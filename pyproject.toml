@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tunacode-cli"
+version = "0.5.1"
+description = "Your agentic CLI developer."
+keywords = ["cli", "agent", "development", "automation"]
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Gavin Vickery", email = "gavin@geekforbrains.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "prompt_toolkit==3.0.51",
+    "pydantic-ai[logfire]==0.2.6",
+    "pygments==2.19.1",
+    "rich==14.0.0",
+    "typer==0.15.3",
+]
+
+[project.scripts]
+tunacode = "tunacode.cli.main:app"
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "black",
+    "flake8",
+    "isort",
+    "pytest",
+    "pytest-cov",
+]
+
+[project.urls]
+Homepage = "https://github.com/geekforbrains/tunacode-cli"
+Repository = "https://github.com/geekforbrains/tunacode-cli"
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+line_length = 100
