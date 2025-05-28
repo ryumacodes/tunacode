@@ -75,7 +75,11 @@ OPENAI_BASE_URL="https://openrouter.ai/api/v1" tunacode
 You can now switch to OpenRouter models using:
 ```
 /model openrouter:mistralai/devstral-small
+/model openrouter:openai/gpt-4.1-mini
+/model openrouter:codex-mini-latest
 ```
+
+**Adding Custom OpenRouter Models**: You can use any OpenRouter model by editing your `~/.config/tunacode.json` file and adding the model to the configuration. TunaCode will automatically detect and use any model format `openrouter:provider/model-name`.
 
 ### MCP Support
 

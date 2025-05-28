@@ -52,10 +52,25 @@ class ModelRegistry:
                 pricing=ModelPricing(input=1.10, cached_input=0.55, output=4.40)
             ),
             "openrouter:mistralai/devstral-small": ModelConfig(
-                pricing=ModelPricing(input=0.0, cached_input=0.0, output=0.0)
+                pricing=ModelPricing(input=0.07, cached_input=0.035, output=0.10)
+            ),
+            "openrouter:codex-mini-latest": ModelConfig(
+                pricing=ModelPricing(input=1.50, cached_input=0.75, output=6.00)
+            ),
+            "openrouter:o4-mini-high": ModelConfig(
+                pricing=ModelPricing(input=1.10, cached_input=0.55, output=4.40)
+            ),
+            "openrouter:o3": ModelConfig(
+                pricing=ModelPricing(input=10.00, cached_input=5.00, output=40.00)
+            ),
+            "openrouter:o4-mini": ModelConfig(
+                pricing=ModelPricing(input=1.10, cached_input=0.55, output=4.40)
             ),
             "openrouter:openai/gpt-4.1": ModelConfig(
-                pricing=ModelPricing(input=2.00, cached_input=0.50, output=8.00)
+                pricing=ModelPricing(input=2.00, cached_input=1.00, output=8.00)
+            ),
+            "openrouter:openai/gpt-4.1-mini": ModelConfig(
+                pricing=ModelPricing(input=0.40, cached_input=0.20, output=1.60)
             ),
         }
 
