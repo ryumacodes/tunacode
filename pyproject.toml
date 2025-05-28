@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tunacode-cli"
-version = "0.5.1"
+version = "0.0.1"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
@@ -46,8 +46,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/geekforbrains/tunacode-cli"
-Repository = "https://github.com/geekforbrains/tunacode-cli"
+Homepage = "https://github.com/larock22/tunacode"
+Repository = "https://github.com/larock22/tunacode"
 
 [tool.black]
 line-length = 100
