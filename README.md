@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/tunacode-cli.svg)](https://badge.fury.io/py/tunacode-cli)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-![TunaCode Demo](screenshot.gif)
+![TunaCode Demo]()
 
 Your agentic CLI developer.
 
