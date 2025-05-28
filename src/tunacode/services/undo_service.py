@@ -59,7 +59,7 @@ def init_undo_system(state_manager: StateManager) -> bool:
     home_dir = Path.home()
 
     if cwd == home_dir:
-        ui.warning(UNDO_DISABLED_HOME)
+        print(f"⚠️  {UNDO_DISABLED_HOME}")
         return False
 
     if not is_in_git_project():
@@ -100,11 +100,11 @@ def init_undo_system(state_manager: StateManager) -> bool:
         return True
     except subprocess.TimeoutExpired as e:
         error = GitOperationError(operation="init", message=UNDO_GIT_TIMEOUT, original_error=e)
-        ui.warning(str(error))
+        print(f"⚠️  {str(error)}")
         return False
     except Exception as e:
         error = GitOperationError(operation="init", message=str(e), original_error=e)
-        ui.warning(ERROR_UNDO_INIT.format(e=e))
+        print(f"⚠️  {ERROR_UNDO_INIT.format(e=e)}")
         return False
 
 
@@ -156,11 +156,11 @@ def commit_for_undo(
         error = GitOperationError(
             operation="commit", message="Git commit timed out", original_error=e
         )
-        ui.warning(str(error))
+        print(f"⚠️  {str(error)}")
         return False
     except Exception as e:
         error = GitOperationError(operation="commit", message=str(e), original_error=e)
-        ui.warning(f"Error creating undo commit: {e}")
+        print(f"⚠️  Error creating undo commit: {e}")
         return False
 
 

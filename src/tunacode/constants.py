@@ -63,7 +63,7 @@ COMMAND_CATEGORIES = {
 }
 
 # System paths
-SIDEKICK_HOME_DIR = ".tunacode"
+TUNACODE_HOME_DIR = ".tunacode"
 SESSIONS_SUBDIR = "sessions"
 DEVICE_ID_FILE = "device_id"
 

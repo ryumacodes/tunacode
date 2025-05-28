@@ -1,41 +1,41 @@
 """
-Sidekick CLI exception hierarchy.
+TunaCode CLI exception hierarchy.
 
-This module defines all custom exceptions used throughout the Sidekick CLI.
-All exceptions inherit from SidekickError for easy catching of any Sidekick-specific error.
+This module defines all custom exceptions used throughout the TunaCode CLI.
+All exceptions inherit from TunaCodeError for easy catching of any TunaCode-specific error.
 """
 
 from tunacode.types import ErrorMessage, FilePath, OriginalError, ToolName
 
 
-class SidekickError(Exception):
-    """Base exception for all Sidekick errors."""
+class TunaCodeError(Exception):
+    """Base exception for all TunaCode errors."""
 
     pass
 
 
 # Configuration and Setup Exceptions
-class ConfigurationError(SidekickError):
+class ConfigurationError(TunaCodeError):
     """Raised when there's a configuration issue."""
 
     pass
 
 
 # User Interaction Exceptions
-class UserAbortError(SidekickError):
+class UserAbortError(TunaCodeError):
     """Raised when user aborts an operation."""
 
     pass
 
 
-class ValidationError(SidekickError):
+class ValidationError(TunaCodeError):
     """Raised when input validation fails."""
 
     pass
 
 
 # Tool and Agent Exceptions
-class ToolExecutionError(SidekickError):
+class ToolExecutionError(TunaCodeError):
     """Raised when a tool fails to execute."""
 
     def __init__(
@@ -46,21 +46,21 @@ class ToolExecutionError(SidekickError):
         super().__init__(f"Tool '{tool_name}' failed: {message}")
 
 
-class AgentError(SidekickError):
+class AgentError(TunaCodeError):
     """Raised when agent operations fail."""
 
     pass
 
 
 # State Management Exceptions
-class StateError(SidekickError):
+class StateError(TunaCodeError):
     """Raised when there's an issue with application state."""
 
     pass
 
 
 # External Service Exceptions
-class ServiceError(SidekickError):
+class ServiceError(TunaCodeError):
     """Base exception for external service failures."""
 
     pass
@@ -89,7 +89,7 @@ class GitOperationError(ServiceError):
 
 
 # File System Exceptions
-class FileOperationError(SidekickError):
+class FileOperationError(TunaCodeError):
     """Raised when file system operations fail."""
 
     def __init__(

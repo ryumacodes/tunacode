@@ -1,5 +1,5 @@
 """
-Module: sidekick.utils.system
+Module: tunacode.utils.system
 
 Provides system information and directory management utilities.
 Handles session management, device identification, file listing
@@ -13,7 +13,7 @@ import uuid
 from pathlib import Path
 
 from ..configuration.settings import ApplicationSettings
-from ..constants import DEVICE_ID_FILE, ENV_FILE, SESSIONS_SUBDIR, SIDEKICK_HOME_DIR
+from ..constants import DEVICE_ID_FILE, ENV_FILE, SESSIONS_SUBDIR, TUNACODE_HOME_DIR
 
 # Default ignore patterns if .gitignore is not found
 DEFAULT_IGNORE_PATTERNS = {
@@ -45,15 +45,15 @@ DEFAULT_IGNORE_PATTERNS = {
 }
 
 
-def get_sidekick_home():
+def get_tunacode_home():
     """
-    Get the path to the Sidekick home directory (~/.sidekick).
+    Get the path to the TunaCode home directory (~/.tunacode).
     Creates it if it doesn't exist.
 
     Returns:
-        Path: The path to the Sidekick home directory.
+        Path: The path to the TunaCode home directory.
     """
-    home = Path.home() / SIDEKICK_HOME_DIR
+    home = Path.home() / TUNACODE_HOME_DIR
     home.mkdir(exist_ok=True)
     return home
 
@@ -68,7 +68,7 @@ def get_session_dir(state_manager):
     Returns:
         Path: The path to the current session directory.
     """
-    session_dir = get_sidekick_home() / SESSIONS_SUBDIR / state_manager.session.session_id
+    session_dir = get_tunacode_home() / SESSIONS_SUBDIR / state_manager.session.session_id
     session_dir.mkdir(exist_ok=True, parents=True)
     return session_dir
 
@@ -181,16 +181,16 @@ def get_cwd():
 
 def get_device_id():
     """
-    Get the device ID from the ~/.sidekick/device_id file.
+    Get the device ID from the ~/.tunacode/device_id file.
     If the file doesn't exist, generate a new UUID and save it.
 
     Returns:
         str: The device ID as a string.
     """
     try:
-        # Get the ~/.sidekick directory
-        sidekick_home = get_sidekick_home()
-        device_id_file = sidekick_home / DEVICE_ID_FILE
+        # Get the ~/.tunacode directory
+        tunacode_home = get_tunacode_home()
+        device_id_file = tunacode_home / DEVICE_ID_FILE
 
         # If the file exists, read the device ID
         if device_id_file.exists():
@@ -245,7 +245,7 @@ def cleanup_session(state_manager):
 
 def check_for_updates():
     """
-    Check if there's a newer version of sidekick-cli available on PyPI.
+    Check if there's a newer version of tunacode-cli available on PyPI.
 
     Returns:
         tuple: (has_update, latest_version)
@@ -257,7 +257,7 @@ def check_for_updates():
     current_version = app_settings.version
     try:
         result = subprocess.run(
-            ["pip", "index", "versions", "sidekick-cli"], capture_output=True, text=True, check=True
+            ["pip", "index", "versions", "tunacode-cli"], capture_output=True, text=True, check=True
         )
         output = result.stdout
 

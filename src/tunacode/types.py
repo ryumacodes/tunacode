@@ -1,8 +1,8 @@
 """
-Centralized type definitions for Sidekick CLI.
+Centralized type definitions for TunaCode CLI.
 
 This module contains all type aliases, protocols, and type definitions
-used throughout the Sidekick codebase.
+used throughout the TunaCode codebase.
 """
 
 from dataclasses import dataclass
