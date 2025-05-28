@@ -11,7 +11,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [
-    { name = "Gavin Vickery", email = "gavin@geekforbrains.com" },
+    { name = "larock22", email = "noreply@github.com" },
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

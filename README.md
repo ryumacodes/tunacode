@@ -13,7 +13,7 @@ TunaCode is an agentic CLI-based AI tool inspired by Claude Code, Copilot, Winds
 to be an open source alternative to these tools, providing a similar experience but with the flexibility of
 using different LLM providers (Anthropic, OpenAI, Google Gemini, OpenRouter) while keeping the agentic workflow.
 
-*TunaCode is currently in beta and under active development. Please [report issues](https://github.com/geekforbrains/tunacode-cli/issues) or share feedback!*
+*TunaCode is currently in beta and under active development. Please [report issues](https://github.com/larock22/tunacode/issues) or share feedback!*
 
 ## Features
 
@@ -27,10 +27,11 @@ using different LLM providers (Anthropic, OpenAI, Google Gemini, OpenRouter) whi
 - Cost and token tracking.
 - Per command or per session confirmation skipping.
 
-## Roadmap
+## Upcoming Features
 
-- Tests 😅
-- More LLM providers, including OpenRouter and Ollama
+- **TinyAgent Integration**: Adding the [tinyagent framework](http://tinyagent.xyz/) to make this CLI tool truly agentic with multi-step reasoning and autonomous task execution
+- **Advanced Flows**: Implementing sophisticated workflow patterns for complex development tasks
+- **Quality of Life Updates**: Enhanced user experience with improved UI, better error handling, and streamlined interactions
 
 ## Quick Start
 
@@ -195,8 +196,8 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 ## Links
 
 - [PyPI Package](https://pypi.org/project/tunacode-cli/)
-- [GitHub Issues](https://github.com/geekforbrains/tunacode-cli/issues)
-- [GitHub Repository](https://github.com/geekforbrains/tunacode-cli)
+- [GitHub Issues](https://github.com/larock22/tunacode/issues)
+- [GitHub Repository](https://github.com/larock22/tunacode)
 
 ## License
 
