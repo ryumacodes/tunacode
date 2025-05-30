@@ -22,16 +22,22 @@ log(){ printf "%b\n" "${GREEN}==>${NC} $*"; }
 die(){ printf "%b\n" "${RED}ERROR:${NC} $*" >&2; exit 1; }
 
 # ── prerequisites -----------------------------------------------------------
-for cmd in python3 pip git twine; do command -v $cmd >/dev/null || die "$cmd missing"; done
+for cmd in python3 git; do command -v $cmd >/dev/null || die "$cmd missing"; done
 [[ -f ~/.pypirc ]] || die "~/.pypirc missing (should contain real‑PyPI token)"
 
-pip -q install build twine setuptools_scm packaging >/dev/null
+# Use virtual environment
+VENV_PATH="venv"
+[[ -d "$VENV_PATH" ]] || die "Virtual environment not found at $VENV_PATH"
+PYTHON="$VENV_PATH/bin/python"
+PIP="$VENV_PATH/bin/pip"
+
+$PIP -q install build twine setuptools_scm packaging >/dev/null
 
 # ── cleanup -----------------------------------------------------------------
 rm -rf dist build *.egg-info
 
 # ── fetch latest PyPI version ----------------------------------------------
-remote=$(python3 - "$PKG" <<'PY'
+remote=$($PYTHON - "$PKG" <<'PY'
 import json, sys, ssl, urllib.request, packaging.version as V
 pkg=sys.argv[1]
 try:
@@ -50,7 +56,7 @@ local=$(git tag --sort=-v:refname | head -n1 | sed 's/^v//')
 log "Latest Git tag  : $local"
 
 # ── choose max(remote, local) & bump patch ----------------------------------
-base=$(python3 - "$remote" "$local" <<'PY'
+base=$($PYTHON - "$remote" "$local" <<'PY'
 import sys, packaging.version as V
 r,l=sys.argv[1:]
 print(r if V.Version(r)>=V.Version(l) else l)
@@ -62,7 +68,12 @@ log "Next version    : $VERSION"
 
 # ── update pyproject.toml version -------------------------------------------
 sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
-git add pyproject.toml
+
+# ── update constants.py version ---------------------------------------------
+sed -i "s/^APP_VERSION = .*/APP_VERSION = \"$VERSION\"/" src/tunacode/constants.py
+
+# ── git add, commit, and push -----------------------------------------------
+git add .
 git commit -m "chore: bump version to $VERSION"
 
 # ── tag & push --------------------------------------------------------------
@@ -71,10 +82,10 @@ git push --tags
 git push
 
 # ── build -------------------------------------------------------------------
-log "Building wheel/sdist"; python3 -m build
+log "Building wheel/sdist"; $PYTHON -m build
 
 # ── upload ------------------------------------------------------------------
-log "Uploading to PyPI"; python3 -m twine upload -r pypi dist/*
+log "Uploading to PyPI"; $PYTHON -m twine upload -r pypi dist/*
 
 log "🎉  $PKG $VERSION published on PyPI"
 

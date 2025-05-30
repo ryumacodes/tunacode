@@ -1,7 +1,7 @@
-"""Module: sidekick.core.agents.main
+"""Module: tunacode.core.agents.main
 
-Main agent functionality and coordination for the Sidekick CLI.
-Provides agent creation, message processing, and tool call management.
+Main agent functionality and coordination for the TunaCode CLI.
+Handles agent creation, configuration, and request processing.
 """
 
 from datetime import datetime, timezone

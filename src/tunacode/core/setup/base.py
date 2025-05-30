@@ -1,7 +1,7 @@
-"""Module: sidekick.core.setup.base
+"""Module: tunacode.core.setup.base
 
-Base setup step abstraction for the Sidekick CLI initialization process.
-Defines the contract that all setup steps must implement.
+Base setup step abstraction for the TunaCode CLI initialization process.
+Provides common interface and functionality for all setup steps.
 """
 
 from abc import ABC, abstractmethod

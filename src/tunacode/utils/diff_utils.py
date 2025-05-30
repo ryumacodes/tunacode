@@ -1,8 +1,8 @@
 """
-Module: sidekick.utils.diff_utils
+Module: tunacode.utils.diff_utils
 
-Provides diff visualization utilities for file changes.
-Generates styled text diffs between original and modified content using the difflib library.
+Diff generation and formatting utilities for TunaCode.
+Provides unified diff generation and colorized output for file changes.
 """
 
 import difflib

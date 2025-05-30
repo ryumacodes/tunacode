@@ -18,6 +18,12 @@ htmlcov/
 coverage.xml
 *.cover
 
+# Test environments
+test_env/
+tests/env/
+test-env/
+.test_env/
+
 # Virtual environments
 env/
 venv/

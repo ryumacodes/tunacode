@@ -1,8 +1,8 @@
 """
-Module: sidekick.tools.write_file
+Module: tunacode.tools.write_file
 
-File writing tool for agent operations in the Sidekick application.
-Creates new files with automatic directory creation and overwrite protection.
+File writing tool for agent operations in the TunaCode application.
+Provides safe file creation with conflict detection and encoding handling.
 """
 
 import os

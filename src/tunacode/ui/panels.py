@@ -1,4 +1,4 @@
-"""Panel display functions for Sidekick UI."""
+"""Panel display functions for TunaCode UI."""
 
 from typing import Any, Optional, Union
 
@@ -11,9 +11,9 @@ from rich.table import Table
 
 from tunacode.configuration.models import ModelRegistry
 from tunacode.constants import (APP_NAME, CMD_CLEAR, CMD_COMPACT, CMD_DUMP, CMD_EXIT, CMD_HELP,
-                                CMD_MODEL, CMD_UNDO, CMD_YOLO, DESC_CLEAR, DESC_COMPACT, DESC_DUMP,
+                                CMD_MODEL, CMD_YOLO, DESC_CLEAR, DESC_COMPACT, DESC_DUMP,
                                 DESC_EXIT, DESC_HELP, DESC_MODEL, DESC_MODEL_DEFAULT,
-                                DESC_MODEL_SWITCH, DESC_UNDO, DESC_YOLO, PANEL_AVAILABLE_COMMANDS,
+                                DESC_MODEL_SWITCH, DESC_YOLO, PANEL_AVAILABLE_COMMANDS,
                                 PANEL_ERROR, PANEL_MESSAGE_HISTORY, PANEL_MODELS, UI_COLORS)
 from tunacode.core.state import StateManager
 from tunacode.utils.file_utils import DotDict
@@ -130,7 +130,6 @@ async def help(command_registry=None) -> None:
             (CMD_CLEAR, DESC_CLEAR),
             (CMD_DUMP, DESC_DUMP),
             (CMD_YOLO, DESC_YOLO),
-            (CMD_UNDO, DESC_UNDO),
             (CMD_COMPACT, DESC_COMPACT),
             (CMD_MODEL, DESC_MODEL),
             (f"{CMD_MODEL} <n>", DESC_MODEL_SWITCH),

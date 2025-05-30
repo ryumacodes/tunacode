@@ -1,4 +1,4 @@
-"""User input handling functions for Sidekick UI."""
+"""User input handling functions for TunaCode UI."""
 
 from typing import Optional
 

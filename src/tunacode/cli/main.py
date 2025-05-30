@@ -1,8 +1,7 @@
 """
-Module: sidekick.cli.main
+Module: tunacode.cli.main
 
-CLI entry point and main command handling for the Sidekick application.
-Manages application startup, version checking, and REPL initialization.
+Enhanced CLI entry point with better styling while staying CLI-based.
 """
 
 import asyncio
@@ -17,7 +16,7 @@ from tunacode.ui import console as ui
 from tunacode.utils.system import check_for_updates
 
 app_settings = ApplicationSettings()
-app = typer.Typer(help=app_settings.name)
+app = typer.Typer(help="🐟 TunaCode - Your AI-powered development assistant")
 state_manager = StateManager()
 
 
@@ -29,6 +28,8 @@ def main(
     model: str = typer.Option(None, "--model", help="Default model to use (e.g., openai/gpt-4)"),
     key: str = typer.Option(None, "--key", help="API key for the provider"),
 ):
+    """🚀 Start TunaCode - Your AI-powered development assistant"""
+    
     if version:
         asyncio.run(ui.version())
         return

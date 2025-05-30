@@ -1,7 +1,7 @@
 """
-Module: sidekick.tools.read_file
+Module: tunacode.tools.read_file
 
-File reading tool for agent operations in the Sidekick application.
+File reading tool for agent operations in the TunaCode application.
 Provides safe file reading with size limits and proper error handling.
 """
 

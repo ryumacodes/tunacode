@@ -1,9 +1,8 @@
 """
-Module: sidekick.configuration.defaults
+Module: tunacode.configuration.defaults
 
-Default configuration values for the Sidekick CLI.
-Provides baseline settings for user configuration including API keys,
-tool settings, and MCP servers.
+Default configuration values for the TunaCode CLI.
+Provides sensible defaults for user configuration and environment variables.
 """
 
 from tunacode.constants import GUIDE_FILE_NAME, TOOL_READ_FILE

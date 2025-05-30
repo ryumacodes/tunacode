@@ -1,4 +1,4 @@
-"""Key binding handlers for Sidekick UI."""
+"""Key binding handlers for TunaCode UI."""
 
 from prompt_toolkit.key_binding import KeyBindings
 

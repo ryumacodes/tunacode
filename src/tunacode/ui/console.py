@@ -1,7 +1,6 @@
-"""Main console coordination module for Sidekick UI.
+"""Main console coordination module for TunaCode UI.
 
-This module re-exports functions from specialized UI modules to maintain
-backward compatibility while organizing code into focused modules.
+Provides high-level console functions and coordinates between different UI components.
 """
 
 from rich.console import Console as RichConsole

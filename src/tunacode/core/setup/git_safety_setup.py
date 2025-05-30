@@ -133,8 +133,7 @@ class GitSafetySetup(BaseSetup):
                 await panel(
                     "⚠️  Working Without Safety Branch",
                     "You've chosen to work directly on your current branch.\n"
-                    "TunaCode will modify files in place. Make sure you have backups!\n"
-                    "You can always use /undo to revert changes.",
+                    "TunaCode will modify files in place. Make sure you have backups!",
                     border_style="red"
                 )
                 # Save preference

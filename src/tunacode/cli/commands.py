@@ -1,4 +1,4 @@
-"""Command system for Sidekick CLI."""
+"""Command system for TunaCode CLI."""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -248,14 +248,13 @@ class BranchCommand(SimpleCommand):
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         import subprocess
-
-        from ..services.undo_service import is_in_git_project
+        import os
 
         if not args:
             await ui.error("Usage: /branch <branch-name>")
             return
 
-        if not is_in_git_project():
+        if not os.path.exists(".git"):
             await ui.error("Not a git repository")
             return
 

@@ -1,7 +1,7 @@
 """
-Module: sidekick.cli.repl
+Module: tunacode.cli.repl
 
-Interactive REPL (Read-Eval-Print Loop) implementation for Sidekick.
+Interactive REPL (Read-Eval-Print Loop) implementation for TunaCode.
 Handles user input, command processing, and agent interaction in an interactive shell.
 """
 
@@ -207,18 +207,7 @@ async def repl(state_manager: StateManager):
     action = None
 
     # Professional startup information
-    await ui.info("TunaCode v0.1 - Beta Release")
-    await ui.muted("• Caution: This tool can modify your codebase")
     await ui.muted(f"• Model: {state_manager.session.current_model}")
-    await ui.line()
-    
-    # Important safety warning
-    await ui.warning("⚠️  IMPORTANT: The /undo command has been removed for safety reasons")
-    await ui.muted("• Always use git branches before making major changes")
-    await ui.muted("• Use '/branch <name>' to create a new branch for experiments")
-    await ui.muted("• Commit your work frequently to preserve changes")
-    await ui.line()
-    
     await ui.success("Ready to assist with your development")
     await ui.line()
     

@@ -1,7 +1,7 @@
-"""Module: sidekick.core.state
+"""Module: tunacode.core.state
 
-State management system for session data in Sidekick CLI.
-Provides centralized state tracking for agents, messages, configurations, and session information.
+State management system for session data in TunaCode CLI.
+Handles user preferences, conversation history, and runtime state.
 """
 
 import uuid

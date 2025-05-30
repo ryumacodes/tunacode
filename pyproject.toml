@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tunacode-cli"
-version = "0.0.11"
+version = "0.0.12"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
@@ -25,11 +25,11 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
+    "typer==0.15.3",
     "prompt_toolkit==3.0.51",
     "pydantic-ai[logfire]==0.2.6",
     "pygments==2.19.1",
     "rich==14.0.0",
-    "typer==0.15.3",
 ]
 
 [project.scripts]
@@ -38,11 +38,12 @@ tunacode = "tunacode.cli.main:app"
 [project.optional-dependencies]
 dev = [
     "build",
-    "black",
+    "black", 
     "flake8",
     "isort",
     "pytest",
     "pytest-cov",
+    "textual-dev",
 ]
 
 [project.urls]
