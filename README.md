@@ -6,9 +6,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Your agentic CLI developer**
-
-_An open-source alternative to Claude Code, Copilot, Windsurf, and Cursor_
+**Your AI-powered CLI coding assistant**
 
 [Quick Start](#quick-start) • [Features](#features) • [Configuration](#configuration) • [Documentation](#documentation)
 
@@ -18,13 +16,21 @@ _An open-source alternative to Claude Code, Copilot, Windsurf, and Cursor_
 
 ## Overview
 
-TunaCode is a powerful agentic CLI-based AI development tool that gives you the flexibility to use any LLM provider while maintaining an intelligent, autonomous workflow. No vendor lock-in, maximum flexibility.
+> **⚠️ Safety First**: TunaCode can modify your codebase. Always use git branches before making major changes. The `/undo` command has been removed - use git for version control.
 
-> **Beta Notice**: TunaCode is currently in beta. [Report issues](https://github.com/larock22/tunacode/issues) or share feedback to help us improve!
+> **Beta Notice**: TunaCode is currently in beta. [Report issues](https://github.com/alchemiststudiosDOTai/tunacode/issues) or share feedback to help us improve!
 
 ---
 
-## Features
+### Recent Updates
+
+- **Simplified Setup**: Direct CLI configuration with `--model` and `--key` flags
+- **Enhanced Safety**: Removed `/undo` command in favor of git-based workflows
+- **Cleaner Codebase**: Removed `/init` command and automatic TUNACODE.md generation
+- **Better Onboarding**: No model validation - trust users to provide correct model names
+- **Unified Model Format**: All models use `provider:model-name` format
+
+### Core Features
 
 <table>
 <tr>
@@ -35,32 +41,33 @@ TunaCode is a powerful agentic CLI-based AI development tool that gives you the 
 - Anthropic Claude
 - OpenAI GPT
 - Google Gemini
-- OpenRouter
-- No vendor lock-in
+- OpenRouter (100+ models)
+- Any OpenAI-compatible API
 
 ### **Developer Tools**
 
+- 4 core tools: read_file, write_file, update_file, run_command
 - MCP (Model Context Protocol) support
-- `/undo` command when AI breaks things
-- JIT system prompt injection
-- Per-project customization guides
+- File operation confirmations with diffs
+- Per-project context guides (TUNACODE.md)
 
 </td>
 <td width="50%">
 
-### **User Experience**
+### **Safety & Control**
 
-- CLI-first design
-- Switch models mid-session
-- Cost and token tracking
-- Skip confirmations per command/session
-- Git integration
+- Git branch integration (`/branch`)
+- No automatic commits
+- Explicit file operation confirmations
+- Permission tracking per session
+- `/yolo` mode for power users
 
-### **Coming Soon**
+### **Architecture**
 
-- TinyAgent framework integration
-- Advanced workflow patterns
-- Enhanced UI and error handling
+- Built on pydantic-ai
+- Async throughout
+- Modular command system
+- Rich UI with syntax highlighting
 
 </td>
 </tr>
@@ -72,8 +79,16 @@ TunaCode is a powerful agentic CLI-based AI development tool that gives you the 
 
 ### Installation
 
+#### PyPI
+
 ```bash
 pip install tunacode-cli
+```
+
+#### One-line Install (Linux/macOS)
+
+```bash
+wget -qO- https://raw.githubusercontent.com/alchemiststudiosDOTai/tunacode/master/scripts/install_linux.sh | bash
 ```
 
 ### Setup Options
@@ -206,7 +221,6 @@ Learn more at [modelcontextprotocol.io](https://modelcontextprotocol.io/)
 | `/model <provider:name>`         | Switch model                     |
 | `/model <provider:name> default` | Set default model                |
 | `/branch <name>`                 | Create and switch Git branch     |
-| `/undo`                          | Undo recent changes              |
 | `/dump`                          | Show message history (debug)     |
 | `exit`                           | Exit application                 |
 
@@ -241,7 +255,7 @@ Create a `TUNACODE.md` file your project root to customize TunaCode's behavior:
 ### Requirements
 
 - Python 3.10+
-- Git (for undo functionality)
+- Git (for version control)
 
 ### Development Setup
 
@@ -301,8 +315,8 @@ Following [Conventional Commits](https://www.conventionalcommits.org/):
 <div align="center">
 
 [![PyPI](https://img.shields.io/badge/PyPI-Package-blue?logo=pypi)](https://pypi.org/project/tunacode-cli/)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?logo=github)](https://github.com/larock22/tunacode)
-[![Issues](https://img.shields.io/badge/GitHub-Issues-red?logo=github)](https://github.com/larock22/tunacode/issues)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?logo=github)](https://github.com/alchemiststudiosDOTai/tunacode)
+[![Issues](https://img.shields.io/badge/GitHub-Issues-red?logo=github)](https://github.com/alchemiststudiosDOTai/tunacode/issues)
 
 </div>
 
@@ -314,5 +328,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-Built on the foundation of [sidekick-cli](https://github.com/geekforbrains/sidekick-cli).
-Thank you to the sidekick-cli team for making TunaCode Possible
+TunaCode is a fork of [sidekick-cli](https://github.com/geekforbrains/sidekick-cli). Special thanks to the sidekick-cli team for creating the foundation that made TunaCode possible.
