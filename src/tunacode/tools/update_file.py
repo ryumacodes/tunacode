@@ -7,12 +7,20 @@ Provides targeted file content modification with diff-based updates.
 
 import os
 
+from pydantic import BaseModel, Field
+from pydantic_ai import tool
 from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
 from tunacode.types import FileContent, FilePath, ToolResult
 from tunacode.ui import console as default_ui
+
+
+class Args(BaseModel, extra="forbid"):
+    path: str = Field(..., description="Absolute or relative file path")
+    target: str
+    patch: str
 
 
 class UpdateFileTool(FileBasedTool):
@@ -96,7 +104,8 @@ class UpdateFileTool(FileBasedTool):
 
 
 # Create the function that maintains the existing interface
-async def update_file(filepath: FilePath, target: FileContent, patch: FileContent) -> ToolResult:
+@tool(name="update_file", args_schema=Args, description="Update text in an existing file")
+async def update_file(path: FilePath, target: FileContent, patch: FileContent) -> ToolResult:
     """
     Update an existing file by replacing a target text block with a patch.
     Requires confirmation with diff before applying.
@@ -111,7 +120,7 @@ async def update_file(filepath: FilePath, target: FileContent, patch: FileConten
     """
     tool = UpdateFileTool(default_ui)
     try:
-        return await tool.execute(filepath, target, patch)
+        return await tool.execute(path, target, patch)
     except ToolExecutionError as e:
         # Return error message for pydantic-ai compatibility
         return str(e)
