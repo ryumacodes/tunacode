@@ -12,18 +12,22 @@ from tunacode.core.setup import (AgentSetup, ConfigSetup, EnvironmentSetup, GitS
 from tunacode.core.state import StateManager
 
 
-async def setup(run_setup: bool, state_manager: StateManager) -> None:
+async def setup(run_setup: bool, state_manager: StateManager, cli_config: dict = None) -> None:
     """
     Setup TunaCode on startup using the new setup coordinator.
 
     Args:
         run_setup (bool): If True, force run the setup process, resetting current config.
         state_manager (StateManager): The state manager instance.
+        cli_config (dict): Optional CLI configuration with baseurl, model, and key.
     """
     coordinator = SetupCoordinator(state_manager)
 
     # Register setup steps in order
-    coordinator.register_step(ConfigSetup(state_manager))
+    config_setup = ConfigSetup(state_manager)
+    if cli_config:
+        config_setup.cli_config = cli_config
+    coordinator.register_step(config_setup)
     coordinator.register_step(EnvironmentSetup(state_manager))
     coordinator.register_step(GitSafetySetup(state_manager))  # Run after config/env but before undo
     coordinator.register_step(UndoSetup(state_manager))

@@ -1,5 +1,5 @@
 """
-Module: sidekick.configuration.settings
+Module: tunacode.configuration.settings
 
 Application settings management for the Sidekick CLI.
 Manages application paths, tool configurations, and runtime settings.
@@ -7,8 +7,15 @@ Manages application paths, tool configurations, and runtime settings.
 
 from pathlib import Path
 
-from tunacode.constants import (APP_NAME, APP_VERSION, CONFIG_FILE_NAME, TOOL_READ_FILE,
-                                TOOL_RUN_COMMAND, TOOL_UPDATE_FILE, TOOL_WRITE_FILE)
+from tunacode.constants import (
+    APP_NAME,
+    APP_VERSION,
+    CONFIG_FILE_NAME,
+    TOOL_READ_FILE,
+    TOOL_RUN_COMMAND,
+    TOOL_UPDATE_FILE,
+    TOOL_WRITE_FILE,
+)
 from tunacode.types import ConfigFile, ConfigPath, ToolName
 
 

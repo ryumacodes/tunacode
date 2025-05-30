@@ -78,8 +78,8 @@ async def multiline_input(state_manager: Optional[StateManager] = None, command_
     placeholder = formatted_text(
         (
             "<darkgrey>"
-            "<bold>Enter</bold> to submit, "
-            "<bold>Esc + Enter</bold> for new line, "
+            "<bold>Enter</bold> to submit • "
+            "<bold>Esc + Enter</bold> for new line • "
             "<bold>/help</bold> for commands"
             "</darkgrey>"
         )

@@ -1,4 +1,4 @@
-"""Module: sidekick.core.setup.config_setup
+"""Module: tinyagent.core.setup.config_setup
 
 Configuration system initialization for the Sidekick CLI.
 Handles user configuration loading, validation, and first-time setup onboarding.
@@ -27,6 +27,7 @@ class ConfigSetup(BaseSetup):
         self.config_dir: ConfigPath = Path.home() / ".config"
         self.config_file: ConfigFile = self.config_dir / CONFIG_FILE_NAME
         self.model_registry = ModelRegistry()
+        self.cli_config = None  # Will be set if CLI args are provided
 
     @property
     def name(self) -> str:
@@ -41,17 +42,26 @@ class ConfigSetup(BaseSetup):
         self.state_manager.session.device_id = system.get_device_id()
         loaded_config = user_configuration.load_config()
 
+        # Handle CLI configuration if provided
+        if self.cli_config and any(self.cli_config.values()):
+            await self._handle_cli_config(loaded_config)
+            return
+
         if loaded_config and not force_setup:
             # Silent loading
             # Merge loaded config with defaults to ensure all required keys exist
-            self.state_manager.session.user_config = self._merge_with_defaults(loaded_config)
+            self.state_manager.session.user_config = self._merge_with_defaults(
+                loaded_config
+            )
         else:
             if force_setup:
                 await ui.muted("Running setup process, resetting config")
             else:
                 await ui.muted("No user configuration found, running setup")
             self.state_manager.session.user_config = DEFAULT_USER_CONFIG.copy()
-            user_configuration.save_config(self.state_manager)  # Save the default config initially
+            user_configuration.save_config(
+                self.state_manager
+            )  # Save the default config initially
             await self._onboarding()
 
         if not self.state_manager.session.user_config.get("default_model"):
@@ -62,21 +72,11 @@ class ConfigSetup(BaseSetup):
                 )
             )
 
-        # Check if the configured model still exists
-        default_model = self.state_manager.session.user_config["default_model"]
-        if not self.model_registry.get_model(default_model):
-            await ui.panel(
-                "Model Not Found",
-                f"The configured model '[bold]{default_model}[/bold]' is no longer available.\n"
-                "Please select a new default model.",
-                border_style=UI_COLORS["warning"],
-            )
-            await self._step2_default_model()
-            user_configuration.save_config(self.state_manager)
+        # No model validation - trust user's model choice
 
-        self.state_manager.session.current_model = self.state_manager.session.user_config[
-            "default_model"
-        ]
+        self.state_manager.session.current_model = (
+            self.state_manager.session.user_config["default_model"]
+        )
 
     async def validate(self) -> bool:
         """Validate that configuration is properly set up."""
@@ -88,10 +88,7 @@ class ConfigSetup(BaseSetup):
         if not self.state_manager.session.user_config.get("default_model"):
             return False
 
-        # Check that the default model is valid
-        default_model = self.state_manager.session.user_config["default_model"]
-        if not self.model_registry.get_model(default_model):
-            return False
+        # No model validation - trust user input
 
         return True
 
@@ -112,7 +109,9 @@ class ConfigSetup(BaseSetup):
 
     async def _onboarding(self):
         """Run the onboarding process for new users."""
-        initial_config = json.dumps(self.state_manager.session.user_config, sort_keys=True)
+        initial_config = json.dumps(
+            self.state_manager.session.user_config, sort_keys=True
+        )
 
         await self._step1_api_keys()
 
@@ -125,11 +124,15 @@ class ConfigSetup(BaseSetup):
                 await self._step2_default_model()
 
             # Compare configs to see if anything changed
-            current_config = json.dumps(self.state_manager.session.user_config, sort_keys=True)
+            current_config = json.dumps(
+                self.state_manager.session.user_config, sort_keys=True
+            )
             if initial_config != current_config:
                 if user_configuration.save_config(self.state_manager):
                     message = f"Config saved to: [bold]{self.config_file}[/bold]"
-                    await ui.panel("Finished", message, top=0, border_style=UI_COLORS["success"])
+                    await ui.panel(
+                        "Finished", message, top=0, border_style=UI_COLORS["success"]
+                    )
                 else:
                     await ui.error("Failed to save configuration.")
         else:
@@ -177,3 +180,78 @@ class ConfigSetup(BaseSetup):
             state_manager=self.state_manager,
         )
         self.state_manager.session.user_config["default_model"] = model_ids[int(choice)]
+
+    async def _step2_default_model_simple(self):
+        """Simple model selection - just enter model name."""
+        await ui.muted("Format: provider:model-name")
+        await ui.muted("Examples: openai:gpt-4.1, anthropic:claude-3-opus, google-gla:gemini-2.0-flash")
+        
+        while True:
+            model_name = await ui.input(
+                "step2",
+                pretext="  Model (provider:name): ",
+                state_manager=self.state_manager,
+            )
+            model_name = model_name.strip()
+            
+            # Check if provider prefix is present
+            if ":" not in model_name:
+                await ui.error("Model name must include provider prefix")
+                await ui.muted("Format: provider:model-name")
+                await ui.muted("You can always change it later with /model")
+                continue
+            
+            # No validation - user is responsible for correct model names
+            self.state_manager.session.user_config["default_model"] = model_name
+            await ui.warning("Model set without validation - verify the model name is correct")
+            await ui.success(f"Selected model: {model_name}")
+            break
+
+    async def _handle_cli_config(self, loaded_config: UserConfig) -> None:
+        """Handle configuration provided via CLI arguments."""
+        # Start with existing config or defaults
+        if loaded_config:
+            self.state_manager.session.user_config = self._merge_with_defaults(loaded_config)
+        else:
+            self.state_manager.session.user_config = DEFAULT_USER_CONFIG.copy()
+        
+        # Apply CLI overrides
+        if self.cli_config.get("key"):
+            # Determine which API key to set based on the model or baseurl
+            if self.cli_config.get("baseurl") and "openrouter" in self.cli_config["baseurl"]:
+                self.state_manager.session.user_config["env"]["OPENROUTER_API_KEY"] = self.cli_config["key"]
+            elif self.cli_config.get("model"):
+                if "claude" in self.cli_config["model"] or "anthropic" in self.cli_config["model"]:
+                    self.state_manager.session.user_config["env"]["ANTHROPIC_API_KEY"] = self.cli_config["key"]
+                elif "gpt" in self.cli_config["model"] or "openai" in self.cli_config["model"]:
+                    self.state_manager.session.user_config["env"]["OPENAI_API_KEY"] = self.cli_config["key"]
+                elif "gemini" in self.cli_config["model"]:
+                    self.state_manager.session.user_config["env"]["GEMINI_API_KEY"] = self.cli_config["key"]
+                else:
+                    # Default to OpenRouter for unknown models
+                    self.state_manager.session.user_config["env"]["OPENROUTER_API_KEY"] = self.cli_config["key"]
+        
+        if self.cli_config.get("baseurl"):
+            self.state_manager.session.user_config["env"]["OPENAI_BASE_URL"] = self.cli_config["baseurl"]
+        
+        if self.cli_config.get("model"):
+            model = self.cli_config["model"]
+            # Require provider prefix
+            if ":" not in model:
+                raise ConfigurationError(
+                    f"Model '{model}' must include provider prefix\n"
+                    "Format: provider:model-name\n"
+                    "Examples: openai:gpt-4.1, anthropic:claude-3-opus"
+                )
+            
+            self.state_manager.session.user_config["default_model"] = model
+        
+        # Set current model
+        self.state_manager.session.current_model = self.state_manager.session.user_config["default_model"]
+        
+        # Save the configuration
+        if user_configuration.save_config(self.state_manager):
+            await ui.warning("Model set without validation - verify the model name is correct")
+            await ui.success(f"Configuration saved to: {self.config_file}")
+        else:
+            await ui.error("Failed to save configuration.")

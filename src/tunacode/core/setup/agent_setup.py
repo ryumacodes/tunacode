@@ -1,4 +1,4 @@
-"""Module: sidekick.core.setup.agent_setup
+"""Module: tinyagent.core.setup.agent_setup
 
 Agent initialization and configuration for the Sidekick CLI.
 Handles the setup and validation of AI agents with the selected model.

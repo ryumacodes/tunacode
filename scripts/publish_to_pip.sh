@@ -77,3 +77,9 @@ log "Building wheel/sdist"; python3 -m build
 log "Uploading to PyPI"; python3 -m twine upload -r pypi dist/*
 
 log "🎉  $PKG $VERSION published on PyPI"
+
+
+
+
+
+

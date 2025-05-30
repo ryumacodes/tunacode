@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional, Type
 from .. import utils
 from ..configuration.models import ModelRegistry
 from ..exceptions import ValidationError
-from ..services.undo_service import perform_undo
 from ..types import CommandArgs, CommandContext, CommandResult, ProcessRequestCallback
 from ..ui import console as ui
 
@@ -233,33 +232,6 @@ class HelpCommand(SimpleCommand):
         await ui.help(self._command_registry)
 
 
-class UndoCommand(SimpleCommand):
-    """Undo the last file operation."""
-
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="undo",
-                aliases=["/undo"],
-                description="Undo the last file operation",
-                category=CommandCategory.DEVELOPMENT,
-            )
-        )
-
-    async def execute(self, args: List[str], context: CommandContext) -> None:
-        success, message = perform_undo(context.state_manager)
-        if success:
-            await ui.success(message)
-        else:
-            # Provide more helpful information when undo fails
-            await ui.warning(message)
-            if "not in a git repository" in message.lower():
-                await ui.muted("💡 To enable undo functionality:")
-                await ui.muted("   • Run 'git init' to initialize a git repository")
-                await ui.muted("   • Or work in a directory that's already a git repository")
-                await ui.muted("   • File operations will still work, but can't be undone")
-
-
 
 class BranchCommand(SimpleCommand):
     """Create and switch to a new git branch."""
@@ -307,50 +279,6 @@ class BranchCommand(SimpleCommand):
             await ui.error("Git executable not found")
 
 
-class InitCommand(SimpleCommand):
-    """Analyse the repository and generate TUNACODE.md."""
-
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="init",
-                aliases=["/init"],
-                description="Analyse the repo and create TUNACODE.md",
-                category=CommandCategory.DEVELOPMENT,
-            )
-        )
-
-    async def execute(self, args: List[str], context: CommandContext) -> None:
-        import json
-        from pathlib import Path
-
-        from .. import context as ctx
-
-        await ui.info("Gathering repository context")
-        data = await ctx.get_context()
-
-        prompt = (
-            "Using the following repository context, summarise build commands "
-            "and coding conventions. Return markdown for a TUNACODE.md file.\n\n"
-            + json.dumps(data, indent=2)
-        )
-
-        process_request = context.process_request
-        content = ""
-        if process_request:
-            res = await process_request(prompt, context.state_manager, output=False)
-            try:
-                content = res.result.output
-            except Exception:
-                content = ""
-
-        if not content:
-            content = "# TUNACODE\n\n" + json.dumps(data, indent=2)
-
-        Path("TUNACODE.md").write_text(content, encoding="utf-8")
-        await ui.success("TUNACODE.md written")
-
-
 class CompactCommand(SimpleCommand):
     """Compact conversation context."""
 
@@ -389,43 +317,44 @@ class ModelCommand(SimpleCommand):
             CommandSpec(
                 name="model",
                 aliases=["/model"],
-                description="List models or select a model (e.g., /model 3 or /model 3 default)",
+                description="Switch model (e.g., /model gpt-4 or /model openai:gpt-4)",
                 category=CommandCategory.MODEL,
             )
         )
 
     async def execute(self, args: CommandArgs, context: CommandContext) -> Optional[str]:
         if not args:
-            # No arguments - list models
-            await ui.models(context.state_manager)
+            # No arguments - show current model
+            current_model = context.state_manager.session.current_model
+            await ui.info(f"Current model: {current_model}")
+            await ui.muted("Usage: /model <provider:model-name> [default]")
+            await ui.muted("Example: /model openai:gpt-4.1")
             return None
 
-        # Parse model index
-        try:
-            model_index = int(args[0])
-        except ValueError:
-            await ui.error(f"Invalid model index: {args[0]}")
+        # Get the model name from args
+        model_name = args[0]
+        
+        # Check if provider prefix is present
+        if ":" not in model_name:
+            await ui.error("Model name must include provider prefix")
+            await ui.muted("Format: provider:model-name")
+            await ui.muted("Examples: openai:gpt-4.1, anthropic:claude-3-opus, google-gla:gemini-2.0-flash")
             return None
-
-        # Get model list
-        model_registry = ModelRegistry()
-        models = list(model_registry.list_models().keys())
-        if model_index < 0 or model_index >= len(models):
-            await ui.error(f"Model index {model_index} out of range")
-            return None
+        
+        # No validation - user is responsible for correct model names
+        await ui.warning("Model set without validation - verify the model name is correct")
 
         # Set the model
-        model = models[model_index]
-        context.state_manager.session.current_model = model
+        context.state_manager.session.current_model = model_name
 
         # Check if setting as default
         if len(args) > 1 and args[1] == "default":
-            utils.user_configuration.set_default_model(model, context.state_manager)
+            utils.user_configuration.set_default_model(model_name, context.state_manager)
             await ui.muted("Updating default model")
             return "restart"
         else:
             # Show success message with the new model
-            await ui.success(f"Switched to model: {model}")
+            await ui.success(f"Switched to model: {model_name}")
             return None
 
 
@@ -510,9 +439,7 @@ class CommandRegistry:
             DumpCommand,
             ClearCommand,
             HelpCommand,
-            UndoCommand,
             BranchCommand,
-            InitCommand,
             # TunaCodeCommand,  # TODO: Temporarily disabled
             CompactCommand,
             ModelCommand,

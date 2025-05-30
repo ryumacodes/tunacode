@@ -206,13 +206,20 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
 async def repl(state_manager: StateManager):
     action = None
 
-    # Hacky startup message
-    await ui.warning("⚠️  tunaCode v0.1 - BETA SOFTWARE")
-    await ui.muted("→ All changes will be made on a new branch for safety")
-    await ui.muted("→ Use with caution! This tool can modify your codebase")
-    await ui.muted(f"→ Model loaded: {state_manager.session.current_model}")
+    # Professional startup information
+    await ui.info("TunaCode v0.1 - Beta Release")
+    await ui.muted("• Caution: This tool can modify your codebase")
+    await ui.muted(f"• Model: {state_manager.session.current_model}")
     await ui.line()
-    await ui.success("ready to hack...")
+    
+    # Important safety warning
+    await ui.warning("⚠️  IMPORTANT: The /undo command has been removed for safety reasons")
+    await ui.muted("• Always use git branches before making major changes")
+    await ui.muted("• Use '/branch <name>' to create a new branch for experiments")
+    await ui.muted("• Commit your work frequently to preserve changes")
+    await ui.line()
+    
+    await ui.success("Ready to assist with your development")
     await ui.line()
     
     instance = agent.get_or_create_agent(state_manager.session.current_model, state_manager)
@@ -248,4 +255,4 @@ async def repl(state_manager: StateManager):
     if action == "restart":
         await repl(state_manager)
     else:
-        await ui.info("Thanks for all the fish.")
+        await ui.info("Session ended. Happy coding!")
