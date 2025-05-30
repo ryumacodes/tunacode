@@ -91,6 +91,27 @@ pip install tunacode-cli
 wget -qO- https://raw.githubusercontent.com/alchemiststudiosDOTai/tunacode/master/scripts/install_linux.sh | bash
 ```
 
+### Uninstallation
+
+To completely remove TunaCode from your system:
+
+```bash
+# Download and run the uninstall script
+wget -qO- https://raw.githubusercontent.com/alchemiststudiosDOTai/tunacode/master/scripts/uninstall.sh | bash
+
+# Or manually:
+# 1. Remove the package
+pipx uninstall tunacode  # if installed via pipx
+# OR
+pip uninstall tunacode-cli  # if installed via pip
+
+# 2. Remove configuration files
+rm -rf ~/.config/tunacode*
+
+# 3. Remove any leftover binaries
+rm -f ~/.local/bin/tunacode
+```
+
 ### Setup Options
 
 <details>
