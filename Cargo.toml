@@ -1,0 +1,8 @@
+[package]
+name = "hello_world_cli"
+version = "0.1.0"
+edition = "2021"
+
+description = "A basic Hello World CLI app in Rust"
+
+[dependencies]
