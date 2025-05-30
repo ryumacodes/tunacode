@@ -12,6 +12,7 @@ from pydantic_ai.messages import ModelRequest, ToolReturnPart
 
 from tunacode.core.state import StateManager
 from tunacode.services.mcp import get_mcp_servers
+from tunacode.tools.bash import bash
 from tunacode.tools.read_file import read_file
 from tunacode.tools.run_command import run_command
 from tunacode.tools.update_file import update_file
@@ -37,6 +38,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         state_manager.session.agents[model] = Agent(
             model=model,
             tools=[
+                Tool(bash, max_retries=max_retries),
                 Tool(read_file, max_retries=max_retries),
                 Tool(run_command, max_retries=max_retries),
                 Tool(update_file, max_retries=max_retries),
