@@ -56,13 +56,23 @@ class ConfigSetup(BaseSetup):
         else:
             if force_setup:
                 await ui.muted("Running setup process, resetting config")
+                self.state_manager.session.user_config = DEFAULT_USER_CONFIG.copy()
+                user_configuration.save_config(
+                    self.state_manager
+                )  # Save the default config initially
+                await self._onboarding()
             else:
-                await ui.muted("No user configuration found, running setup")
-            self.state_manager.session.user_config = DEFAULT_USER_CONFIG.copy()
-            user_configuration.save_config(
-                self.state_manager
-            )  # Save the default config initially
-            await self._onboarding()
+                # No config found - show CLI usage instead of onboarding
+                from tunacode.ui.console import console
+                console.print("\n[bold red]No configuration found![/bold red]")
+                console.print("\n[bold]Quick Setup:[/bold]")
+                console.print("Configure TunaCode using CLI flags:")
+                console.print("\n[blue]Examples:[/blue]")
+                console.print("  [green]tunacode --model 'openai:gpt-4' --key 'your-key'[/green]")
+                console.print("  [green]tunacode --model 'anthropic:claude-3-opus' --key 'your-key'[/green]")
+                console.print("  [green]tunacode --model 'openrouter:anthropic/claude-3.5-sonnet' --key 'your-key' --baseurl 'https://openrouter.ai/api/v1'[/green]")
+                console.print("\n[yellow]Run 'tunacode --help' for more options[/yellow]\n")
+                raise SystemExit(0)
 
         if not self.state_manager.session.user_config.get("default_model"):
             raise ConfigurationError(
