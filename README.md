@@ -46,7 +46,7 @@
 
 ### **Developer Tools**
 
-- 4 core tools: read_file, write_file, update_file, run_command
+- 6 core tools: bash, grep, read_file, write_file, update_file, run_command
 - MCP (Model Context Protocol) support
 - File operation confirmations with diffs
 - Per-project context guides (TUNACODE.md)
@@ -306,8 +306,10 @@ src/tunacode/
 │
 ├── tools/               # AI Agent Tools
 │   ├── base.py         # Tool base classes
+│   ├── bash.py         # Enhanced shell command execution
+│   ├── grep.py         # Parallel content search tool
 │   ├── read_file.py    # File reading tool
-│   ├── run_command.py  # Command execution tool
+│   ├── run_command.py  # Basic command execution tool
 │   ├── update_file.py  # File modification tool
 │   └── write_file.py   # File creation tool
 │
