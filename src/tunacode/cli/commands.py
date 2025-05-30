@@ -138,6 +138,36 @@ class DumpCommand(SimpleCommand):
         await ui.dump_messages(context.state_manager.session.messages)
 
 
+class ThoughtsCommand(SimpleCommand):
+    """Toggle display of agent thoughts."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="thoughts",
+                aliases=["/thoughts"],
+                description="Show or hide agent thought messages",
+                category=CommandCategory.DEBUG,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        state = context.state_manager.session
+        if args:
+            arg = args[0].lower()
+            if arg in {"on", "1", "true"}:
+                state.show_thoughts = True
+            elif arg in {"off", "0", "false"}:
+                state.show_thoughts = False
+            else:
+                await ui.error("Usage: /thoughts [on|off]")
+                return
+        else:
+            state.show_thoughts = not state.show_thoughts
+        status = "ON" if state.show_thoughts else "OFF"
+        await ui.success(f"Thought display {status}")
+
+
 class ClearCommand(SimpleCommand):
     """Clear screen and message history."""
 
@@ -232,7 +262,6 @@ class HelpCommand(SimpleCommand):
         await ui.help(self._command_registry)
 
 
-
 class BranchCommand(SimpleCommand):
     """Create and switch to a new git branch."""
 
@@ -247,8 +276,8 @@ class BranchCommand(SimpleCommand):
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
-        import subprocess
         import os
+        import subprocess
 
         if not args:
             await ui.error("Usage: /branch <branch-name>")
@@ -332,14 +361,16 @@ class ModelCommand(SimpleCommand):
 
         # Get the model name from args
         model_name = args[0]
-        
+
         # Check if provider prefix is present
         if ":" not in model_name:
             await ui.error("Model name must include provider prefix")
             await ui.muted("Format: provider:model-name")
-            await ui.muted("Examples: openai:gpt-4.1, anthropic:claude-3-opus, google-gla:gemini-2.0-flash")
+            await ui.muted(
+                "Examples: openai:gpt-4.1, anthropic:claude-3-opus, google-gla:gemini-2.0-flash"
+            )
             return None
-        
+
         # No validation - user is responsible for correct model names
         await ui.warning("Model set without validation - verify the model name is correct")
 
@@ -416,8 +447,7 @@ class CommandRegistry:
         category_commands = self._categories[command.category]
         # Remove any existing instance of this command class
         self._categories[command.category] = [
-            cmd for cmd in category_commands 
-            if cmd.__class__ != command.__class__
+            cmd for cmd in category_commands if cmd.__class__ != command.__class__
         ]
         # Add the new instance
         self._categories[command.category].append(command)
@@ -436,6 +466,7 @@ class CommandRegistry:
         command_classes = [
             YoloCommand,
             DumpCommand,
+            ThoughtsCommand,
             ClearCommand,
             HelpCommand,
             BranchCommand,
@@ -459,7 +490,7 @@ class CommandRegistry:
         # Only update if callback has changed
         if self._factory.dependencies.process_request_callback == callback:
             return
-            
+
         self._factory.update_dependencies(process_request_callback=callback)
 
         # Re-register CompactCommand with new dependency if already registered
@@ -494,10 +525,10 @@ class CommandRegistry:
         if command_name in self._commands:
             command = self._commands[command_name]
             return await command.execute(args, context)
-        
+
         # Try partial matching
         matches = self.find_matching_commands(command_name)
-        
+
         if not matches:
             raise ValidationError(f"Unknown command: {command_name}")
         elif len(matches) == 1:
@@ -513,10 +544,10 @@ class CommandRegistry:
     def find_matching_commands(self, partial_command: str) -> List[str]:
         """
         Find all commands that start with the given partial command.
-        
+
         Args:
             partial_command: The partial command to match
-            
+
         Returns:
             List of matching command names
         """
@@ -534,11 +565,11 @@ class CommandRegistry:
             return False
 
         command_name = parts[0].lower()
-        
+
         # Check exact match first
         if command_name in self._commands:
             return True
-            
+
         # Check partial match
         return len(self.find_matching_commands(command_name)) > 0
 
