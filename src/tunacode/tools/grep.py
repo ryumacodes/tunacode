@@ -12,6 +12,7 @@ import asyncio
 import re
 import subprocess
 import fnmatch
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
@@ -47,6 +48,69 @@ class SearchConfig:
     timeout_seconds: int = 30
 
 
+# Fast-Glob Prefilter Configuration
+MAX_GLOB = 5_000        # Hard cap - protects memory & tokens
+GLOB_BATCH = 500        # Streaming batch size
+EXCLUDE_DIRS = {        # Common directories to skip
+    'node_modules', '.git', '__pycache__', 
+    '.venv', 'venv', 'dist', 'build', '.pytest_cache',
+    '.mypy_cache', '.tox', 'target', 'node_modules'
+}
+
+
+def fast_glob(root: Path, include: str, exclude: str = None) -> List[Path]:
+    """
+    Lightning-fast filename filtering using os.scandir.
+    
+    Args:
+        root: Directory to search
+        include: Include pattern (e.g., "*.py", "*.{js,ts}")
+        exclude: Exclude pattern (optional)
+    
+    Returns:
+        List of matching file paths (bounded by MAX_GLOB)
+    """
+    matches, stack = [], [root]
+    
+    # Handle multiple extensions in include pattern like "*.{py,js,ts}"
+    if '{' in include and '}' in include:
+        # Convert *.{py,js,ts} to multiple patterns
+        base, ext_part = include.split('{', 1)
+        ext_part = ext_part.split('}', 1)[0]
+        extensions = ext_part.split(',')
+        include_patterns = [base + ext.strip() for ext in extensions]
+        include_regexes = [re.compile(fnmatch.translate(pat), re.IGNORECASE) for pat in include_patterns]
+    else:
+        include_regexes = [re.compile(fnmatch.translate(include), re.IGNORECASE)]
+    
+    exclude_rx = re.compile(fnmatch.translate(exclude), re.IGNORECASE) if exclude else None
+    
+    while stack and len(matches) < MAX_GLOB:
+        current_dir = stack.pop()
+        
+        try:
+            with os.scandir(current_dir) as entries:
+                for entry in entries:
+                    # Skip common irrelevant directories
+                    if entry.is_dir(follow_symlinks=False):
+                        if entry.name not in EXCLUDE_DIRS:
+                            stack.append(Path(entry.path))
+                    
+                    # Check file matches
+                    elif entry.is_file(follow_symlinks=False):
+                        # Check against any include pattern
+                        matches_include = any(regex.match(entry.name) for regex in include_regexes)
+                        
+                        if matches_include:
+                            if not exclude_rx or not exclude_rx.match(entry.name):
+                                matches.append(Path(entry.path))
+                                
+        except (PermissionError, OSError):
+            continue  # Skip inaccessible directories
+            
+    return matches[:MAX_GLOB]
+
+
 class ParallelGrep(BaseTool):
     """Advanced parallel grep tool with multiple search strategies."""
     
@@ -71,15 +135,15 @@ class ParallelGrep(BaseTool):
         search_type: str = "smart"  # smart, ripgrep, python, hybrid
     ) -> str:
         """
-        Execute parallel grep search with multiple strategies.
+        Execute parallel grep search with fast-glob prefiltering and multiple strategies.
         
         Args:
             pattern: Search pattern (literal text or regex)
             directory: Directory to search (default: current)
             case_sensitive: Whether search is case sensitive
             use_regex: Whether pattern is a regular expression
-            include_files: File patterns to include (e.g., "*.py,*.js")
-            exclude_files: File patterns to exclude (e.g., "*.pyc,node_modules/*")
+            include_files: File patterns to include (e.g., "*.py", "*.{js,ts}")
+            exclude_files: File patterns to exclude (e.g., "*.pyc", "node_modules/*")
             max_results: Maximum number of results to return
             context_lines: Number of context lines before/after matches
             search_type: Search strategy to use
@@ -88,11 +152,38 @@ class ParallelGrep(BaseTool):
             Formatted search results
         """
         try:
-            # Parse file patterns
+            # 1️⃣ Fast-glob prefilter to find candidate files
+            include_pattern = include_files or "*"
+            exclude_pattern = exclude_files
+            
+            candidates = await asyncio.get_event_loop().run_in_executor(
+                self._executor, 
+                fast_glob, 
+                Path(directory), 
+                include_pattern,
+                exclude_pattern
+            )
+            
+            if not candidates:
+                return f"No files found matching pattern: {include_pattern}"
+            
+            # 2️⃣ Smart strategy selection based on candidate count
+            original_search_type = search_type
+            if search_type == "smart":
+                if len(candidates) <= 50:
+                    # Small set - Python strategy more efficient (low startup cost)
+                    search_type = "python"
+                elif len(candidates) <= 1000:
+                    # Medium set - Ripgrep optimal for this range
+                    search_type = "ripgrep" 
+                else:
+                    # Large set - Hybrid for best coverage and redundancy
+                    search_type = "hybrid"
+            
+            # 3️⃣ Create search configuration
+            # Note: include_patterns/exclude_patterns now only used for legacy compatibility
             include_patterns = self._parse_patterns(include_files) if include_files else ["*"]
             exclude_patterns = self._parse_patterns(exclude_files) if exclude_files else []
-            
-            # Create search configuration
             config = SearchConfig(
                 case_sensitive=case_sensitive,
                 use_regex=use_regex,
@@ -102,20 +193,27 @@ class ParallelGrep(BaseTool):
                 exclude_patterns=exclude_patterns
             )
             
-            # Choose search strategy based on type
-            if search_type == "smart":
-                results = await self._smart_search(pattern, directory, config)
-            elif search_type == "ripgrep":
-                results = await self._ripgrep_search(pattern, directory, config)
+            # 4️⃣ Execute chosen strategy with pre-filtered candidates
+            if search_type == "ripgrep":
+                results = await self._ripgrep_search_filtered(pattern, candidates, config)
             elif search_type == "python":
-                results = await self._python_search(pattern, directory, config)
+                results = await self._python_search_filtered(pattern, candidates, config)
             elif search_type == "hybrid":
-                results = await self._hybrid_search(pattern, directory, config)
+                results = await self._hybrid_search_filtered(pattern, candidates, config)
             else:
                 raise ToolExecutionError(f"Unknown search type: {search_type}")
             
-            # Format and return results
-            return self._format_results(results, pattern, config)
+            # 5️⃣ Format and return results with strategy info
+            strategy_info = f"Strategy: {search_type} (was {original_search_type}), Files: {len(candidates)}/{MAX_GLOB}"
+            formatted_results = self._format_results(results, pattern, config)
+            
+            # Add strategy info to results
+            if formatted_results.startswith("Found"):
+                lines = formatted_results.split('\n')
+                lines[1] = f"Strategy: {search_type} | Candidates: {len(candidates)} files | " + lines[1]
+                return '\n'.join(lines)
+            else:
+                return f"{formatted_results}\n\n{strategy_info}"
             
         except Exception as e:
             raise ToolExecutionError(f"Grep search failed: {str(e)}")
@@ -264,6 +362,124 @@ class ParallelGrep(BaseTool):
         unique_results.sort(key=lambda r: r.relevance_score, reverse=True)
         return unique_results[:config.max_results]
     
+    # ====== NEW FILTERED SEARCH METHODS ======
+    
+    async def _ripgrep_search_filtered(
+        self, 
+        pattern: str, 
+        candidates: List[Path], 
+        config: SearchConfig
+    ) -> List[SearchResult]:
+        """
+        Run ripgrep on pre-filtered file list.
+        """
+        def run_ripgrep_filtered():
+            cmd = ["rg", "--json"]
+            
+            # Add configuration flags
+            if not config.case_sensitive:
+                cmd.append("--ignore-case")
+            if config.context_lines > 0:
+                cmd.extend(["--context", str(config.context_lines)])
+            if config.max_results:
+                cmd.extend(["--max-count", str(config.max_results)])
+            
+            # Add pattern and explicit file list
+            cmd.append(pattern)
+            cmd.extend(str(f) for f in candidates)
+            
+            try:
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=config.timeout_seconds
+                )
+                return result.stdout if result.returncode == 0 else None
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                return None
+        
+        # Run ripgrep in thread pool
+        output = await asyncio.get_event_loop().run_in_executor(
+            self._executor, run_ripgrep_filtered
+        )
+        
+        return self._parse_ripgrep_output(output) if output else []
+    
+    async def _python_search_filtered(
+        self, 
+        pattern: str, 
+        candidates: List[Path], 
+        config: SearchConfig
+    ) -> List[SearchResult]:
+        """
+        Run Python parallel search on pre-filtered candidates.
+        """
+        # Prepare search pattern
+        if config.use_regex:
+            flags = 0 if config.case_sensitive else re.IGNORECASE
+            regex_pattern = re.compile(pattern, flags)
+        else:
+            regex_pattern = None
+        
+        # Create search tasks for candidates only
+        search_tasks = []
+        for file_path in candidates:
+            task = self._search_file(
+                file_path, pattern, regex_pattern, config
+            )
+            search_tasks.append(task)
+        
+        # Execute searches in parallel
+        all_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+        
+        # Flatten results and filter out exceptions
+        results = []
+        for file_results in all_results:
+            if isinstance(file_results, list):
+                results.extend(file_results)
+        
+        # Sort by relevance and limit results
+        results.sort(key=lambda r: r.relevance_score, reverse=True)
+        return results[:config.max_results]
+    
+    async def _hybrid_search_filtered(
+        self, 
+        pattern: str, 
+        candidates: List[Path], 
+        config: SearchConfig
+    ) -> List[SearchResult]:
+        """
+        Hybrid approach using multiple search methods concurrently on pre-filtered candidates.
+        """
+        
+        # Run multiple search strategies in parallel
+        tasks = [
+            self._ripgrep_search_filtered(pattern, candidates, config),
+            self._python_search_filtered(pattern, candidates, config)
+        ]
+        
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Merge and deduplicate results
+        all_results = []
+        for results in results_list:
+            if isinstance(results, list):
+                all_results.extend(results)
+        
+        # Deduplicate by file path and line number
+        seen = set()
+        unique_results = []
+        for result in all_results:
+            key = (result.file_path, result.line_number)
+            if key not in seen:
+                seen.add(key)
+                unique_results.append(result)
+        
+        # Sort and limit
+        unique_results.sort(key=lambda r: r.relevance_score, reverse=True)
+        return unique_results[:config.max_results]
+    
     async def _find_files(
         self, 
         directory: str, 
@@ -337,10 +553,15 @@ class ParallelGrep(BaseTool):
                             if pos == -1:
                                 break
                             # Create a simple match object
-                            match = type('Match', (), {
-                                'start': lambda: pos,
-                                'end': lambda: pos + len(search_pattern)
-                            })()
+                            class SimpleMatch:
+                                def __init__(self, start_pos, end_pos):
+                                    self._start = start_pos
+                                    self._end = end_pos
+                                def start(self):
+                                    return self._start
+                                def end(self):
+                                    return self._end
+                            match = SimpleMatch(pos, pos + len(search_pattern))
                             matches.append(match)
                             start = pos + 1
                     
