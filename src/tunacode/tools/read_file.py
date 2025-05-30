@@ -7,12 +7,25 @@ Provides safe file reading with size limits and proper error handling.
 
 import os
 
-from tunacode.constants import (ERROR_FILE_DECODE, ERROR_FILE_DECODE_DETAILS, ERROR_FILE_NOT_FOUND,
-                                ERROR_FILE_TOO_LARGE, MAX_FILE_SIZE, MSG_FILE_SIZE_LIMIT)
+from pydantic import BaseModel, Field
+from pydantic_ai import tool
+
+from tunacode.constants import (
+    ERROR_FILE_DECODE,
+    ERROR_FILE_DECODE_DETAILS,
+    ERROR_FILE_NOT_FOUND,
+    ERROR_FILE_TOO_LARGE,
+    MAX_FILE_SIZE,
+    MSG_FILE_SIZE_LIMIT,
+)
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
 from tunacode.types import FilePath, ToolResult
 from tunacode.ui import console as default_ui
+
+
+class Args(BaseModel, extra="forbid"):
+    path: str = Field(..., description="Absolute or relative file path")
 
 
 class ReadFileTool(FileBasedTool):
@@ -71,7 +84,8 @@ class ReadFileTool(FileBasedTool):
 
 
 # Create the function that maintains the existing interface
-async def read_file(filepath: FilePath) -> ToolResult:
+@tool(name="read_file", args_schema=Args, description="Read text from file")
+async def read_file(path: FilePath) -> ToolResult:
     """
     Read the contents of a file.
 
@@ -83,7 +97,7 @@ async def read_file(filepath: FilePath) -> ToolResult:
     """
     tool = ReadFileTool(default_ui)
     try:
-        return await tool.execute(filepath)
+        return await tool.execute(path)
     except ToolExecutionError as e:
         # Return error message for pydantic-ai compatibility
         return str(e)

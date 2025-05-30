@@ -7,12 +7,19 @@ Provides safe file creation with conflict detection and encoding handling.
 
 import os
 
+from pydantic import BaseModel, Field
+from pydantic_ai import tool
 from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
 from tunacode.types import FileContent, FilePath, ToolResult
 from tunacode.ui import console as default_ui
+
+
+class Args(BaseModel, extra="forbid"):
+    path: str = Field(..., description="Absolute or relative file path")
+    content: str
 
 
 class WriteFileTool(FileBasedTool):
@@ -62,7 +69,8 @@ class WriteFileTool(FileBasedTool):
 
 
 # Create the function that maintains the existing interface
-async def write_file(filepath: FilePath, content: FileContent) -> ToolResult:
+@tool(name="write_file", args_schema=Args, description="Write new file to disk")
+async def write_file(path: FilePath, content: FileContent) -> ToolResult:
     """
     Write content to a new file. Fails if the file already exists.
     Requires confirmation before writing.
@@ -76,7 +84,7 @@ async def write_file(filepath: FilePath, content: FileContent) -> ToolResult:
     """
     tool = WriteFileTool(default_ui)
     try:
-        return await tool.execute(filepath, content)
+        return await tool.execute(path, content)
     except ToolExecutionError as e:
         # Return error message for pydantic-ai compatibility
         return str(e)

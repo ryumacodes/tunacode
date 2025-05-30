@@ -18,19 +18,32 @@ from tunacode.tools.read_file import read_file
 from tunacode.tools.run_command import run_command
 from tunacode.tools.update_file import update_file
 from tunacode.tools.write_file import write_file
-from tunacode.types import (AgentRun, ErrorMessage, ModelName, PydanticAgent, ToolCallback,
-                            ToolCallId, ToolName)
+from tunacode.types import (
+    AgentRun,
+    ErrorMessage,
+    ModelName,
+    PydanticAgent,
+    ToolCallback,
+    ToolCallId,
+    ToolName,
+)
 
 
 async def _process_node(node, tool_callback: Optional[ToolCallback], state_manager: StateManager):
     if hasattr(node, "request"):
         state_manager.session.messages.append(node.request)
 
+    if hasattr(node, "thought") and node.thought:
+        state_manager.session.messages.append({"thought": node.thought})
+
     if hasattr(node, "model_response"):
         state_manager.session.messages.append(node.model_response)
         for part in node.model_response.parts:
             if part.part_kind == "tool-call" and tool_callback:
                 await tool_callback(part, node)
+            elif part.part_kind == "tool-return":
+                obs_msg = f"OBSERVATION[{part.tool_name}]: {part.content[:2_000]}"
+                state_manager.session.messages.append(obs_msg)
 
 
 def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
@@ -118,6 +131,10 @@ async def process_request(
     agent = get_or_create_agent(model, state_manager)
     mh = state_manager.session.messages.copy()
     async with agent.iter(message, message_history=mh) as agent_run:
+        i = 0
         async for node in agent_run:
             await _process_node(node, tool_callback, state_manager)
+            i += 1
+            if i >= 6:
+                break
         return agent_run

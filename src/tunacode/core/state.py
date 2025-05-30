@@ -8,8 +8,15 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from tunacode.types import (DeviceId, InputSessions, MessageHistory, ModelName, SessionId, ToolName,
-                            UserConfig)
+from tunacode.types import (
+    DeviceId,
+    InputSessions,
+    MessageHistory,
+    ModelName,
+    SessionId,
+    ToolName,
+    UserConfig,
+)
 
 
 @dataclass
@@ -25,6 +32,7 @@ class SessionState:
     tool_ignore: list[ToolName] = field(default_factory=list)
     yolo: bool = False
     undo_initialized: bool = False
+    show_thoughts: bool = False
     session_id: SessionId = field(default_factory=lambda: str(uuid.uuid4()))
     device_id: Optional[DeviceId] = None
     input_sessions: InputSessions = field(default_factory=dict)
