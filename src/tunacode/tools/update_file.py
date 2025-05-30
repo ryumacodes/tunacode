@@ -1,8 +1,8 @@
 """
-Module: sidekick.tools.update_file
+Module: tunacode.tools.update_file
 
-File update tool for agent operations in the Sidekick application.
-Enables safe text replacement in existing files with target/patch semantics.
+File update tool for agent operations in the TunaCode application.
+Provides targeted file content modification with diff-based updates.
 """
 
 import os

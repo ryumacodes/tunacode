@@ -5,7 +5,7 @@ This guide outlines the steps and conventions for adding new tools to the TunaCo
 ---
 
 ## 1. Core Principles
-- **Base Classes:** All tools inherit from `BaseTool` (for error handling, UI integration, retry logic) or `FileBasedTool` (adds git tracking for undo).
+- **Base Classes:** All tools inherit from `BaseTool` (for error handling, UI integration, retry logic) or `FileBasedTool` (adds enhanced file error handling).
 - **Consistency:** Each tool implements `_execute(self, **kwargs)`, and integrates seamlessly via the agent interface (pydantic-ai).
 - **Modularity:** UI/UX logic, tool logic, and agent integration are kept separate for testability and maintainability.
 
@@ -13,8 +13,8 @@ This guide outlines the steps and conventions for adding new tools to the TunaCo
 
 ## 2. Tool Creation Steps
 1. **Subclass the appropriate base** in `src/tunacode/tools/base.py`:
-   - Use `BaseTool` for general tools
-   - Use `FileBasedTool` for tools that alter files tracked by git
+   - Use `BaseTool` for general tools (like command execution)
+   - Use `FileBasedTool` for file operations (provides enhanced file error handling)
 
 2. **Define Your Tool:**
 ```python
@@ -36,7 +36,7 @@ class MyCoolTool(BaseTool):
 
 4. **Register CLI/Integration:**
 - If the tool should be exposed to the user, add it to autocomplete or `/help` as necessary.
-- For shell/file tools, ensure actions are tracked for undo in `FileBasedTool`.
+- For file tools, use `FileBasedTool` for enhanced error handling and context.
 
 ---
 
@@ -45,14 +45,13 @@ class MyCoolTool(BaseTool):
 2. *ToolHandler* checks for confirmation & invokes the tool
 3. *ToolUI* prompts user (Yes/No/Skip/Abort)
 4. *Tool's* `execute()` is called; output passed back to agent
-5. *Undo* and *git integration* handled automatically for file tools
 
 ---
 
 ## 4. Best Practices
-- **Be Atomic:** Tools should do one thing, well (easy to test/undo)
+- **Be Atomic:** Tools should do one thing, well (easy to test)
 - **User Safety:** Leverage confirmation and error handling
-- **Track File Changes:** Use `FileBasedTool` for editing/deleting files (enables `/undo`)
+- **Enhanced File Handling:** Use `FileBasedTool` for file operations (better error context and handling)
 - **Retry-Friendly:** Support retries (idempotency recommended!)
 
 ---

@@ -1,4 +1,4 @@
-"""UI-specific constants for Sidekick."""
+"""UI-specific constants for TunaCode."""
 
 # UI Layout Constants
 DEFAULT_PANEL_PADDING = {"top": 1, "right": 0, "bottom": 1, "left": 0}

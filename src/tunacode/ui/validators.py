@@ -1,4 +1,4 @@
-"""Input validators for Sidekick UI."""
+"""Input validators for TunaCode UI."""
 
 from prompt_toolkit.validation import ValidationError, Validator
 

@@ -1,6 +1,6 @@
-"""Module: tinyagent.core.setup.coordinator
+"""Module: tunacode.core.setup.coordinator
 
-Setup orchestration and coordination for the Sidekick CLI.
+Setup orchestration and coordination for the TunaCode CLI.
 Manages the execution order and validation of all registered setup steps.
 """
 

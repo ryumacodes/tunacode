@@ -44,7 +44,7 @@ class CommandCompleter(Completer):
             command_names = self.command_registry.get_command_names()
         else:
             # Fallback list of commands
-            command_names = ['/help', '/clear', '/dump', '/yolo', '/undo', 
+            command_names = ['/help', '/clear', '/dump', '/yolo', 
                            '/branch', '/compact', '/model']
         
         # Get the partial command (without /)

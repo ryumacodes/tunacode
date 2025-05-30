@@ -1,7 +1,7 @@
-"""Module: tinyagent.core.setup.agent_setup
+"""Module: tunacode.core.setup.agent_setup
 
-Agent initialization and configuration for the Sidekick CLI.
-Handles the setup and validation of AI agents with the selected model.
+Agent initialization and configuration for the TunaCode CLI.
+Sets up AI agents with proper model configurations and tools.
 """
 
 from typing import Any, Optional

@@ -271,6 +271,97 @@ Create a `TUNACODE.md` file your project root to customize TunaCode's behavior:
 
 ---
 
+## Source Code Architecture
+
+### Directory Structure
+
+```
+src/tunacode/
+├── cli/                    # Command Line Interface
+│   ├── commands.py        # Command registry and implementations
+│   ├── main.py           # Entry point and CLI setup (Typer)
+│   └── repl.py           # Interactive REPL loop
+│
+├── configuration/         # Configuration Management
+│   ├── defaults.py       # Default configuration values
+│   ├── models.py         # Configuration data models
+│   └── settings.py       # Settings loader and validator
+│
+├── core/                 # Core Application Logic
+│   ├── agents/           # AI Agent System
+│   │   └── main.py       # Primary agent implementation (pydantic-ai)
+│   ├── setup/            # Application Setup & Initialization
+│   │   ├── agent_setup.py     # Agent configuration
+│   │   ├── base.py           # Setup step base class
+│   │   ├── config_setup.py   # Configuration setup
+│   │   ├── coordinator.py    # Setup orchestration
+│   │   ├── environment_setup.py  # Environment validation
+│   │   └── git_safety_setup.py   # Git safety checks
+│   ├── state.py          # Application state management
+│   └── tool_handler.py   # Tool execution and validation
+│
+├── services/             # External Services
+│   ├── mcp.py           # Model Context Protocol integration
+│   └── undo_service.py  # Undo operations (beta)
+│
+├── tools/               # AI Agent Tools
+│   ├── base.py         # Tool base classes
+│   ├── read_file.py    # File reading tool
+│   ├── run_command.py  # Command execution tool
+│   ├── update_file.py  # File modification tool
+│   └── write_file.py   # File creation tool
+│
+├── ui/                 # User Interface Components
+│   ├── completers.py   # Tab completion
+│   ├── console.py      # Rich console setup
+│   ├── input.py        # Input handling
+│   ├── keybindings.py  # Keyboard shortcuts
+│   ├── lexers.py       # Syntax highlighting
+│   ├── output.py       # Output formatting and banner
+│   ├── panels.py       # UI panels and layouts
+│   ├── prompt_manager.py # Prompt toolkit integration
+│   ├── tool_ui.py      # Tool confirmation dialogs
+│   └── validators.py   # Input validation
+│
+├── utils/              # Utility Functions
+│   ├── bm25.py        # BM25 search algorithm(beta)
+│   ├── diff_utils.py  # Diff generation and formatting
+│   ├── file_utils.py  # File system operations
+│   ├── ripgrep.py     # Code search utilities
+│   ├── system.py      # System information
+│   ├── text_utils.py  # Text processing
+│   └── user_configuration.py # User config management
+│
+├── constants.py        # Application constants
+├── context.py         # Context management
+├── exceptions.py      # Custom exceptions
+├── types.py           # Type definitions
+└── prompts/
+    └── system.txt     # System prompts for AI agent
+```
+
+### Key Components
+
+| Component            | Purpose                  | Key Files                       |
+| -------------------- | ------------------------ | ------------------------------- |
+| **CLI Layer**        | Command parsing and REPL | `cli/main.py`, `cli/repl.py`    |
+| **Agent System**     | AI-powered assistance    | `core/agents/main.py`           |
+| **Tool System**      | File/command operations  | `tools/*.py`                    |
+| **State Management** | Session state tracking   | `core/state.py`                 |
+| **UI Framework**     | Rich terminal interface  | `ui/output.py`, `ui/console.py` |
+| **Configuration**    | User settings & models   | `configuration/*.py`            |
+| **Setup System**     | Initial configuration    | `core/setup/*.py`               |
+
+### Data Flow
+
+```
+CLI Input → Command Registry → REPL → Agent → Tools → UI Output
+     ↓              ↓           ↓       ↓       ↓        ↑
+State Manager ←────────────────────────────────────────┘
+```
+
+---
+
 ## Development
 
 ### Requirements
@@ -290,44 +381,6 @@ make lint
 # Run tests
 make test
 ```
-
-### Release Process
-
-<details>
-<summary><b>Click to expand release steps</b></summary>
-
-1. **Update versions:**
-
-   - `pyproject.toml`
-   - `src/tunacode/constants.py` (APP_VERSION)
-
-2. **Commit and tag:**
-
-   ```bash
-   git add pyproject.toml src/tunacode/constants.py
-   git commit -m "chore: bump version to X.Y.Z"
-   git tag vX.Y.Z
-   git push origin vX.Y.Z
-   ```
-
-3. **Create release:**
-   ```bash
-   gh release create vX.Y.Z --title "vX.Y.Z" --notes "Release notes"
-   ```
-
-</details>
-
-### Commit Convention
-
-Following [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` New features
-- `fix:` Bug fixes
-- `docs:` Documentation
-- `style:` Code formatting
-- `refactor:` Code refactoring
-- `test:` Tests
-- `chore:` Maintenance
 
 ---
 

@@ -1,4 +1,4 @@
-"""Base tool class for all Sidekick tools.
+"""Base tool class for all TunaCode tools.
 
 This module provides a base class that implements common patterns
 for all tools including error handling, UI logging, and ModelRetry support.
@@ -13,7 +13,7 @@ from tunacode.types import FilePath, ToolName, ToolResult, UILogger
 
 
 class BaseTool(ABC):
-    """Base class for all Sidekick tools providing common functionality."""
+    """Base class for all TunaCode tools providing common functionality."""
 
     def __init__(self, ui_logger: UILogger | None = None):
         """Initialize the base tool.
@@ -42,11 +42,6 @@ class BaseTool(ABC):
             if self.ui:
                 await self.ui.info(f"{self.tool_name}({self._format_args(*args, **kwargs)})")
             result = await self._execute(*args, **kwargs)
-            
-            # For file operations, try to create a git commit for undo tracking
-            if isinstance(self, FileBasedTool):
-                await self._commit_for_undo()
-                
             return result
         except ModelRetry as e:
             # Log as warning and re-raise for pydantic-ai
@@ -142,46 +137,12 @@ class FileBasedTool(BaseTool):
     """Base class for tools that work with files.
 
     Provides common file-related functionality like:
-    - Path validation
+    - Path validation  
     - File existence checking
     - Directory creation
     - Encoding handling
-    - Git commit for undo tracking
+    - Enhanced error handling for file operations
     """
-    
-    async def _commit_for_undo(self) -> None:
-        """Create a git commit for undo tracking after file operations.
-        
-        This method gracefully handles cases where git is not available:
-        - No git repository: Warns user about limited undo functionality
-        - Git command fails: Warns but doesn't break the main operation
-        - Any other error: Silently continues (file operation still succeeds)
-        """
-        try:
-            # Import here to avoid circular imports
-            from tunacode.services.undo_service import commit_for_undo, is_in_git_project
-            
-            # Check if we're in a git project first
-            if not is_in_git_project():
-                if self.ui:
-                    await self.ui.muted("⚠️  No git repository - undo functionality limited")
-                return
-            
-            # Try to create commit with tool name as prefix
-            success = commit_for_undo(message_prefix=f"tunacode {self.tool_name.lower()}")
-            if success and self.ui:
-                await self.ui.muted("• Git commit created for undo tracking")
-            elif self.ui:
-                await self.ui.muted("⚠️  Could not create git commit - undo may not work")
-        except Exception:
-            # Silently ignore commit errors - don't break the main file operation
-            # The file operation itself succeeded, we just can't track it for undo
-            if self.ui:
-                try:
-                    await self.ui.muted("⚠️  Git commit failed - undo functionality limited")
-                except:
-                    # Even the warning failed, just continue silently
-                    pass
 
     def _format_args(self, filepath: FilePath, *args, **kwargs) -> str:
         """Format arguments with filepath as first argument."""

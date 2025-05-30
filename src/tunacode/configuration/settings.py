@@ -1,8 +1,8 @@
 """
 Module: tunacode.configuration.settings
 
-Application settings management for the Sidekick CLI.
-Manages application paths, tool configurations, and runtime settings.
+Application settings management for the TunaCode CLI.
+Handles configuration paths, model registries, and application metadata.
 """
 
 from pathlib import Path

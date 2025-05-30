@@ -1,7 +1,7 @@
 """
-Module: sidekick.ui.decorators
+Module: tunacode.ui.decorators
 
-Provides decorators for UI functions including sync/async wrapper patterns.
+Decorators for UI functions, particularly for creating sync wrappers of async functions.
 """
 
 import asyncio

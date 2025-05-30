@@ -1,7 +1,7 @@
 """Module: tunacode.core.setup.environment_setup
 
-Environment detection and configuration for the Sidekick CLI.
-Handles setting up environment variables from user configuration.
+Environment detection and configuration for the TunaCode CLI.
+Validates system requirements and environment variables.
 """
 
 import os

@@ -1,4 +1,4 @@
-"""Output and display functions for Sidekick UI."""
+"""Output and display functions for TunaCode UI."""
 
 from prompt_toolkit.application import run_in_terminal
 from rich.console import Console
@@ -16,9 +16,16 @@ from .decorators import create_sync_wrapper
 console = Console()
 colors = DotDict(UI_COLORS)
 
-BANNER = """[bold #00d7ff]╭─────────────────────────────────────────────────────────────────╮[/bold #00d7ff]
-[bold #00d7ff]│[/bold #00d7ff] [bold white]T U N A C O D E[/bold white] [dim #64748b]• Agentic AI Development Environment[/dim #64748b] [bold #00d7ff]│[/bold #00d7ff]
-[bold #00d7ff]╰─────────────────────────────────────────────────────────────────╯[/bold #00d7ff]"""
+BANNER = """[bold cyan]
+████████╗██╗   ██╗███╗   ██╗ █████╗  ██████╗ ██████╗ ██████╗ ███████╗
+╚══██╔══╝██║   ██║████╗  ██║██╔══██╗██╔════╝██╔═══██╗██╔══██╗██╔════╝
+   ██║   ██║   ██║██╔██╗ ██║███████║██║     ██║   ██║██║  ██║█████╗  
+   ██║   ██║   ██║██║╚██╗██║██╔══██║██║     ██║   ██║██║  ██║██╔══╝  
+   ██║   ╚██████╔╝██║ ╚████║██║  ██║╚██████╗╚██████╔╝██████╔╝███████╗
+   ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝
+[/bold cyan]
+
+● Caution: This tool can modify your codebase - always use git branches"""
 
 
 @create_sync_wrapper

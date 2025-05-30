@@ -1,4 +1,4 @@
-"""Prompt configuration and management for Sidekick UI."""
+"""Prompt configuration and management for TunaCode UI."""
 
 from dataclasses import dataclass
 from typing import Optional

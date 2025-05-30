@@ -7,7 +7,7 @@ Centralizes all magic strings, UI text, error messages, and application constant
 
 # Application info
 APP_NAME = "TunaCode"
-APP_VERSION = "0.0.11"
+APP_VERSION = "0.0.12"
 
 # File patterns
 GUIDE_FILE_PATTERN = "{name}.md"
@@ -35,7 +35,6 @@ CMD_HELP = "/help"
 CMD_CLEAR = "/clear"
 CMD_DUMP = "/dump"
 CMD_YOLO = "/yolo"
-CMD_UNDO = "/undo"
 CMD_COMPACT = "/compact"
 CMD_MODEL = "/model"
 CMD_EXIT = "exit"
@@ -46,7 +45,6 @@ DESC_HELP = "Show this help message"
 DESC_CLEAR = "Clear the conversation history"
 DESC_DUMP = "Show the current conversation history"
 DESC_YOLO = "Toggle confirmation prompts on/off"
-DESC_UNDO = "Undo the last file change"
 DESC_COMPACT = "Summarize the conversation context"
 DESC_MODEL = "List available models"
 DESC_MODEL_SWITCH = "Switch to a specific model"
@@ -56,7 +54,7 @@ DESC_EXIT = "Exit the application"
 # Command Configuration
 COMMAND_PREFIX = "/"
 COMMAND_CATEGORIES = {
-    "state": ["yolo", "undo"],
+    "state": ["yolo"],
     "debug": ["dump", "compact"],
     "ui": ["clear", "help"],
     "config": ["model"],
@@ -110,7 +108,6 @@ ERROR_COMMAND_NOT_FOUND = "Error: Command not found or failed to execute:"
 ERROR_COMMAND_EXECUTION = (
     "Error: Command not found or failed to execute: {command}. Details: {error}"
 )
-ERROR_UNDO_INIT = "Error initializing undo system: {e}"
 
 # Command output messages
 CMD_OUTPUT_NO_OUTPUT = "No output."
@@ -118,11 +115,6 @@ CMD_OUTPUT_NO_ERRORS = "No errors."
 CMD_OUTPUT_FORMAT = "STDOUT:\n{output}\n\nSTDERR:\n{error}"
 CMD_OUTPUT_TRUNCATED = "\n...\n[truncated]\n...\n"
 
-# Undo system messages
-UNDO_DISABLED_HOME = "Undo system disabled, running from home directory"
-UNDO_DISABLED_NO_GIT = "⚠️  Not in a git repository - undo functionality will be limited"
-UNDO_INITIAL_COMMIT = "Initial commit for tunacode undo history"
-UNDO_GIT_TIMEOUT = "Git initialization timed out"
 
 # Log/status messages
 MSG_UPDATE_AVAILABLE = "Update available: v{latest_version}"

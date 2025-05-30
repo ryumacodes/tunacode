@@ -1,8 +1,8 @@
 """
-Module: sidekick.configuration.models
+Module: tunacode.configuration.models
 
-Configuration model definitions and model registry for AI models.
-Manages available AI models, their configurations, and pricing information.
+Configuration data models and model registry for TunaCode CLI.
+Defines available AI models and their configurations.
 """
 
 from tunacode.types import ModelConfig, ModelName, ModelPricing

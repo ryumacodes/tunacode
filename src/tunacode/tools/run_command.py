@@ -1,7 +1,7 @@
 """
-Module: sidekick.tools.run_command
+Module: tunacode.tools.run_command
 
-Command execution tool for agent operations in the Sidekick application.
+Command execution tool for agent operations in the TunaCode application.
 Provides controlled shell command execution with output capture and truncation.
 """
 
