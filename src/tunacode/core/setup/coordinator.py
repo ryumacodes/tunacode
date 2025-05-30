@@ -1,4 +1,4 @@
-"""Module: sidekick.core.setup.coordinator
+"""Module: tinyagent.core.setup.coordinator
 
 Setup orchestration and coordination for the Sidekick CLI.
 Manages the execution order and validation of all registered setup steps.
@@ -32,7 +32,9 @@ class SetupCoordinator:
 
                     if not await step.validate():
                         await ui.error(f"Setup validation failed: {step.name}")
-                        raise RuntimeError(f"Setup step '{step.name}' failed validation")
+                        raise RuntimeError(
+                            f"Setup step '{step.name}' failed validation"
+                        )
                 else:
                     # Skip silently
                     pass

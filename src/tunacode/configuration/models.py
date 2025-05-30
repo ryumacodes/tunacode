@@ -72,6 +72,9 @@ class ModelRegistry:
             "openrouter:openai/gpt-4.1-mini": ModelConfig(
                 pricing=ModelPricing(input=0.40, cached_input=0.20, output=1.60)
             ),
+            "openrouter:openai/gpt-4.1-nano": ModelConfig(
+                pricing=ModelPricing(input=0.10, cached_input=0.05, output=0.40)
+            ),
         }
 
     def get_model(self, name: ModelName) -> ModelConfig:

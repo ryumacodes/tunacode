@@ -2,6 +2,7 @@
 
 from typing import Any, Optional, Union
 
+from rich.box import ROUNDED
 from rich.markdown import Markdown
 from rich.padding import Padding
 from rich.panel import Panel
@@ -42,7 +43,8 @@ async def panel(
         title=f"[bold]{title}[/bold]", 
         title_align="left", 
         border_style=border_style,
-        padding=(0, 1)
+        padding=(0, 1),
+        box=ROUNDED  # Use ROUNDED box style
     )
     await print(Padding(panel_obj, (top, right, bottom, left)), **kwargs)
 
@@ -83,8 +85,8 @@ async def models(state_manager: StateManager = None) -> None:
 
 async def help(command_registry=None) -> None:
     """Display the available commands organized by category."""
-    table = Table(show_header=False, box=None, padding=(0, 3, 0, 0))
-    table.add_column("Command", style=f"bold {colors.primary}", justify="right", min_width=16)
+    table = Table(show_header=False, box=None, padding=(0, 2, 0, 0))
+    table.add_column("Command", style=f"bold {colors.primary}", justify="right", min_width=18)
     table.add_column("Description", style=colors.muted)
 
     if command_registry:

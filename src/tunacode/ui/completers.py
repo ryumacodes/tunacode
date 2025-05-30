@@ -45,7 +45,7 @@ class CommandCompleter(Completer):
         else:
             # Fallback list of commands
             command_names = ['/help', '/clear', '/dump', '/yolo', '/undo', 
-                           '/branch', '/compact', '/model', '/init']
+                           '/branch', '/compact', '/model']
         
         # Get the partial command (without /)
         partial = word_before_cursor[1:].lower()

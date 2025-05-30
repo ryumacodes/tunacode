@@ -16,9 +16,9 @@ from .decorators import create_sync_wrapper
 console = Console()
 colors = DotDict(UI_COLORS)
 
-BANNER = """[bold #00d7ff]┌─────────────────────────────────────────────────────────────────┐[/bold #00d7ff]
+BANNER = """[bold #00d7ff]╭─────────────────────────────────────────────────────────────────╮[/bold #00d7ff]
 [bold #00d7ff]│[/bold #00d7ff] [bold white]T U N A C O D E[/bold white] [dim #64748b]• Agentic AI Development Environment[/dim #64748b] [bold #00d7ff]│[/bold #00d7ff]
-[bold #00d7ff]└─────────────────────────────────────────────────────────────────┘[/bold #00d7ff]"""
+[bold #00d7ff]╰─────────────────────────────────────────────────────────────────╯[/bold #00d7ff]"""
 
 
 @create_sync_wrapper
@@ -28,8 +28,8 @@ async def print(message, **kwargs) -> None:
 
 
 async def line() -> None:
-    """Print a line to the console."""
-    await run_in_terminal(lambda: console.line())
+    """Print an empty line for spacing."""
+    await print("")
 
 
 async def info(text: str) -> None:
@@ -47,9 +47,9 @@ async def warning(text: str) -> None:
     await print(f"[{colors.warning}]⚠[/{colors.warning}] {text}")
 
 
-async def muted(text: str, spaces: int = 0) -> None:
-    """Print a muted message."""
-    await print(f"{' ' * spaces}[{colors.muted}]•[/{colors.muted}] [dim]{text}[/dim]")
+async def muted(text: str) -> None:
+    """Print muted text."""
+    await print(text, style=colors.muted)
 
 
 async def usage(usage: str) -> None:

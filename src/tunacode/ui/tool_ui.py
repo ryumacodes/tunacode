@@ -154,9 +154,9 @@ class ToolUI:
         if request.filepath:
             ui.console.print(f"File: {request.filepath}", style=self.colors.muted)
 
-        ui.console.print("  1. Yes (default)")
-        ui.console.print("  2. Yes, and don't ask again for commands like this")
-        ui.console.print(f"  3. No, and tell {APP_NAME} what to do differently")
+        ui.console.print("  [1] Yes (default)")
+        ui.console.print("  [2] Yes, and don't ask again for commands like this")
+        ui.console.print(f"  [3] No, and tell {APP_NAME} what to do differently")
         resp = input("  Choose an option [1/2/3]: ").strip() or "1"
 
         # Add spacing after user choice for better readability
