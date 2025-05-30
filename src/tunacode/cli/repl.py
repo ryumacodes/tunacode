@@ -171,6 +171,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         def tool_callback_with_state(part, node):
             return _tool_handler(part, node, state_manager)
 
+        start_idx = len(state_manager.session.messages)
         res = await agent.process_request(
             state_manager.session.current_model,
             text,
@@ -178,6 +179,11 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             tool_callback=tool_callback_with_state,
         )
         if output:
+            if state_manager.session.show_thoughts:
+                new_msgs = state_manager.session.messages[start_idx:]
+                for msg in new_msgs:
+                    if isinstance(msg, dict) and "thought" in msg:
+                        await ui.muted(f"THOUGHT: {msg['thought']}")
             await ui.agent(res.result.output)
     except CancelledError:
         await ui.muted("Request cancelled")
@@ -210,7 +216,7 @@ async def repl(state_manager: StateManager):
     await ui.muted(f"• Model: {state_manager.session.current_model}")
     await ui.success("Ready to assist with your development")
     await ui.line()
-    
+
     instance = agent.get_or_create_agent(state_manager.session.current_model, state_manager)
 
     async with instance.run_mcp_servers():
