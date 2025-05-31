@@ -168,6 +168,43 @@ class ThoughtsCommand(SimpleCommand):
         await ui.success(f"Thought display {status}")
 
 
+class IterationsCommand(SimpleCommand):
+    """Configure maximum agent iterations for ReAct reasoning."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="iterations",
+                aliases=["/iterations"],
+                description="Set maximum agent iterations for complex reasoning",
+                category=CommandCategory.DEBUG,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        state = context.state_manager.session
+        if args:
+            try:
+                new_limit = int(args[0])
+                if new_limit < 1 or new_limit > 50:
+                    await ui.error("Iterations must be between 1 and 50")
+                    return
+                
+                # Update the user config
+                if "settings" not in state.user_config:
+                    state.user_config["settings"] = {}
+                state.user_config["settings"]["max_iterations"] = new_limit
+                
+                await ui.success(f"Maximum iterations set to {new_limit}")
+                await ui.muted("Higher values allow more complex reasoning but may be slower")
+            except ValueError:
+                await ui.error("Please provide a valid number")
+        else:
+            current = state.user_config.get("settings", {}).get("max_iterations", 15)
+            await ui.info(f"Current maximum iterations: {current}")
+            await ui.muted("Usage: /iterations <number> (1-50)")
+
+
 class ClearCommand(SimpleCommand):
     """Clear screen and message history."""
 
@@ -182,8 +219,127 @@ class ClearCommand(SimpleCommand):
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
+        # Patch any orphaned tool calls before clearing
+        from tunacode.core.agents.main import patch_tool_messages
+        patch_tool_messages("Conversation cleared", context.state_manager)
+        
         await ui.clear()
         context.state_manager.session.messages = []
+        await ui.success("Message history cleared")
+
+
+class FixCommand(SimpleCommand):
+    """Fix orphaned tool calls that cause API errors."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="fix",
+                aliases=["/fix"],
+                description="Fix orphaned tool calls causing API errors",
+                category=CommandCategory.DEBUG,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        from tunacode.core.agents.main import patch_tool_messages
+        
+        # Count current messages
+        before_count = len(context.state_manager.session.messages)
+        
+        # Patch orphaned tool calls
+        patch_tool_messages("Tool call resolved by /fix command", context.state_manager)
+        
+        # Count after patching
+        after_count = len(context.state_manager.session.messages)
+        patched_count = after_count - before_count
+        
+        if patched_count > 0:
+            await ui.success(f"Fixed {patched_count} orphaned tool call(s)")
+            await ui.muted("You can now continue the conversation normally")
+        else:
+            await ui.info("No orphaned tool calls found")
+
+
+class ParseToolsCommand(SimpleCommand):
+    """Parse and execute JSON tool calls from the last response."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="parsetools",
+                aliases=["/parsetools"],
+                description="Parse JSON tool calls from last response when structured calling fails",
+                category=CommandCategory.DEBUG,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        from tunacode.core.agents.main import extract_and_execute_tool_calls
+        
+        # Find the last model response in messages
+        messages = context.state_manager.session.messages
+        if not messages:
+            await ui.error("No message history found")
+            return
+        
+        # Look for the most recent response with text content
+        found_content = False
+        for msg in reversed(messages):
+            if hasattr(msg, 'parts'):
+                for part in msg.parts:
+                    if hasattr(part, 'content') and isinstance(part.content, str):
+                        # Create tool callback
+                        from tunacode.cli.repl import _tool_handler
+                        def tool_callback_with_state(part, node):
+                            return _tool_handler(part, node, context.state_manager)
+                        
+                        try:
+                            await extract_and_execute_tool_calls(
+                                part.content, 
+                                tool_callback_with_state, 
+                                context.state_manager
+                            )
+                            await ui.success("JSON tool parsing completed")
+                            found_content = True
+                            return
+                        except Exception as e:
+                            await ui.error(f"Failed to parse tools: {str(e)}")
+                            return
+        
+        if not found_content:
+            await ui.error("No parseable content found in recent messages")
+
+
+class RefreshConfigCommand(SimpleCommand):
+    """Refresh configuration from defaults."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="refresh",
+                aliases=["/refresh"],
+                description="Refresh configuration from defaults (useful after updates)",
+                category=CommandCategory.SYSTEM,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
+        
+        # Update current session config with latest defaults
+        for key, value in DEFAULT_USER_CONFIG.items():
+            if key not in context.state_manager.session.user_config:
+                context.state_manager.session.user_config[key] = value
+            elif isinstance(value, dict):
+                # Merge dict values, preserving user overrides
+                for subkey, subvalue in value.items():
+                    if subkey not in context.state_manager.session.user_config[key]:
+                        context.state_manager.session.user_config[key][subkey] = subvalue
+        
+        # Show updated max_iterations
+        max_iterations = context.state_manager.session.user_config.get("settings", {}).get("max_iterations", 20)
+        await ui.success(f"Configuration refreshed - max iterations: {max_iterations}")
 
 
 class TunaCodeCommand(SimpleCommand):
@@ -467,7 +623,11 @@ class CommandRegistry:
             YoloCommand,
             DumpCommand,
             ThoughtsCommand,
+            IterationsCommand,
             ClearCommand,
+            FixCommand,
+            ParseToolsCommand,
+            RefreshConfigCommand,
             HelpCommand,
             BranchCommand,
             # TunaCodeCommand,  # TODO: Temporarily disabled

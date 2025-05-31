@@ -7,9 +7,6 @@ Provides controlled shell command execution with output capture and truncation.
 
 import subprocess
 
-from pydantic import BaseModel, Field
-from pydantic_ai import tool
-
 from tunacode.constants import (
     CMD_OUTPUT_FORMAT,
     CMD_OUTPUT_NO_ERRORS,
@@ -24,11 +21,6 @@ from tunacode.constants import (
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import BaseTool
 from tunacode.types import ToolResult
-from tunacode.ui import console as default_ui
-
-
-class Args(BaseModel, extra="forbid"):
-    command: str = Field(..., description="Shell command to run")
 
 
 class RunCommandTool(BaseTool):
@@ -103,8 +95,7 @@ class RunCommandTool(BaseTool):
 
 
 # Create the function that maintains the existing interface
-@tool(name="run_command", args_schema=Args, description="Execute shell command")
-async def run_command(command: str) -> ToolResult:
+async def run_command(command: str) -> str:
     """
     Run a shell command and return the output. User must confirm risky commands.
 
@@ -114,7 +105,7 @@ async def run_command(command: str) -> ToolResult:
     Returns:
         ToolResult: The output of the command (stdout and stderr) or an error message.
     """
-    tool = RunCommandTool(default_ui)
+    tool = RunCommandTool(None)  # No UI for pydantic-ai compatibility
     try:
         return await tool.execute(command)
     except ToolExecutionError as e:
