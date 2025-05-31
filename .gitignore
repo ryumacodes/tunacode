@@ -29,12 +29,16 @@ env/
 venv/
 ENV/
 .env
+.deploy_venv/
 
 # IDE files
 .idea/
 .vscode/
 *.swp
 *.swo
+
+# PyPI config (contains secrets)
+.pypirc
 
 # OS specific files
 .DS_Store
