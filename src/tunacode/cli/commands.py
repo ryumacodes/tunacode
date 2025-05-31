@@ -493,6 +493,106 @@ class CompactCommand(SimpleCommand):
         context.state_manager.session.messages = context.state_manager.session.messages[-2:]
 
 
+class UpdateCommand(SimpleCommand):
+    """Update TunaCode to the latest version."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="update",
+                aliases=["/update"],
+                description="Update TunaCode to the latest version",
+                category=CommandCategory.SYSTEM,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        import subprocess
+        import sys
+        import shutil
+
+        await ui.info("Checking for TunaCode updates...")
+
+        # Detect installation method
+        installation_method = None
+        
+        # Check if installed via pipx
+        if shutil.which("pipx"):
+            try:
+                result = subprocess.run(
+                    ["pipx", "list"], 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=10
+                )
+                if "tunacode" in result.stdout.lower():
+                    installation_method = "pipx"
+            except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                pass
+
+        # Check if installed via pip
+        if not installation_method:
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-m", "pip", "show", "tunacode-cli"], 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=10
+                )
+                if result.returncode == 0:
+                    installation_method = "pip"
+            except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                pass
+
+        if not installation_method:
+            await ui.error("Could not detect TunaCode installation method")
+            await ui.muted("Manual update options:")
+            await ui.muted("  pipx: pipx upgrade tunacode")
+            await ui.muted("  pip:  pip install --upgrade tunacode-cli")
+            return
+
+        # Perform update based on detected method
+        try:
+            if installation_method == "pipx":
+                await ui.info("Updating via pipx...")
+                result = subprocess.run(
+                    ["pipx", "upgrade", "tunacode"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+            else:  # pip
+                await ui.info("Updating via pip...")
+                result = subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "--upgrade", "tunacode-cli"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+
+            if result.returncode == 0:
+                await ui.success("TunaCode updated successfully!")
+                await ui.muted("Restart TunaCode to use the new version")
+                
+                # Show update output if available
+                if result.stdout.strip():
+                    output_lines = result.stdout.strip().split('\n')
+                    for line in output_lines[-5:]:  # Show last 5 lines
+                        if line.strip():
+                            await ui.muted(f"  {line}")
+            else:
+                await ui.error("Update failed")
+                if result.stderr:
+                    await ui.muted(f"Error: {result.stderr.strip()}")
+
+        except subprocess.TimeoutExpired:
+            await ui.error("Update timed out")
+        except subprocess.CalledProcessError as e:
+            await ui.error(f"Update failed: {e}")
+        except FileNotFoundError:
+            await ui.error(f"Could not find {installation_method} executable")
+
+
 class ModelCommand(SimpleCommand):
     """Manage model selection."""
 
@@ -628,6 +728,7 @@ class CommandRegistry:
             FixCommand,
             ParseToolsCommand,
             RefreshConfigCommand,
+            UpdateCommand,
             HelpCommand,
             BranchCommand,
             # TunaCodeCommand,  # TODO: Temporarily disabled
