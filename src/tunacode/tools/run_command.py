@@ -7,14 +7,20 @@ Provides controlled shell command execution with output capture and truncation.
 
 import subprocess
 
-from tunacode.constants import (CMD_OUTPUT_FORMAT, CMD_OUTPUT_NO_ERRORS, CMD_OUTPUT_NO_OUTPUT,
-                                CMD_OUTPUT_TRUNCATED, COMMAND_OUTPUT_END_SIZE,
-                                COMMAND_OUTPUT_START_INDEX, COMMAND_OUTPUT_THRESHOLD,
-                                ERROR_COMMAND_EXECUTION, MAX_COMMAND_OUTPUT)
+from tunacode.constants import (
+    CMD_OUTPUT_FORMAT,
+    CMD_OUTPUT_NO_ERRORS,
+    CMD_OUTPUT_NO_OUTPUT,
+    CMD_OUTPUT_TRUNCATED,
+    COMMAND_OUTPUT_END_SIZE,
+    COMMAND_OUTPUT_START_INDEX,
+    COMMAND_OUTPUT_THRESHOLD,
+    ERROR_COMMAND_EXECUTION,
+    MAX_COMMAND_OUTPUT,
+)
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import BaseTool
 from tunacode.types import ToolResult
-from tunacode.ui import console as default_ui
 
 
 class RunCommandTool(BaseTool):
@@ -89,7 +95,7 @@ class RunCommandTool(BaseTool):
 
 
 # Create the function that maintains the existing interface
-async def run_command(command: str) -> ToolResult:
+async def run_command(command: str) -> str:
     """
     Run a shell command and return the output. User must confirm risky commands.
 
@@ -99,7 +105,7 @@ async def run_command(command: str) -> ToolResult:
     Returns:
         ToolResult: The output of the command (stdout and stderr) or an error message.
     """
-    tool = RunCommandTool(default_ui)
+    tool = RunCommandTool(None)  # No UI for pydantic-ai compatibility
     try:
         return await tool.execute(command)
     except ToolExecutionError as e:

@@ -22,13 +22,14 @@
 
 ---
 
-### Recent Updates
+### Recent Updates (v0.0.14)
 
-- **Simplified Setup**: Direct CLI configuration with `--model` and `--key` flags
-- **Enhanced Safety**: Removed `/undo` command in favor of git-based workflows
-- **Cleaner Codebase**: Removed `/init` command and automatic TUNACODE.md generation
-- **Better Onboarding**: No model validation - trust users to provide correct model names
-- **Unified Model Format**: All models use `provider:model-name` format
+- **🔧 JSON Tool Parsing Fallback**: Automatic recovery when API providers fail with structured tool calling
+- **⚡ Enhanced Reliability**: Fixed parameter naming issues that caused tool schema errors
+- **🔄 Configuration Management**: New `/refresh` command to reload config without restart
+- **🧠 Improved ReAct Reasoning**: Enhanced iteration limits (now defaults to 20) and better thought processing
+- **🛠️ New Debug Commands**: `/parsetools` for manual JSON parsing, `/iterations` for controlling reasoning depth
+- **📊 Better Error Recovery**: Multiple fallback mechanisms for various failure scenarios
 
 ### Core Features
 
@@ -39,17 +40,18 @@
 ### **Multi-Provider Support**
 
 - Anthropic Claude
-- OpenAI GPT
+- OpenAI GPT  
 - Google Gemini
 - OpenRouter (100+ models)
 - Any OpenAI-compatible API
 
 ### **Developer Tools**
 
-- 4 core tools: read_file, write_file, update_file, run_command
+- 6 core tools: bash, grep, read_file, write_file, update_file, run_command
 - MCP (Model Context Protocol) support
 - File operation confirmations with diffs
 - Per-project context guides (TUNACODE.md)
+- JSON tool parsing fallback for API compatibility
 
 </td>
 <td width="50%">
@@ -68,6 +70,7 @@
 - Async throughout
 - Modular command system
 - Rich UI with syntax highlighting
+- ReAct reasoning patterns
 
 </td>
 </tr>
@@ -232,6 +235,8 @@ Learn more at [modelcontextprotocol.io](https://modelcontextprotocol.io/)
 
 ## Commands Reference
 
+### Core Commands
+
 | Command                          | Description                      |
 | -------------------------------- | -------------------------------- |
 | `/help`                          | Show available commands          |
@@ -245,13 +250,43 @@ Learn more at [modelcontextprotocol.io](https://modelcontextprotocol.io/)
 | `/dump`                          | Show message history (debug)     |
 | `exit`                           | Exit application                 |
 
+### Debug & Recovery Commands
+
+| Command                          | Description                      |
+| -------------------------------- | -------------------------------- |
+| `/thoughts`                      | Toggle ReAct thought display     |
+| `/iterations <1-50>`             | Set max reasoning iterations     |
+| `/parsetools`                    | Parse JSON tool calls manually   |
+| `/fix`                           | Fix orphaned tool calls         |
+| `/refresh`                       | Reload configuration from defaults |
+
+---
+
+## Reliability Features
+
+### JSON Tool Parsing Fallback
+
+TunaCode automatically handles API provider failures with robust JSON parsing:
+
+- **Automatic Recovery**: When structured tool calling fails, TunaCode parses JSON from text responses
+- **Multiple Formats**: Supports inline JSON, code blocks, and complex nested structures
+- **Manual Recovery**: Use `/parsetools` when automatic parsing needs assistance
+- **Visual Feedback**: See `🔧 Recovered using JSON tool parsing` messages during fallback
+
+### Enhanced Error Handling
+
+- **Tool Schema Fixes**: Consistent parameter naming across all tools
+- **Orphaned Tool Call Recovery**: Automatic cleanup with `/fix` command
+- **Configuration Refresh**: Update settings without restart using `/refresh`
+- **ReAct Reasoning**: Configurable iteration limits for complex problem solving
+
 ---
 
 ## Customization
 
 ### Project Guides
 
-Create a `TUNACODE.md` file your project root to customize TunaCode's behavior:
+Create a `TUNACODE.md` file in your project root to customize TunaCode's behavior:
 
 ```markdown
 # Project Guide
@@ -301,13 +336,14 @@ src/tunacode/
 │   └── tool_handler.py   # Tool execution and validation
 │
 ├── services/             # External Services
-│   ├── mcp.py           # Model Context Protocol integration
-│   └── undo_service.py  # Undo operations (beta)
+│   └── mcp.py           # Model Context Protocol integration
 │
 ├── tools/               # AI Agent Tools
 │   ├── base.py         # Tool base classes
+│   ├── bash.py         # Enhanced shell command execution
+│   ├── grep.py         # Parallel content search tool
 │   ├── read_file.py    # File reading tool
-│   ├── run_command.py  # Command execution tool
+│   ├── run_command.py  # Basic command execution tool
 │   ├── update_file.py  # File modification tool
 │   └── write_file.py   # File creation tool
 │
@@ -324,7 +360,7 @@ src/tunacode/
 │   └── validators.py   # Input validation
 │
 ├── utils/              # Utility Functions
-│   ├── bm25.py        # BM25 search algorithm(beta)
+│   ├── bm25.py        # BM25 search algorithm (beta)
 │   ├── diff_utils.py  # Diff generation and formatting
 │   ├── file_utils.py  # File system operations
 │   ├── ripgrep.py     # Code search utilities

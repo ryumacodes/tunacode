@@ -22,7 +22,7 @@ Before publishing TunaCode CLI, a systematic audit uncovered several showstopper
 ### 3. **Import Errors from Commented Code**
 - **Issue**: TunaCodeCommand was commented out but still registered in discovery list
 - **Impact**: Import errors would crash the application
-- **Fix**: Commented out registration as well
+- **Fix**: Commented out registration as welll
 - **Files**: `src/tunacode/cli/commands.py`
 
 ### 4. **Command Registration Duplicates**
