@@ -7,19 +7,11 @@ Provides safe file creation with conflict detection and encoding handling.
 
 import os
 
-from pydantic import BaseModel, Field
-from pydantic_ai import tool
 from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
-from tunacode.types import FileContent, FilePath, ToolResult
-from tunacode.ui import console as default_ui
-
-
-class Args(BaseModel, extra="forbid"):
-    path: str = Field(..., description="Absolute or relative file path")
-    content: str
+from tunacode.types import ToolResult
 
 
 class WriteFileTool(FileBasedTool):
@@ -29,7 +21,7 @@ class WriteFileTool(FileBasedTool):
     def tool_name(self) -> str:
         return "Write"
 
-    async def _execute(self, filepath: FilePath, content: FileContent) -> ToolResult:
+    async def _execute(self, filepath: str, content: str) -> ToolResult:
         """Write content to a new file. Fails if the file already exists.
 
         Args:
@@ -61,7 +53,7 @@ class WriteFileTool(FileBasedTool):
 
         return f"Successfully wrote to new file: {filepath}"
 
-    def _format_args(self, filepath: FilePath, content: FileContent = None) -> str:
+    def _format_args(self, filepath: str, content: str = None) -> str:
         """Format arguments, truncating content for display."""
         if content is not None and len(content) > 50:
             return f"{repr(filepath)}, content='{content[:47]}...'"
@@ -69,22 +61,21 @@ class WriteFileTool(FileBasedTool):
 
 
 # Create the function that maintains the existing interface
-@tool(name="write_file", args_schema=Args, description="Write new file to disk")
-async def write_file(path: FilePath, content: FileContent) -> ToolResult:
+async def write_file(filepath: str, content: str) -> str:
     """
     Write content to a new file. Fails if the file already exists.
     Requires confirmation before writing.
 
     Args:
-        filepath (FilePath): The path to the file to write to.
-        content (FileContent): The content to write to the file.
+        filepath: The path to the file to write to.
+        content: The content to write to the file.
 
     Returns:
-        ToolResult: A message indicating the success or failure of the operation.
+        A message indicating the success or failure of the operation.
     """
-    tool = WriteFileTool(default_ui)
+    tool = WriteFileTool(None)  # No UI for pydantic-ai compatibility
     try:
-        return await tool.execute(path, content)
+        return await tool.execute(filepath, content)
     except ToolExecutionError as e:
         # Return error message for pydantic-ai compatibility
         return str(e)

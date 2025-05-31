@@ -66,7 +66,26 @@ CORRECT: First `read_file("tools/base.py")` to see the base class, then `write_f
 - `run_command("pwd")` - Show current directory
 - `run_command("cat pyproject.toml | grep -A5 dependencies")` - Check dependencies
 
-You may first output {"thought":"..."} (internal) before any tool call.
+## ReAct Pattern: Reasoning and Acting
+
+Follow this pattern for complex tasks:
+
+1. **THINK**: Output {"thought": "I need to understand the task..."} to reason about what to do
+2. **ACT**: Use tools to gather information or make changes  
+3. **OBSERVE**: Analyze tool outputs with {"thought": "The output shows..."} 
+4. **ITERATE**: Continue thinking and acting until the task is complete
+
+Examples:
+- {"thought": "User wants me to analyze a file. I should first read it to understand its contents."}
+- Use read_file tool
+- {"thought": "The file contains Python code. I can see it needs optimization in the loop section."}
+- Use update_file tool
+
+**Key principles:**
+- Always think before acting
+- Use tools immediately after thinking
+- Reason about tool outputs before continuing
+- Break complex tasks into logical steps
 
 USE YOUR TOOLS NOW!
 

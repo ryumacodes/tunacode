@@ -7,9 +7,6 @@ Provides safe file reading with size limits and proper error handling.
 
 import os
 
-from pydantic import BaseModel, Field
-from pydantic_ai import tool
-
 from tunacode.constants import (
     ERROR_FILE_DECODE,
     ERROR_FILE_DECODE_DETAILS,
@@ -20,12 +17,7 @@ from tunacode.constants import (
 )
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
-from tunacode.types import FilePath, ToolResult
-from tunacode.ui import console as default_ui
-
-
-class Args(BaseModel, extra="forbid"):
-    path: str = Field(..., description="Absolute or relative file path")
+from tunacode.types import ToolResult
 
 
 class ReadFileTool(FileBasedTool):
@@ -35,7 +27,7 @@ class ReadFileTool(FileBasedTool):
     def tool_name(self) -> str:
         return "Read"
 
-    async def _execute(self, filepath: FilePath) -> ToolResult:
+    async def _execute(self, filepath: str) -> ToolResult:
         """Read the contents of a file.
 
         Args:
@@ -58,7 +50,7 @@ class ReadFileTool(FileBasedTool):
             content = file.read()
             return content
 
-    async def _handle_error(self, error: Exception, filepath: FilePath = None) -> ToolResult:
+    async def _handle_error(self, error: Exception, filepath: str = None) -> ToolResult:
         """Handle errors with specific messages for common cases.
 
         Raises:
@@ -84,20 +76,19 @@ class ReadFileTool(FileBasedTool):
 
 
 # Create the function that maintains the existing interface
-@tool(name="read_file", args_schema=Args, description="Read text from file")
-async def read_file(path: FilePath) -> ToolResult:
+async def read_file(filepath: str) -> str:
     """
     Read the contents of a file.
 
     Args:
-        filepath (FilePath): The path to the file to read.
+        filepath: The path to the file to read.
 
     Returns:
-        ToolResult: The contents of the file or an error message.
+        str: The contents of the file or an error message.
     """
-    tool = ReadFileTool(default_ui)
+    tool = ReadFileTool(None)  # No UI for pydantic-ai compatibility
     try:
-        return await tool.execute(path)
+        return await tool.execute(filepath)
     except ToolExecutionError as e:
         # Return error message for pydantic-ai compatibility
         return str(e)

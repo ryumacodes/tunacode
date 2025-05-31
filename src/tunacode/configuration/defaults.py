@@ -18,6 +18,7 @@ DEFAULT_USER_CONFIG: UserConfig = {
     },
     "settings": {
         "max_retries": 10,
+        "max_iterations": 20,
         "tool_ignore": [TOOL_READ_FILE],
         "guide_file": GUIDE_FILE_NAME,
     },
