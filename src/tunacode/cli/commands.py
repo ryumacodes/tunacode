@@ -138,6 +138,73 @@ class DumpCommand(SimpleCommand):
         await ui.dump_messages(context.state_manager.session.messages)
 
 
+class ThoughtsCommand(SimpleCommand):
+    """Toggle display of agent thoughts."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="thoughts",
+                aliases=["/thoughts"],
+                description="Show or hide agent thought messages",
+                category=CommandCategory.DEBUG,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        state = context.state_manager.session
+        if args:
+            arg = args[0].lower()
+            if arg in {"on", "1", "true"}:
+                state.show_thoughts = True
+            elif arg in {"off", "0", "false"}:
+                state.show_thoughts = False
+            else:
+                await ui.error("Usage: /thoughts [on|off]")
+                return
+        else:
+            state.show_thoughts = not state.show_thoughts
+        status = "ON" if state.show_thoughts else "OFF"
+        await ui.success(f"Thought display {status}")
+
+
+class IterationsCommand(SimpleCommand):
+    """Configure maximum agent iterations for ReAct reasoning."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="iterations",
+                aliases=["/iterations"],
+                description="Set maximum agent iterations for complex reasoning",
+                category=CommandCategory.DEBUG,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        state = context.state_manager.session
+        if args:
+            try:
+                new_limit = int(args[0])
+                if new_limit < 1 or new_limit > 50:
+                    await ui.error("Iterations must be between 1 and 50")
+                    return
+                
+                # Update the user config
+                if "settings" not in state.user_config:
+                    state.user_config["settings"] = {}
+                state.user_config["settings"]["max_iterations"] = new_limit
+                
+                await ui.success(f"Maximum iterations set to {new_limit}")
+                await ui.muted("Higher values allow more complex reasoning but may be slower")
+            except ValueError:
+                await ui.error("Please provide a valid number")
+        else:
+            current = state.user_config.get("settings", {}).get("max_iterations", 15)
+            await ui.info(f"Current maximum iterations: {current}")
+            await ui.muted("Usage: /iterations <number> (1-50)")
+
+
 class ClearCommand(SimpleCommand):
     """Clear screen and message history."""
 
@@ -152,8 +219,127 @@ class ClearCommand(SimpleCommand):
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
+        # Patch any orphaned tool calls before clearing
+        from tunacode.core.agents.main import patch_tool_messages
+        patch_tool_messages("Conversation cleared", context.state_manager)
+        
         await ui.clear()
         context.state_manager.session.messages = []
+        await ui.success("Message history cleared")
+
+
+class FixCommand(SimpleCommand):
+    """Fix orphaned tool calls that cause API errors."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="fix",
+                aliases=["/fix"],
+                description="Fix orphaned tool calls causing API errors",
+                category=CommandCategory.DEBUG,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        from tunacode.core.agents.main import patch_tool_messages
+        
+        # Count current messages
+        before_count = len(context.state_manager.session.messages)
+        
+        # Patch orphaned tool calls
+        patch_tool_messages("Tool call resolved by /fix command", context.state_manager)
+        
+        # Count after patching
+        after_count = len(context.state_manager.session.messages)
+        patched_count = after_count - before_count
+        
+        if patched_count > 0:
+            await ui.success(f"Fixed {patched_count} orphaned tool call(s)")
+            await ui.muted("You can now continue the conversation normally")
+        else:
+            await ui.info("No orphaned tool calls found")
+
+
+class ParseToolsCommand(SimpleCommand):
+    """Parse and execute JSON tool calls from the last response."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="parsetools",
+                aliases=["/parsetools"],
+                description="Parse JSON tool calls from last response when structured calling fails",
+                category=CommandCategory.DEBUG,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        from tunacode.core.agents.main import extract_and_execute_tool_calls
+        
+        # Find the last model response in messages
+        messages = context.state_manager.session.messages
+        if not messages:
+            await ui.error("No message history found")
+            return
+        
+        # Look for the most recent response with text content
+        found_content = False
+        for msg in reversed(messages):
+            if hasattr(msg, 'parts'):
+                for part in msg.parts:
+                    if hasattr(part, 'content') and isinstance(part.content, str):
+                        # Create tool callback
+                        from tunacode.cli.repl import _tool_handler
+                        def tool_callback_with_state(part, node):
+                            return _tool_handler(part, node, context.state_manager)
+                        
+                        try:
+                            await extract_and_execute_tool_calls(
+                                part.content, 
+                                tool_callback_with_state, 
+                                context.state_manager
+                            )
+                            await ui.success("JSON tool parsing completed")
+                            found_content = True
+                            return
+                        except Exception as e:
+                            await ui.error(f"Failed to parse tools: {str(e)}")
+                            return
+        
+        if not found_content:
+            await ui.error("No parseable content found in recent messages")
+
+
+class RefreshConfigCommand(SimpleCommand):
+    """Refresh configuration from defaults."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="refresh",
+                aliases=["/refresh"],
+                description="Refresh configuration from defaults (useful after updates)",
+                category=CommandCategory.SYSTEM,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
+        
+        # Update current session config with latest defaults
+        for key, value in DEFAULT_USER_CONFIG.items():
+            if key not in context.state_manager.session.user_config:
+                context.state_manager.session.user_config[key] = value
+            elif isinstance(value, dict):
+                # Merge dict values, preserving user overrides
+                for subkey, subvalue in value.items():
+                    if subkey not in context.state_manager.session.user_config[key]:
+                        context.state_manager.session.user_config[key][subkey] = subvalue
+        
+        # Show updated max_iterations
+        max_iterations = context.state_manager.session.user_config.get("settings", {}).get("max_iterations", 20)
+        await ui.success(f"Configuration refreshed - max iterations: {max_iterations}")
 
 
 class TunaCodeCommand(SimpleCommand):
@@ -232,7 +418,6 @@ class HelpCommand(SimpleCommand):
         await ui.help(self._command_registry)
 
 
-
 class BranchCommand(SimpleCommand):
     """Create and switch to a new git branch."""
 
@@ -247,8 +432,8 @@ class BranchCommand(SimpleCommand):
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
-        import subprocess
         import os
+        import subprocess
 
         if not args:
             await ui.error("Usage: /branch <branch-name>")
@@ -308,6 +493,106 @@ class CompactCommand(SimpleCommand):
         context.state_manager.session.messages = context.state_manager.session.messages[-2:]
 
 
+class UpdateCommand(SimpleCommand):
+    """Update TunaCode to the latest version."""
+
+    def __init__(self):
+        super().__init__(
+            CommandSpec(
+                name="update",
+                aliases=["/update"],
+                description="Update TunaCode to the latest version",
+                category=CommandCategory.SYSTEM,
+            )
+        )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        import subprocess
+        import sys
+        import shutil
+
+        await ui.info("Checking for TunaCode updates...")
+
+        # Detect installation method
+        installation_method = None
+        
+        # Check if installed via pipx
+        if shutil.which("pipx"):
+            try:
+                result = subprocess.run(
+                    ["pipx", "list"], 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=10
+                )
+                if "tunacode" in result.stdout.lower():
+                    installation_method = "pipx"
+            except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                pass
+
+        # Check if installed via pip
+        if not installation_method:
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-m", "pip", "show", "tunacode-cli"], 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=10
+                )
+                if result.returncode == 0:
+                    installation_method = "pip"
+            except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                pass
+
+        if not installation_method:
+            await ui.error("Could not detect TunaCode installation method")
+            await ui.muted("Manual update options:")
+            await ui.muted("  pipx: pipx upgrade tunacode")
+            await ui.muted("  pip:  pip install --upgrade tunacode-cli")
+            return
+
+        # Perform update based on detected method
+        try:
+            if installation_method == "pipx":
+                await ui.info("Updating via pipx...")
+                result = subprocess.run(
+                    ["pipx", "upgrade", "tunacode"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+            else:  # pip
+                await ui.info("Updating via pip...")
+                result = subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "--upgrade", "tunacode-cli"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+
+            if result.returncode == 0:
+                await ui.success("TunaCode updated successfully!")
+                await ui.muted("Restart TunaCode to use the new version")
+                
+                # Show update output if available
+                if result.stdout.strip():
+                    output_lines = result.stdout.strip().split('\n')
+                    for line in output_lines[-5:]:  # Show last 5 lines
+                        if line.strip():
+                            await ui.muted(f"  {line}")
+            else:
+                await ui.error("Update failed")
+                if result.stderr:
+                    await ui.muted(f"Error: {result.stderr.strip()}")
+
+        except subprocess.TimeoutExpired:
+            await ui.error("Update timed out")
+        except subprocess.CalledProcessError as e:
+            await ui.error(f"Update failed: {e}")
+        except FileNotFoundError:
+            await ui.error(f"Could not find {installation_method} executable")
+
+
 class ModelCommand(SimpleCommand):
     """Manage model selection."""
 
@@ -332,14 +617,16 @@ class ModelCommand(SimpleCommand):
 
         # Get the model name from args
         model_name = args[0]
-        
+
         # Check if provider prefix is present
         if ":" not in model_name:
             await ui.error("Model name must include provider prefix")
             await ui.muted("Format: provider:model-name")
-            await ui.muted("Examples: openai:gpt-4.1, anthropic:claude-3-opus, google-gla:gemini-2.0-flash")
+            await ui.muted(
+                "Examples: openai:gpt-4.1, anthropic:claude-3-opus, google-gla:gemini-2.0-flash"
+            )
             return None
-        
+
         # No validation - user is responsible for correct model names
         await ui.warning("Model set without validation - verify the model name is correct")
 
@@ -416,8 +703,7 @@ class CommandRegistry:
         category_commands = self._categories[command.category]
         # Remove any existing instance of this command class
         self._categories[command.category] = [
-            cmd for cmd in category_commands 
-            if cmd.__class__ != command.__class__
+            cmd for cmd in category_commands if cmd.__class__ != command.__class__
         ]
         # Add the new instance
         self._categories[command.category].append(command)
@@ -436,7 +722,13 @@ class CommandRegistry:
         command_classes = [
             YoloCommand,
             DumpCommand,
+            ThoughtsCommand,
+            IterationsCommand,
             ClearCommand,
+            FixCommand,
+            ParseToolsCommand,
+            RefreshConfigCommand,
+            UpdateCommand,
             HelpCommand,
             BranchCommand,
             # TunaCodeCommand,  # TODO: Temporarily disabled
@@ -459,7 +751,7 @@ class CommandRegistry:
         # Only update if callback has changed
         if self._factory.dependencies.process_request_callback == callback:
             return
-            
+
         self._factory.update_dependencies(process_request_callback=callback)
 
         # Re-register CompactCommand with new dependency if already registered
@@ -494,10 +786,10 @@ class CommandRegistry:
         if command_name in self._commands:
             command = self._commands[command_name]
             return await command.execute(args, context)
-        
+
         # Try partial matching
         matches = self.find_matching_commands(command_name)
-        
+
         if not matches:
             raise ValidationError(f"Unknown command: {command_name}")
         elif len(matches) == 1:
@@ -513,10 +805,10 @@ class CommandRegistry:
     def find_matching_commands(self, partial_command: str) -> List[str]:
         """
         Find all commands that start with the given partial command.
-        
+
         Args:
             partial_command: The partial command to match
-            
+
         Returns:
             List of matching command names
         """
@@ -534,11 +826,11 @@ class CommandRegistry:
             return False
 
         command_name = parts[0].lower()
-        
+
         # Check exact match first
         if command_name in self._commands:
             return True
-            
+
         # Check partial match
         return len(self.find_matching_commands(command_name)) > 0
 

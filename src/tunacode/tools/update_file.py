@@ -11,8 +11,7 @@ from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
-from tunacode.types import FileContent, FilePath, ToolResult
-from tunacode.ui import console as default_ui
+from tunacode.types import ToolResult
 
 
 class UpdateFileTool(FileBasedTool):
@@ -23,7 +22,7 @@ class UpdateFileTool(FileBasedTool):
         return "Update"
 
     async def _execute(
-        self, filepath: FilePath, target: FileContent, patch: FileContent
+        self, filepath: str, target: str, patch: str
     ) -> ToolResult:
         """Update an existing file by replacing a target text block with a patch.
 
@@ -75,7 +74,7 @@ class UpdateFileTool(FileBasedTool):
         return f"File '{filepath}' updated successfully."
 
     def _format_args(
-        self, filepath: FilePath, target: FileContent = None, patch: FileContent = None
+        self, filepath: str, target: str = None, patch: str = None
     ) -> str:
         """Format arguments, truncating target and patch for display."""
         args = [repr(filepath)]
@@ -96,20 +95,20 @@ class UpdateFileTool(FileBasedTool):
 
 
 # Create the function that maintains the existing interface
-async def update_file(filepath: FilePath, target: FileContent, patch: FileContent) -> ToolResult:
+async def update_file(filepath: str, target: str, patch: str) -> str:
     """
     Update an existing file by replacing a target text block with a patch.
     Requires confirmation with diff before applying.
 
     Args:
-        filepath (FilePath): The path to the file to update.
-        target (FileContent): The entire, exact block of text to be replaced.
-        patch (FileContent): The new block of text to insert.
+        filepath: The path to the file to update.
+        target: The entire, exact block of text to be replaced.
+        patch: The new block of text to insert.
 
     Returns:
-        ToolResult: A message indicating the success or failure of the operation.
+        str: A message indicating the success or failure of the operation.
     """
-    tool = UpdateFileTool(default_ui)
+    tool = UpdateFileTool(None)  # No UI for pydantic-ai compatibility
     try:
         return await tool.execute(filepath, target, patch)
     except ToolExecutionError as e:

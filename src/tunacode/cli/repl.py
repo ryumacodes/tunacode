@@ -167,10 +167,14 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             await ui.error(str(e))
             return
 
+        # Patch any orphaned tool calls from previous requests before proceeding
+        patch_tool_messages("Tool execution was interrupted", state_manager)
+        
         # Create a partial function that includes state_manager
         def tool_callback_with_state(part, node):
             return _tool_handler(part, node, state_manager)
 
+        start_idx = len(state_manager.session.messages)
         res = await agent.process_request(
             state_manager.session.current_model,
             text,
@@ -178,7 +182,17 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             tool_callback=tool_callback_with_state,
         )
         if output:
-            await ui.agent(res.result.output)
+            if state_manager.session.show_thoughts:
+                new_msgs = state_manager.session.messages[start_idx:]
+                for msg in new_msgs:
+                    if isinstance(msg, dict) and "thought" in msg:
+                        await ui.muted(f"THOUGHT: {msg['thought']}")
+            # Check if result exists and has output
+            if hasattr(res, 'result') and res.result is not None and hasattr(res.result, 'output'):
+                await ui.agent(res.result.output)
+            else:
+                # Fallback: show that the request was processed
+                await ui.muted("Request completed")
     except CancelledError:
         await ui.muted("Request cancelled")
     except UserAbortError:
@@ -188,6 +202,31 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         await ui.muted(error_message)
         patch_tool_messages(error_message, state_manager)
     except Exception as e:
+        # Check if this might be a tool calling failure that we can recover from
+        error_str = str(e).lower()
+        if any(keyword in error_str for keyword in ['tool', 'function', 'call', 'schema']):
+            # Try to extract and execute tool calls from the last response
+            if state_manager.session.messages:
+                last_msg = state_manager.session.messages[-1]
+                if hasattr(last_msg, 'parts'):
+                    for part in last_msg.parts:
+                        if hasattr(part, 'content') and isinstance(part.content, str):
+                            from tunacode.core.agents.main import extract_and_execute_tool_calls
+                            try:
+                                # Create a partial function that includes state_manager
+                                def tool_callback_with_state(part, node):
+                                    return _tool_handler(part, node, state_manager)
+                                    
+                                await extract_and_execute_tool_calls(
+                                    part.content, 
+                                    tool_callback_with_state, 
+                                    state_manager
+                                )
+                                await ui.warning("🔧 Recovered using JSON tool parsing")
+                                return  # Successfully recovered
+                            except Exception:
+                                pass  # Fallback failed, continue with normal error handling
+        
         # Wrap unexpected exceptions in AgentError for better tracking
         agent_error = AgentError(f"Agent processing failed: {str(e)}")
         agent_error.__cause__ = e  # Preserve the original exception chain
@@ -210,7 +249,7 @@ async def repl(state_manager: StateManager):
     await ui.muted(f"• Model: {state_manager.session.current_model}")
     await ui.success("Ready to assist with your development")
     await ui.line()
-    
+
     instance = agent.get_or_create_agent(state_manager.session.current_model, state_manager)
 
     async with instance.run_mcp_servers():
