@@ -72,7 +72,9 @@ async def input(
     return await manager.get_input(session_key, pretext, config)
 
 
-async def multiline_input(state_manager: Optional[StateManager] = None, command_registry=None) -> str:
+async def multiline_input(
+    state_manager: Optional[StateManager] = None, command_registry=None
+) -> str:
     """Get multiline input from the user with @file completion and highlighting."""
     kb = create_key_bindings()
     placeholder = formatted_text(
@@ -85,11 +87,12 @@ async def multiline_input(state_manager: Optional[StateManager] = None, command_
         )
     )
     return await input(
-        "multiline", 
-        key_bindings=kb, 
-        multiline=True, 
+        "multiline",
+        pretext="❯ ",  # Default prompt
+        key_bindings=kb,
+        multiline=True,
         placeholder=placeholder,
         completer=create_completer(command_registry),
         lexer=FileReferenceLexer(),
-        state_manager=state_manager
+        state_manager=state_manager,
     )

@@ -137,7 +137,7 @@ class FileBasedTool(BaseTool):
     """Base class for tools that work with files.
 
     Provides common file-related functionality like:
-    - Path validation  
+    - Path validation
     - File existence checking
     - Directory creation
     - Encoding handling

@@ -21,9 +21,7 @@ class UpdateFileTool(FileBasedTool):
     def tool_name(self) -> str:
         return "Update"
 
-    async def _execute(
-        self, filepath: str, target: str, patch: str
-    ) -> ToolResult:
+    async def _execute(self, filepath: str, target: str, patch: str) -> ToolResult:
         """Update an existing file by replacing a target text block with a patch.
 
         Args:
@@ -73,9 +71,7 @@ class UpdateFileTool(FileBasedTool):
 
         return f"File '{filepath}' updated successfully."
 
-    def _format_args(
-        self, filepath: str, target: str = None, patch: str = None
-    ) -> str:
+    def _format_args(self, filepath: str, target: str = None, patch: str = None) -> str:
         """Format arguments, truncating target and patch for display."""
         args = [repr(filepath)]
 
