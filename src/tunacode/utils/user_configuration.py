@@ -18,12 +18,34 @@ if TYPE_CHECKING:
     from tunacode.core.state import StateManager
 
 
+import hashlib
+
+_config_fingerprint = None
+_config_cache = None
+
+
+def compute_config_fingerprint(config_obj) -> str:
+    """Returns a short hash/fingerprint for a config object/searchable for fastpath usage."""
+    b = json.dumps(config_obj, sort_keys=True).encode()
+    return hashlib.sha1(b).hexdigest()[:12]
+
+
 def load_config() -> Optional[UserConfig]:
-    """Load user config from file"""
+    """Load user config from file, using fingerprint fast path if available."""
+    global _config_fingerprint, _config_cache
     app_settings = ApplicationSettings()
     try:
         with open(app_settings.paths.config_file, "r") as f:
-            return json.load(f)
+            raw = f.read()
+            loaded = json.loads(raw)
+            new_fp = hashlib.sha1(raw.encode()).hexdigest()[:12]
+            # If hash matches, return in-memory cached config object
+            if new_fp == _config_fingerprint and _config_cache is not None:
+                return _config_cache
+            # else, update fast path
+            _config_fingerprint = new_fp
+            _config_cache = loaded
+            return loaded
     except FileNotFoundError:
         return None
     except JSONDecodeError:

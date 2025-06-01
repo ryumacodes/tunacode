@@ -101,9 +101,7 @@ ERROR_INVALID_PROVIDER = "Invalid provider number"
 ERROR_FILE_NOT_FOUND = "Error: File not found at '{filepath}'."
 ERROR_FILE_TOO_LARGE = "Error: File '{filepath}' is too large (> 100KB)."
 ERROR_FILE_DECODE = "Error reading file '{filepath}': Could not decode using UTF-8."
-ERROR_FILE_DECODE_DETAILS = (
-    "It might be a binary file or use a different encoding. {error}"
-)
+ERROR_FILE_DECODE_DETAILS = "It might be a binary file or use a different encoding. {error}"
 ERROR_COMMAND_NOT_FOUND = "Error: Command not found or failed to execute:"
 ERROR_COMMAND_EXECUTION = (
     "Error: Command not found or failed to execute: {command}. Details: {error}"

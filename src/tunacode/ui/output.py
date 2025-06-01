@@ -72,9 +72,9 @@ async def version() -> None:
 
 async def banner() -> None:
     """Display the application banner."""
-    console.clear()
+    await run_in_terminal(lambda: console.clear())
     banner_padding = Padding(BANNER, (2, 0, 1, 0))
-    await print(banner_padding)
+    await run_in_terminal(lambda: console.print(banner_padding))
 
 
 async def clear() -> None:

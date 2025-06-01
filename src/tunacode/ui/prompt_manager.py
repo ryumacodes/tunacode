@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from prompt_toolkit.completion import Completer
-from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.formatted_text import HTML, FormattedText
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.lexers import Lexer
 from prompt_toolkit.shortcuts import PromptSession
@@ -42,12 +42,14 @@ class PromptManager:
         self.state_manager = state_manager
         self._temp_sessions = {}  # For when no state manager is available
         self._style = self._create_style()
-    
+
     def _create_style(self) -> Style:
         """Create the style for the prompt with file reference highlighting."""
-        return Style.from_dict({
-            'file-reference': UI_COLORS.get('file_ref', 'light_blue'),
-        })
+        return Style.from_dict(
+            {
+                "file-reference": UI_COLORS.get("file_ref", "light_blue"),
+            }
+        )
 
     def get_session(self, session_key: str, config: PromptConfig) -> PromptSession:
         """Get or create a prompt session.
@@ -98,10 +100,20 @@ class PromptManager:
         """
         session = self.get_session(session_key, config)
 
+        # Create a custom prompt that changes based on input
+        def get_prompt():
+            # Check if current buffer starts with "!"
+            if hasattr(session.app, "current_buffer") and session.app.current_buffer:
+                text = session.app.current_buffer.text
+                if text.startswith("!"):
+                    # Use bright yellow background with black text for high visibility
+                    return HTML('<style bg="#ffcc00" fg="black"><b> ◆ BASH MODE ◆ </b></style> ')
+            return HTML(prompt) if isinstance(prompt, str) else prompt
+
         try:
-            # Get user input
+            # Get user input with dynamic prompt
             response = await session.prompt_async(
-                prompt,
+                get_prompt,
                 is_password=config.is_password,
                 validator=config.validator,
                 multiline=config.multiline,
