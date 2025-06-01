@@ -89,6 +89,11 @@ async def update_available(latest_version: str) -> None:
     await muted(MSG_UPDATE_INSTRUCTION)
 
 
+async def show_update_message(latest_version: str) -> None:
+    """Display update available message (alias for update_available)."""
+    await update_available(latest_version)
+
+
 async def spinner(show: bool = True, spinner_obj=None, state_manager: StateManager = None):
     """Manage a spinner display."""
     icon = SPINNER_TYPE
