@@ -7,17 +7,10 @@ Provides controlled shell command execution with output capture and truncation.
 
 import subprocess
 
-from tunacode.constants import (
-    CMD_OUTPUT_FORMAT,
-    CMD_OUTPUT_NO_ERRORS,
-    CMD_OUTPUT_NO_OUTPUT,
-    CMD_OUTPUT_TRUNCATED,
-    COMMAND_OUTPUT_END_SIZE,
-    COMMAND_OUTPUT_START_INDEX,
-    COMMAND_OUTPUT_THRESHOLD,
-    ERROR_COMMAND_EXECUTION,
-    MAX_COMMAND_OUTPUT,
-)
+from tunacode.constants import (CMD_OUTPUT_FORMAT, CMD_OUTPUT_NO_ERRORS, CMD_OUTPUT_NO_OUTPUT,
+                                CMD_OUTPUT_TRUNCATED, COMMAND_OUTPUT_END_SIZE,
+                                COMMAND_OUTPUT_START_INDEX, COMMAND_OUTPUT_THRESHOLD,
+                                ERROR_COMMAND_EXECUTION, MAX_COMMAND_OUTPUT)
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import BaseTool
 from tunacode.types import ToolResult

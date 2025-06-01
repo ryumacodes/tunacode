@@ -11,10 +11,10 @@ from rich.table import Table
 
 from tunacode.configuration.models import ModelRegistry
 from tunacode.constants import (APP_NAME, CMD_CLEAR, CMD_COMPACT, CMD_DUMP, CMD_EXIT, CMD_HELP,
-                                CMD_MODEL, CMD_YOLO, DESC_CLEAR, DESC_COMPACT, DESC_DUMP,
-                                DESC_EXIT, DESC_HELP, DESC_MODEL, DESC_MODEL_DEFAULT,
-                                DESC_MODEL_SWITCH, DESC_YOLO, PANEL_AVAILABLE_COMMANDS,
-                                PANEL_ERROR, PANEL_MESSAGE_HISTORY, PANEL_MODELS, UI_COLORS)
+                                CMD_MODEL, CMD_YOLO, DESC_CLEAR, DESC_COMPACT, DESC_DUMP, DESC_EXIT,
+                                DESC_HELP, DESC_MODEL, DESC_MODEL_DEFAULT, DESC_MODEL_SWITCH,
+                                DESC_YOLO, PANEL_AVAILABLE_COMMANDS, PANEL_ERROR,
+                                PANEL_MESSAGE_HISTORY, PANEL_MODELS, UI_COLORS)
 from tunacode.core.state import StateManager
 from tunacode.utils.file_utils import DotDict
 
@@ -39,12 +39,12 @@ async def panel(
     """Display a rich panel with modern styling."""
     border_style = border_style or kwargs.get("style") or colors.border
     panel_obj = Panel(
-        Padding(text, (0, 1, 0, 1)), 
-        title=f"[bold]{title}[/bold]", 
-        title_align="left", 
+        Padding(text, (0, 1, 0, 1)),
+        title=f"[bold]{title}[/bold]",
+        title_align="left",
         border_style=border_style,
         padding=(0, 1),
-        box=ROUNDED  # Use ROUNDED box style
+        box=ROUNDED,  # Use ROUNDED box style
     )
     await print(Padding(panel_obj, (top, right, bottom, left)), **kwargs)
 

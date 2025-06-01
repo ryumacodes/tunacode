@@ -94,9 +94,7 @@ class BashTool(BaseTool):
             )
 
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=timeout
-                )
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
             except asyncio.TimeoutError:
                 # Kill the process if it times out
                 process.kill()
@@ -246,7 +244,9 @@ async def bash(
     """
     tool = BashTool()
     try:
-        return await tool.execute(command, cwd=cwd, env=env, timeout=timeout, capture_output=capture_output)
+        return await tool.execute(
+            command, cwd=cwd, env=env, timeout=timeout, capture_output=capture_output
+        )
     except ToolExecutionError as e:
         # Return error message for pydantic-ai compatibility
         return str(e)

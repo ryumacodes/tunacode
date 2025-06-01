@@ -8,15 +8,8 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from tunacode.types import (
-    DeviceId,
-    InputSessions,
-    MessageHistory,
-    ModelName,
-    SessionId,
-    ToolName,
-    UserConfig,
-)
+from tunacode.types import (DeviceId, InputSessions, MessageHistory, ModelName, SessionId, ToolName,
+                            UserConfig)
 
 
 @dataclass
