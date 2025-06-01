@@ -439,3 +439,16 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Acknowledgments
 
 TunaCode is a fork of [sidekick-cli](https://github.com/geekforbrains/sidekick-cli). Special thanks to the sidekick-cli team for creating the foundation that made TunaCode possible.
+
+### Key Differences from sidekick-cli
+
+While TunaCode builds on the foundation of sidekick-cli, we've made several architectural changes for our workflow:
+
+- **JSON Tool Parsing Fallback**: Added fallback parsing for when API providers fail with structured tool calling
+- **Parallel Search Tools**: New `bash` and `grep` tools with parallel execution for codebase navigation
+- **ReAct Reasoning**: Implemented ReAct (Reasoning + Acting) patterns with configurable iteration limits
+- **Dynamic Configuration**: Added `/refresh` command and modified configuration management
+- **Safety Changes**: Removed automatic git commits and `/undo` command - requires explicit git usage
+- **Error Recovery**: Multiple fallback mechanisms and orphaned tool call recovery
+- **Tool System Rewrite**: Complete overhaul of internal tools with atomic operations and different confirmation UIs
+- **Debug Commands**: Added `/parsetools`, `/thoughts`, `/iterations` for debugging
