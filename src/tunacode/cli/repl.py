@@ -6,6 +6,8 @@ Handles user input, command processing, and agent interaction in an interactive 
 """
 
 import json
+import os
+import subprocess
 from asyncio.exceptions import CancelledError
 
 from prompt_toolkit.application import run_in_terminal
@@ -269,6 +271,19 @@ async def repl(state_manager: StateManager):
                 action = await _handle_command(line, state_manager)
                 if action == "restart":
                     break
+                continue
+
+            if line.startswith("!"):
+                command = line[1:].strip()
+
+                def run_shell():
+                    if command:
+                        subprocess.run(command, shell=True)
+                    else:
+                        shell = os.environ.get("SHELL", "bash")
+                        subprocess.run(shell)
+
+                await run_in_terminal(run_shell)
                 continue
 
             # Check if another task is already running
