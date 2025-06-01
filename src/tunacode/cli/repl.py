@@ -6,6 +6,8 @@ Handles user input, command processing, and agent interaction in an interactive 
 """
 
 import json
+import os
+import subprocess
 from asyncio.exceptions import CancelledError
 
 from prompt_toolkit.application import run_in_terminal
@@ -169,7 +171,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
 
         # Patch any orphaned tool calls from previous requests before proceeding
         patch_tool_messages("Tool execution was interrupted", state_manager)
-        
+
         # Create a partial function that includes state_manager
         def tool_callback_with_state(part, node):
             return _tool_handler(part, node, state_manager)
@@ -188,7 +190,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                     if isinstance(msg, dict) and "thought" in msg:
                         await ui.muted(f"THOUGHT: {msg['thought']}")
             # Check if result exists and has output
-            if hasattr(res, 'result') and res.result is not None and hasattr(res.result, 'output'):
+            if hasattr(res, "result") and res.result is not None and hasattr(res.result, "output"):
                 await ui.agent(res.result.output)
             else:
                 # Fallback: show that the request was processed
@@ -204,29 +206,28 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
     except Exception as e:
         # Check if this might be a tool calling failure that we can recover from
         error_str = str(e).lower()
-        if any(keyword in error_str for keyword in ['tool', 'function', 'call', 'schema']):
+        if any(keyword in error_str for keyword in ["tool", "function", "call", "schema"]):
             # Try to extract and execute tool calls from the last response
             if state_manager.session.messages:
                 last_msg = state_manager.session.messages[-1]
-                if hasattr(last_msg, 'parts'):
+                if hasattr(last_msg, "parts"):
                     for part in last_msg.parts:
-                        if hasattr(part, 'content') and isinstance(part.content, str):
+                        if hasattr(part, "content") and isinstance(part.content, str):
                             from tunacode.core.agents.main import extract_and_execute_tool_calls
+
                             try:
                                 # Create a partial function that includes state_manager
                                 def tool_callback_with_state(part, node):
                                     return _tool_handler(part, node, state_manager)
-                                    
+
                                 await extract_and_execute_tool_calls(
-                                    part.content, 
-                                    tool_callback_with_state, 
-                                    state_manager
+                                    part.content, tool_callback_with_state, state_manager
                                 )
                                 await ui.warning("🔧 Recovered using JSON tool parsing")
                                 return  # Successfully recovered
                             except Exception:
                                 pass  # Fallback failed, continue with normal error handling
-        
+
         # Wrap unexpected exceptions in AgentError for better tracking
         agent_error = AgentError(f"Agent processing failed: {str(e)}")
         agent_error.__cause__ = e  # Preserve the original exception chain
@@ -269,6 +270,30 @@ async def repl(state_manager: StateManager):
                 action = await _handle_command(line, state_manager)
                 if action == "restart":
                     break
+                continue
+
+            if line.startswith("!"):
+                command = line[1:].strip()
+
+                # Show tool-style header for bash commands
+                cmd_display = command if command else "Interactive shell"
+                await ui.panel("Tool(bash)", f"Command: {cmd_display}", border_style="yellow")
+
+                def run_shell():
+                    try:
+                        if command:
+                            result = subprocess.run(command, shell=True, capture_output=False)
+                            if result.returncode != 0:
+                                # Use print directly since we're in a terminal context
+                                print(f"\nCommand exited with code {result.returncode}")
+                        else:
+                            shell = os.environ.get("SHELL", "bash")
+                            subprocess.run(shell)
+                    except Exception as e:
+                        print(f"\nShell command failed: {str(e)}")
+
+                await run_in_terminal(run_shell)
+                await ui.line()
                 continue
 
             # Check if another task is already running

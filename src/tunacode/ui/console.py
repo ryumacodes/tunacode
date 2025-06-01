@@ -9,8 +9,9 @@ from rich.markdown import Markdown
 # Import and re-export all functions from specialized modules
 from .input import formatted_text, input, multiline_input
 from .keybindings import create_key_bindings
-from .output import (banner, clear, info, line, muted, print, show_update_message, spinner, success,
-                     sync_print, update_available, usage, version, warning)
+from .output import (banner, clear, info, line, muted, print, spinner, success, sync_print,
+                     update_available, usage, version, warning)
+# Patch banner to use sync fast version
 from .panels import (agent, dump_messages, error, help, models, panel, sync_panel,
                      sync_tool_confirm, tool_confirm)
 from .prompt_manager import PromptConfig, PromptManager
@@ -46,7 +47,6 @@ __all__ = [
     "line",
     "muted",
     "print",
-    "show_update_message",
     "spinner",
     "success",
     "sync_print",

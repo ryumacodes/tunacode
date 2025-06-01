@@ -7,12 +7,15 @@ Tests command registration and basic execution without actually running updates.
 import asyncio
 import sys
 import os
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from tunacode.cli.commands import UpdateCommand, CommandRegistry
 from tunacode.types import CommandContext
 from tunacode.core.state import StateManager
 
+@pytest.mark.asyncio
 async def test_update_command():
     """Test the update command registration and basic functionality."""
     print("Testing UpdateCommand...")
