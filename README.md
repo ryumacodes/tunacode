@@ -248,6 +248,7 @@ Learn more at [modelcontextprotocol.io](https://modelcontextprotocol.io/)
 | `/model <provider:name> default` | Set default model                |
 | `/branch <name>`                 | Create and switch Git branch     |
 | `/dump`                          | Show message history (debug)     |
+| `!`                              | Run shell command or open shell  |
 | `exit`                           | Exit application                 |
 
 ### Debug & Recovery Commands
