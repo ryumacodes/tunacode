@@ -22,8 +22,10 @@
 
 ---
 
-### Recent Updates (v0.0.14)
+### Recent Updates (v0.0.15)
 
+- **🐚 Shell Command Support**: Execute shell commands directly with `!command` or open interactive shell with `!`
+- **🔧 Enhanced Bash Tool**: Advanced bash execution with timeouts, working directory, and environment variables
 - **🔧 JSON Tool Parsing Fallback**: Automatic recovery when API providers fail with structured tool calling
 - **⚡ Enhanced Reliability**: Fixed parameter naming issues that caused tool schema errors
 - **🔄 Configuration Management**: New `/refresh` command to reload config without restart
@@ -48,6 +50,7 @@
 ### **Developer Tools**
 
 - 6 core tools: bash, grep, read_file, write_file, update_file, run_command
+- Direct shell command execution with `!` prefix
 - MCP (Model Context Protocol) support
 - File operation confirmations with diffs
 - Per-project context guides (TUNACODE.md)
@@ -248,7 +251,8 @@ Learn more at [modelcontextprotocol.io](https://modelcontextprotocol.io/)
 | `/model <provider:name> default` | Set default model                |
 | `/branch <name>`                 | Create and switch Git branch     |
 | `/dump`                          | Show message history (debug)     |
-| `!`                              | Run shell command or open shell  |
+| `!<command>`                     | Run shell command                |
+| `!`                              | Open interactive shell           |
 | `exit`                           | Exit application                 |
 
 ### Debug & Recovery Commands
@@ -260,6 +264,42 @@ Learn more at [modelcontextprotocol.io](https://modelcontextprotocol.io/)
 | `/parsetools`                    | Parse JSON tool calls manually   |
 | `/fix`                           | Fix orphaned tool calls         |
 | `/refresh`                       | Reload configuration from defaults |
+
+---
+
+## Available Tools
+
+### Bash Tool
+The enhanced bash tool provides advanced shell command execution with safety features:
+
+- **Working Directory Support**: Execute commands in specific directories
+- **Environment Variables**: Set custom environment variables for commands
+- **Timeout Control**: Configurable timeouts (1-300 seconds) to prevent hanging
+- **Output Capture**: Full stdout/stderr capture with truncation for large outputs
+- **Safety Checks**: Warns about potentially destructive commands
+- **Error Guidance**: Helpful error messages for common issues (command not found, permission denied, etc.)
+
+**Example usage by the AI:**
+```python
+# Simple command
+await bash("ls -la")
+
+# With working directory
+await bash("npm install", cwd="/path/to/project")
+
+# With timeout for long operations
+await bash("npm run build", timeout=120)
+
+# With environment variables
+await bash("python script.py", env={"API_KEY": "secret"})
+```
+
+### Other Core Tools
+- **grep**: Fast parallel content search across files
+- **read_file**: Read file contents with line numbers
+- **write_file**: Create new files (fails if file exists)
+- **update_file**: Modify existing files with precise replacements
+- **run_command**: Basic command execution (simpler than bash)
 
 ---
 
