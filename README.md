@@ -22,16 +22,20 @@
 
 ---
 
-### Recent Updates (v0.0.15)
+### Recent Updates (v0.0.18)
 
-- **🐚 Shell Command Support**: Execute shell commands directly with `!command` or open interactive shell with `!`
-- **🔧 Enhanced Bash Tool**: Advanced bash execution with timeouts, working directory, and environment variables
-- **🔧 JSON Tool Parsing Fallback**: Automatic recovery when API providers fail with structured tool calling
-- **⚡ Enhanced Reliability**: Fixed parameter naming issues that caused tool schema errors
-- **🔄 Configuration Management**: New `/refresh` command to reload config without restart
-- **🧠 Improved ReAct Reasoning**: Enhanced iteration limits (now defaults to 20) and better thought processing
-- **🛠️ New Debug Commands**: `/parsetools` for manual JSON parsing, `/iterations` for controlling reasoning depth
-- **📊 Better Error Recovery**: Multiple fallback mechanisms for various failure scenarios
+- **Advanced Agent Orchestration**: New orchestrator system for complex multi-step tasks with planning visibility
+- **Background Task Manager**: Asynchronous background processing for long-running operations
+- **Read-Only Agent**: Specialized agent for safe codebase exploration without modification risks
+- **Planning Transparency**: See the AI's planning process before execution with detailed task breakdowns
+- **Shell Command Support**: Execute shell commands directly with `!command` or open interactive shell with `!`
+- **Enhanced Bash Tool**: Advanced bash execution with timeouts, working directory, and environment variables
+- **JSON Tool Parsing Fallback**: Automatic recovery when API providers fail with structured tool calling
+- **Enhanced Reliability**: Fixed parameter naming issues that caused tool schema errors
+- **Configuration Management**: New `/refresh` command to reload config without restart
+- **Improved ReAct Reasoning**: Enhanced iteration limits (now defaults to 20) and better thought processing
+- **New Debug Commands**: `/parsetools` for manual JSON parsing, `/iterations` for controlling reasoning depth
+- **Better Error Recovery**: Multiple fallback mechanisms for various failure scenarios
 
 ### Core Features
 
@@ -365,7 +369,14 @@ src/tunacode/
 │
 ├── core/                 # Core Application Logic
 │   ├── agents/           # AI Agent System
-│   │   └── main.py       # Primary agent implementation (pydantic-ai)
+│   │   ├── main.py       # Primary agent implementation (pydantic-ai)
+│   │   ├── orchestrator.py # Complex task orchestration and planning
+│   │   ├── planner_schema.py # Planning data models
+│   │   └── readonly.py   # Read-only agent for safe exploration
+│   ├── background/       # Background Task Management
+│   │   └── manager.py    # Async background task execution
+│   ├── llm/              # LLM Integration
+│   │   └── planner.py    # LLM-based task planning
 │   ├── setup/            # Application Setup & Initialization
 │   │   ├── agent_setup.py     # Agent configuration
 │   │   ├── base.py           # Setup step base class
@@ -414,7 +425,7 @@ src/tunacode/
 ├── exceptions.py      # Custom exceptions
 ├── types.py           # Type definitions
 └── prompts/
-    └── system.txt     # System prompts for AI agent
+    └── system.md      # System prompts for AI agent
 ```
 
 ### Key Components
@@ -423,6 +434,8 @@ src/tunacode/
 | -------------------- | ------------------------ | ------------------------------- |
 | **CLI Layer**        | Command parsing and REPL | `cli/main.py`, `cli/repl.py`    |
 | **Agent System**     | AI-powered assistance    | `core/agents/main.py`           |
+| **Orchestrator**     | Complex task planning    | `core/agents/orchestrator.py`   |
+| **Background Tasks** | Async task execution     | `core/background/manager.py`    |
 | **Tool System**      | File/command operations  | `tools/*.py`                    |
 | **State Management** | Session state tracking   | `core/state.py`                 |
 | **UI Framework**     | Rich terminal interface  | `ui/output.py`, `ui/console.py` |
@@ -487,6 +500,9 @@ While TunaCode builds on the foundation of sidekick-cli, we've made several arch
 
 - **JSON Tool Parsing Fallback**: Added fallback parsing for when API providers fail with structured tool calling
 - **Parallel Search Tools**: New `bash` and `grep` tools with parallel execution for codebase navigation
+- **Agent Orchestration**: Advanced orchestrator for complex multi-step tasks with planning transparency
+- **Background Processing**: Asynchronous task manager for long-running operations
+- **Read-Only Agent**: Safe exploration mode that prevents accidental modifications
 - **ReAct Reasoning**: Implemented ReAct (Reasoning + Acting) patterns with configurable iteration limits
 - **Dynamic Configuration**: Added `/refresh` command and modified configuration management
 - **Safety Changes**: Removed automatic git commits and `/undo` command - requires explicit git usage

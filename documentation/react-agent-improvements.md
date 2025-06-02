@@ -105,7 +105,7 @@ if state_manager.session.show_thoughts and i > 1:
 
 ### 3. Enhanced System Prompt for ReAct
 
-**File**: `/src/tunacode/prompts/system.txt`
+**File**: `/src/tunacode/prompts/system.md`
 
 **Added Explicit ReAct Instructions**:
 ```
