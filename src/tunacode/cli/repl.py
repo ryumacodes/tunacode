@@ -17,6 +17,7 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior
 from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.agents import main as agent
 from tunacode.core.agents.main import patch_tool_messages
+from tunacode.core.agents.orchestrator import OrchestratorAgent
 from tunacode.core.tool_handler import ToolHandler
 from tunacode.exceptions import AgentError, UserAbortError, ValidationError
 from tunacode.ui import console as ui
@@ -160,41 +161,69 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         True, state_manager.session.spinner, state_manager
     )
     try:
-        # Expand @file references before sending to the agent
-        try:
-            from tunacode.utils.text_utils import expand_file_refs
-
-            text = expand_file_refs(text)
-        except ValueError as e:
-            await ui.error(str(e))
-            return
-
         # Patch any orphaned tool calls from previous requests before proceeding
         patch_tool_messages("Tool execution was interrupted", state_manager)
+
+        # Track message start for thoughts display
+        start_idx = len(state_manager.session.messages)
 
         # Create a partial function that includes state_manager
         def tool_callback_with_state(part, node):
             return _tool_handler(part, node, state_manager)
 
-        start_idx = len(state_manager.session.messages)
-        res = await agent.process_request(
-            state_manager.session.current_model,
-            text,
-            state_manager,
-            tool_callback=tool_callback_with_state,
-        )
-        if output:
-            if state_manager.session.show_thoughts:
-                new_msgs = state_manager.session.messages[start_idx:]
-                for msg in new_msgs:
-                    if isinstance(msg, dict) and "thought" in msg:
-                        await ui.muted(f"THOUGHT: {msg['thought']}")
-            # Check if result exists and has output
-            if hasattr(res, "result") and res.result is not None and hasattr(res.result, "output"):
-                await ui.agent(res.result.output)
-            else:
-                # Fallback: show that the request was processed
-                await ui.muted("Request completed")
+        # Check if architect mode is enabled
+        if getattr(state_manager.session, 'architect_mode', False):
+            # Expand @file references before sending to the orchestrator
+            try:
+                from tunacode.utils.text_utils import expand_file_refs
+
+                text = expand_file_refs(text)
+            except ValueError as e:
+                await ui.error(str(e))
+                return
+            # Use orchestrator for planning and execution
+            orchestrator = OrchestratorAgent(state_manager)
+            results = await orchestrator.run(text, state_manager.session.current_model)
+            
+            if output:
+                # Process results from all sub-agents
+                for res in results:
+                    # Check if result exists and has output
+                    if hasattr(res, "result") and res.result is not None and hasattr(res.result, "output"):
+                        await ui.agent(res.result.output)
+                
+                if not results:
+                    # Fallback: show that the request was processed
+                    await ui.muted("Request completed")
+        else:
+            # Expand @file references before sending to the agent
+            try:
+                from tunacode.utils.text_utils import expand_file_refs
+
+                text = expand_file_refs(text)
+            except ValueError as e:
+                await ui.error(str(e))
+                return
+            
+            # Use normal agent processing
+            res = await agent.process_request(
+                state_manager.session.current_model,
+                text,
+                state_manager,
+                tool_callback=tool_callback_with_state,
+            )
+            if output:
+                if state_manager.session.show_thoughts:
+                    new_msgs = state_manager.session.messages[start_idx:]
+                    for msg in new_msgs:
+                        if isinstance(msg, dict) and "thought" in msg:
+                            await ui.muted(f"THOUGHT: {msg['thought']}")
+                # Check if result exists and has output
+                if hasattr(res, "result") and res.result is not None and hasattr(res.result, "output"):
+                    await ui.agent(res.result.output)
+                else:
+                    # Fallback: show that the request was processed
+                    await ui.muted("Request completed")
     except CancelledError:
         await ui.muted("Request cancelled")
     except UserAbortError:
