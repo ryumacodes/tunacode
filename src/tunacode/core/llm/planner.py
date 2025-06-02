@@ -56,7 +56,7 @@ async def make_plan(request: str, model: ModelName, state_manager: StateManager)
     # Display the plan
     console.print(f"[dim][Planning] Generated {len(tasks)} tasks:[/dim]")
     for task in tasks:
-        task_type = "✏️  WRITE" if task.mutate else "👁  READ"
+        task_type = "WRITE" if task.mutate else "READ"
         console.print(f"[dim]  Task {task.id}: {task_type} - {task.description}[/dim]")
     console.print("")
 
