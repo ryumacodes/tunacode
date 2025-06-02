@@ -14,11 +14,11 @@ import itertools
 from typing import List
 
 from ...types import AgentRun, ModelName
+from ..llm.planner import make_plan
 from ..state import StateManager
 from . import main as agent_main
-from .readonly import ReadOnlyAgent
 from .planner_schema import Task
-from ..llm.planner import make_plan
+from .readonly import ReadOnlyAgent
 
 
 class OrchestratorAgent:
@@ -27,10 +27,10 @@ class OrchestratorAgent:
     def __init__(self, state_manager: StateManager):
         self.state = state_manager
 
-    async def plan(self, request: str) -> List[Task]:
+    async def plan(self, request: str, model: ModelName) -> List[Task]:
         """Plan tasks for a user request using the planner LLM."""
 
-        return await make_plan(request)
+        return await make_plan(request, model, self.state)
 
     async def _run_sub_task(self, task: Task, model: ModelName) -> AgentRun:
         """Execute a single task using an appropriate sub-agent."""
@@ -54,7 +54,7 @@ class OrchestratorAgent:
         """
 
         model = model or self.state.session.current_model
-        tasks = await self.plan(request)
+        tasks = await self.plan(request, model)
 
         results: List[AgentRun] = []
         for mutate_flag, group in itertools.groupby(tasks, key=lambda t: t.mutate):

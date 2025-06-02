@@ -1,9 +1,11 @@
 """Read-only agent with a restricted toolset."""
+
 from __future__ import annotations
 
 from typing import Sequence
-from .main import Agent  # type: ignore
+
 from ..state import StateManager
+from .main import Agent  # type: ignore
 
 READ_ONLY_TOOLS: Sequence[str] = (
     "read_file",
