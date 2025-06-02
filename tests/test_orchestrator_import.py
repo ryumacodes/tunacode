@@ -17,7 +17,6 @@ def test_orchestrator_import():
         orch = OrchestratorAgent(state)
         assert orch
         print("✓ OrchestratorAgent import successful")
-        return True
     except Exception as e:
         print(f"✗ OrchestratorAgent import failed: {e}")
-        return False
+        raise
