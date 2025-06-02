@@ -34,12 +34,24 @@ class OrchestratorAgent:
 
     async def _run_sub_task(self, task: Task, model: ModelName) -> AgentRun:
         """Execute a single task using an appropriate sub-agent."""
+        from rich.console import Console
+
+        console = Console()
+
+        # Show which task is being executed
+        task_type = "✏️  WRITE" if task.mutate else "👁  READ"
+        console.print(f"\n[dim][Executing Task {task.id}] {task_type}[/dim]")
+        console.print(f"[dim]  → {task.description}[/dim]")
 
         if task.mutate:
             agent_main.get_or_create_agent(model, self.state)
-            return await agent_main.process_request(model, task.description, self.state)
-        agent = ReadOnlyAgent(model, self.state)
-        return await agent.process_request(task.description)
+            result = await agent_main.process_request(model, task.description, self.state)
+        else:
+            agent = ReadOnlyAgent(model, self.state)
+            result = await agent.process_request(task.description)
+
+        console.print(f"[dim][Task {task.id}] ✓ Complete[/dim]")
+        return result
 
     async def run(self, request: str, model: ModelName | None = None) -> List[AgentRun]:
         """Plan and execute a user request.
@@ -52,9 +64,20 @@ class OrchestratorAgent:
             Optional model name to use for sub agents.  Defaults to the current
             session model.
         """
+        from rich.console import Console
 
+        console = Console()
         model = model or self.state.session.current_model
+
+        # Show orchestrator is starting
+        console.print(
+            "\n[cyan]🎯 Orchestrator Mode: Analyzing request and creating execution plan...[/cyan]"
+        )
+
         tasks = await self.plan(request, model)
+
+        # Show execution is starting
+        console.print(f"\n[cyan]🚀 Executing plan with {len(tasks)} tasks...[/cyan]")
 
         results: List[AgentRun] = []
         for mutate_flag, group in itertools.groupby(tasks, key=lambda t: t.mutate):
@@ -62,7 +85,15 @@ class OrchestratorAgent:
                 for t in group:
                     results.append(await self._run_sub_task(t, model))
             else:
-                coros = [self._run_sub_task(t, model) for t in group]
+                # Show parallel execution
+                task_list = list(group)
+                if len(task_list) > 1:
+                    console.print(
+                        f"\n[dim][Parallel Execution] Running {len(task_list)} read-only tasks concurrently...[/dim]"
+                    )
+                coros = [self._run_sub_task(t, model) for t in task_list]
                 results.extend(await asyncio.gather(*coros))
+
+        console.print("\n[green]✅ Orchestrator completed all tasks successfully![/green]")
 
         return results

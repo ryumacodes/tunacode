@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ...types import AgentRun, ModelName
 from ...tools.grep import grep
 from ...tools.read_file import read_file
+from ...types import AgentRun, ModelName
 from ..state import StateManager
 
 if TYPE_CHECKING:
@@ -25,9 +25,9 @@ class ReadOnlyAgent:
         """Lazily create the agent with read-only tools."""
         if self._agent is None:
             from .main import get_agent_tool
-            
+
             Agent, Tool = get_agent_tool()
-            
+
             # Create agent with only read-only tools
             self._agent = Agent(
                 model=self.model,
@@ -42,11 +42,10 @@ class ReadOnlyAgent:
     async def process_request(self, request: str) -> AgentRun:
         """Process a request using only read-only tools."""
         agent = self._get_agent()
-        result = await agent.run(request)
-        
-        # Create a minimal AgentRun response
-        return AgentRun(
-            model_response=result.data if hasattr(result, 'data') else str(result),
-            usage={},
-            run_id="readonly",
-        )
+
+        # Use iter() like main.py does to get the full run context
+        async with agent.iter(request) as agent_run:
+            async for _ in agent_run:
+                pass  # Let it complete
+
+        return agent_run
