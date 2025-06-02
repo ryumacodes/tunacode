@@ -134,7 +134,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         import os
         from pathlib import Path
 
-        prompt_path = Path(__file__).parent.parent.parent / "prompts" / "system.txt"
+        prompt_path = Path(__file__).parent.parent.parent / "prompts" / "system.md"
         try:
             with open(prompt_path, "r", encoding="utf-8") as f:
                 system_prompt = f.read().strip()
