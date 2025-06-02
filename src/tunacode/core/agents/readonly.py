@@ -1,26 +1,52 @@
-"""Read-only agent with a restricted toolset."""
+"""Read-only agent implementation for non-mutating operations."""
 
 from __future__ import annotations
 
-from typing import Sequence
+from typing import TYPE_CHECKING
 
+from ...types import AgentRun, ModelName
+from ...tools.grep import grep
+from ...tools.read_file import read_file
 from ..state import StateManager
-from .main import Agent  # type: ignore
 
-READ_ONLY_TOOLS: Sequence[str] = (
-    "read_file",
-    "grep",
-    "search",
-    "explain_symbol",
-)
+if TYPE_CHECKING:
+    from ...types import PydanticAgent
 
 
-class ReadOnlyAgent(Agent):  # type: ignore[name-defined]
-    """Agent configured with read-only tools."""
+class ReadOnlyAgent:
+    """Agent configured with read-only tools for analysis tasks."""
 
-    def __init__(self, model: str, state_manager: StateManager):
-        super().__init__(
-            model=model,
-            tools=READ_ONLY_TOOLS,
-            state_manager=state_manager,
+    def __init__(self, model: ModelName, state_manager: StateManager):
+        self.model = model
+        self.state_manager = state_manager
+        self._agent: PydanticAgent | None = None
+
+    def _get_agent(self) -> PydanticAgent:
+        """Lazily create the agent with read-only tools."""
+        if self._agent is None:
+            from .main import get_agent_tool
+            
+            Agent, Tool = get_agent_tool()
+            
+            # Create agent with only read-only tools
+            self._agent = Agent(
+                model=self.model,
+                system_prompt="You are a read-only assistant. You can analyze and read files but cannot modify them.",
+                tools=[
+                    Tool(read_file),
+                    Tool(grep),
+                ],
+            )
+        return self._agent
+
+    async def process_request(self, request: str) -> AgentRun:
+        """Process a request using only read-only tools."""
+        agent = self._get_agent()
+        result = await agent.run(request)
+        
+        # Create a minimal AgentRun response
+        return AgentRun(
+            model_response=result.data if hasattr(result, 'data') else str(result),
+            usage={},
+            run_id="readonly",
         )
