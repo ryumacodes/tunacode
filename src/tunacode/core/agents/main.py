@@ -18,15 +18,8 @@ from tunacode.tools.read_file import read_file
 from tunacode.tools.run_command import run_command
 from tunacode.tools.update_file import update_file
 from tunacode.tools.write_file import write_file
-from tunacode.types import (
-    AgentRun,
-    ErrorMessage,
-    ModelName,
-    PydanticAgent,
-    ToolCallback,
-    ToolCallId,
-    ToolName,
-)
+from tunacode.types import (AgentRun, ErrorMessage, ModelName, PydanticAgent, ToolCallback,
+                            ToolCallId, ToolName)
 
 
 # Lazy import for Agent and Tool
@@ -251,7 +244,7 @@ async def parse_json_tool_calls(
         elif char == "}":
             brace_count -= 1
             if brace_count == 0 and start_pos != -1:
-                potential_json = text[start_pos:i + 1]
+                potential_json = text[start_pos : i + 1]
                 try:
                     parsed = json.loads(potential_json)
                     if isinstance(parsed, dict) and "tool" in parsed and "args" in parsed:
