@@ -301,8 +301,6 @@ async def repl(state_manager: StateManager):
                 ctrl_c_pressed = True
                 await ui.warning("Hit Ctrl+C again to exit")
                 continue
-            except (EOFError, KeyboardInterrupt):
-                break
 
             if not line:
                 continue
