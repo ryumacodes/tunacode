@@ -2,7 +2,6 @@
 
 import re
 
-from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.lexers import Lexer
 
 
