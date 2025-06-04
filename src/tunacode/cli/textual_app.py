@@ -11,18 +11,13 @@ Provides a rich, interactive terminal user interface with:
 import asyncio
 from typing import Optional
 
-from rich.markdown import Markdown
-from textual import on, work
+from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.message import Message
-from textual.reactive import reactive
-from textual.widgets import Button, Footer, Header, Input, Label
-from textual.widgets import Markdown as MarkdownWidget
-from textual.widgets import Static, TabbedContent, TabPane, TextArea
+from textual.widgets import Button, Footer, Header, Static, TextArea
 
-from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.state import StateManager
 from tunacode.setup import setup
 from tunacode.utils.system import check_for_updates
@@ -130,78 +125,78 @@ class TunaCodeApp(App):
         border: thick $primary;
         padding: 1;
     }
-    
+
     .sidebar-title {
         text-align: center;
         color: $primary;
         margin-bottom: 1;
     }
-    
+
     .section-title {
         color: $accent;
         margin: 1 0;
     }
-    
+
     .command-item {
         color: $text-muted;
         margin-left: 1;
     }
-    
+
     .status-ready {
         color: $success;
     }
-    
+
     .status-busy {
         color: $warning;
     }
-    
+
     .status-error {
         color: $error;
     }
-    
+
     ChatHistory {
         border: thick $primary;
         padding: 1;
         height: 1fr;
     }
-    
+
     .user-message {
         background: $surface;
         border-left: thick $primary;
         padding: 1;
         margin: 1 0;
     }
-    
+
     .agent-message {
         background: $surface;
         border-left: thick $success;
         padding: 1;
         margin: 1 0;
     }
-    
+
     .system-message {
         background: $surface;
         border-left: thick $warning;
         padding: 1;
         margin: 1 0;
     }
-    
+
     .tool-message {
         background: $surface;
         border-left: thick $accent;
         padding: 1;
         margin: 1 0;
     }
-    
+
     InputArea {
         height: 5;
         padding: 1;
     }
-    
+
     #message-input {
         height: 3;
     }
-    
+
     #send-button {
         width: 10;
         margin-left: 1;
@@ -250,7 +245,8 @@ class TunaCodeApp(App):
         )
         self.chat_history.add_message(
             "System",
-            "⚠️ IMPORTANT: Always use git branches before making major changes\nType '/help' for available commands",
+            "⚠️ IMPORTANT: Always use git branches before making major changes\n"
+            "Type '/help' for available commands",
             "system",
         )
 
@@ -280,7 +276,7 @@ class TunaCodeApp(App):
         """Handle slash commands."""
         if command == "/help":
             help_text = """Available Commands:
-            
+
 /help - Show this help message
 /clear - Clear chat history
 /model - Show current model info
@@ -371,8 +367,6 @@ def main():
 
     # Initialize state manager
     state_manager = StateManager()
-    app_settings = ApplicationSettings()
-
     # Show banner
     print("🐟 TunaCode - Modern AI Development Assistant")
     print("=" * 50)

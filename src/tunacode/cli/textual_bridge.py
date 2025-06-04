@@ -5,9 +5,8 @@ This module adapts the existing REPL and agent processing logic to work
 with the new Textual-based interface while maintaining compatibility.
 """
 
-import asyncio
 from asyncio.exceptions import CancelledError
-from typing import Callable, Optional
+from typing import Callable
 
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
@@ -129,7 +128,7 @@ class TextualAgentBridge:
             # Check if confirmation is needed
             if tool_handler.should_confirm(part.tool_name):
                 # Create confirmation request
-                request = tool_handler.create_confirmation_request(part.tool_name, args)
+                tool_handler.create_confirmation_request(part.tool_name, args)
 
                 # For now, show a simple confirmation in the UI
                 # In a full implementation, this would show a proper modal dialog

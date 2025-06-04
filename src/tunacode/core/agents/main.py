@@ -7,11 +7,29 @@ Handles agent creation, configuration, and request processing.
 import json
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
+from tunacode.core.state import StateManager
+from tunacode.services.mcp import get_mcp_servers
+from tunacode.tools.bash import bash
+from tunacode.tools.grep import grep
+from tunacode.tools.read_file import read_file
+from tunacode.tools.run_command import run_command
+from tunacode.tools.update_file import update_file
+from tunacode.tools.write_file import write_file
+from tunacode.types import (
+    AgentRun,
+    ErrorMessage,
+    ModelName,
+    PydanticAgent,
+    ToolCallback,
+    ToolCallId,
+    ToolName,
+)
+
+
 # Lazy import for Agent and Tool
-
-
 def get_agent_tool():
     import importlib
 
@@ -24,18 +42,6 @@ def get_model_messages():
 
     messages = importlib.import_module("pydantic_ai.messages")
     return messages.ModelRequest, messages.ToolReturnPart
-
-
-from tunacode.core.state import StateManager
-from tunacode.services.mcp import get_mcp_servers
-from tunacode.tools.bash import bash
-from tunacode.tools.grep import grep
-from tunacode.tools.read_file import read_file
-from tunacode.tools.run_command import run_command
-from tunacode.tools.update_file import update_file
-from tunacode.tools.write_file import write_file
-from tunacode.types import (AgentRun, ErrorMessage, ModelName, PydanticAgent, ToolCallback,
-                            ToolCallId, ToolName)
 
 
 async def _process_node(node, tool_callback: Optional[ToolCallback], state_manager: StateManager):
@@ -131,9 +137,6 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         Agent, Tool = get_agent_tool()
 
         # Load system prompt
-        import os
-        from pathlib import Path
-
         prompt_path = Path(__file__).parent.parent.parent / "prompts" / "system.md"
         try:
             with open(prompt_path, "r", encoding="utf-8") as f:
@@ -248,7 +251,7 @@ async def parse_json_tool_calls(
         elif char == "}":
             brace_count -= 1
             if brace_count == 0 and start_pos != -1:
-                potential_json = text[start_pos : i + 1]
+                potential_json = text[start_pos:i + 1]
                 try:
                     parsed = json.loads(potential_json)
                     if isinstance(parsed, dict) and "tool" in parsed and "args" in parsed:
