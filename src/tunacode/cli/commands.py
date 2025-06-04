@@ -192,7 +192,7 @@ class ArchitectCommand(SimpleCommand):
                 await ui.error("Usage: /architect [on|off]")
                 return
         else:
-            state.architect_mode = not getattr(state, 'architect_mode', False)
+            state.architect_mode = not getattr(state, "architect_mode", False)
         status = "ON" if state.architect_mode else "OFF"
         if state.architect_mode:
             await ui.success(f"Architect mode {status} - Requests will be planned before execution")

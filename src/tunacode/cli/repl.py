@@ -172,7 +172,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             return _tool_handler(part, node, state_manager)
 
         # Check if architect mode is enabled
-        if getattr(state_manager.session, 'architect_mode', False):
+        if getattr(state_manager.session, "architect_mode", False):
             # Expand @file references before sending to the orchestrator
             try:
                 from tunacode.utils.text_utils import expand_file_refs
@@ -184,14 +184,18 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             # Use orchestrator for planning and execution
             orchestrator = OrchestratorAgent(state_manager)
             results = await orchestrator.run(text, state_manager.session.current_model)
-            
+
             if output:
                 # Process results from all sub-agents
                 for res in results:
                     # Check if result exists and has output
-                    if hasattr(res, "result") and res.result is not None and hasattr(res.result, "output"):
+                    if (
+                        hasattr(res, "result")
+                        and res.result is not None
+                        and hasattr(res.result, "output")
+                    ):
                         await ui.agent(res.result.output)
-                
+
                 if not results:
                     # Fallback: show that the request was processed
                     await ui.muted("Request completed")
@@ -204,7 +208,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             except ValueError as e:
                 await ui.error(str(e))
                 return
-            
+
             # Use normal agent processing
             res = await agent.process_request(
                 state_manager.session.current_model,
@@ -219,7 +223,11 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                         if isinstance(msg, dict) and "thought" in msg:
                             await ui.muted(f"THOUGHT: {msg['thought']}")
                 # Check if result exists and has output
-                if hasattr(res, "result") and res.result is not None and hasattr(res.result, "output"):
+                if (
+                    hasattr(res, "result")
+                    and res.result is not None
+                    and hasattr(res.result, "output")
+                ):
                     await ui.agent(res.result.output)
                 else:
                     # Fallback: show that the request was processed
