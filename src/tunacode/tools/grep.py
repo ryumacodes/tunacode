@@ -16,7 +16,7 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional
 
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import BaseTool
@@ -239,7 +239,7 @@ class ParallelGrep(BaseTool):
             results = await self._ripgrep_search(pattern, directory, config)
             if results:
                 return results
-        except:
+        except Exception:
             pass
 
         # Fallback to Python implementation
