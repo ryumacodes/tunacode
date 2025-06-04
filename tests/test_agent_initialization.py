@@ -3,6 +3,7 @@
 import pytest
 from unittest.mock import MagicMock, patch, mock_open
 from pathlib import Path
+import os
 
 from tunacode.core.state import StateManager
 from tunacode.core.agents.main import get_or_create_agent
@@ -19,19 +20,29 @@ async def test_agent_creation_with_missing_system_prompt_files():
         "settings": {"max_retries": 3}
     }
     
-    # Mock the file system to simulate missing prompt files
-    with patch('pathlib.Path.open', side_effect=FileNotFoundError):
-        with patch('builtins.open', side_effect=FileNotFoundError):
-            # This should not raise TypeError about NoneType
-            agent = get_or_create_agent(state_manager.session.current_model, state_manager)
+    # Mock environment variable
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        # Mock the Agent class to avoid actual OpenAI client creation
+        mock_agent = MagicMock()
+        mock_agent._system_prompts = ["You are a helpful AI assistant for software development tasks."]
+        
+        with patch('tunacode.core.agents.main.get_agent_tool') as mock_get_agent_tool:
+            mock_Agent = MagicMock(return_value=mock_agent)
+            mock_Tool = MagicMock()
+            mock_get_agent_tool.return_value = (mock_Agent, mock_Tool)
             
-            # Verify agent was created with default prompt
-            assert agent is not None
-            assert hasattr(agent, '_system_prompts')
-            # Check that a default prompt was used
-            assert agent._system_prompts is not None
-            assert len(agent._system_prompts) > 0
-            assert agent._system_prompts[0] == "You are a helpful AI assistant for software development tasks."
+            # Mock the file system to simulate missing prompt files
+            with patch('pathlib.Path.open', side_effect=FileNotFoundError):
+                with patch('builtins.open', side_effect=FileNotFoundError):
+                    # This should not raise TypeError about NoneType
+                    agent = get_or_create_agent(state_manager.session.current_model, state_manager)
+                    
+                    # Verify agent was created with default prompt
+                    assert agent is not None
+                    # Check that Agent was called with the default prompt
+                    mock_Agent.assert_called_once()
+                    args, kwargs = mock_Agent.call_args
+                    assert kwargs['system_prompt'] == "You are a helpful AI assistant for software development tasks."
 
 
 @pytest.mark.asyncio
@@ -47,19 +58,30 @@ async def test_agent_creation_with_system_txt():
     
     txt_content = "Test prompt from system.txt"
     
-    def mock_open_file(path, *args, **kwargs):
-        if str(path).endswith('system.md'):
-            raise FileNotFoundError
-        elif str(path).endswith('system.txt'):
-            return mock_open(read_data=txt_content)()
-        raise FileNotFoundError
-    
-    with patch('builtins.open', side_effect=mock_open_file):
-        agent = get_or_create_agent(state_manager.session.current_model, state_manager)
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        mock_agent = MagicMock()
+        mock_agent._system_prompts = [txt_content]
         
-        assert agent is not None
-        assert hasattr(agent, '_system_prompts')
-        assert agent._system_prompts[0] == txt_content
+        with patch('tunacode.core.agents.main.get_agent_tool') as mock_get_agent_tool:
+            mock_Agent = MagicMock(return_value=mock_agent)
+            mock_Tool = MagicMock()
+            mock_get_agent_tool.return_value = (mock_Agent, mock_Tool)
+            
+            def mock_open_file(path, *args, **kwargs):
+                if str(path).endswith('system.md'):
+                    raise FileNotFoundError
+                elif str(path).endswith('system.txt'):
+                    return mock_open(read_data=txt_content)()
+                raise FileNotFoundError
+            
+            with patch('builtins.open', side_effect=mock_open_file):
+                agent = get_or_create_agent(state_manager.session.current_model, state_manager)
+                
+                assert agent is not None
+                # Check that Agent was called with the txt content
+                mock_Agent.assert_called_once()
+                args, kwargs = mock_Agent.call_args
+                assert kwargs['system_prompt'] == txt_content
 
 
 @pytest.mark.asyncio
@@ -69,27 +91,57 @@ async def test_agent_creation_with_system_md():
     state_manager.session.current_model = "openai:gpt-4"
     state_manager.session.user_config = {
         "default_model": "openai:gpt-4", 
-        "env": {"OPENAI_API_KEY": "test-key"}
+        "env": {"OPENAI_API_KEY": "test-key"},
+        "settings": {"max_retries": 3}
     }
     
     md_content = "Test prompt from system.md"
     
-    with patch('builtins.open', mock_open(read_data=md_content)):
-        agent = get_or_create_agent(state_manager.session.current_model, state_manager)
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        mock_agent = MagicMock()
+        mock_agent._system_prompts = [md_content]
         
-        assert agent is not None
-        assert hasattr(agent, '_system_prompts')
-        assert agent._system_prompts[0] == md_content
+        with patch('tunacode.core.agents.main.get_agent_tool') as mock_get_agent_tool:
+            mock_Agent = MagicMock(return_value=mock_agent)
+            mock_Tool = MagicMock()
+            mock_get_agent_tool.return_value = (mock_Agent, mock_Tool)
+            
+            with patch('builtins.open', mock_open(read_data=md_content)):
+                agent = get_or_create_agent(state_manager.session.current_model, state_manager)
+                
+                assert agent is not None
+                # Check that Agent was called with the md content
+                mock_Agent.assert_called_once()
+                args, kwargs = mock_Agent.call_args
+                assert kwargs['system_prompt'] == md_content
 
 
 def test_agent_never_receives_none_system_prompt():
-    """Ensure Agent class never receives None as system_prompt."""
-    from pydantic_ai import Agent
+    """Ensure our code never passes None as system_prompt."""
+    state_manager = StateManager()
+    state_manager.session.current_model = "openai:gpt-4"
+    state_manager.session.user_config = {
+        "default_model": "openai:gpt-4",
+        "env": {"OPENAI_API_KEY": "test-key"},
+        "settings": {"max_retries": 3}
+    }
     
-    # This should raise TypeError if we pass None
-    with pytest.raises(TypeError, match="'NoneType' object is not iterable"):
-        Agent(
-            model="openai:gpt-4",
-            system_prompt=None,  # This is what was happening
-            tools=[]
-        )
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        mock_agent = MagicMock()
+        
+        with patch('tunacode.core.agents.main.get_agent_tool') as mock_get_agent_tool:
+            mock_Agent = MagicMock(return_value=mock_agent)
+            mock_Tool = MagicMock()
+            mock_get_agent_tool.return_value = (mock_Agent, mock_Tool)
+            
+            # Even with all files missing, we should never pass None
+            with patch('pathlib.Path.open', side_effect=FileNotFoundError):
+                with patch('builtins.open', side_effect=FileNotFoundError):
+                    agent = get_or_create_agent(state_manager.session.current_model, state_manager)
+                    
+                    # Verify that system_prompt was never None
+                    mock_Agent.assert_called_once()
+                    args, kwargs = mock_Agent.call_args
+                    assert kwargs['system_prompt'] is not None
+                    assert isinstance(kwargs['system_prompt'], str)
+                    assert len(kwargs['system_prompt']) > 0
