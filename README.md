@@ -8,6 +8,8 @@
 
 **Your AI-powered CLI coding assistant**
 
+![Demo](demo.gif)
+
 [Quick Start](#quick-start) • [Features](#features) • [Configuration](#configuration) • [Documentation](#documentation)
 
 </div>
@@ -94,6 +96,24 @@
 ```bash
 pip install tunacode-cli
 ```
+
+#### Development Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/larock22/tunacode.git
+cd tunacode
+
+# Run the setup script
+./scripts/setup_dev_env.sh
+
+# Or manually:
+python3 -m venv venv
+source venv/bin/activate
+pip install -e ".[dev]"
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development setup.
 
 #### One-line Install (Linux/macOS)
 
