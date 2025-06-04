@@ -44,12 +44,10 @@ if ! make lint; then
     die "Linting failed! Fix linting errors before publishing."
 fi
 
-# Temporarily skip tests due to circular import issue - critical fixes need to be pushed
-log "Skipping tests temporarily - critical fixes need to be published"
-# log "Running tests"
-# if ! $VENV_PATH/bin/pytest -v; then
-#     die "Tests failed! Fix failing tests before publishing."
-# fi
+log "Running tests"
+if ! $VENV_PATH/bin/pytest -v; then
+    die "Tests failed! Fix failing tests before publishing."
+fi
 
 log "All checks passed!"
 
