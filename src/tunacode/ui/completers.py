@@ -1,18 +1,19 @@
 """Completers for file references and commands."""
 
 import os
-from typing import Iterable, Optional
+from typing import TYPE_CHECKING, Iterable, Optional
 
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion, merge_completers
 from prompt_toolkit.document import Document
 
-from ..cli.commands import CommandRegistry
+if TYPE_CHECKING:
+    from ..cli.commands import CommandRegistry
 
 
 class CommandCompleter(Completer):
     """Completer for slash commands."""
 
-    def __init__(self, command_registry: Optional[CommandRegistry] = None):
+    def __init__(self, command_registry: Optional["CommandRegistry"] = None):
         self.command_registry = command_registry
 
     def get_completions(
@@ -120,7 +121,7 @@ class FileReferenceCompleter(Completer):
             pass
 
 
-def create_completer(command_registry: Optional[CommandRegistry] = None) -> Completer:
+def create_completer(command_registry: Optional["CommandRegistry"] = None) -> Completer:
     """Create a merged completer for both commands and file references."""
     return merge_completers(
         [
