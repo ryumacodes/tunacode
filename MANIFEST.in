@@ -1,0 +1,19 @@
+# Include all prompt files
+include src/tunacode/prompts/*.txt
+include src/tunacode/prompts/*.md
+
+# Include other important files
+include README.md
+include LICENSE
+include pyproject.toml
+include CLAUDE.md
+include TUNACODE.md
+
+# Include test files (optional, but good for development)
+recursive-include tests *.py
+
+# Exclude compiled files
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.so
+global-exclude *.egg-info
