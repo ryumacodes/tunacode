@@ -14,12 +14,12 @@ clean:
 	find . -type f -name "*.pyc" -delete
 
 lint:
-	black src/
-	isort src/
-	flake8 src/
+	venv/bin/black src/
+	venv/bin/isort src/
+	venv/bin/flake8 src/
 
 test:
-	pytest
+	venv/bin/pytest
 
 coverage:
 	pytest --cov=src/tunacode --cov-report=term
