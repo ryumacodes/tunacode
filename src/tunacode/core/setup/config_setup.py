@@ -102,7 +102,8 @@ class ConfigSetup(BaseSetup):
                     "  [green]tunacode --model 'openrouter:anthropic/claude-3.5-sonnet' --key 'your-key' --baseurl 'https://openrouter.ai/api/v1'[/green]"
                 )
                 console.print("\n[yellow]Run 'tunacode --help' for more options[/yellow]\n")
-                raise SystemExit(0)
+                from tunacode.exceptions import ConfigurationError
+                raise ConfigurationError("No configuration found. Please use CLI flags to configure.")
 
         if not self.state_manager.session.user_config.get("default_model"):
             raise ConfigurationError(
