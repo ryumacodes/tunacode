@@ -45,7 +45,7 @@ if ! make lint; then
 fi
 
 log "Running tests"
-if ! pytest -v; then
+if ! $VENV_PATH/bin/pytest -v; then
     die "Tests failed! Fix failing tests before publishing."
 fi
 
