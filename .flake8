@@ -4,7 +4,9 @@ ignore =
     # Whitespace before ':' (conflicts with black)
     E203,
     # Line break before binary operator (conflicts with black)
-    W503
+    W503,
+    # Multiple statements on one line (def) - Protocol methods
+    E704
 exclude = 
     venv,
     build,
