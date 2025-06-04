@@ -99,7 +99,8 @@ class ConfigSetup(BaseSetup):
                     "  [green]tunacode --model 'anthropic:claude-3-opus' --key 'your-key'[/green]"
                 )
                 console.print(
-                    "  [green]tunacode --model 'openrouter:anthropic/claude-3.5-sonnet' --key 'your-key' --baseurl 'https://openrouter.ai/api/v1'[/green]"
+                    "  [green]tunacode --model 'openrouter:anthropic/claude-3.5-sonnet' "
+                    "--key 'your-key' --baseurl 'https://openrouter.ai/api/v1'[/green]"
                 )
                 console.print("\n[yellow]Run 'tunacode --help' for more options[/yellow]\n")
                 from tunacode.exceptions import ConfigurationError
