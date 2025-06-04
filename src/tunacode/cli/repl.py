@@ -282,6 +282,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
 
 async def repl(state_manager: StateManager):
     action = None
+    ctrl_c_pressed = False
 
     # Professional startup information
     await ui.muted(f"• Model: {state_manager.session.current_model}")
@@ -294,11 +295,19 @@ async def repl(state_manager: StateManager):
         while True:
             try:
                 line = await ui.multiline_input(state_manager, _command_registry)
+            except UserAbortError:
+                if ctrl_c_pressed:
+                    break
+                ctrl_c_pressed = True
+                await ui.warning("Hit Ctrl+C again to exit")
+                continue
             except (EOFError, KeyboardInterrupt):
                 break
 
             if not line:
                 continue
+
+            ctrl_c_pressed = False
 
             if line.lower() in ["exit", "quit"]:
                 break

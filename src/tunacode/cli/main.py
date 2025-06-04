@@ -14,6 +14,7 @@ from tunacode.core.state import StateManager
 from tunacode.setup import setup
 from tunacode.ui import console as ui
 from tunacode.utils.system import check_for_updates
+from tunacode.exceptions import UserAbortError
 
 app_settings = ApplicationSettings()
 app = typer.Typer(help="🐟 TunaCode - Your AI-powered development assistant")
@@ -49,6 +50,9 @@ def main(
         try:
             await setup(run_setup, state_manager, cli_config)
             await repl(state_manager)
+        except (KeyboardInterrupt, UserAbortError):
+            update_task.cancel()
+            return
         except Exception as e:
             from tunacode.exceptions import ConfigurationError
 
