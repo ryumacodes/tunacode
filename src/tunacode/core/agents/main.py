@@ -125,7 +125,7 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
 
 def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
     if model not in state_manager.session.agents:
-        max_retries = state_manager.session.user_config["settings"]["max_retries"]
+        max_retries = state_manager.session.user_config.get("settings", {}).get("max_retries", 3)
 
         # Lazy import Agent and Tool
         Agent, Tool = get_agent_tool()
@@ -139,7 +139,14 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             with open(prompt_path, "r", encoding="utf-8") as f:
                 system_prompt = f.read().strip()
         except FileNotFoundError:
-            system_prompt = None
+            # Fallback to system.txt if system.md not found
+            prompt_path = Path(__file__).parent.parent.parent / "prompts" / "system.txt"
+            try:
+                with open(prompt_path, "r", encoding="utf-8") as f:
+                    system_prompt = f.read().strip()
+            except FileNotFoundError:
+                # Use a default system prompt if neither file exists
+                system_prompt = "You are a helpful AI assistant for software development tasks."
 
         state_manager.session.agents[model] = Agent(
             model=model,

@@ -5,6 +5,6 @@ setup(
     packages=find_namespace_packages(where="src"),
     include_package_data=True,
     package_data={
-        "tunacode": ["prompts/*.txt"],
+        "tunacode": ["prompts/*.txt", "prompts/*.md"],
     },
 )
