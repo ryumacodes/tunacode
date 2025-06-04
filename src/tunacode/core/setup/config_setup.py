@@ -103,7 +103,10 @@ class ConfigSetup(BaseSetup):
                 )
                 console.print("\n[yellow]Run 'tunacode --help' for more options[/yellow]\n")
                 from tunacode.exceptions import ConfigurationError
-                raise ConfigurationError("No configuration found. Please use CLI flags to configure.")
+
+                raise ConfigurationError(
+                    "No configuration found. Please use CLI flags to configure."
+                )
 
         if not self.state_manager.session.user_config.get("default_model"):
             raise ConfigurationError(

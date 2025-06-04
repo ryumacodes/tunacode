@@ -51,6 +51,7 @@ def main(
             await repl(state_manager)
         except Exception as e:
             from tunacode.exceptions import ConfigurationError
+
             if isinstance(e, ConfigurationError):
                 # ConfigurationError already printed helpful message, just exit cleanly
                 update_task.cancel()  # Cancel the update check
