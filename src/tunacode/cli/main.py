@@ -40,7 +40,7 @@ def main(
         await ui.banner()
 
         # Start update check in background
-        update_task = asyncio.to_thread(check_for_updates)
+        update_task = asyncio.create_task(asyncio.to_thread(check_for_updates))
 
         cli_config = {}
         if baseurl or model or key:
@@ -50,6 +50,11 @@ def main(
             await setup(run_setup, state_manager, cli_config)
             await repl(state_manager)
         except Exception as e:
+            from tunacode.exceptions import ConfigurationError
+            if isinstance(e, ConfigurationError):
+                # ConfigurationError already printed helpful message, just exit cleanly
+                update_task.cancel()  # Cancel the update check
+                return
             import traceback
 
             await ui.error(f"{str(e)}\n\nTraceback:\n{traceback.format_exc()}")
