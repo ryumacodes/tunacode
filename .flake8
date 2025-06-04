@@ -1,2 +1,15 @@
 [flake8]
-max-line-length=100
+max-line-length = 120
+ignore = 
+    # Whitespace before ':' (conflicts with black)
+    E203,
+    # Line break before binary operator (conflicts with black)
+    W503
+exclude = 
+    venv,
+    build,
+    dist,
+    .git,
+    __pycache__,
+    *.egg-info,
+    .pytest_cache

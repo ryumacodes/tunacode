@@ -4,10 +4,9 @@ from typing import Optional
 
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.styles import Style
 from prompt_toolkit.validation import Validator
 
-from tunacode.constants import UI_COLORS, UI_PROMPT_PREFIX
+from tunacode.constants import UI_PROMPT_PREFIX
 from tunacode.core.state import StateManager
 
 from .completers import create_completer
