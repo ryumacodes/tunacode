@@ -25,13 +25,31 @@ die(){ printf "%b\n" "${RED}ERROR:${NC} $*" >&2; exit 1; }
 for cmd in python3 git; do command -v $cmd >/dev/null || die "$cmd missing"; done
 [[ -f ~/.pypirc ]] || die "~/.pypirc missing (should contain real‑PyPI token)"
 
+# ── ensure clean working directory ------------------------------------------
+if [[ -n $(git status --porcelain) ]]; then
+    die "Working directory is not clean. Commit or stash changes before publishing."
+fi
+
 # Use virtual environment
 VENV_PATH="venv"
 [[ -d "$VENV_PATH" ]] || die "Virtual environment not found at $VENV_PATH"
 PYTHON="$VENV_PATH/bin/python"
 PIP="$VENV_PATH/bin/pip"
 
-$PIP -q install build twine setuptools_scm packaging >/dev/null
+$PIP -q install build twine setuptools_scm packaging pytest black isort flake8 >/dev/null
+
+# ── run tests and linting before publishing --------------------------------
+log "Running linting checks"
+if ! make lint; then
+    die "Linting failed! Fix linting errors before publishing."
+fi
+
+log "Running tests"
+if ! pytest -v; then
+    die "Tests failed! Fix failing tests before publishing."
+fi
+
+log "All checks passed!"
 
 # ── cleanup -----------------------------------------------------------------
 rm -rf dist build *.egg-info
