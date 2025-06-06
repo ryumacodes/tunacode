@@ -370,6 +370,8 @@ async def process_request(
 
                     await ui.warning(f"⚠️ Reached maximum iterations ({max_iterations})")
                 break
+
+        # If we need to add a fallback response, create a wrapper
         if not response_state.has_user_response and i >= max_iterations and fallback_enabled:
             patch_tool_messages("Task incomplete", state_manager=state_manager)
             response_state.has_final_synthesis = True
@@ -378,6 +380,28 @@ async def process_request(
                 progress=f"{i}/{max_iterations} iterations completed",
             )
 
-            agent_run.result = SimpleResult(fallback.summary)
-        agent_run.response_state = response_state
-        return agent_run
+            # Create a wrapper object that mimics AgentRun with the required attributes
+            class AgentRunWrapper:
+                def __init__(self, wrapped_run, fallback_result):
+                    self._wrapped = wrapped_run
+                    self.result = fallback_result
+                    self.response_state = response_state
+
+                def __getattr__(self, name):
+                    # Delegate all other attributes to the wrapped object
+                    return getattr(self._wrapped, name)
+
+            return AgentRunWrapper(agent_run, SimpleResult(fallback.summary))
+
+        # For non-fallback cases, we still need to handle the response_state
+        # Create a minimal wrapper just to add response_state
+        class AgentRunWithState:
+            def __init__(self, wrapped_run):
+                self._wrapped = wrapped_run
+                self.response_state = response_state
+
+            def __getattr__(self, name):
+                # Delegate all other attributes to the wrapped object
+                return getattr(self._wrapped, name)
+
+        return AgentRunWithState(agent_run)
