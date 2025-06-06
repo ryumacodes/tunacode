@@ -25,6 +25,7 @@ from tunacode.types import (
     ModelName,
     PydanticAgent,
     ResponseState,
+    SimpleResult,
     ToolCallback,
     ToolCallId,
     ToolName,
@@ -378,16 +379,12 @@ async def process_request(
                     await ui.warning(f"⚠️ Reached maximum iterations ({max_iterations})")
                 break
         if not response_state.has_user_response and i >= max_iterations and fallback_enabled:
-            patch_tool_messages("Task incomplete", state_manager)
+            patch_tool_messages("Task incomplete", state_manager=state_manager)
             response_state.has_final_synthesis = True
             fallback = FallbackResponse(
                 summary="Reached maximum iterations without producing a final response.",
                 progress=f"{i}/{max_iterations} iterations completed",
             )
-
-            class SimpleResult:
-                def __init__(self, output: str):
-                    self.output = output
 
             agent_run.result = SimpleResult(fallback.summary)
         agent_run.response_state = response_state
