@@ -18,18 +18,8 @@ from tunacode.tools.read_file import read_file
 from tunacode.tools.run_command import run_command
 from tunacode.tools.update_file import update_file
 from tunacode.tools.write_file import write_file
-from tunacode.types import (
-    AgentRun,
-    ErrorMessage,
-    FallbackResponse,
-    ModelName,
-    PydanticAgent,
-    ResponseState,
-    SimpleResult,
-    ToolCallback,
-    ToolCallId,
-    ToolName,
-)
+from tunacode.types import (AgentRun, ErrorMessage, FallbackResponse, ModelName, PydanticAgent,
+                            ResponseState, SimpleResult, ToolCallback, ToolCallId, ToolName)
 
 
 # Lazy import for Agent and Tool
@@ -353,7 +343,9 @@ async def process_request(
     mh = state_manager.session.messages.copy()
     # Get max iterations from config (default: 20)
     max_iterations = state_manager.session.user_config.get("settings", {}).get("max_iterations", 20)
-    fallback_enabled = state_manager.session.user_config.get("settings", {}).get("fallback_response", True)
+    fallback_enabled = state_manager.session.user_config.get("settings", {}).get(
+        "fallback_response", True
+    )
 
     response_state = ResponseState()
 
