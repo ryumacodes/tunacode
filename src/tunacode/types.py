@@ -5,7 +5,7 @@ This module contains all type aliases, protocols, and type definitions
 used throughout the TunaCode codebase.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Protocol, Tuple, Union
 
@@ -148,9 +148,16 @@ class FallbackResponse:
     """Structure for synthesized fallback responses."""
 
     summary: str
-    progress: Optional[str] = None
-    issues: Optional[str] = None
-    next_steps: Optional[str] = None
+    progress: str = ""
+    issues: List[str] = field(default_factory=list)
+    next_steps: List[str] = field(default_factory=list)
+
+
+@dataclass
+class SimpleResult:
+    """Simple result container for agent responses."""
+    
+    output: str
 
 # =============================================================================
 # Session and State Types
