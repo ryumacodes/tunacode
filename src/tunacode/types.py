@@ -5,7 +5,7 @@ This module contains all type aliases, protocols, and type definitions
 used throughout the TunaCode codebase.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Protocol, Tuple, Union
 
@@ -133,6 +133,31 @@ AgentRun = Any  # pydantic_ai.RunContext or similar
 # Agent configuration
 AgentConfig = Dict[str, Any]
 AgentName = str
+
+
+@dataclass
+class ResponseState:
+    """Track whether a user visible response was produced."""
+
+    has_user_response: bool = False
+    has_final_synthesis: bool = False
+
+
+@dataclass
+class FallbackResponse:
+    """Structure for synthesized fallback responses."""
+
+    summary: str
+    progress: str = ""
+    issues: List[str] = field(default_factory=list)
+    next_steps: List[str] = field(default_factory=list)
+
+
+@dataclass
+class SimpleResult:
+    """Simple result container for agent responses."""
+    
+    output: str
 
 # =============================================================================
 # Session and State Types
