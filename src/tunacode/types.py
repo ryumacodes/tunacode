@@ -134,6 +134,24 @@ AgentRun = Any  # pydantic_ai.RunContext or similar
 AgentConfig = Dict[str, Any]
 AgentName = str
 
+
+@dataclass
+class ResponseState:
+    """Track whether a user visible response was produced."""
+
+    has_user_response: bool = False
+    has_final_synthesis: bool = False
+
+
+@dataclass
+class FallbackResponse:
+    """Structure for synthesized fallback responses."""
+
+    summary: str
+    progress: Optional[str] = None
+    issues: Optional[str] = None
+    next_steps: Optional[str] = None
+
 # =============================================================================
 # Session and State Types
 # =============================================================================

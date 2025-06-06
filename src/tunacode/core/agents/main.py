@@ -18,8 +18,17 @@ from tunacode.tools.read_file import read_file
 from tunacode.tools.run_command import run_command
 from tunacode.tools.update_file import update_file
 from tunacode.tools.write_file import write_file
-from tunacode.types import (AgentRun, ErrorMessage, ModelName, PydanticAgent, ToolCallback,
-                            ToolCallId, ToolName)
+from tunacode.types import (
+    AgentRun,
+    ErrorMessage,
+    FallbackResponse,
+    ModelName,
+    PydanticAgent,
+    ResponseState,
+    ToolCallback,
+    ToolCallId,
+    ToolName,
+)
 
 
 # Lazy import for Agent and Tool
@@ -343,11 +352,17 @@ async def process_request(
     mh = state_manager.session.messages.copy()
     # Get max iterations from config (default: 20)
     max_iterations = state_manager.session.user_config.get("settings", {}).get("max_iterations", 20)
+    fallback_enabled = state_manager.session.user_config.get("settings", {}).get("fallback_response", True)
+
+    response_state = ResponseState()
 
     async with agent.iter(message, message_history=mh) as agent_run:
         i = 0
         async for node in agent_run:
             await _process_node(node, tool_callback, state_manager)
+            if hasattr(node, "result") and node.result and hasattr(node.result, "output"):
+                if node.result.output:
+                    response_state.has_user_response = True
             i += 1
 
             # Display iteration progress if thoughts are enabled
@@ -362,5 +377,18 @@ async def process_request(
 
                     await ui.warning(f"⚠️ Reached maximum iterations ({max_iterations})")
                 break
+        if not response_state.has_user_response and i >= max_iterations and fallback_enabled:
+            patch_tool_messages("Task incomplete", state_manager)
+            response_state.has_final_synthesis = True
+            fallback = FallbackResponse(
+                summary="Reached maximum iterations without producing a final response.",
+                progress=f"{i}/{max_iterations} iterations completed",
+            )
 
+            class SimpleResult:
+                def __init__(self, output: str):
+                    self.output = output
+
+            agent_run.result = SimpleResult(fallback.summary)
+        agent_run.response_state = response_state
         return agent_run
