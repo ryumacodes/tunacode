@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Fallback response mechanism when agent reaches maximum iterations without user response
+- Configuration option `fallback_response` to enable/disable fallback responses
+- Response state tracking to determine if user-visible response was produced
+- Automatic synthesis of incomplete task status when max iterations reached
+
 ### Changed
 
 - Modified CLI commands processing
