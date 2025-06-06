@@ -108,8 +108,10 @@ class OrchestratorAgent:
                 def __init__(self, output: str):
                     self.output = output
 
-            synth_run = type("SynthRun", (), {})()
-            synth_run.result = SynthResult(summary)
-            results.append(synth_run)
+            class SynthRun:
+                def __init__(self):
+                    self.result = SynthResult(summary)
+
+            results.append(SynthRun())
 
         return results
