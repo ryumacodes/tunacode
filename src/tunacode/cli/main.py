@@ -11,10 +11,10 @@ import typer
 from tunacode.cli.repl import repl
 from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.state import StateManager
+from tunacode.exceptions import UserAbortError
 from tunacode.setup import setup
 from tunacode.ui import console as ui
 from tunacode.utils.system import check_for_updates
-from tunacode.exceptions import UserAbortError
 
 app_settings = ApplicationSettings()
 app = typer.Typer(help="🐟 TunaCode - Your AI-powered development assistant")

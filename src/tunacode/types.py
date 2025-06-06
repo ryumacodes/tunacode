@@ -156,8 +156,9 @@ class FallbackResponse:
 @dataclass
 class SimpleResult:
     """Simple result container for agent responses."""
-    
+
     output: str
+
 
 # =============================================================================
 # Session and State Types
