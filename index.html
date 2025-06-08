@@ -9,45 +9,46 @@
         tailwind.config = {
             theme: {
                 extend: {
+                    colors: {
+                        'cyber': {
+                            'dark': '#000000',
+                            'darker': '#0a0a0a',
+                            'blue': '#0f1419',
+                            'teal': '#1a1a2e',
+                            'cyan': '#64ffda',
+                            'pink': '#ff6b9d',
+                            'yellow': '#ffeb3b',
+                            'purple': '#bb86fc',
+                            'green': '#4caf50'
+                        }
+                    },
+                    fontFamily: {
+                        'mono': ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
+                        'tech': ['Inter', 'system-ui', 'sans-serif']
+                    },
                     animation: {
-                        'float': 'float 6s ease-in-out infinite',
                         'glow': 'glow 2s ease-in-out infinite alternate',
-                        'slide-up': 'slideUp 0.8s ease-out',
-                        'fade-in': 'fadeIn 1s ease-out',
-                        'scale-in': 'scaleIn 0.6s ease-out',
-                        'gradient-x': 'gradient-x 15s ease infinite',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'fade-in': 'fadeIn 0.8s ease-out',
+                        'float': 'float 3s ease-in-out infinite',
                     },
                     keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0px)' },
-                            '50%': { transform: 'translateY(-20px)' }
-                        },
                         glow: {
-                            '0%': { boxShadow: '0 0 20px rgba(56, 189, 248, 0.3)' },
-                            '100%': { boxShadow: '0 0 40px rgba(56, 189, 248, 0.6)' }
+                            '0%': { boxShadow: '0 0 10px rgba(0, 212, 255, 0.5)' },
+                            '100%': { boxShadow: '0 0 20px rgba(0, 212, 255, 0.8)' }
                         },
                         slideUp: {
-                            '0%': { opacity: '0', transform: 'translateY(30px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0px)' }
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
                         },
                         fadeIn: {
                             '0%': { opacity: '0' },
                             '100%': { opacity: '1' }
                         },
-                        scaleIn: {
-                            '0%': { opacity: '0', transform: 'scale(0.9)' },
-                            '100%': { opacity: '1', transform: 'scale(1)' }
-                        },
-                        'gradient-x': {
-                            '0%, 100%': {
-                                'background-size': '200% 200%',
-                                'background-position': 'left center'
-                            },
-                            '50%': {
-                                'background-size': '200% 200%',
-                                'background-position': 'right center'
-                            },
-                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        }
                     }
                 }
             }
@@ -55,443 +56,287 @@
     </script>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #0f1419 100%);
         }
-        .gradient-text {
-            background-clip: text;
-            -webkit-background-clip: text;
-            color: transparent;
+        .cyber-grid {
+            background-image: 
+                linear-gradient(rgba(100, 255, 218, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(100, 255, 218, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
         }
-        .glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .neon-border {
+            border: 1px solid rgba(100, 255, 218, 0.4);
+            box-shadow: 0 0 15px rgba(100, 255, 218, 0.3);
         }
-        .glass-dark {
-            background: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 255, 218, 0.15);
         }
-        .hover-lift {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .glow-text {
+            text-shadow: 0 0 15px rgba(100, 255, 218, 0.6);
         }
-        .hover-lift:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-        .parallax-bg {
-            background-attachment: fixed;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-size: cover;
-        }
-        @keyframes particle-float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-30px) rotate(120deg); }
-            66% { transform: translateY(15px) rotate(240deg); }
-        }
-        .particle {
-            animation: particle-float 8s ease-in-out infinite;
-        }
-        .code-block {
+        .code-window {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(10, 10, 10, 0.95) 100%);
+            border: 1px solid rgba(100, 255, 218, 0.3);
             position: relative;
             overflow: hidden;
         }
-        .code-block::before {
+        .code-window::before {
             content: '';
             position: absolute;
             top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.1), transparent);
-            transition: left 0.5s;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(90deg, #ff6b9d 0%, #64ffda 50%, #ffeb3b 100%);
+            opacity: 0.7;
         }
-        .code-block:hover::before {
-            left: 100%;
+        .terminal-dots {
+            position: absolute;
+            top: 8px;
+            left: 15px;
+            z-index: 10;
+        }
+        .terminal-dots::before,
+        .terminal-dots::after,
+        .terminal-dots {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .terminal-dots::before {
+            content: '';
+            background: #ff5f56;
+        }
+        .terminal-dots::after {
+            content: '';
+            background: #ffbd2e;
+        }
+        .terminal-dots {
+            background: #27ca3f;
         }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-200 relative overflow-x-hidden">
+<body class="min-h-screen text-white relative overflow-x-hidden">
     
-    <!-- Animated Background Particles -->
-    <div class="fixed inset-0 overflow-hidden pointer-events-none">
-        <div class="particle absolute top-1/4 left-1/4 w-2 h-2 bg-sky-400/20 rounded-full"></div>
-        <div class="particle absolute top-3/4 left-3/4 w-3 h-3 bg-cyan-400/15 rounded-full" style="animation-delay: -2s;"></div>
-        <div class="particle absolute top-1/2 left-1/6 w-1 h-1 bg-blue-400/25 rounded-full" style="animation-delay: -4s;"></div>
-        <div class="particle absolute top-1/3 right-1/4 w-2 h-2 bg-indigo-400/20 rounded-full" style="animation-delay: -1s;"></div>
-        <div class="particle absolute bottom-1/4 right-1/3 w-3 h-3 bg-sky-300/15 rounded-full" style="animation-delay: -3s;"></div>
-    </div>
-
-    <!-- Navigation Bar -->
-    <nav class="glass fixed top-0 left-0 right-0 z-50 border-b border-white/10">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="#" class="text-2xl font-bold text-sky-400 hover:text-sky-300 transition-colors duration-300">
-                TunaCode
-            </a>
-            <div class="space-x-6 hidden md:flex">
-                <a href="#features" class="text-slate-300 hover:text-sky-400 transition-all duration-300 hover:scale-105 relative group">
-                    Features
-                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-sky-400 transition-all duration-300 group-hover:w-full"></span>
-                </a>
-                <a href="#quick-start" class="text-slate-300 hover:text-sky-400 transition-all duration-300 hover:scale-105 relative group">
-                    Quick Start
-                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-sky-400 transition-all duration-300 group-hover:w-full"></span>
-                </a>
-                <a href="https://github.com/alchemiststudiosDOTai/tunacode" target="_blank" 
-                   class="glass-dark px-4 py-2 rounded-lg text-slate-300 hover:text-white transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-sky-500/25">
-                    GitHub
-                </a>
+    <!-- Cyber Grid Background -->
+    <div class="fixed inset-0 cyber-grid opacity-30 pointer-events-none"></div>
+    
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 glass-panel">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <img src="tunacode_logo.jpg" alt="TunaCode Logo" class="w-10 h-10 rounded-lg">
+                    <span class="text-2xl font-bold text-cyber-cyan glow-text">TunaCode</span>
+                </div>
+                                 <div class="hidden md:flex space-x-8">
+                     <a href="#features" class="text-gray-100 hover:text-cyber-cyan transition-colors duration-300 font-tech">Features</a>
+                     <a href="#install" class="text-gray-100 hover:text-cyber-cyan transition-colors duration-300 font-tech">Install</a>
+                     <a href="https://github.com/alchemiststudiosDOTai/tunacode" target="_blank" 
+                        class="neon-border px-4 py-2 rounded-lg text-cyber-cyan hover:bg-cyber-cyan hover:text-black transition-all duration-300 font-tech">
+                         GitHub
+                     </a>
+                 </div>
             </div>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <header class="min-h-screen flex items-center justify-center pt-20 relative">
-        <div class="absolute inset-0 bg-gradient-to-br from-sky-900/20 via-transparent to-cyan-900/20"></div>
+    <section class="min-h-screen flex items-center justify-center pt-20 relative">
         <div class="container mx-auto px-6 text-center relative z-10">
             <div class="animate-fade-in">
-                <h1 class="text-6xl md:text-8xl font-black mb-8 animate-gradient-x bg-gradient-to-r from-sky-400 via-cyan-300 to-blue-400 gradient-text">
-                    TunaCode
-                </h1>
-                <p class="text-xl md:text-3xl text-slate-300 mb-12 max-w-4xl mx-auto leading-relaxed font-light animate-slide-up">
-                    Your AI-powered CLI coding assistant, designed to <span class="text-sky-400 font-medium">supercharge</span> your development workflow.
-                </p>
-                <div class="flex flex-col sm:flex-row justify-center gap-6 mb-16 animate-scale-in">
-                    <a href="#quick-start" class="glass px-8 py-4 rounded-2xl text-white font-semibold text-lg hover-lift hover:bg-sky-500/20 transition-all duration-300 group">
-                        <span class="flex items-center justify-center gap-2">
-                            Get Started
-                            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                            </svg>
-                        </span>
-                    </a>
-                    <a href="https://github.com/alchemiststudiosDOTai/tunacode" target="_blank" 
-                       class="glass-dark px-8 py-4 rounded-2xl text-slate-100 font-semibold text-lg hover-lift hover:bg-white/10 transition-all duration-300 group">
-                        <span class="flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                            </svg>
-                            View on GitHub
-                        </span>
-                    </a>
+                <div class="flex items-center justify-center mb-8">
+                    <img src="tunacode_logo.jpg" alt="TunaCode" class="w-32 h-32 rounded-2xl shadow-2xl animate-float">
                 </div>
-                <div class="animate-float">
-                    <div class="glass-dark p-4 rounded-3xl shadow-2xl mx-auto max-w-5xl hover:shadow-sky-500/20 transition-all duration-500">
-                        <img src="demo.gif" alt="TunaCode Demo" class="rounded-2xl w-full">
+                                 <h1 class="text-6xl md:text-7xl font-bold mb-6 text-gray-100 glow-text">
+                     Tuna<span class="text-cyber-cyan">Code</span>
+                 </h1>
+                 <p class="text-xl md:text-2xl text-gray-200 mb-12 max-w-3xl mx-auto font-tech leading-relaxed">
+                     AI-powered CLI coding assistant for the cyberpunk developer.
+                     <br>Built for speed, precision, and modern workflows.
+                 </p>
+                
+                <!-- Installation Command -->
+                <div class="code-window rounded-xl p-6 max-w-2xl mx-auto mb-12 animate-slide-up">
+                    <div class="terminal-dots"></div>
+                    <div class="pt-6">
+                                                 <div class="flex items-center space-x-2 text-gray-300 text-sm mb-2 font-mono">
+                             <span class="text-cyber-pink">$</span>
+                             <span>pip install tunacode-cli</span>
+                         </div>
+                         <div class="flex items-center space-x-2 text-gray-300 text-sm font-mono">
+                             <span class="text-cyber-pink">$</span>
+                             <span class="text-cyber-cyan">tunacode</span>
+                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="absolute bottom-8 left-1/2 -translate-x-1/2 text-slate-400 animate-bounce">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 5.25 7.5 7.5 7.5-7.5m-15 6 7.5 7.5 7.5-7.5" />
-                </svg>
+
+                <div class="flex flex-col sm:flex-row justify-center gap-6 mb-16">
+                                         <a href="#install" 
+                        class="bg-cyber-cyan text-black px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white transition-all duration-300 animate-glow font-tech">
+                         Get Started
+                     </a>
+                     <a href="https://github.com/alchemiststudiosDOTai/tunacode" target="_blank"
+                        class="neon-border px-8 py-4 rounded-xl text-cyber-cyan font-semibold text-lg hover:bg-cyber-cyan hover:text-black transition-all duration-300 font-tech">
+                         View Source
+                     </a>
+                </div>
             </div>
         </div>
-    </header>
+    </section>
 
-    <!-- Main Content Area -->
-    <main class="container mx-auto px-6 py-20 relative">
+    <!-- Features Section -->
+    <section id="features" class="py-20 relative">
+        <div class="container mx-auto px-6">
+                         <div class="text-center mb-16 animate-slide-up">
+                 <h2 class="text-4xl md:text-5xl font-bold mb-6 text-gray-100 glow-text">Core Features</h2>
+                 <p class="text-xl text-gray-200 max-w-2xl mx-auto font-tech">
+                     Built for the modern developer workflow with cutting-edge AI integration.
+                 </p>
+             </div>
 
-        <!-- Recent Updates Section -->
-        <section id="updates" class="py-20">
-            <div class="text-center mb-16 animate-slide-up">
-                <h2 class="text-5xl font-bold mb-6 gradient-text bg-gradient-to-r from-sky-400 to-cyan-300">Recent Updates</h2>
-                <p class="text-slate-400 text-xl max-w-2xl mx-auto">Stay up-to-date with the latest enhancements in TunaCode (v0.0.18).</p>
-            </div>
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div class="glass p-8 rounded-3xl hover-lift group animate-scale-in">
-                    <div class="w-12 h-12 bg-gradient-to-br from-sky-400 to-cyan-300 rounded-2xl mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- Feature Cards -->
+                <div class="glass-panel p-8 rounded-xl hover:border-cyber-cyan transition-all duration-300 group">
+                    <div class="w-12 h-12 bg-cyber-cyan rounded-lg mb-6 flex items-center justify-center group-hover:animate-glow">
+                        <svg class="w-6 h-6 text-cyber-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-semibold text-sky-400 mb-4">Advanced Agent Orchestration</h3>
-                    <p class="text-slate-300 leading-relaxed">New orchestrator system for complex multi-step tasks with planning visibility.</p>
+                    <h3 class="text-xl font-semibold text-cyber-cyan mb-4 font-tech">Multi-Provider AI</h3>
+                                         <p class="text-gray-200 font-tech">Support for Claude, GPT, Gemini, and 100+ models via OpenRouter.</p>
                 </div>
-                <div class="glass p-8 rounded-3xl hover-lift group animate-scale-in" style="animation-delay: 0.1s;">
-                    <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-300 rounded-2xl mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-semibold text-sky-400 mb-4">Background Task Manager</h3>
-                    <p class="text-slate-300 leading-relaxed">Asynchronous background processing for long-running operations.</p>
-                </div>
-                <div class="glass p-8 rounded-3xl hover-lift group animate-scale-in" style="animation-delay: 0.2s;">
-                    <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-300 rounded-2xl mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-semibold text-sky-400 mb-4">Read-Only Agent</h3>
-                    <p class="text-slate-300 leading-relaxed">Specialized agent for safe codebase exploration without modification risks.</p>
-                </div>
-                <div class="glass p-8 rounded-3xl hover-lift group animate-scale-in" style="animation-delay: 0.3s;">
-                    <div class="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-300 rounded-2xl mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-semibold text-sky-400 mb-4">Planning Transparency</h3>
-                    <p class="text-slate-300 leading-relaxed">See the AI's planning process before execution with detailed task breakdowns.</p>
-                </div>
-                <div class="glass p-8 rounded-3xl hover-lift group animate-scale-in" style="animation-delay: 0.4s;">
-                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-300 rounded-2xl mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+
+                <div class="glass-panel p-8 rounded-xl hover:border-cyber-pink transition-all duration-300 group">
+                    <div class="w-12 h-12 bg-cyber-pink rounded-lg mb-6 flex items-center justify-center">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-semibold text-sky-400 mb-4">Shell Command Support</h3>
-                    <p class="text-slate-300 leading-relaxed">Execute shell commands directly with `!command` or open interactive shell with `!`.</p>
-                </div>
-                <div class="glass p-8 rounded-3xl hover-lift group animate-scale-in" style="animation-delay: 0.5s;">
-                    <div class="w-12 h-12 bg-gradient-to-br from-red-400 to-pink-300 rounded-2xl mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-semibold text-sky-400 mb-4">Enhanced Bash Tool</h3>
-                    <p class="text-slate-300 leading-relaxed">Advanced bash execution with timeouts, working directory, and environment variables.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Core Features Section -->
-        <section id="features" class="py-20">
-            <div class="text-center mb-16 animate-slide-up">
-                <h2 class="text-5xl font-bold mb-6 gradient-text bg-gradient-to-r from-sky-400 to-cyan-300">Core Features</h2>
-                <p class="text-slate-400 text-xl max-w-2xl mx-auto">Discover the powerful capabilities that make TunaCode an essential tool for developers.</p>
-            </div>
-            <div class="grid md:grid-cols-2 gap-12">
-                <div class="glass p-10 rounded-3xl hover-lift animate-scale-in">
-                    <h3 class="text-3xl font-semibold text-sky-400 mb-6 flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-sky-400 to-cyan-300 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                            </svg>
-                        </div>
-                        Multi-Provider Support
-                    </h3>
-                    <ul class="space-y-3 text-slate-300">
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-sky-400 rounded-full"></div>
-                            Anthropic Claude
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-green-400 rounded-full"></div>
-                            OpenAI GPT
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
-                            Google Gemini
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-purple-400 rounded-full"></div>
-                            OpenRouter (100+ models)
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                            Any OpenAI-compatible API
-                        </li>
-                    </ul>
-                </div>
-                <div class="glass p-10 rounded-3xl hover-lift animate-scale-in" style="animation-delay: 0.1s;">
-                    <h3 class="text-3xl font-semibold text-sky-400 mb-6 flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-300 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                        </div>
-                        Developer Tools
-                    </h3>
-                    <ul class="space-y-3 text-slate-300">
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                            6 core tools: bash, grep, read_file, write_file, update_file, run_command
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-orange-400 rounded-full"></div>
-                            Direct shell command execution with `!` prefix
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-cyan-400 rounded-full"></div>
-                            MCP (Model Context Protocol) support
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-pink-400 rounded-full"></div>
-                            File operation confirmations with diffs
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-indigo-400 rounded-full"></div>
-                            Per-project context guides (TUNACODE.md)
-                        </li>
-                    </ul>
-                </div>
-                <div class="glass p-10 rounded-3xl hover-lift animate-scale-in" style="animation-delay: 0.2s;">
-                    <h3 class="text-3xl font-semibold text-sky-400 mb-6 flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-300 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                            </svg>
-                        </div>
-                        Safety & Control
-                    </h3>
-                    <ul class="space-y-3 text-slate-300">
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
-                            Git branch integration (`/branch`)
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-red-400 rounded-full"></div>
-                            No automatic commits
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-green-400 rounded-full"></div>
-                            Explicit file operation confirmations
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                            Permission tracking per session
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-purple-400 rounded-full"></div>
-                            `/yolo` mode for power users
-                        </li>
-                    </ul>
-                </div>
-                <div class="glass p-10 rounded-3xl hover-lift animate-scale-in" style="animation-delay: 0.3s;">
-                    <h3 class="text-3xl font-semibold text-sky-400 mb-6 flex items-center gap-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-300 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                            </svg>
-                        </div>
-                        Architecture
-                    </h3>
-                    <ul class="space-y-3 text-slate-300">
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-teal-400 rounded-full"></div>
-                            Built on pydantic-ai
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-violet-400 rounded-full"></div>
-                            Async throughout
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-rose-400 rounded-full"></div>
-                            Modular command system
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-lime-400 rounded-full"></div>
-                            Rich UI with syntax highlighting
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-2 h-2 bg-amber-400 rounded-full"></div>
-                            ReAct reasoning patterns
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- Quick Start Section -->
-        <section id="quick-start" class="py-20">
-            <div class="text-center mb-16 animate-slide-up">
-                <h2 class="text-5xl font-bold mb-6 gradient-text bg-gradient-to-r from-sky-400 to-cyan-300">Quick Start</h2>
-                <p class="text-slate-400 text-xl max-w-2xl mx-auto">Get TunaCode up and running in minutes.</p>
-            </div>
-            
-            <div class="glass p-10 rounded-3xl mb-12 hover-lift animate-scale-in code-block">
-                <h3 class="text-3xl font-semibold text-sky-400 mb-6 flex items-center gap-3">
-                    <div class="w-8 h-8 bg-gradient-to-br from-sky-400 to-cyan-300 rounded-lg flex items-center justify-center">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                        </svg>
-                    </div>
-                    Installation (PyPI)
-                </h3>
-                <div class="glass-dark p-6 rounded-2xl">
-                    <pre class="text-sky-300 text-lg font-mono"><code>pip install tunacode-cli</code></pre>
-                </div>
-            </div>
-
-            <div class="glass p-10 rounded-3xl mb-12 hover-lift animate-scale-in code-block" style="animation-delay: 0.1s;">
-                <h3 class="text-3xl font-semibold text-sky-400 mb-6 flex items-center gap-3">
-                    <div class="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-300 rounded-lg flex items-center justify-center">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                    </div>
-                    Development Installation
-                </h3>
-                <div class="glass-dark p-6 rounded-2xl">
-                    <pre class="text-green-300 text-base font-mono leading-relaxed"><code># Clone the repository
-git clone https://github.com/larock22/tunacode.git
-cd tunacode
-
-# Run the setup script
-./scripts/setup_dev_env.sh
-
-# Or manually:
-python3 -m venv venv
-source venv/bin/activate
-pip install -e ".[dev]"</code></pre>
-                </div>
-            </div>
-
-            <div class="glass p-10 rounded-3xl mb-12 hover-lift animate-scale-in code-block" style="animation-delay: 0.2s;">
-                <h3 class="text-3xl font-semibold text-sky-400 mb-6 flex items-center gap-3">
-                    <div class="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-300 rounded-lg flex items-center justify-center">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                        </svg>
-                    </div>
-                    One-line Install (Linux/macOS)
-                </h3>
-                <div class="glass-dark p-6 rounded-2xl">
-                    <pre class="text-yellow-300 text-base font-mono"><code>wget -qO- https://raw.githubusercontent.com/alchemiststudiosDOTai/tunacode/master/scripts/install_linux.sh | bash</code></pre>
-                </div>
-            </div>
-            
-            <div class="text-center animate-scale-in" style="animation-delay: 0.3s;">
-                <p class="text-slate-400 mb-8 text-lg">After installation, configure TunaCode with your preferred LLM provider:</p>
-                <div class="glass-dark p-8 rounded-3xl max-w-2xl mx-auto">
-                    <pre class="text-cyan-300 text-base font-mono leading-relaxed"><code># Direct CLI Setup (Example with OpenAI)
-tunacode --model "openai:gpt-4.1" --key "your-openai-key"</code></pre>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Footer -->
-    <footer class="glass-dark border-t border-white/10 mt-20">
-        <div class="container mx-auto px-6 py-12 text-center">
-            <div class="mb-8">
-                <h3 class="text-2xl font-bold text-sky-400 mb-4">TunaCode</h3>
-                <p class="text-slate-400 max-w-md mx-auto">Empowering developers with AI-powered CLI assistance for enhanced productivity.</p>
-            </div>
-            <div class="flex justify-center space-x-6 mb-8">
-                <a href="https://github.com/alchemiststudiosDOTai/tunacode" target="_blank" 
-                   class="text-slate-400 hover:text-sky-400 transition-all duration-300 hover:scale-110">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                    </svg>
-                </a>
-            </div>
-            <div class="text-slate-500 space-y-2">
-                <p>&copy; 2025 TunaCode. All rights reserved.</p>
-                <p>Based on sidekick-cli. Licensed under the <a href="LICENSE" class="text-sky-400 hover:underline transition-colors">MIT License</a>.</p>
+                    <h3 class="text-xl font-semibold text-cyber-pink mb-4 font-tech">Advanced Tooling</h3>
+                                         <p class="text-gray-200 font-tech">6 core tools plus shell integration with MCP protocol support.</p>
+                 </div>
+ 
+                 <div class="glass-panel p-8 rounded-xl hover:border-cyber-yellow transition-all duration-300 group">
+                     <div class="w-12 h-12 bg-cyber-yellow rounded-lg mb-6 flex items-center justify-center">
+                         <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                         </svg>
+                     </div>
+                     <h3 class="text-xl font-semibold text-cyber-yellow mb-4 font-tech">Safety First</h3>
+                     <p class="text-gray-200 font-tech">Explicit confirmations, git integration, and no automatic commits.</p>
+                 </div>
+ 
+                 <div class="glass-panel p-8 rounded-xl hover:border-cyber-cyan transition-all duration-300 group">
+                     <div class="w-12 h-12 bg-gradient-to-br from-cyber-cyan to-cyber-pink rounded-lg mb-6 flex items-center justify-center">
+                         <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                         </svg>
+                     </div>
+                     <h3 class="text-xl font-semibold text-cyber-cyan mb-4 font-tech">Agent Orchestration</h3>
+                     <p class="text-gray-200 font-tech">Background tasks, planning transparency, and specialized agents.</p>
+                 </div>
+ 
+                 <div class="glass-panel p-8 rounded-xl hover:border-cyber-pink transition-all duration-300 group">
+                     <div class="w-12 h-12 bg-gradient-to-br from-cyber-pink to-cyber-yellow rounded-lg mb-6 flex items-center justify-center">
+                         <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                         </svg>
+                     </div>
+                     <h3 class="text-xl font-semibold text-cyber-pink mb-4 font-tech">Modern Architecture</h3>
+                     <p class="text-gray-200 font-tech">Built on pydantic-ai with async throughout and rich UI.</p>
+                 </div>
+ 
+                 <div class="glass-panel p-8 rounded-xl hover:border-cyber-yellow transition-all duration-300 group">
+                     <div class="w-12 h-12 bg-gradient-to-br from-cyber-yellow to-cyber-cyan rounded-lg mb-6 flex items-center justify-center">
+                         <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                         </svg>
+                     </div>
+                     <h3 class="text-xl font-semibold text-cyber-yellow mb-4 font-tech">Developer Experience</h3>
+                     <p class="text-gray-200 font-tech">Rich syntax highlighting, ReAct patterns, and intuitive commands.</p>
+                 </div>
             </div>
         </div>
-    </footer>
+    </section>
 
+    <!-- Installation Section -->
+    <section id="install" class="py-20 relative">
+        <div class="container mx-auto px-6">
+                         <div class="text-center mb-16">
+                 <h2 class="text-4xl md:text-5xl font-bold mb-6 text-gray-100 glow-text">Quick Install</h2>
+                 <p class="text-xl text-gray-200 max-w-2xl mx-auto font-tech">
+                     Get TunaCode running in under 60 seconds.
+                 </p>
+             </div>
+
+            <div class="max-w-4xl mx-auto space-y-8">
+                <!-- PyPI Installation -->
+                <div class="code-window rounded-xl p-8">
+                    <div class="terminal-dots"></div>
+                    <div class="pt-6">
+                        <h3 class="text-cyber-cyan text-lg font-semibold mb-4 font-tech">Install from PyPI</h3>
+                                                 <div class="bg-black rounded-lg p-4 font-mono border border-gray-800">
+                             <span class="text-cyber-pink">$</span> <span class="text-gray-100">pip install tunacode-cli</span>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- One-liner Installation -->
+                <div class="code-window rounded-xl p-8">
+                    <div class="terminal-dots"></div>
+                    <div class="pt-6">
+                        <h3 class="text-cyber-pink text-lg font-semibold mb-4 font-tech">One-line Install (Linux/macOS)</h3>
+                                                 <div class="bg-black rounded-lg p-4 font-mono text-sm border border-gray-800">
+                             <span class="text-cyber-pink">$</span> <span class="text-gray-100">wget -qO- https://raw.githubusercontent.com/alchemiststudiosDOTai/tunacode/master/scripts/install_linux.sh | bash</span>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Configuration -->
+                <div class="code-window rounded-xl p-8">
+                    <div class="terminal-dots"></div>
+                    <div class="pt-6">
+                        <h3 class="text-cyber-yellow text-lg font-semibold mb-4 font-tech">Configure & Run</h3>
+                                                 <div class="bg-black rounded-lg p-4 font-mono space-y-2 border border-gray-800">
+                             <div><span class="text-cyber-pink">$</span> <span class="text-gray-100">tunacode --model "openai:gpt-4.1" --key "your-key"</span></div>
+                             <div><span class="text-cyber-pink">$</span> <span class="text-cyber-cyan">tunacode</span></div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="glass-panel border-t border-cyber-cyan/20 mt-20">
+        <div class="container mx-auto px-6 py-12 text-center">
+            <div class="flex items-center justify-center space-x-4 mb-6">
+                <img src="tunacode_logo.jpg" alt="TunaCode" class="w-8 h-8 rounded-lg">
+                <span class="text-2xl font-bold text-cyber-cyan glow-text">TunaCode</span>
+            </div>
+                         <p class="text-gray-300 mb-8 font-tech">AI-powered CLI coding assistant for the cyberpunk developer.</p>
+             <div class="flex justify-center space-x-6 mb-8">
+                 <a href="https://github.com/alchemiststudiosDOTai/tunacode" target="_blank" 
+                    class="text-gray-300 hover:text-cyber-cyan transition-colors duration-300">
+                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                         <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                     </svg>
+                 </a>
+             </div>
+             <div class="text-gray-400 space-y-2 font-tech">
+                 <p>&copy; 2025 TunaCode. Licensed under the MIT License.</p>
+                 <p>Built for developers, by developers.</p>
+             </div>
+        </div>
+    </footer>
 </body>
 </html> 
