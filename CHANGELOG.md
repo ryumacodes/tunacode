@@ -20,7 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created ARCHITECTURE.md for technical details
   - Created DEVELOPMENT.md for contributing guidelines
   - Created ADVANCED-CONFIG.md for detailed configuration
-- Development version indicator ("dev") in banner
 
 ### Changed
 
