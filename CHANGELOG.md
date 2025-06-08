@@ -7,23 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.28] - 2025-06-08
+
+### Added
+
+- Enhanced `/compact` command with summary visibility:
+  - Displays AI-generated summary in a cyan-bordered panel before truncating
+  - Shows message count before and after compaction
+  - Improved summary extraction logic supporting multiple model response formats
+- Streamlined documentation structure:
+  - Created FEATURES.md for complete feature reference
+  - Created ARCHITECTURE.md for technical details
+  - Created DEVELOPMENT.md for contributing guidelines
+  - Created ADVANCED-CONFIG.md for detailed configuration
+- Development version indicator ("dev") in banner
+
+### Changed
+
+- `/compact` command now shows what was summarized instead of operating silently
+- README streamlined to focus on quick installation and basic usage
+- Moved detailed documentation to separate files for better organization
+
+## [0.0.27] - 2025-06-08
+
 ### Added
 
 - Fallback response mechanism when agent reaches maximum iterations without user response
 - Configuration option `fallback_response` to enable/disable fallback responses
 - Response state tracking to determine if user-visible response was produced
 - Automatic synthesis of incomplete task status when max iterations reached
-- Enhanced `/compact` command with summary visibility:
-  - Displays AI-generated summary in a cyan-bordered panel before truncating
-  - Shows message count before and after compaction
-  - Improved summary extraction logic supporting multiple model response formats
 
 ### Changed
 
 - Modified CLI commands processing
 - Updated REPL functionality
 - Enhanced output display formatting
-- `/compact` command now shows what was summarized instead of operating silently
+
+## [0.0.26] - 2025-01-07
+
+### Fixed
+
+- Resolved 'property result of AgentRun object has no setter' error
+
+## [0.0.25] - 2025-01-07
+
+### Fixed
+
+- Prevent agent from creating files in /tmp directory
+
+## [0.0.24] - 2025-01-07
+
+### Added
+
+- Demo gif to README
 
 ## [0.0.23] - 2025-01-06
 
