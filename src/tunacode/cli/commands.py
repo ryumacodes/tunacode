@@ -538,7 +538,7 @@ class CompactCommand(SimpleCommand):
 
         # Extract summary text from result
         summary_text = ""
-        
+
         # First try: standard result structure
         if (
             result
@@ -547,7 +547,7 @@ class CompactCommand(SimpleCommand):
             and hasattr(result.result, "output")
         ):
             summary_text = result.result.output
-        
+
         # Second try: check messages for assistant response
         if not summary_text:
             messages = context.state_manager.session.messages
@@ -561,11 +561,15 @@ class CompactCommand(SimpleCommand):
                             content = part.content
                             # Skip JSON thought objects
                             if content.strip().startswith('{"thought"'):
-                                lines = content.split('\n')
+                                lines = content.split("\n")
                                 # Find the actual summary after the JSON
                                 for i, line in enumerate(lines):
-                                    if line.strip() and not line.strip().startswith('{') and not line.strip().endswith('}'):
-                                        summary_text = '\n'.join(lines[i:]).strip()
+                                    if (
+                                        line.strip()
+                                        and not line.strip().startswith("{")
+                                        and not line.strip().endswith("}")
+                                    ):
+                                        summary_text = "\n".join(lines[i:]).strip()
                                         break
                             else:
                                 summary_text = content
@@ -581,7 +585,7 @@ class CompactCommand(SimpleCommand):
                     if getattr(msg, "role", None) == "assistant":
                         summary_text = msg.content
                         break
-                
+
                 if summary_text:
                     break
 
