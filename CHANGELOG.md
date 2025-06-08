@@ -13,12 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration option `fallback_response` to enable/disable fallback responses
 - Response state tracking to determine if user-visible response was produced
 - Automatic synthesis of incomplete task status when max iterations reached
+- Enhanced `/compact` command with summary visibility:
+  - Displays AI-generated summary in a cyan-bordered panel before truncating
+  - Shows message count before and after compaction
+  - Improved summary extraction logic supporting multiple model response formats
 
 ### Changed
 
 - Modified CLI commands processing
 - Updated REPL functionality
 - Enhanced output display formatting
+- `/compact` command now shows what was summarized instead of operating silently
 
 ## [0.0.23] - 2025-01-06
 
