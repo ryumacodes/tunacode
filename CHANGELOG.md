@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.30] - 2025-06-14
+
 ### Added
 
 - File context visibility improvements
@@ -18,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Shows "Reading: filename.py" instead of full JSON for read_file tool
   - Truncates long commands to 60 characters for better readability
   - Maintains detailed JSON display for other tools
+  - Added token counting for model responses
 
 ### Fixed
 
