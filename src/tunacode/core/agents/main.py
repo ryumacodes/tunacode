@@ -38,6 +38,9 @@ def get_model_messages():
 
 
 async def _process_node(node, tool_callback: Optional[ToolCallback], state_manager: StateManager):
+    from tunacode.ui import console as ui
+    from tunacode.utils.token_counter import estimate_tokens
+
     if hasattr(node, "request"):
         state_manager.session.messages.append(node.request)
 
@@ -45,36 +48,47 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
         state_manager.session.messages.append({"thought": node.thought})
         # Display thought immediately if show_thoughts is enabled
         if state_manager.session.show_thoughts:
-            from tunacode.ui import console as ui
-
-            await ui.muted(f"💭 THOUGHT: {node.thought}")
+            await ui.muted(f"THOUGHT: {node.thought}")
 
     if hasattr(node, "model_response"):
         state_manager.session.messages.append(node.model_response)
 
-        # Enhanced ReAct thought processing
+        # Enhanced display when thoughts are enabled
         if state_manager.session.show_thoughts:
             import json
             import re
 
-            from tunacode.ui import console as ui
-
+            # Display LLM response content
             for part in node.model_response.parts:
                 if hasattr(part, "content") and isinstance(part.content, str):
                     content = part.content.strip()
+
+                    # Skip empty content
+                    if not content:
+                        continue
+
+                    # Estimate tokens in this response
+                    token_count = estimate_tokens(content)
+
+                    # Display non-JSON content as LLM response
+                    if not content.startswith('{"thought"'):
+                        # Truncate very long responses for display
+                        display_content = content[:500] + "..." if len(content) > 500 else content
+                        await ui.muted(f"\nRESPONSE: {display_content}")
+                        await ui.muted(f"TOKENS: ~{token_count}")
 
                     # Pattern 1: Inline JSON thoughts {"thought": "..."}
                     thought_pattern = r'\{"thought":\s*"([^"]+)"\}'
                     matches = re.findall(thought_pattern, content)
                     for thought in matches:
-                        await ui.muted(f"💭 REASONING: {thought}")
+                        await ui.muted(f"REASONING: {thought}")
 
                     # Pattern 2: Standalone thought JSON objects
                     try:
                         if content.startswith('{"thought"'):
                             thought_obj = json.loads(content)
                             if "thought" in thought_obj:
-                                await ui.muted(f"💭 REASONING: {thought_obj['thought']}")
+                                await ui.muted(f"REASONING: {thought_obj['thought']}")
                     except (json.JSONDecodeError, KeyError):
                         pass
 
@@ -85,35 +99,85 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
                         if thought not in [m for m in matches]:  # Avoid duplicates
                             # Clean up escaped characters
                             cleaned_thought = thought.replace('\\"', '"').replace("\\n", " ")
-                            await ui.muted(f"💭 REASONING: {cleaned_thought}")
-
-                    # Pattern 4: Text-based reasoning indicators
-                    reasoning_indicators = [
-                        (r"I need to (.+?)\.", "PLANNING"),
-                        (r"Let me (.+?)\.", "ACTION"),
-                        (r"The output shows (.+?)\.", "OBSERVATION"),
-                        (r"Based on (.+?), I should (.+?)\.", "DECISION"),
-                    ]
-
-                    for pattern, label in reasoning_indicators:
-                        indicator_matches = re.findall(pattern, content, re.IGNORECASE)
-                        for match in indicator_matches:
-                            if isinstance(match, tuple):
-                                match_text = " ".join(match)
-                            else:
-                                match_text = match
-                            await ui.muted(f"🎯 {label}: {match_text}")
-                            break  # Only show first match per pattern
+                            await ui.muted(f"REASONING: {cleaned_thought}")
 
         # Check for tool calls and fallback to JSON parsing if needed
         has_tool_calls = False
         for part in node.model_response.parts:
             if part.part_kind == "tool-call" and tool_callback:
                 has_tool_calls = True
+
+                # Display tool call details when thoughts are enabled
+                if state_manager.session.show_thoughts:
+                    await ui.muted(f"\nTOOL: {part.tool_name}")
+                    if hasattr(part, "args"):
+                        # Check if args is a dictionary before accessing keys
+                        if isinstance(part.args, dict):
+                            # Simplify display based on tool type
+                            if part.tool_name == "read_file" and "file_path" in part.args:
+                                file_path = part.args["file_path"]
+                                filename = Path(file_path).name
+                                await ui.muted(f"Reading: {filename}")
+                            elif part.tool_name == "write_file" and "file_path" in part.args:
+                                file_path = part.args["file_path"]
+                                filename = Path(file_path).name
+                                await ui.muted(f"Writing: {filename}")
+                            elif part.tool_name == "update_file" and "file_path" in part.args:
+                                file_path = part.args["file_path"]
+                                filename = Path(file_path).name
+                                await ui.muted(f"Updating: {filename}")
+                            elif (
+                                part.tool_name in ["run_command", "bash"] and "command" in part.args
+                            ):
+                                command = part.args["command"]
+                                # Truncate long commands
+                                display_cmd = (
+                                    command if len(command) <= 60 else command[:57] + "..."
+                                )
+                                await ui.muted(f"Command: {display_cmd}")
+                            else:
+                                # For other tools, show full args but more compact
+                                args_str = json.dumps(part.args, indent=2)
+                                await ui.muted(f"ARGS: {args_str}")
+                        else:
+                            # If args is not a dict (e.g., a string), just display it as is
+                            await ui.muted(f"ARGS: {part.args}")
+
+                # Track this tool call (moved outside thoughts block)
+                state_manager.session.tool_calls.append(
+                    {
+                        "tool": part.tool_name,
+                        "args": part.args if hasattr(part, "args") else {},
+                        "iteration": state_manager.session.current_iteration,
+                    }
+                )
+
+                # Track files if this is read_file (moved outside thoughts block)
+                if (
+                    part.tool_name == "read_file"
+                    and hasattr(part, "args")
+                    and "file_path" in part.args
+                ):
+                    state_manager.session.files_in_context.add(part.args["file_path"])
+                    # Show files in context when thoughts are enabled
+                    if state_manager.session.show_thoughts:
+                        await ui.muted(
+                            f"\nFILES IN CONTEXT: {list(state_manager.session.files_in_context)}"
+                        )
+
                 await tool_callback(part, node)
+
             elif part.part_kind == "tool-return":
                 obs_msg = f"OBSERVATION[{part.tool_name}]: {part.content[:2_000]}"
                 state_manager.session.messages.append(obs_msg)
+
+                # Display tool return when thoughts are enabled
+                if state_manager.session.show_thoughts:
+                    # Truncate for display
+                    display_content = (
+                        part.content[:200] + "..." if len(part.content) > 200 else part.content
+                    )
+                    await ui.muted(f"TOOL RESULT: {display_content}")
 
         # If no structured tool calls found, try parsing JSON from text content
         if not has_tool_calls and tool_callback:
@@ -276,13 +340,13 @@ async def parse_json_tool_calls(
             if state_manager.session.show_thoughts:
                 from tunacode.ui import console as ui
 
-                await ui.muted(f"🔧 FALLBACK: Executed {tool_name} via JSON parsing")
+                await ui.muted(f"FALLBACK: Executed {tool_name} via JSON parsing")
 
         except Exception as e:
             if state_manager.session.show_thoughts:
                 from tunacode.ui import console as ui
 
-                await ui.error(f"❌ Error executing fallback tool {tool_name}: {str(e)}")
+                await ui.error(f"Error executing fallback tool {tool_name}: {str(e)}")
 
 
 async def extract_and_execute_tool_calls(
@@ -324,13 +388,13 @@ async def extract_and_execute_tool_calls(
                 if state_manager.session.show_thoughts:
                     from tunacode.ui import console as ui
 
-                    await ui.muted(f"🔧 FALLBACK: Executed {tool_data['tool']} from code block")
+                    await ui.muted(f"FALLBACK: Executed {tool_data['tool']} from code block")
 
         except (json.JSONDecodeError, KeyError, Exception) as e:
             if state_manager.session.show_thoughts:
                 from tunacode.ui import console as ui
 
-                await ui.error(f"❌ Error parsing code block tool call: {str(e)}")
+                await ui.error(f"Error parsing code block tool call: {str(e)}")
 
 
 async def process_request(
@@ -349,26 +413,43 @@ async def process_request(
 
     response_state = ResponseState()
 
+    # Reset iteration tracking for this request
+    state_manager.session.iteration_count = 0
+
     async with agent.iter(message, message_history=mh) as agent_run:
         i = 0
         async for node in agent_run:
+            state_manager.session.current_iteration = i + 1
             await _process_node(node, tool_callback, state_manager)
             if hasattr(node, "result") and node.result and hasattr(node.result, "output"):
                 if node.result.output:
                     response_state.has_user_response = True
             i += 1
+            state_manager.session.iteration_count = i
 
             # Display iteration progress if thoughts are enabled
-            if state_manager.session.show_thoughts and i > 1:
+            if state_manager.session.show_thoughts:
                 from tunacode.ui import console as ui
 
-                await ui.muted(f"🔄 Iteration {i}/{max_iterations}")
+                await ui.muted(f"\nITERATION: {i}/{max_iterations}")
+
+                # Show summary of tools used so far
+                if state_manager.session.tool_calls:
+                    tool_summary = {}
+                    for tc in state_manager.session.tool_calls:
+                        tool_name = tc.get("tool", "unknown")
+                        tool_summary[tool_name] = tool_summary.get(tool_name, 0) + 1
+
+                    summary_str = ", ".join(
+                        [f"{name}: {count}" for name, count in tool_summary.items()]
+                    )
+                    await ui.muted(f"TOOLS USED: {summary_str}")
 
             if i >= max_iterations:
                 if state_manager.session.show_thoughts:
                     from tunacode.ui import console as ui
 
-                    await ui.warning(f"⚠️ Reached maximum iterations ({max_iterations})")
+                    await ui.warning(f"Reached maximum iterations ({max_iterations})")
                 break
 
         # If we need to add a fallback response, create a wrapper
@@ -465,12 +546,23 @@ async def process_request(
             class AgentRunWrapper:
                 def __init__(self, wrapped_run, fallback_result):
                     self._wrapped = wrapped_run
-                    self.result = fallback_result
+                    self._result = fallback_result
                     self.response_state = response_state
 
-                def __getattr__(self, name):
+                def __getattribute__(self, name):
+                    # Handle special attributes first to avoid conflicts
+                    if name in ['_wrapped', '_result', 'response_state']:
+                        return object.__getattribute__(self, name)
+                    
+                    # Explicitly handle 'result' to return our fallback result
+                    if name == 'result':
+                        return object.__getattribute__(self, '_result')
+                    
                     # Delegate all other attributes to the wrapped object
-                    return getattr(self._wrapped, name)
+                    try:
+                        return getattr(object.__getattribute__(self, '_wrapped'), name)
+                    except AttributeError:
+                        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
             return AgentRunWrapper(agent_run, SimpleResult(comprehensive_output))
 
@@ -481,8 +573,15 @@ async def process_request(
                 self._wrapped = wrapped_run
                 self.response_state = response_state
 
-            def __getattr__(self, name):
+            def __getattribute__(self, name):
+                # Handle special attributes first
+                if name in ['_wrapped', 'response_state']:
+                    return object.__getattribute__(self, name)
+                
                 # Delegate all other attributes to the wrapped object
-                return getattr(self._wrapped, name)
+                try:
+                    return getattr(object.__getattribute__(self, '_wrapped'), name)
+                except AttributeError:
+                    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
         return AgentRunWithState(agent_run)

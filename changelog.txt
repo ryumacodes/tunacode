@@ -7,31 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- File context visibility improvements
-  - Files in context now always display after agent responses (not just when thoughts mode is enabled)
-  - Shows only filenames for better readability instead of full paths
-  - Tracks files referenced with @ syntax alongside files read through tools
-- Enhanced `/thoughts` command display
-  - Simplified tool arguments display for common file operations
-  - Shows "Reading: filename.py" instead of full JSON for read_file tool
-  - Truncates long commands to 60 characters for better readability
-  - Maintains detailed JSON display for other tools
-
-### Fixed
-
-- Fixed error when tool arguments were strings instead of dictionaries
-- Improved error handling for non-standard tool argument formats
-- Fixed aggressive file writing when using @ file references
-  - Added clear "FILE REFERENCE" headers to distinguish referenced content from code to write
-  - Updated system prompt to understand @ syntax is for providing context, not for file creation
-  - Changed model behavior from "TOOLS FIRST, ALWAYS" to "UNDERSTAND CONTEXT" for better interpretation
-- Fixed "string indices must be integers" error in fallback responses
-  - Improved AgentRunWrapper attribute resolution to properly handle result attribute conflicts
-  - Used __getattribute__ instead of __getattr__ to ensure correct attribute precedence
-  - Prevents errors when agent reaches max iterations and generates fallback response
-
 ## [0.0.29] - 2025-12-06
 
 ### Added

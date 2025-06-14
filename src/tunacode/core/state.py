@@ -30,6 +30,11 @@ class SessionState:
     device_id: Optional[DeviceId] = None
     input_sessions: InputSessions = field(default_factory=dict)
     current_task: Optional[Any] = None
+    # Enhanced tracking for thoughts display
+    files_in_context: set[str] = field(default_factory=set)
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
+    iteration_count: int = 0
+    current_iteration: int = 0
 
 
 class StateManager:

@@ -72,7 +72,10 @@ class TextualAgentBridge:
             try:
                 from tunacode.utils.text_utils import expand_file_refs
 
-                text = expand_file_refs(text)
+                text, referenced_files = expand_file_refs(text)
+                # Track the referenced files
+                for file_path in referenced_files:
+                    self.state_manager.session.files_in_context.add(file_path)
             except ValueError as e:
                 return f"Error: {str(e)}"
 
