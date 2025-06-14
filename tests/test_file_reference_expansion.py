@@ -20,11 +20,13 @@ class TestFileReferenceExpansion:
             
             try:
                 text = f"Please analyze @{f.name}"
-                expanded = expand_file_refs(text)
+                expanded, files = expand_file_refs(text)
                 
                 assert "```python" in expanded
                 assert "print('Hello, World!')" in expanded
                 assert "```" in expanded
+                assert len(files) == 1
+                assert os.path.abspath(f.name) in files
             finally:
                 os.unlink(f.name)
 
@@ -41,12 +43,15 @@ class TestFileReferenceExpansion:
             
             try:
                 text = f"Compare @{f1.name} with @{f2.name}"
-                expanded = expand_file_refs(text)
+                expanded, files = expand_file_refs(text)
                 
                 assert "```python" in expanded
                 assert "def hello():" in expanded
                 assert "```javascript" in expanded
                 assert "console.log('Hello');" in expanded
+                assert len(files) == 2
+                assert os.path.abspath(f1.name) in files
+                assert os.path.abspath(f2.name) in files
             finally:
                 os.unlink(f1.name)
                 os.unlink(f2.name)
@@ -56,7 +61,7 @@ class TestFileReferenceExpansion:
         text = "Please analyze @/path/that/does/not/exist.py"
         
         with pytest.raises(ValueError) as exc_info:
-            expand_file_refs(text)
+            expanded, files = expand_file_refs(text)
         
         assert "File not found" in str(exc_info.value)
 
@@ -71,7 +76,7 @@ class TestFileReferenceExpansion:
                 text = f"Please analyze @{f.name}"
                 
                 with pytest.raises(ValueError) as exc_info:
-                    expand_file_refs(text)
+                    expanded, files = expand_file_refs(text)
                 
                 assert "too large" in str(exc_info.value)
             finally:
@@ -85,12 +90,14 @@ class TestFileReferenceExpansion:
             
             try:
                 text = f"Before @{f.name} and after"
-                expanded = expand_file_refs(text)
+                expanded, files = expand_file_refs(text)
                 
                 assert "Before" in expanded
                 assert "and after" in expanded
                 assert "```text" in expanded  # .md files default to text
                 assert "# Test File" in expanded
+                assert len(files) == 1
+                assert os.path.abspath(f.name) in files
             finally:
                 os.unlink(f.name)
 
@@ -120,10 +127,12 @@ class TestFileReferenceExpansion:
                 
                 try:
                     text = f"@{f.name}"
-                    expanded = expand_file_refs(text)
+                    expanded, files = expand_file_refs(text)
                     
                     assert f"```{expected_lang}" in expanded
                     assert "test content" in expanded
+                    assert len(files) == 1
+                    assert os.path.abspath(f.name) in files
                 finally:
                     os.unlink(f.name)
 
@@ -148,11 +157,50 @@ class TestFileReferenceExpansion:
                 
                 # Test relative path reference
                 text = "@subdir/test.py needs review"
-                expanded = expand_file_refs(text)
+                expanded, files = expand_file_refs(text)
                 
                 assert "```python" in expanded
                 assert "def test():" in expanded
                 assert "needs review" in expanded
+                assert len(files) == 1
+                # Check that the absolute path is stored
+                assert str(test_file.resolve()) in files
             finally:
                 # Restore original directory
                 os.chdir(original_cwd)
+
+    def test_file_path_tracking(self):
+        """Test that file paths are correctly tracked and returned."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f1, \
+             tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as f2:
+            
+            f1.write("# Python file")
+            f1.flush()
+            
+            f2.write("// JavaScript file")
+            f2.flush()
+            
+            try:
+                # Test single file
+                text1 = f"Look at @{f1.name}"
+                expanded1, files1 = expand_file_refs(text1)
+                assert len(files1) == 1
+                assert os.path.abspath(f1.name) == files1[0]
+                
+                # Test multiple files
+                text2 = f"Compare @{f1.name} and @{f2.name}"
+                expanded2, files2 = expand_file_refs(text2)
+                assert len(files2) == 2
+                assert os.path.abspath(f1.name) in files2
+                assert os.path.abspath(f2.name) in files2
+                
+                # Test duplicate references (should still be unique in list)
+                text3 = f"Check @{f1.name} and then @{f1.name} again"
+                expanded3, files3 = expand_file_refs(text3)
+                assert len(files3) == 2  # Two occurrences but same file
+                assert files3[0] == files3[1]  # Both should be the same path
+                assert os.path.abspath(f1.name) == files3[0]
+                
+            finally:
+                os.unlink(f1.name)
+                os.unlink(f2.name)

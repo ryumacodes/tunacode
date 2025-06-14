@@ -6,7 +6,7 @@ Includes file extension to language mapping and key formatting functions.
 """
 
 import os
-from typing import Set
+from typing import List, Set, Tuple
 
 
 def key_to_title(key: str, uppercase_words: Set[str] = None) -> str:
@@ -50,14 +50,16 @@ def ext_to_lang(path: str) -> str:
     return "text"
 
 
-def expand_file_refs(text: str) -> str:
+def expand_file_refs(text: str) -> Tuple[str, List[str]]:
     """Expand @file references with file contents wrapped in code fences.
 
     Args:
         text: The input text potentially containing @file references.
 
     Returns:
-        Text with any @file references replaced by the file's contents.
+        Tuple[str, List[str]]: A tuple containing:
+            - Text with any @file references replaced by the file's contents
+            - List of absolute paths of files that were successfully expanded
 
     Raises:
         ValueError: If a referenced file does not exist or is too large.
@@ -69,6 +71,7 @@ def expand_file_refs(text: str) -> str:
                                     MSG_FILE_SIZE_LIMIT)
 
     pattern = re.compile(r"@([\w./_-]+)")
+    expanded_files = []
 
     def replacer(match: re.Match) -> str:
         path = match.group(1)
@@ -81,7 +84,13 @@ def expand_file_refs(text: str) -> str:
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        lang = ext_to_lang(path)
-        return f"```{lang}\n{content}\n```"
+        # Track the absolute path of the file
+        abs_path = os.path.abspath(path)
+        expanded_files.append(abs_path)
 
-    return pattern.sub(replacer, text)
+        lang = ext_to_lang(path)
+        # Add clear headers to indicate this is a file reference, not code to write
+        return f"\n=== FILE REFERENCE: {path} ===\n```{lang}\n{content}\n```\n=== END FILE REFERENCE: {path} ===\n"
+
+    expanded_text = pattern.sub(replacer, text)
+    return expanded_text, expanded_files

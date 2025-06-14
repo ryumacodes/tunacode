@@ -258,7 +258,8 @@ class ClearCommand(SimpleCommand):
 
         await ui.clear()
         context.state_manager.session.messages = []
-        await ui.success("Message history cleared")
+        context.state_manager.session.files_in_context.clear()
+        await ui.success("Message history and file context cleared")
 
 
 class FixCommand(SimpleCommand):

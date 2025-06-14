@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 from asyncio.exceptions import CancelledError
+from pathlib import Path
 
 from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.application.current import get_app
@@ -164,6 +165,13 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         # Patch any orphaned tool calls from previous requests before proceeding
         patch_tool_messages("Tool execution was interrupted", state_manager)
 
+        # Clear tracking for new request when thoughts are enabled
+        if state_manager.session.show_thoughts:
+            state_manager.session.tool_calls = []
+            # Don't clear files_in_context - keep it cumulative for the session
+            state_manager.session.iteration_count = 0
+            state_manager.session.current_iteration = 0
+
         # Track message start for thoughts display
         start_idx = len(state_manager.session.messages)
 
@@ -177,7 +185,10 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             try:
                 from tunacode.utils.text_utils import expand_file_refs
 
-                text = expand_file_refs(text)
+                text, referenced_files = expand_file_refs(text)
+                # Track the referenced files
+                for file_path in referenced_files:
+                    state_manager.session.files_in_context.add(file_path)
             except ValueError as e:
                 await ui.error(str(e))
                 return
@@ -199,12 +210,22 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                 if not results:
                     # Fallback: show that the request was processed
                     await ui.muted("Request completed")
+
+                # Always show files in context after orchestrator response
+                if state_manager.session.files_in_context:
+                    filenames = [
+                        Path(f).name for f in sorted(state_manager.session.files_in_context)
+                    ]
+                    await ui.muted(f"\nFiles in context: {', '.join(filenames)}")
         else:
             # Expand @file references before sending to the agent
             try:
                 from tunacode.utils.text_utils import expand_file_refs
 
-                text = expand_file_refs(text)
+                text, referenced_files = expand_file_refs(text)
+                # Track the referenced files
+                for file_path in referenced_files:
+                    state_manager.session.files_in_context.add(file_path)
             except ValueError as e:
                 await ui.error(str(e))
                 return
@@ -229,9 +250,22 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                     and hasattr(res.result, "output")
                 ):
                     await ui.agent(res.result.output)
+                    # Always show files in context after agent response
+                    if state_manager.session.files_in_context:
+                        # Extract just filenames from full paths for readability
+                        filenames = [
+                            Path(f).name for f in sorted(state_manager.session.files_in_context)
+                        ]
+                        await ui.muted(f"\nFiles in context: {', '.join(filenames)}")
                 else:
                     # Fallback: show that the request was processed
                     await ui.muted("Request completed")
+                    # Show files in context even for empty responses
+                    if state_manager.session.files_in_context:
+                        filenames = [
+                            Path(f).name for f in sorted(state_manager.session.files_in_context)
+                        ]
+                        await ui.muted(f"Files in context: {', '.join(filenames)}")
     except CancelledError:
         await ui.muted("Request cancelled")
     except UserAbortError:
