@@ -551,18 +551,20 @@ async def process_request(
 
                 def __getattribute__(self, name):
                     # Handle special attributes first to avoid conflicts
-                    if name in ['_wrapped', '_result', 'response_state']:
+                    if name in ["_wrapped", "_result", "response_state"]:
                         return object.__getattribute__(self, name)
-                    
+
                     # Explicitly handle 'result' to return our fallback result
-                    if name == 'result':
-                        return object.__getattribute__(self, '_result')
-                    
+                    if name == "result":
+                        return object.__getattribute__(self, "_result")
+
                     # Delegate all other attributes to the wrapped object
                     try:
-                        return getattr(object.__getattribute__(self, '_wrapped'), name)
+                        return getattr(object.__getattribute__(self, "_wrapped"), name)
                     except AttributeError:
-                        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+                        raise AttributeError(
+                            f"'{type(self).__name__}' object has no attribute '{name}'"
+                        )
 
             return AgentRunWrapper(agent_run, SimpleResult(comprehensive_output))
 
@@ -575,13 +577,15 @@ async def process_request(
 
             def __getattribute__(self, name):
                 # Handle special attributes first
-                if name in ['_wrapped', 'response_state']:
+                if name in ["_wrapped", "response_state"]:
                     return object.__getattribute__(self, name)
-                
+
                 # Delegate all other attributes to the wrapped object
                 try:
-                    return getattr(object.__getattribute__(self, '_wrapped'), name)
+                    return getattr(object.__getattribute__(self, "_wrapped"), name)
                 except AttributeError:
-                    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+                    raise AttributeError(
+                        f"'{type(self).__name__}' object has no attribute '{name}'"
+                    )
 
         return AgentRunWithState(agent_run)
