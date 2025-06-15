@@ -11,6 +11,8 @@ from enum import Enum
 from typing import List, Optional
 
 from ..code_index import CodeIndex
+from .project_context import ProjectContext
+from .task_generator import AdaptiveTaskGenerator
 
 
 class RequestType(Enum):
@@ -53,7 +55,11 @@ class RequestAnalyzer:
     def __init__(self):
         # Initialize code index for file lookups
         self.code_index = CodeIndex()
-        
+        # Initialize project context detector
+        self.project_context = ProjectContext(self.code_index)
+        # Initialize task generator
+        self.task_generator = AdaptiveTaskGenerator(self.project_context)
+
         # Patterns for different request types
         self.patterns = {
             RequestType.READ_FILE: [
@@ -97,6 +103,11 @@ class RequestAnalyzer:
                     Confidence.HIGH,
                 ),
                 (r"(?:what does|what is)\s+(.+?)\s+(?:do|for)", Confidence.HIGH),
+                # Pattern for summarize with file reference
+                (r"(@?\S+\.\w+)\s+(?:summarize|summary)", Confidence.HIGH),
+                (r"(?:summarize|summary)\s+(?:the\s+)?(?:file\s+)?(@?\S+\.\w+)", Confidence.HIGH),
+                # General summarize pattern
+                (r"summarize\s+(?:this|the)\s+file", Confidence.MEDIUM),
             ],
             RequestType.ANALYZE_CODEBASE: [
                 (
@@ -105,6 +116,10 @@ class RequestAnalyzer:
                 ),
                 (
                     r"(?:how does|how is)\s+(?:this|the)\s+(?:code|project|codebase).+?(?:organized|structured|work)",
+                    Confidence.HIGH,
+                ),
+                (
+                    r"(?:tell\s+me\s+about|describe|what\s+is)\s+(?:this\s+)?(?:code|codebase|project)",
                     Confidence.HIGH,
                 ),
             ],
@@ -151,13 +166,32 @@ class RequestAnalyzer:
         # Try to match against known patterns
         best_match = None
         best_confidence = Confidence.NONE
+        matches_by_type = {}  # Track all matches by type
 
         for request_type, patterns in self.patterns.items():
             for pattern, confidence in patterns:
                 match = re.search(pattern, request_lower, re.IGNORECASE)
-                if match and confidence.value > best_confidence.value:
-                    best_match = (request_type, match, confidence)
-                    best_confidence = confidence
+                if match:
+                    if request_type not in matches_by_type:
+                        matches_by_type[request_type] = []
+                    matches_by_type[request_type].append((match, confidence))
+                    
+                    if confidence.value > best_confidence.value:
+                        best_match = (request_type, match, confidence)
+                        best_confidence = confidence
+
+        # Special handling: if we have both READ_FILE and EXPLAIN_CODE matches,
+        # and the request contains "summarize", prefer EXPLAIN_CODE
+        if (
+            RequestType.READ_FILE in matches_by_type
+            and RequestType.EXPLAIN_CODE in matches_by_type
+            and "summariz" in request_lower  # catches summarize, summarizing, summary
+        ):
+            # Use the best EXPLAIN_CODE match
+            for match, conf in matches_by_type[RequestType.EXPLAIN_CODE]:
+                best_match = (RequestType.EXPLAIN_CODE, match, conf)
+                best_confidence = conf
+                break
 
         if best_match:
             request_type, match, confidence = best_match
@@ -215,6 +249,8 @@ class RequestAnalyzer:
             "compile",
             "lint",
             "format",
+            "summarize",
+            "summary",
         ]
         found = []
         for keyword in operation_keywords:
@@ -288,10 +324,10 @@ class RequestAnalyzer:
         elif intent.request_type == RequestType.SEARCH_CODE:
             search_term = intent.search_terms[0] if intent.search_terms else ""
             directory = intent.file_paths[0] if intent.file_paths else "."
-            
+
             # Use CodeIndex to build a more precise pattern
             pattern = self._build_precise_grep_pattern(search_term)
-            
+
             if pattern:
                 tasks.append(
                     {
@@ -324,46 +360,56 @@ class RequestAnalyzer:
                 )
                 task_id += 1
 
-            # Then analyze
+            # Then analyze based on the request
+            if "summariz" in intent.raw_request.lower():
+                analyze_desc = f"Summarize the contents of {', '.join(intent.file_paths) if intent.file_paths else 'the file'}"
+            else:
+                analyze_desc = "Explain how the code works"
+            
             tasks.append(
                 {
                     "id": task_id,
-                    "description": "Explain how the code works",
+                    "description": analyze_desc,
                     "mutate": False,
                     "tool": "analyze",
                     "args": {"request": intent.raw_request},
                 }
             )
 
+        elif intent.request_type == RequestType.ANALYZE_CODEBASE:
+            # Use context-aware task generation for codebase analysis
+            context = self.project_context.detect_context()
+            return self.task_generator.generate_codebase_tasks(context)
+
         else:
             # For write/update operations, return None to use LLM planning
             return None
 
         return tasks if tasks else None
-    
+
     def _build_precise_grep_pattern(self, search_term: str) -> Optional[str]:
         """Build a precise grep pattern using the CodeIndex.
-        
+
         Args:
             search_term: The term to search for
-            
+
         Returns:
             A precise regex pattern or None if clarification is needed
         """
         if not search_term:
             return None
-        
+
         # For very short terms (1-2 chars), we need more context to avoid broad searches
         if len(search_term) <= 2:
             return None
-            
+
         # Ensure the index is built
         if not self.code_index._indexed:
             self.code_index.build_index()
-        
+
         # Look up files that might contain this term
         matching_files = self.code_index.lookup(search_term)
-        
+
         if matching_files:
             # If we found exact file matches, build a pattern for the filename
             # Use word boundaries to avoid overly broad matches
@@ -376,15 +422,15 @@ class RequestAnalyzer:
                 search_term,
                 search_term.lower(),
                 search_term.upper(),
-                search_term.capitalize()
+                search_term.capitalize(),
             ]
-            
+
             for variant in variations:
                 matches = self.code_index.lookup(variant)
                 if matches:
                     escaped_variant = re.escape(variant)
                     return f"\\b{escaped_variant}\\b"
-            
+
             # If still no matches, it might be a general code pattern
             # Return the search term with word boundaries
             # This avoids the problematic single-letter patterns

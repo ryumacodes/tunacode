@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from ...tools.bash import bash
 from ...tools.grep import grep
+from ...tools.list_dir import list_dir
 from ...tools.read_file import read_file
 from ...types import AgentRun, ModelName, ResponseState
 from ..state import StateManager
@@ -32,10 +33,15 @@ class ReadOnlyAgent:
             # Create agent with only read-only tools
             self._agent = Agent(
                 model=self.model,
-                system_prompt="You are a read-only assistant. You can analyze and read files but cannot modify them. You can also execute shell commands for inspection purposes.",
+                system_prompt=(
+                    "You are a read-only assistant. You can analyze and read files but cannot modify them. "
+                    "You can also execute shell commands for inspection purposes. When listing directories, "
+                    "prefer using list_dir over bash ls commands."
+                ),
                 tools=[
                     Tool(read_file),
                     Tool(grep),
+                    Tool(list_dir),
                     Tool(bash),
                 ],
             )

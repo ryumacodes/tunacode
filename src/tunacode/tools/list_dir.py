@@ -7,7 +7,7 @@ Provides efficient directory listing without using shell commands.
 
 import os
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
@@ -22,10 +22,7 @@ class ListDirTool(FileBasedTool):
         return "ListDir"
 
     async def _execute(
-        self, 
-        directory: FilePath = ".", 
-        max_entries: int = 200,
-        show_hidden: bool = False
+        self, directory: FilePath = ".", max_entries: int = 200, show_hidden: bool = False
     ) -> ToolResult:
         """List the contents of a directory.
 
@@ -42,28 +39,28 @@ class ListDirTool(FileBasedTool):
         """
         # Convert to Path object for easier handling
         dir_path = Path(directory).resolve()
-        
+
         # Verify it's a directory
         if not dir_path.exists():
             raise FileNotFoundError(f"Directory not found: {dir_path}")
-        
+
         if not dir_path.is_dir():
             raise NotADirectoryError(f"Not a directory: {dir_path}")
-        
+
         # Collect entries
         entries: List[Tuple[str, bool, str]] = []  # (name, is_dir, type_indicator)
-        
+
         try:
             with os.scandir(dir_path) as scanner:
                 for entry in scanner:
                     # Skip hidden files if requested
-                    if not show_hidden and entry.name.startswith('.'):
+                    if not show_hidden and entry.name.startswith("."):
                         continue
-                    
+
                     try:
                         is_directory = entry.is_dir(follow_symlinks=False)
                         is_symlink = entry.is_symlink()
-                        
+
                         # Determine type indicator
                         if is_symlink:
                             type_indicator = "@"  # Symlink
@@ -77,76 +74,78 @@ class ListDirTool(FileBasedTool):
                                 type_indicator = ""  # Regular file
                         else:
                             type_indicator = "?"  # Unknown type
-                        
+
                         entries.append((entry.name, is_directory, type_indicator))
-                        
+
                     except (OSError, PermissionError):
                         # If we can't stat the entry, include it with unknown type
                         entries.append((entry.name, False, "?"))
-        
+
         except PermissionError as e:
             raise PermissionError(f"Permission denied accessing directory: {dir_path}")
-        
+
         # Sort entries: directories first, then files, both alphabetically
         entries.sort(key=lambda x: (not x[1], x[0].lower()))
-        
+
         # Apply limit after sorting to ensure consistent results
         total_entries = len(entries)
         if len(entries) > max_entries:
             entries = entries[:max_entries]
-        
+
         # Format output
         if not entries:
             return f"Directory '{dir_path}' is empty"
-        
+
         # Build formatted output
         lines = [f"Contents of '{dir_path}':"]
         lines.append("")
-        
+
         # Determine column width for better formatting
         max_name_length = max(len(name) for name, _, _ in entries)
         col_width = min(max_name_length + 2, 50)  # Cap at 50 chars
-        
+
         for name, is_dir, type_indicator in entries:
             # Truncate long names
             display_name = name
             if len(name) > 47:
                 display_name = name[:44] + "..."
-            
+
             # Add type indicator
             display_name += type_indicator
-            
+
             # Add entry type description
             if is_dir:
                 entry_type = "[DIR]"
             else:
                 entry_type = "[FILE]"
-            
+
             lines.append(f"  {display_name:<{col_width}} {entry_type}")
-        
+
         # Add summary
         displayed_count = len(entries)
         dir_count = sum(1 for _, is_dir, _ in entries if is_dir)
         file_count = displayed_count - dir_count
-        
+
         lines.append("")
-        lines.append(f"Total: {displayed_count} entries ({dir_count} directories, {file_count} files)")
-        
+        lines.append(
+            f"Total: {displayed_count} entries ({dir_count} directories, {file_count} files)"
+        )
+
         if total_entries > max_entries:
             lines.append(f"Note: Output limited to {max_entries} entries")
-        
+
         return "\n".join(lines)
 
     def _format_args(self, directory: FilePath = ".", *args, **kwargs) -> str:
         """Format arguments for display."""
         all_args = [repr(str(directory))]
-        
+
         # Add other keyword arguments if present
         for key, value in kwargs.items():
-            if key not in ['max_entries', 'show_hidden']:
+            if key not in ["max_entries", "show_hidden"]:
                 continue
             all_args.append(f"{key}={repr(value)}")
-        
+
         return ", ".join(all_args)
 
     def _get_error_context(self, directory: FilePath = None, *args, **kwargs) -> str:
@@ -157,22 +156,18 @@ class ListDirTool(FileBasedTool):
 
 
 # Create the function that maintains compatibility with pydantic-ai
-async def list_dir(
-    directory: str = ".", 
-    max_entries: int = 200,
-    show_hidden: bool = False
-) -> str:
+async def list_dir(directory: str = ".", max_entries: int = 200, show_hidden: bool = False) -> str:
     """
     List the contents of a directory without using shell commands.
-    
+
     Uses os.scandir for efficient directory listing with proper error handling.
     Results are sorted with directories first, then files, both alphabetically.
-    
+
     Args:
         directory: The path to the directory to list (defaults to current directory)
         max_entries: Maximum number of entries to return (default: 200)
         show_hidden: Whether to include hidden files/directories (default: False)
-    
+
     Returns:
         str: Formatted list of directory contents or error message
     """

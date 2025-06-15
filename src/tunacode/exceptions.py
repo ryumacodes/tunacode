@@ -112,5 +112,5 @@ class TooBroadPatternError(ToolExecutionError):
         super().__init__(
             "grep",
             f"Pattern '{pattern}' is too broad - no matches found within {timeout_seconds}s. "
-            "Please use a more specific pattern."
+            "Please use a more specific pattern.",
         )

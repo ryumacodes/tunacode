@@ -101,7 +101,7 @@ class FeedbackLoop:
             return FeedbackResult(
                 decision=FeedbackDecision.COMPLETE,
                 summary=f"Reached maximum iterations ({self.max_iterations}). Stopping execution.",
-                reason="Max iterations reached"
+                reason="Max iterations reached",
             )
 
         # Check if all tasks succeeded
@@ -116,19 +116,19 @@ class FeedbackLoop:
             return FeedbackResult(
                 decision=FeedbackDecision.COMPLETE,
                 summary="All read operations completed successfully.",
-                reason="All tasks succeeded"
+                reason="All tasks succeeded",
             )
 
         # Check for common errors
         for i, (task, result) in enumerate(zip(completed_tasks, results)):
             if isinstance(result, Exception):
                 error_str = str(result).lower()
-                
+
                 # Handle TooBroadPatternError specifically
                 if isinstance(result, TooBroadPatternError):
                     pattern = result.pattern
                     retry_key = f"pattern:{pattern}"
-                    
+
                     # Check retry budget (max 2 retries per pattern)
                     retries = self.retry_budget.get(retry_key, 0)
                     if retries >= 2:
@@ -136,38 +136,40 @@ class FeedbackLoop:
                             decision=FeedbackDecision.ERROR,
                             error_message=f"Pattern '{pattern}' failed after maximum retries.",
                             summary="Search pattern too broad even after narrowing attempts.",
-                            reason="Exceeded retry budget for broad pattern"
+                            reason="Exceeded retry budget for broad pattern",
                         )
-                    
+
                     # Increment retry count
                     self.retry_budget[retry_key] = retries + 1
-                    
+
                     # Create a retry task with narrowed pattern
                     narrowed_pattern = self._narrow_pattern(pattern, task)
                     new_task = task.copy()
                     new_task["pattern"] = narrowed_pattern
-                    new_task["description"] = f"Retry search with narrowed pattern: {narrowed_pattern}"
-                    
+                    new_task["description"] = (
+                        f"Retry search with narrowed pattern: {narrowed_pattern}"
+                    )
+
                     return FeedbackResult(
                         decision=FeedbackDecision.RETRY,
                         new_tasks=[new_task],
                         summary=f"Pattern '{pattern}' timed out. Retrying with narrowed pattern.",
-                        reason=f"TooBroadPatternError: timeout after {result.timeout_seconds}s"
+                        reason=f"TooBroadPatternError: timeout after {result.timeout_seconds}s",
                     )
-                
+
                 elif "file not found" in error_str:
                     return FeedbackResult(
                         decision=FeedbackDecision.ERROR,
                         error_message="File not found. Cannot proceed.",
                         summary="Execution failed due to missing file.",
-                        reason="FileNotFoundError"
+                        reason="FileNotFoundError",
                     )
                 elif "permission denied" in error_str:
                     return FeedbackResult(
                         decision=FeedbackDecision.ERROR,
                         error_message="Permission denied. Cannot proceed.",
                         summary="Execution failed due to permissions.",
-                        reason="PermissionError"
+                        reason="PermissionError",
                     )
 
         return None
@@ -223,7 +225,7 @@ class FeedbackLoop:
                 decision=decision,
                 new_tasks=analysis.get("new_tasks"),
                 summary=analysis.get("summary", "Analysis complete."),
-                reason=analysis.get("reason", "LLM analysis")
+                reason=analysis.get("reason", "LLM analysis"),
             )
 
         except Exception as e:
@@ -232,7 +234,7 @@ class FeedbackLoop:
             return FeedbackResult(
                 decision=FeedbackDecision.COMPLETE,
                 summary="Assuming completion due to analysis failure.",
-                reason="Analysis failure - defaulting to complete"
+                reason="Analysis failure - defaulting to complete",
             )
 
     def _build_context(
@@ -269,7 +271,7 @@ class FeedbackLoop:
         # Add attempted strategies to prevent loops
         if self.attempted_strategies:
             context_parts.append(f"\nPreviously attempted: {', '.join(self.attempted_strategies)}")
-        
+
         # Add retry budget information
         if self.retry_budget:
             retry_info = []
@@ -282,22 +284,22 @@ class FeedbackLoop:
     def record_strategy(self, strategy: str):
         """Record a strategy that was attempted."""
         self.attempted_strategies.add(strategy)
-    
+
     def _narrow_pattern(self, broad_pattern: str, task: Dict[str, Any]) -> str:
         """
         Attempt to narrow a broad search pattern based on context.
-        
+
         Args:
             broad_pattern: The pattern that was too broad
             task: The original task containing context
-            
+
         Returns:
             A narrowed pattern that should be more specific
         """
         # Get additional context from the task
         path = task.get("path", "")
         file_type = task.get("file_type", "")
-        
+
         # Simple heuristics to narrow patterns
         if len(broad_pattern) <= 2:
             # Very short patterns - add word boundaries or common prefixes
@@ -305,14 +307,14 @@ class FeedbackLoop:
                 return f"\\b{broad_pattern}\\b"  # Word boundaries
             else:
                 return f"^{broad_pattern}"  # Start of line
-        
+
         # If searching in specific file types, we can be more aggressive
         if file_type:
             if file_type in [".py", ".js", ".ts", ".java", ".cpp", ".c"]:
                 # For code files, look for function/variable usage
                 if broad_pattern.isidentifier():
                     return f"(def |function |var |let |const |class ){broad_pattern}"
-        
+
         # For paths, limit to specific directories
         if path and path != ".":
             # Already searching in a specific path, try to make pattern more specific
@@ -321,10 +323,10 @@ class FeedbackLoop:
                 parts = broad_pattern.split(".")
                 if len(parts) == 2 and parts[1]:
                     return f"\\.{parts[1]}\\b"  # More specific file extension
-        
+
         # Default: Add word boundaries if alphanumeric
         if broad_pattern.isalnum():
             return f"\\b{broad_pattern}\\b"
-        
+
         # Last resort: limit to start of line or after whitespace
         return f"(^|\\s){broad_pattern}"
