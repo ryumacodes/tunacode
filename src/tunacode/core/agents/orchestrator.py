@@ -29,6 +29,10 @@ class OrchestratorAgent:
 
     async def plan(self, request: str, model: ModelName) -> List[Task]:
         """Plan tasks for a user request using the planner LLM."""
+        from rich.console import Console
+
+        console = Console()
+        console.print(f"[dim][Orchestrator.plan] Called with model: {model}[/dim]")
 
         return await make_plan(request, model, self.state)
 
@@ -67,7 +71,11 @@ class OrchestratorAgent:
         from rich.console import Console
 
         console = Console()
+        console.print(
+            f"[yellow][Orchestrator.run] Starting with request: {request[:100]}...[/yellow]"
+        )
         model = model or self.state.session.current_model
+        console.print(f"[yellow][Orchestrator.run] Using model: {model}[/yellow]")
 
         # Track response state across all sub-tasks
         response_state = ResponseState()
@@ -77,7 +85,22 @@ class OrchestratorAgent:
             "\n[cyan]Orchestrator Mode: Analyzing request and creating execution plan...[/cyan]"
         )
 
-        tasks = await self.plan(request, model)
+        try:
+            tasks = await self.plan(request, model)
+        except Exception as e:
+            console.print(f"\n[red]Failed to create execution plan: {str(e)}[/red]")
+
+            # Check if it's a validation error from pydantic-ai
+            if "validation" in str(e).lower() or "empty" in str(e).lower():
+                console.print(
+                    "\n[yellow]Tip: The model may have returned an invalid or empty response.[/yellow]"
+                )
+                console.print(
+                    "[yellow]Try rephrasing your request or breaking it down into smaller tasks.[/yellow]"
+                )
+
+            # Return empty results list to let the caller handle it
+            return []
 
         # Show execution is starting
         console.print(f"\n[cyan]Executing plan with {len(tasks)} tasks...[/cyan]")

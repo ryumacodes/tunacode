@@ -39,7 +39,7 @@ tunacode --model "anthropic:claude-3.5-sonnet" --key "sk-ant-your-anthropic-key"
 tunacode --model "openrouter:openai/gpt-4o" --key "sk-or-your-openrouter-key"
 ```
 
-Your config is saved to `~/.config/tunacode.json`
+Your config is saved to `~/.config/tunacode.json` (edit directly with `nvim ~/.config/tunacode.json`)
 
 ## Start Coding
 

@@ -29,6 +29,9 @@ TOOL_READ_FILE = "read_file"
 TOOL_WRITE_FILE = "write_file"
 TOOL_UPDATE_FILE = "update_file"
 TOOL_RUN_COMMAND = "run_command"
+TOOL_BASH = "bash"
+TOOL_GREP = "grep"
+TOOL_LIST_DIR = "list_dir"
 
 # Commands
 CMD_HELP = "/help"

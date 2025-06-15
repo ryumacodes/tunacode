@@ -40,17 +40,44 @@ async def make_plan(request: str, model: ModelName, state_manager: StateManager)
 
     # Show planning is starting
     console.print("\n[dim][Planning] Breaking down request into tasks...[/dim]")
+    console.print(f"[dim][Planning] Using model: {model}[/dim]")
+    console.print(
+        f"[dim][Planning] Request: {request[:200]}{'...' if len(request) > 200 else ''}[/dim]"
+    )
+
+    # Get max retries from config (same as main agent)
+    max_retries = state_manager.session.user_config.get("settings", {}).get("max_retries", 3)
 
     # Create a simple planning agent
     planner = Agent(
         model=model,
         system_prompt=_SYSTEM,
         result_type=List[Task],
+        retries=max_retries,
     )
 
     # Get the plan from the agent
-    result = await planner.run(request)
-    tasks = result.data
+    try:
+        console.print("[dim][Planning] Sending request to LLM...[/dim]")
+        result = await planner.run(request)
+        console.print("[dim][Planning] Got response from LLM[/dim]")
+        tasks = result.data
+        console.print(f"[dim][Planning] Parsed {len(tasks)} tasks from response[/dim]")
+    except Exception as e:
+        # Log the actual error for debugging
+        console.print(f"\n[red]Planning failed: {str(e)}[/red]")
+        if hasattr(e, "__class__"):
+            console.print(f"[red]Error type: {e.__class__.__name__}[/red]")
+
+        # Show more details if show_thoughts is enabled
+        if state_manager.session.show_thoughts:
+            import traceback
+
+            console.print("[red]Full traceback:[/red]")
+            console.print(f"[red]{traceback.format_exc()}[/red]")
+
+        # Re-raise to let caller handle it properly
+        raise
 
     # Display the plan
     console.print(f"[dim][Planning] Generated {len(tasks)} tasks:[/dim]")

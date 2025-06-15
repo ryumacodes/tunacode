@@ -101,3 +101,16 @@ class FileOperationError(TunaCodeError):
         self.path = path
         self.original_error = original_error
         super().__init__(f"File {operation} failed for '{path}': {message}")
+
+
+class TooBroadPatternError(ToolExecutionError):
+    """Raised when a search pattern is too broad and times out."""
+
+    def __init__(self, pattern: str, timeout_seconds: float):
+        self.pattern = pattern
+        self.timeout_seconds = timeout_seconds
+        super().__init__(
+            "grep",
+            f"Pattern '{pattern}' is too broad - no matches found within {timeout_seconds}s. "
+            "Please use a more specific pattern."
+        )
