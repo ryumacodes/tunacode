@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ...tools.bash import bash
 from ...tools.grep import grep
 from ...tools.read_file import read_file
 from ...types import AgentRun, ModelName, ResponseState
@@ -31,10 +32,11 @@ class ReadOnlyAgent:
             # Create agent with only read-only tools
             self._agent = Agent(
                 model=self.model,
-                system_prompt="You are a read-only assistant. You can analyze and read files but cannot modify them.",
+                system_prompt="You are a read-only assistant. You can analyze and read files but cannot modify them. You can also execute shell commands for inspection purposes.",
                 tools=[
                     Tool(read_file),
                     Tool(grep),
+                    Tool(bash),
                 ],
             )
         return self._agent

@@ -6,6 +6,7 @@ This tool provides sophisticated grep-like functionality with:
 - Multiple search strategies (literal, regex, fuzzy)
 - Smart result ranking and deduplication
 - Context-aware output formatting
+- Timeout handling for overly broad patterns (3 second deadline for first match)
 """
 
 import asyncio
@@ -13,12 +14,13 @@ import fnmatch
 import os
 import re
 import subprocess
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from tunacode.exceptions import ToolExecutionError
+from tunacode.exceptions import ToolExecutionError, TooBroadPatternError
 from tunacode.tools.base import BaseTool
 
 
@@ -48,6 +50,7 @@ class SearchConfig:
     exclude_patterns: List[str] = None
     max_file_size: int = 1024 * 1024  # 1MB
     timeout_seconds: int = 30
+    first_match_deadline: float = 3.0  # Timeout for finding first match
 
 
 # Fast-Glob Prefilter Configuration
@@ -203,14 +206,18 @@ class ParallelGrep(BaseTool):
             )
 
             # 4️⃣ Execute chosen strategy with pre-filtered candidates
-            if search_type == "ripgrep":
-                results = await self._ripgrep_search_filtered(pattern, candidates, config)
-            elif search_type == "python":
-                results = await self._python_search_filtered(pattern, candidates, config)
-            elif search_type == "hybrid":
-                results = await self._hybrid_search_filtered(pattern, candidates, config)
-            else:
-                raise ToolExecutionError(f"Unknown search type: {search_type}")
+            try:
+                if search_type == "ripgrep":
+                    results = await self._ripgrep_search_filtered(pattern, candidates, config)
+                elif search_type == "python":
+                    results = await self._python_search_filtered(pattern, candidates, config)
+                elif search_type == "hybrid":
+                    results = await self._hybrid_search_filtered(pattern, candidates, config)
+                else:
+                    raise ToolExecutionError(f"Unknown search type: {search_type}")
+            except TooBroadPatternError:
+                # Re-raise the too broad pattern error to be handled by the feedback loop
+                raise
 
             # 5️⃣ Format and return results with strategy info
             strategy_info = f"Strategy: {search_type} (was {original_search_type}), Files: {len(candidates)}/{MAX_GLOB}"
@@ -226,6 +233,9 @@ class ParallelGrep(BaseTool):
             else:
                 return f"{formatted_results}\n\n{strategy_info}"
 
+        except TooBroadPatternError:
+            # Re-raise TooBroadPatternError without wrapping it
+            raise
         except Exception as e:
             raise ToolExecutionError(f"Grep search failed: {str(e)}")
 
@@ -248,7 +258,7 @@ class ParallelGrep(BaseTool):
     async def _ripgrep_search(
         self, pattern: str, directory: str, config: SearchConfig
     ) -> List[SearchResult]:
-        """Use ripgrep for high-performance searching."""
+        """Use ripgrep for high-performance searching with first match deadline."""
 
         def run_ripgrep():
             cmd = ["rg", "--json"]
@@ -272,26 +282,80 @@ class ParallelGrep(BaseTool):
             cmd.extend([pattern, directory])
 
             try:
-                result = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=config.timeout_seconds
+                # Start the process
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1
                 )
-                return result.stdout if result.returncode == 0 else None
+                
+                # Monitor for first match within deadline
+                start_time = time.time()
+                output_lines = []
+                first_match_found = False
+                
+                while True:
+                    # Check if we exceeded the first match deadline
+                    if not first_match_found and (time.time() - start_time) > config.first_match_deadline:
+                        process.kill()
+                        process.wait()
+                        raise TooBroadPatternError(pattern, config.first_match_deadline)
+                    
+                    # Check if process is still running
+                    if process.poll() is not None:
+                        # Process finished, get any remaining output
+                        remaining_output, _ = process.communicate()
+                        if remaining_output:
+                            output_lines.extend(remaining_output.splitlines())
+                        break
+                    
+                    # Try to read a line (non-blocking)
+                    try:
+                        line = process.stdout.readline()
+                        if line:
+                            output_lines.append(line.rstrip())
+                            # Check if this is a match line
+                            if '"type":"match"' in line:
+                                first_match_found = True
+                    except:
+                        pass
+                    
+                    # Small sleep to avoid busy waiting
+                    time.sleep(0.01)
+                
+                # Check exit code
+                if process.returncode == 0:
+                    return "\n".join(output_lines)
+                else:
+                    return None
+                    
+            except TooBroadPatternError:
+                raise
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 return None
+            except Exception as e:
+                # Make sure to clean up the process
+                if 'process' in locals():
+                    try:
+                        process.kill()
+                        process.wait()
+                    except:
+                        pass
+                return None
 
-        # Run ripgrep in thread pool
-        output = await asyncio.get_event_loop().run_in_executor(self._executor, run_ripgrep)
-
-        if not output:
-            return []
-
-        # Parse ripgrep JSON output
-        return self._parse_ripgrep_output(output)
+        # Run ripgrep with monitoring in thread pool
+        try:
+            output = await asyncio.get_event_loop().run_in_executor(self._executor, run_ripgrep)
+            return self._parse_ripgrep_output(output) if output else []
+        except TooBroadPatternError:
+            raise
 
     async def _python_search(
         self, pattern: str, directory: str, config: SearchConfig
     ) -> List[SearchResult]:
-        """Pure Python parallel search implementation."""
+        """Pure Python parallel search implementation with first match deadline."""
 
         # Find all files to search
         files = await self._find_files(directory, config)
@@ -303,24 +367,64 @@ class ParallelGrep(BaseTool):
         else:
             regex_pattern = None
 
+        # Track search progress
+        start_time = time.time()
+        first_match_event = asyncio.Event()
+        
+        async def search_with_monitoring(file_path: Path):
+            """Search a file and signal when first match is found."""
+            try:
+                file_results = await self._search_file(file_path, pattern, regex_pattern, config)
+                if file_results and not first_match_event.is_set():
+                    first_match_event.set()
+                return file_results
+            except Exception:
+                return []
+        
         # Create search tasks for parallel execution
         search_tasks = []
         for file_path in files:
-            task = self._search_file(file_path, pattern, regex_pattern, config)
+            task = search_with_monitoring(file_path)
             search_tasks.append(task)
-
-        # Execute searches in parallel
-        all_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-
-        # Flatten results and filter out exceptions
-        results = []
-        for file_results in all_results:
-            if isinstance(file_results, list):
-                results.extend(file_results)
-
-        # Sort by relevance and limit results
-        results.sort(key=lambda r: r.relevance_score, reverse=True)
-        return results[: config.max_results]
+        
+        # Create a deadline task
+        async def check_deadline():
+            """Monitor for first match deadline."""
+            await asyncio.sleep(config.first_match_deadline)
+            if not first_match_event.is_set():
+                # Cancel all pending tasks
+                for task in search_tasks:
+                    if not task.done():
+                        task.cancel()
+                raise TooBroadPatternError(pattern, config.first_match_deadline)
+        
+        deadline_task = asyncio.create_task(check_deadline())
+        
+        try:
+            # Execute searches in parallel with deadline monitoring
+            all_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+            
+            # Cancel deadline task if we got results
+            deadline_task.cancel()
+            
+            # Flatten results and filter out exceptions
+            results = []
+            for file_results in all_results:
+                if isinstance(file_results, list):
+                    results.extend(file_results)
+            
+            # Sort by relevance and limit results
+            results.sort(key=lambda r: r.relevance_score, reverse=True)
+            return results[: config.max_results]
+            
+        except asyncio.CancelledError:
+            # Re-raise TooBroadPatternError if that's what caused the cancellation
+            if deadline_task.done():
+                try:
+                    await deadline_task
+                except TooBroadPatternError:
+                    raise
+            return []
 
     async def _hybrid_search(
         self, pattern: str, directory: str, config: SearchConfig
@@ -335,6 +439,14 @@ class ParallelGrep(BaseTool):
 
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
+        # Check if any task raised TooBroadPatternError
+        too_broad_errors = [r for r in results_list if isinstance(r, TooBroadPatternError)]
+        if too_broad_errors:
+            # If both strategies timed out, raise the error
+            valid_results = [r for r in results_list if isinstance(r, list)]
+            if not valid_results:
+                raise too_broad_errors[0]
+        
         # Merge and deduplicate results
         all_results = []
         for results in results_list:
@@ -360,7 +472,7 @@ class ParallelGrep(BaseTool):
         self, pattern: str, candidates: List[Path], config: SearchConfig
     ) -> List[SearchResult]:
         """
-        Run ripgrep on pre-filtered file list.
+        Run ripgrep on pre-filtered file list with first match deadline.
         """
 
         def run_ripgrep_filtered():
@@ -379,25 +491,84 @@ class ParallelGrep(BaseTool):
             cmd.extend(str(f) for f in candidates)
 
             try:
-                result = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=config.timeout_seconds
+                # Start the process
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1
                 )
-                return result.stdout if result.returncode == 0 else None
+                
+                # Monitor for first match within deadline
+                start_time = time.time()
+                output_lines = []
+                first_match_found = False
+                
+                while True:
+                    # Check if we exceeded the first match deadline
+                    if not first_match_found and (time.time() - start_time) > config.first_match_deadline:
+                        process.kill()
+                        process.wait()
+                        raise TooBroadPatternError(pattern, config.first_match_deadline)
+                    
+                    # Check if process is still running
+                    if process.poll() is not None:
+                        # Process finished, get any remaining output
+                        remaining_output, _ = process.communicate()
+                        if remaining_output:
+                            output_lines.extend(remaining_output.splitlines())
+                        break
+                    
+                    # Try to read a line (non-blocking)
+                    try:
+                        # Use a small timeout to avoid blocking indefinitely
+                        line = process.stdout.readline()
+                        if line:
+                            output_lines.append(line.rstrip())
+                            # Check if this is a match line
+                            if '"type":"match"' in line:
+                                first_match_found = True
+                    except:
+                        pass
+                    
+                    # Small sleep to avoid busy waiting
+                    time.sleep(0.01)
+                
+                # Check exit code
+                if process.returncode == 0:
+                    return "\n".join(output_lines)
+                else:
+                    return None
+                    
+            except TooBroadPatternError:
+                raise
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 return None
+            except Exception as e:
+                # Make sure to clean up the process
+                if 'process' in locals():
+                    try:
+                        process.kill()
+                        process.wait()
+                    except:
+                        pass
+                return None
 
-        # Run ripgrep in thread pool
-        output = await asyncio.get_event_loop().run_in_executor(
-            self._executor, run_ripgrep_filtered
-        )
-
-        return self._parse_ripgrep_output(output) if output else []
+        # Run ripgrep with monitoring in thread pool
+        try:
+            output = await asyncio.get_event_loop().run_in_executor(
+                self._executor, run_ripgrep_filtered
+            )
+            return self._parse_ripgrep_output(output) if output else []
+        except TooBroadPatternError:
+            raise
 
     async def _python_search_filtered(
         self, pattern: str, candidates: List[Path], config: SearchConfig
     ) -> List[SearchResult]:
         """
-        Run Python parallel search on pre-filtered candidates.
+        Run Python parallel search on pre-filtered candidates with first match deadline.
         """
         # Prepare search pattern
         if config.use_regex:
@@ -406,24 +577,65 @@ class ParallelGrep(BaseTool):
         else:
             regex_pattern = None
 
+        # Track search progress
+        start_time = time.time()
+        first_match_event = asyncio.Event()
+        results_list = []
+        
+        async def search_with_monitoring(file_path: Path):
+            """Search a file and signal when first match is found."""
+            try:
+                file_results = await self._search_file(file_path, pattern, regex_pattern, config)
+                if file_results and not first_match_event.is_set():
+                    first_match_event.set()
+                return file_results
+            except Exception:
+                return []
+        
         # Create search tasks for candidates only
         search_tasks = []
         for file_path in candidates:
-            task = self._search_file(file_path, pattern, regex_pattern, config)
+            task = search_with_monitoring(file_path)
             search_tasks.append(task)
-
-        # Execute searches in parallel
-        all_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-
-        # Flatten results and filter out exceptions
-        results = []
-        for file_results in all_results:
-            if isinstance(file_results, list):
-                results.extend(file_results)
-
-        # Sort by relevance and limit results
-        results.sort(key=lambda r: r.relevance_score, reverse=True)
-        return results[: config.max_results]
+        
+        # Create a deadline task
+        async def check_deadline():
+            """Monitor for first match deadline."""
+            await asyncio.sleep(config.first_match_deadline)
+            if not first_match_event.is_set():
+                # Cancel all pending tasks
+                for task in search_tasks:
+                    if not task.done():
+                        task.cancel()
+                raise TooBroadPatternError(pattern, config.first_match_deadline)
+        
+        deadline_task = asyncio.create_task(check_deadline())
+        
+        try:
+            # Execute searches in parallel with deadline monitoring
+            all_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+            
+            # Cancel deadline task if we got results
+            deadline_task.cancel()
+            
+            # Flatten results and filter out exceptions
+            results = []
+            for file_results in all_results:
+                if isinstance(file_results, list):
+                    results.extend(file_results)
+            
+            # Sort by relevance and limit results
+            results.sort(key=lambda r: r.relevance_score, reverse=True)
+            return results[: config.max_results]
+            
+        except asyncio.CancelledError:
+            # Re-raise TooBroadPatternError if that's what caused the cancellation
+            if deadline_task.done():
+                try:
+                    await deadline_task
+                except TooBroadPatternError:
+                    raise
+            return []
 
     async def _hybrid_search_filtered(
         self, pattern: str, candidates: List[Path], config: SearchConfig
@@ -440,6 +652,14 @@ class ParallelGrep(BaseTool):
 
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
+        # Check if any task raised TooBroadPatternError
+        too_broad_errors = [r for r in results_list if isinstance(r, TooBroadPatternError)]
+        if too_broad_errors:
+            # If both strategies timed out, raise the error
+            valid_results = [r for r in results_list if isinstance(r, list)]
+            if not valid_results:
+                raise too_broad_errors[0]
+        
         # Merge and deduplicate results
         all_results = []
         for results in results_list:

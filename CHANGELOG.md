@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- New `list_dir` tool for efficient directory listing
+  - Uses `os.scandir` for better performance than shell commands
+  - Supports pagination with configurable max entries (default 200)
+  - Shows file type indicators (/, *, @, ?)
+  - Sorts results with directories first, then files alphabetically
+  - Optional hidden file display with `show_hidden` parameter
+  - Graceful permission error handling
+  - Provides a fallback when bash commands aren't available
+
 ## [0.0.30] - 2025-06-14
 
 ### Added

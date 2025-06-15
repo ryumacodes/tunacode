@@ -14,6 +14,7 @@ from tunacode.core.state import StateManager
 from tunacode.services.mcp import get_mcp_servers
 from tunacode.tools.bash import bash
 from tunacode.tools.grep import grep
+from tunacode.tools.list_dir import list_dir
 from tunacode.tools.read_file import read_file
 from tunacode.tools.run_command import run_command
 from tunacode.tools.update_file import update_file
@@ -135,6 +136,9 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
                                     command if len(command) <= 60 else command[:57] + "..."
                                 )
                                 await ui.muted(f"Command: {display_cmd}")
+                            elif part.tool_name == "list_dir" and "directory" in part.args:
+                                directory = part.args["directory"]
+                                await ui.muted(f"Listing: {directory}")
                             else:
                                 # For other tools, show full args but more compact
                                 args_str = json.dumps(part.args, indent=2)
@@ -214,6 +218,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             tools=[
                 Tool(bash, max_retries=max_retries),
                 Tool(grep, max_retries=max_retries),
+                Tool(list_dir, max_retries=max_retries),
                 Tool(read_file, max_retries=max_retries),
                 Tool(run_command, max_retries=max_retries),
                 Tool(update_file, max_retries=max_retries),

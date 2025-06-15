@@ -17,8 +17,8 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.agents import main as agent
+from tunacode.core.agents.adaptive_orchestrator import AdaptiveOrchestrator
 from tunacode.core.agents.main import patch_tool_messages
-from tunacode.core.agents.orchestrator import OrchestratorAgent
 from tunacode.core.tool_handler import ToolHandler
 from tunacode.exceptions import AgentError, UserAbortError, ValidationError
 from tunacode.ui import console as ui
@@ -192,8 +192,8 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             except ValueError as e:
                 await ui.error(str(e))
                 return
-            # Use orchestrator for planning and execution
-            orchestrator = OrchestratorAgent(state_manager)
+            # Use adaptive orchestrator for planning and execution
+            orchestrator = AdaptiveOrchestrator(state_manager)
             results = await orchestrator.run(text, state_manager.session.current_model)
 
             if output:

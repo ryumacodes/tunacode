@@ -44,11 +44,14 @@ TunaCode is a CLI tool that provides an AI-powered coding assistant using pydant
 - Model format: `provider:model-name` (e.g., `openai:gpt-4`, `anthropic:claude-3-opus`)
 
 ### Tool System
-Four internal tools with confirmation UI:
+Seven internal tools with confirmation UI:
 1. `read_file` - Read file contents
 2. `write_file` - Create new files (fails if exists)
 3. `update_file` - Update existing files with target/patch pattern
 4. `run_command` - Execute shell commands
+5. `bash` - Execute bash commands with enhanced capabilities
+6. `grep` - Fast file content searching using regex patterns
+7. `list_dir` - Efficient directory listing without shell commands
 
 Tools extend `BaseTool` or `FileBasedTool` base classes. External tools supported via MCP (Model Context Protocol).
 
