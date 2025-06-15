@@ -44,7 +44,14 @@ class AdaptiveOrchestrator:
         self.total_timeout = 120  # 2min total
 
     async def run(self, request: str, model: ModelName | None = None) -> List[AgentRun]:
-        """Execute a request with adaptive planning and feedback loops."""
+        """Execute a request with adaptive planning and feedback loops.
+
+        Implements the Frame → Think → Act → Loop pattern:
+        1. Frame: Establish context (who, where, what)
+        2. Think: Analyze request and plan tasks
+        3. Act: Execute tasks
+        4. Loop: Analyze results and adapt
+        """
         from rich.console import Console
 
         console = Console()
@@ -52,16 +59,28 @@ class AdaptiveOrchestrator:
         model = model or self.state.session.current_model
         start_time = time.time()
 
-        console.print("\n[cyan]Adaptive Orchestrator: Analyzing request...[/cyan]")
+        console.print("\n[cyan]Adaptive Orchestrator: Framing context...[/cyan]")
 
         try:
-            # Step 1: Analyze the request
+            # Step 1: FRAME - Establish context
+            project_context = self.analyzer.project_context.detect_context()
+            sources = (
+                ", ".join(project_context.source_dirs[:2])
+                if project_context.source_dirs
+                else "unknown"
+            )
+            framework = f"({project_context.framework})" if project_context.framework else ""
+            console.print(
+                f"[dim]Project: {project_context.project_type.value} {framework} | Sources: {sources}[/dim]"
+            )
+
+            # Step 2: THINK - Analyze the request with context
             intent = self.analyzer.analyze(request)
             console.print(
                 f"[dim]Request type: {intent.request_type.value}, Confidence: {intent.confidence.name}[/dim]"
             )
 
-            # Step 2: Generate initial task plan
+            # Generate initial task plan with context awareness
             tasks = await self._get_initial_tasks(request, intent, model)
             if not tasks:
                 console.print("[yellow]No tasks generated. Falling back to regular mode.[/yellow]")
@@ -69,7 +88,7 @@ class AdaptiveOrchestrator:
 
             console.print(f"\n[cyan]Executing plan with {len(tasks)} initial tasks...[/cyan]")
 
-            # Step 3: Execute with feedback loop
+            # Step 3 & 4: ACT & LOOP - Execute with feedback loop
             return await self._execute_with_feedback(request, tasks, model, start_time)
 
         except asyncio.TimeoutError:
@@ -116,15 +135,26 @@ class AdaptiveOrchestrator:
     async def _execute_with_feedback(
         self, request: str, initial_tasks: List[Dict[str, Any]], model: ModelName, start_time: float
     ) -> List[AgentRun]:
-        """Execute tasks with feedback loop."""
+        """Execute tasks with feedback loop - the ACT and LOOP phases."""
         from rich.console import Console
 
         console = Console()
 
-        all_results = []
+        # all_results = []  # Not used after refactoring
         completed_tasks = []
         remaining_tasks = initial_tasks
         iteration = 0
+
+        # Track aggregated output from all tasks
+        aggregated_outputs = []
+        has_any_output = False
+
+        # Track findings for adaptive task generation
+        findings = {
+            "interesting_files": [],
+            "directories_found": [],
+            "patterns_detected": [],
+        }
 
         response_state = ResponseState()
 
@@ -147,37 +177,80 @@ class AdaptiveOrchestrator:
                     console.print(f"[red]Task failed: {exec_result.task['description']}[/red]")
                     console.print(f"[red]Error: {str(exec_result.error)}[/red]")
 
-                # Add to results
-                all_results.append(exec_result.result)
-                completed_tasks.append(exec_result.task)
-
-                # Update response state
-                if hasattr(exec_result.result, "result") and exec_result.result.result:
+                # Collect outputs instead of adding results directly
+                if (
+                    exec_result.result
+                    and hasattr(exec_result.result, "result")
+                    and exec_result.result.result
+                ):
                     if (
                         hasattr(exec_result.result.result, "output")
                         and exec_result.result.result.output
                     ):
+                        aggregated_outputs.append(exec_result.result.result.output)
+                        has_any_output = True
                         response_state.has_user_response = True
 
-            # Analyze results and decide next steps
-            feedback = await self.feedback_loop.analyze_results(
-                request, completed_tasks, batch_results, iteration + 1, model
-            )
+                completed_tasks.append(exec_result.task)
 
-            console.print(f"[dim]Feedback: {feedback.decision.value} - {feedback.summary}[/dim]")
+                # Extract findings from successful tasks
+                if exec_result.result and not exec_result.error:
+                    self._extract_findings(exec_result, findings)
 
-            if feedback.decision == FeedbackDecision.COMPLETE:
-                break
-            elif feedback.decision == FeedbackDecision.ERROR:
-                console.print(f"[red]Stopping due to error: {feedback.error_message}[/red]")
-                break
-            elif feedback.decision in [FeedbackDecision.CONTINUE, FeedbackDecision.RETRY]:
-                if feedback.new_tasks:
-                    remaining_tasks = feedback.new_tasks
-                    console.print(f"[dim]Generated {len(remaining_tasks)} follow-up tasks[/dim]")
+            # THINK phase of the loop - analyze and adapt
+            # Get project context for smarter decisions
+            project_context = self.analyzer.project_context.detect_context()
+
+            # Generate adaptive follow-up tasks based on findings
+            if iteration < self.feedback_loop.max_iterations - 1:  # Not last iteration
+                followup_tasks = self.analyzer.task_generator.generate_followup_tasks(
+                    findings, project_context
+                )
+
+                if followup_tasks:
+                    # Convert Task objects to dicts
+                    new_tasks = []
+                    for task in followup_tasks[:3]:  # Limit follow-ups per iteration
+                        new_tasks.append(
+                            {
+                                "id": task.id,
+                                "description": task.description,
+                                "mutate": task.mutate,
+                                "tool": task.tool,
+                                "args": task.args,
+                            }
+                        )
+
+                    if new_tasks:
+                        console.print(
+                            f"[dim]Generated {len(new_tasks)} adaptive follow-up tasks[/dim]"
+                        )
+                        remaining_tasks = new_tasks
+                    else:
+                        # Use original feedback mechanism
+                        feedback = await self.feedback_loop.analyze_results(
+                            request, completed_tasks, batch_results, iteration + 1, model
+                        )
+
+                        console.print(
+                            f"[dim]Feedback: {feedback.decision.value} - {feedback.summary}[/dim]"
+                        )
+
+                        if feedback.decision == FeedbackDecision.COMPLETE:
+                            break
+                        elif feedback.decision == FeedbackDecision.ERROR:
+                            console.print(
+                                f"[red]Stopping due to error: {feedback.error_message}[/red]"
+                            )
+                            break
+                        elif feedback.new_tasks:
+                            remaining_tasks = feedback.new_tasks
+                        else:
+                            break
                 else:
-                    console.print("[yellow]No new tasks generated. Stopping.[/yellow]")
                     break
+            else:
+                break
 
             iteration += 1
 
@@ -185,9 +258,23 @@ class AdaptiveOrchestrator:
             f"\n[green]Adaptive execution completed after {iteration + 1} iterations[/green]"
         )
 
-        # Add final summary if needed
-        if not response_state.has_user_response and all_results:
-            # Create a summary of what was done
+        # Create a single consolidated response
+        if has_any_output:
+            # Combine all outputs into one response
+            combined_output = "\n\n".join(aggregated_outputs)
+
+            class ConsolidatedResult:
+                def __init__(self, output: str):
+                    self.output = output
+
+            class ConsolidatedRun:
+                def __init__(self, output: str):
+                    self.result = ConsolidatedResult(output)
+                    self.response_state = response_state
+
+            return [ConsolidatedRun(combined_output)]
+        elif completed_tasks:
+            # No output from tasks, create a summary
             summary_parts = [f"Completed {len(completed_tasks)} tasks:"]
             for task in completed_tasks[:5]:  # Show first 5
                 summary_parts.append(f"• {task['description']}")
@@ -201,10 +288,11 @@ class AdaptiveOrchestrator:
             class SummaryRun:
                 def __init__(self, output: str):
                     self.result = SummaryResult(output)
+                    self.response_state = response_state
 
-            all_results.append(SummaryRun("\n".join(summary_parts)))
+            return [SummaryRun("\n".join(summary_parts))]
 
-        return all_results
+        return []
 
     async def _execute_task_batch(
         self, tasks: List[Dict[str, Any]], model: ModelName
@@ -302,8 +390,8 @@ class AdaptiveOrchestrator:
 
     def _format_tool_request(self, task: Dict[str, Any]) -> str:
         """Format a specific tool request."""
-        tool = task["tool"]
-        args = task["args"]
+        tool = task.get("tool")
+        args = task.get("args", {})
 
         # Format based on tool type
         if tool == "read_file":
@@ -312,6 +400,9 @@ class AdaptiveOrchestrator:
             pattern = args.get("pattern", "")
             directory = args.get("directory", ".")
             return f"Search for '{pattern}' in {directory}"
+        elif tool == "list_dir":
+            directory = args.get("directory", ".")
+            return f"List the contents of directory {directory}"
         elif tool == "write_file":
             return f"Create file {args.get('file_path', '')} with appropriate content"
         elif tool == "update_file":
@@ -319,6 +410,88 @@ class AdaptiveOrchestrator:
         elif tool == "run_command":
             return f"Run command: {args.get('command', '')}"
         elif tool == "bash":
-            return f"Execute bash command: {args.get('command', '')}"
+            command = args.get("command", "")
+            # Handle special cases for better commands
+            if "ls -R" in command:
+                # Replace recursive ls with list_dir tool
+                return "Use list_dir tool to list directory contents"
+            elif command.strip() in ["ls", "ls -la", "ls -l"]:
+                # Simple ls commands should use list_dir
+                return "Use list_dir tool to list current directory"
+            return f"Execute bash command: {command}"
+        elif tool == "analyze":
+            # For analyze tasks, pass through the original request
+            original_request = args.get("request", task["description"])
+            return original_request
         else:
             return task["description"]
+
+    def _extract_findings(self, exec_result: ExecutionResult, findings: Dict[str, List]) -> None:
+        """Extract interesting findings from task execution results."""
+        task = exec_result.task
+        tool = task.get("tool")
+
+        # Extract output text if available
+        output_text = ""
+        if exec_result.result and hasattr(exec_result.result, "result"):
+            result = exec_result.result.result
+            if hasattr(result, "output"):
+                output_text = str(result.output)
+
+        if not output_text:
+            return
+
+        # Extract findings based on tool type
+        if tool == "list_dir":
+            # Look for interesting files and directories
+            lines = output_text.split("\n")
+            for line in lines:
+                line = line.strip()
+                if "[DIR]" in line:
+                    # Extract directory name
+                    dir_name = line.split("[DIR]")[0].strip()
+                    if dir_name and not dir_name.startswith("."):
+                        findings["directories_found"].append(dir_name)
+                elif "[FILE]" in line:
+                    # Extract file name
+                    file_name = line.split("[FILE]")[0].strip()
+                    # Look for interesting files
+                    if any(
+                        pattern in file_name.lower()
+                        for pattern in [
+                            "config",
+                            "settings",
+                            "main",
+                            "index",
+                            "app",
+                            "server",
+                            "api",
+                        ]
+                    ):
+                        findings["interesting_files"].append(file_name)
+
+        elif tool == "grep":
+            # Track that we found matches for this pattern
+            pattern = task.get("args", {}).get("pattern", "")
+            if "matches" in output_text.lower() or "found" in output_text.lower():
+                findings["patterns_detected"].append(pattern)
+
+        elif tool == "read_file":
+            # Look for imports, dependencies, or other interesting patterns
+            # file_path = task.get("args", {}).get("file_path", "")  # Not used yet
+
+            # For package.json, pyproject.toml, etc., we could extract dependencies
+            # but keeping it simple for now
+            if "import" in output_text or "require" in output_text:
+                # This file has imports, might be worth exploring imports
+                findings["interesting_files"].extend(
+                    [
+                        f
+                        for f in output_text.split()
+                        if f.endswith((".py", ".js", ".ts", ".jsx", ".tsx"))
+                    ]
+                )
+
+        # Limit findings to avoid explosion
+        for key in findings:
+            findings[key] = list(set(findings[key]))[:10]
