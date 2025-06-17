@@ -179,7 +179,7 @@ async def test_tool_with_ui_logger():
     
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "test.txt").touch()
-        result = await tool.execute(tmpdir)
+        await tool.execute(tmpdir)
         
         # Check UI logging occurred
         assert len(ui.messages) > 0

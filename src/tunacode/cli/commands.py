@@ -164,40 +164,7 @@ class ThoughtsCommand(SimpleCommand):
         else:
             state.show_thoughts = not state.show_thoughts
         status = "ON" if state.show_thoughts else "OFF"
-        await ui.success(f"Thought display {status}")
-
-
-class ArchitectCommand(SimpleCommand):
-    """Toggle architect mode for task planning and orchestration."""
-
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="architect",
-                aliases=["/architect"],
-                description="Toggle architect mode (task planning & orchestration)",
-                category=CommandCategory.DEBUG,
-            )
-        )
-
-    async def execute(self, args: List[str], context: CommandContext) -> None:
-        state = context.state_manager.session
-        if args:
-            arg = args[0].lower()
-            if arg in {"on", "1", "true"}:
-                state.architect_mode = True
-            elif arg in {"off", "0", "false"}:
-                state.architect_mode = False
-            else:
-                await ui.error("Usage: /architect [on|off]")
-                return
-        else:
-            state.architect_mode = not getattr(state, "architect_mode", False)
-        status = "ON" if state.architect_mode else "OFF"
-        if state.architect_mode:
-            await ui.success(f"Architect mode {status} - Requests will be planned before execution")
-        else:
-            await ui.success(f"Architect mode {status} - Using direct execution")
+        await ui.success(f"Thought display ")
 
 
 class IterationsCommand(SimpleCommand):
@@ -833,7 +800,6 @@ class CommandRegistry:
             YoloCommand,
             DumpCommand,
             ThoughtsCommand,
-            ArchitectCommand,
             IterationsCommand,
             ClearCommand,
             FixCommand,

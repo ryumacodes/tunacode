@@ -11,61 +11,6 @@ from tunacode.core.state import StateManager
 
 
 @pytest.mark.asyncio
-async def test_orchestrator_expands_file_references():
-    """Test that @ file references are expanded before being sent to orchestrator."""
-    # Create a test file
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        f.write("def example():\n    return 42")
-        f.flush()
-        
-        try:
-            # Create mock state manager
-            state_manager = MagicMock(spec=StateManager)
-            state_manager.session = MagicMock()
-            state_manager.session.architect_mode = True  # Enable orchestrator mode
-            state_manager.session.current_model = "test:model"
-            state_manager.session.messages = []
-            state_manager.session.spinner = None
-            
-            # Create mock UI functions
-            with patch("tunacode.cli.repl.ui") as mock_ui:
-                mock_ui.spinner = AsyncMock(return_value=None)
-                mock_ui.error = AsyncMock()
-                mock_ui.agent = AsyncMock()
-                mock_ui.muted = AsyncMock()
-                
-                # Mock the orchestrator
-                with patch("tunacode.cli.repl.OrchestratorAgent") as mock_orchestrator_class:
-                    mock_orchestrator = AsyncMock()
-                    mock_orchestrator_class.return_value = mock_orchestrator
-                    
-                    # Capture what text is passed to orchestrator.run()
-                    captured_text = None
-                    
-                    async def capture_run(text, model):
-                        nonlocal captured_text
-                        captured_text = text
-                        return []
-                    
-                    mock_orchestrator.run = capture_run
-                    
-                    # Process request with @ file reference
-                    input_text = f"Please analyze @{f.name}"
-                    await process_request(input_text, state_manager)
-                    
-                    # Verify the text was expanded before reaching orchestrator
-                    assert captured_text is not None
-                    assert "```python" in captured_text
-                    assert "def example():" in captured_text
-                    assert "return 42" in captured_text
-                    
-                    # Verify no error was shown
-                    mock_ui.error.assert_not_called()
-        finally:
-            os.unlink(f.name)
-
-
-@pytest.mark.asyncio
 async def test_standard_mode_expands_file_references():
     """Test that @ file references are expanded in standard mode."""
     # Create a test file
@@ -126,7 +71,6 @@ async def test_file_not_found_shows_error():
     # Create mock state manager
     state_manager = MagicMock(spec=StateManager)
     state_manager.session = MagicMock()
-    state_manager.session.architect_mode = True
     state_manager.session.current_model = "test:model"
     state_manager.session.messages = []
     state_manager.session.spinner = None
