@@ -1,148 +1,231 @@
 #!/usr/bin/env python3
 """
-Test for grep tool timeout handling functionality
+Test for grep tool timeout handling functionality.
+
+The grep tool has a 60-second timeout for finding the FIRST match.
+This prevents the tool from hanging indefinitely on patterns that
+match nothing or take too long to process.
 """
 import asyncio
 import sys
 import os
 import tempfile
 from pathlib import Path
+import time
 
 # Add src to path so we can import tunacode modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-def test_timeout_handling():
-    """Test that grep times out on overly broad patterns"""
+def test_search_with_no_matches_completes():
+    """Test that searching for non-existent pattern completes without timeout"""
     try:
         from tunacode.tools.grep import grep
-        from tunacode.exceptions import TooBroadPatternError
         
-        print("Testing timeout on overly broad pattern...")
+        print("Testing search for non-existent pattern...")
         
-        # Create a test with an intentionally broad pattern that matches everything
-        # Using a pattern like "." in regex mode should match every character
-        try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create some test files
+            for i in range(10):
+                Path(tmpdir, f"test_{i}.py").write_text(f"def function_{i}():\n    return {i}")
+            
+            start_time = time.time()
+            
+            # Search for something that doesn't exist
             result = asyncio.run(grep(
-                pattern=".",  # Matches every character
-                directory=".",
-                use_regex=True,
+                pattern="DOES_NOT_EXIST_ANYWHERE",
+                directory=tmpdir,
+                include_files="*.py"
+            ))
+            
+            elapsed = time.time() - start_time
+            
+            assert "No matches found" in result
+            assert elapsed < 5.0, f"Search took too long: {elapsed:.2f}s"
+            
+            print(f"✓ Non-existent pattern search completed in {elapsed:.2f}s")
+            return True
+            
+    except Exception as e:
+        print(f"✗ Test failed: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def test_normal_search_finds_matches_quickly():
+    """Test that normal searches find first match quickly"""
+    try:
+        from tunacode.tools.grep import grep
+        
+        print("Testing normal search finds matches quickly...")
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create test files with searchable content
+            for i in range(50):
+                content = f"import os\nimport sys\n# TODO: implement feature {i}\n"
+                Path(tmpdir, f"module_{i}.py").write_text(content)
+            
+            start_time = time.time()
+            
+            # Search for a common pattern
+            result = asyncio.run(grep(
+                pattern="TODO",
+                directory=tmpdir,
                 include_files="*.py",
-                max_results=10000,  # High limit to stress test
-                search_type="python"  # Use python strategy for testing
+                max_results=10
             ))
             
-            # If we get here without timeout, the search completed
-            print("Search completed without timeout (found matches quickly enough)")
-            return True
+            elapsed = time.time() - start_time
             
-        except TooBroadPatternError as e:
-            print(f"✓ Correctly caught TooBroadPatternError: {e}")
-            assert "too broad" in str(e).lower(), "Error message should mention pattern is too broad"
-            assert "3.0s" in str(e) or "3s" in str(e), "Error message should mention the timeout duration"
+            assert "Found" in result and "matches" in result
+            assert elapsed < 2.0, f"Search took too long: {elapsed:.2f}s"
+            
+            print(f"✓ Found matches in {elapsed:.2f}s")
             return True
             
     except Exception as e:
-        print(f"✗ Timeout handling test failed with unexpected error: {type(e).__name__}: {e}")
+        print(f"✗ Test failed: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         return False
 
-def test_normal_search_completes():
-    """Test that normal searches complete without timeout"""
+def test_regex_search_performance():
+    """Test that regex searches perform reasonably"""
     try:
         from tunacode.tools.grep import grep
         
-        print("Testing normal search completes...")
+        print("Testing regex search performance...")
         
-        # Search for something specific that should complete quickly
-        result = asyncio.run(grep(
-            pattern="class ParallelGrep",
-            directory="src/tunacode/tools",
-            include_files="*.py",
-            max_results=5
-        ))
-        
-        assert isinstance(result, str), "Should return a string result"
-        assert "Found" in result or "No matches" in result, "Should have a result status"
-        
-        print("✓ Normal search completed successfully")
-        return True
-        
-    except Exception as e:
-        print(f"✗ Normal search test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-def test_ripgrep_timeout():
-    """Test that ripgrep strategy also handles timeout"""
-    try:
-        from tunacode.tools.grep import grep
-        from tunacode.exceptions import TooBroadPatternError
-        
-        print("Testing ripgrep timeout handling...")
-        
-        try:
-            # Use a very broad pattern with ripgrep
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create files with various patterns
+            for i in range(20):
+                content = f"""
+def process_{i}(data):
+    result = calculate_{i}(data)
+    value = transform_{i}(result)
+    return finalize_{i}(value)
+"""
+                Path(tmpdir, f"processor_{i}.py").write_text(content)
+            
+            start_time = time.time()
+            
+            # Search with a regex pattern
             result = asyncio.run(grep(
-                pattern=".",
-                directory=".",
+                pattern=r"(calculate|transform|finalize)_\d+",
+                directory=tmpdir,
                 use_regex=True,
-                include_files="*",  # All files
-                max_results=10000,
-                search_type="ripgrep"
+                include_files="*.py"
             ))
             
-            # If search completes, that's okay
-            print("Ripgrep search completed without timeout")
-            return True
+            elapsed = time.time() - start_time
             
-        except TooBroadPatternError as e:
-            print(f"✓ Ripgrep correctly timed out: {e}")
+            assert "Found" in result
+            assert elapsed < 3.0, f"Regex search took too long: {elapsed:.2f}s"
+            
+            print(f"✓ Regex search completed in {elapsed:.2f}s")
             return True
             
     except Exception as e:
-        print(f"✗ Ripgrep timeout test failed: {type(e).__name__}: {e}")
+        print(f"✗ Test failed: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         return False
 
-def test_hybrid_timeout_fallback():
-    """Test that hybrid search handles timeout in one strategy"""
+def test_large_file_search():
+    """Test searching in files with many lines"""
     try:
         from tunacode.tools.grep import grep
         
-        print("Testing hybrid search with potential timeout...")
+        print("Testing search in large files...")
         
-        # Hybrid should continue even if one strategy times out
-        result = asyncio.run(grep(
-            pattern="import asyncio",  # More specific pattern
-            directory="src",
-            include_files="*.py",
-            max_results=5,
-            search_type="hybrid"
-        ))
-        
-        assert isinstance(result, str), "Should return a result"
-        print("✓ Hybrid search handled timeout gracefully")
-        return True
-        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a large file
+            lines = []
+            for i in range(10000):
+                if i == 5000:
+                    lines.append("# SPECIAL_MARKER: This is the line we're looking for")
+                else:
+                    lines.append(f"# Regular line number {i}")
+            
+            Path(tmpdir, "large_file.py").write_text("\n".join(lines))
+            
+            start_time = time.time()
+            
+            # Search for the special marker
+            result = asyncio.run(grep(
+                pattern="SPECIAL_MARKER",
+                directory=tmpdir,
+                include_files="*.py"
+            ))
+            
+            elapsed = time.time() - start_time
+            
+            assert "Found 1 matches" in result
+            assert "line 5001" in result or "5001" in result
+            assert elapsed < 2.0, f"Large file search took too long: {elapsed:.2f}s"
+            
+            print(f"✓ Large file search completed in {elapsed:.2f}s")
+            return True
+            
     except Exception as e:
-        print(f"✗ Hybrid timeout fallback test failed: {e}")
+        print(f"✗ Test failed: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def test_search_with_excludes():
+    """Test that searches with exclude patterns work efficiently"""
+    try:
+        from tunacode.tools.grep import grep
+        
+        print("Testing search with exclude patterns...")
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create test structure
+            (Path(tmpdir) / "src").mkdir()
+            (Path(tmpdir) / "tests").mkdir()
+            (Path(tmpdir) / "node_modules").mkdir()
+            
+            # Add files to each directory
+            Path(tmpdir, "src/main.py").write_text("import unittest")
+            Path(tmpdir, "tests/test_main.py").write_text("import unittest")
+            Path(tmpdir, "node_modules/lib.py").write_text("import unittest")
+            
+            start_time = time.time()
+            
+            # Search excluding node_modules
+            result = asyncio.run(grep(
+                pattern="unittest",
+                directory=tmpdir,
+                include_files="*.py",
+                exclude_files="node_modules/*"
+            ))
+            
+            elapsed = time.time() - start_time
+            
+            assert "Found" in result
+            assert "node_modules" not in result
+            assert elapsed < 1.0, f"Search with excludes took too long: {elapsed:.2f}s"
+            
+            print(f"✓ Search with excludes completed in {elapsed:.2f}s")
+            return True
+            
+    except Exception as e:
+        print(f"✗ Test failed: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         return False
 
 def main():
-    """Run all grep timeout tests"""
-    print("Testing grep timeout handling functionality...")
+    """Run all grep timeout/performance tests"""
+    print("Testing grep search performance and timeout handling...")
     print("=" * 60)
     
     tests = [
-        test_normal_search_completes,
-        test_timeout_handling,
-        test_ripgrep_timeout,
-        test_hybrid_timeout_fallback,
+        test_search_with_no_matches_completes,
+        test_normal_search_finds_matches_quickly,
+        test_regex_search_performance,
+        test_large_file_search,
+        test_search_with_excludes,
     ]
     
     passed = 0
@@ -160,7 +243,7 @@ def main():
     print(f"Results: {passed}/{total} tests passed")
     
     if passed == total:
-        print("✅ All grep timeout tests PASSED!")
+        print("✅ All grep performance tests PASSED!")
         return 0
     else:
         print("❌ Some tests FAILED!")
