@@ -3,7 +3,6 @@ from unittest.mock import patch, MagicMock
 
 from tunacode.core.state import StateManager
 from tunacode.core.agents import main as agent_main
-from tunacode.core.agents.orchestrator import OrchestratorAgent
 
 class DummyNode:
     pass
@@ -39,18 +38,3 @@ async def test_process_request_generates_fallback():
         res = await agent_main.process_request("model", "test", state)
         assert hasattr(res, "result")
         assert "maximum iterations" in res.result.output.lower()
-
-@pytest.mark.asyncio
-async def test_orchestrator_synthesizes_summary():
-    state = StateManager()
-    orch = OrchestratorAgent(state)
-    tasks = [MagicMock(id=1, description="task", mutate=True)]
-    fake_run = MagicMock()
-    fake_run.result = None
-    with patch.object(orch, "plan", return_value=tasks):
-        with patch.object(orch, "_run_sub_task", return_value=fake_run):
-            results = await orch.run("req")
-            assert len(results) == 2
-            # Check that fallback response was generated
-            assert "orchestrator completed all tasks" in results[-1].result.output.lower()
-            assert "executed 1/1 tasks" in results[-1].result.output.lower()

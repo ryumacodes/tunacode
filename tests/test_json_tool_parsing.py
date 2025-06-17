@@ -7,7 +7,6 @@ import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 from tunacode.core.agents.main import parse_json_tool_calls, extract_and_execute_tool_calls
-from tunacode.core.state import StateManager
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 
 
@@ -136,7 +135,7 @@ class TestJSONToolParsing:
         # Verify all different tool types were called
         called_tools = [call[0][0].tool_name for call in mock_tool_callback.call_args_list]
         assert "read_file" in called_tools
-        assert "run_command" in called_tools  
+        assert "run_command" in called_tools
         assert "write_file" in called_tools
     
     @pytest.mark.asyncio
@@ -153,7 +152,9 @@ class TestJSONToolParsing:
     @pytest.mark.asyncio
     async def test_complex_nested_args(self, state_manager, mock_tool_callback):
         """Test parsing complex nested JSON arguments."""
-        text = '''{"tool": "update_file", "args": {"path": "config.json", "target": "{\\"port\\": 3000}", "patch": "{\\"port\\": 8080, \\"host\\": \\"localhost\\"}"}}'''
+        text = ('{"tool": "update_file", "args": {"path": "config.json", ' 
+                '"target": "{\\"port\\": 3000}", ' 
+                '"patch": "{\\"port\\": 8080, \\"host\\": \\"localhost\\"}"}}')
         
         await parse_json_tool_calls(text, mock_tool_callback, state_manager)
         
@@ -173,8 +174,11 @@ if __name__ == "__main__":
     
     try:
         # Try to run with pytest
-        result = subprocess.run([sys.executable, "-m", "pytest", __file__, "-v"], 
-                              capture_output=True, text=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", __file__, "-v"],
+            capture_output=True,
+            text=True
+        )
         print(result.stdout)
         if result.stderr:
             print("STDERR:", result.stderr)

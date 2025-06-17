@@ -17,7 +17,6 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.agents import main as agent
-from tunacode.core.agents.adaptive_orchestrator import AdaptiveOrchestrator
 from tunacode.core.agents.main import patch_tool_messages
 from tunacode.core.tool_handler import ToolHandler
 from tunacode.exceptions import AgentError, UserAbortError, ValidationError
@@ -179,93 +178,50 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         def tool_callback_with_state(part, node):
             return _tool_handler(part, node, state_manager)
 
-        # Check if architect mode is enabled
-        if getattr(state_manager.session, "architect_mode", False):
-            # Expand @file references before sending to the orchestrator
-            try:
-                from tunacode.utils.text_utils import expand_file_refs
+        # Expand @file references before sending to the agent
+        try:
+            from tunacode.utils.text_utils import expand_file_refs
 
-                text, referenced_files = expand_file_refs(text)
-                # Track the referenced files
-                for file_path in referenced_files:
-                    state_manager.session.files_in_context.add(file_path)
-            except ValueError as e:
-                await ui.error(str(e))
-                return
-            # Use adaptive orchestrator for planning and execution
-            orchestrator = AdaptiveOrchestrator(state_manager)
-            results = await orchestrator.run(text, state_manager.session.current_model)
+            text, referenced_files = expand_file_refs(text)
+            # Track the referenced files
+            for file_path in referenced_files:
+                state_manager.session.files_in_context.add(file_path)
+        except ValueError as e:
+            await ui.error(str(e))
+            return
 
-            if output:
-                # Process results from all sub-agents
-                for res in results:
-                    # Check if result exists and has output
-                    if (
-                        hasattr(res, "result")
-                        and res.result is not None
-                        and hasattr(res.result, "output")
-                    ):
-                        await ui.agent(res.result.output)
-
-                if not results:
-                    # Fallback: show that the request was processed
-                    await ui.muted("Request completed")
-
-                # Always show files in context after orchestrator response
+        # Use normal agent processing
+        res = await agent.process_request(
+            state_manager.session.current_model,
+            text,
+            state_manager,
+            tool_callback=tool_callback_with_state,
+        )
+        if output:
+            if state_manager.session.show_thoughts:
+                new_msgs = state_manager.session.messages[start_idx:]
+                for msg in new_msgs:
+                    if isinstance(msg, dict) and "thought" in msg:
+                        await ui.muted(f"THOUGHT: {msg['thought']}")
+            # Check if result exists and has output
+            if hasattr(res, "result") and res.result is not None and hasattr(res.result, "output"):
+                await ui.agent(res.result.output)
+                # Always show files in context after agent response
                 if state_manager.session.files_in_context:
+                    # Extract just filenames from full paths for readability
                     filenames = [
                         Path(f).name for f in sorted(state_manager.session.files_in_context)
                     ]
                     await ui.muted(f"\nFiles in context: {', '.join(filenames)}")
-        else:
-            # Expand @file references before sending to the agent
-            try:
-                from tunacode.utils.text_utils import expand_file_refs
-
-                text, referenced_files = expand_file_refs(text)
-                # Track the referenced files
-                for file_path in referenced_files:
-                    state_manager.session.files_in_context.add(file_path)
-            except ValueError as e:
-                await ui.error(str(e))
-                return
-
-            # Use normal agent processing
-            res = await agent.process_request(
-                state_manager.session.current_model,
-                text,
-                state_manager,
-                tool_callback=tool_callback_with_state,
-            )
-            if output:
-                if state_manager.session.show_thoughts:
-                    new_msgs = state_manager.session.messages[start_idx:]
-                    for msg in new_msgs:
-                        if isinstance(msg, dict) and "thought" in msg:
-                            await ui.muted(f"THOUGHT: {msg['thought']}")
-                # Check if result exists and has output
-                if (
-                    hasattr(res, "result")
-                    and res.result is not None
-                    and hasattr(res.result, "output")
-                ):
-                    await ui.agent(res.result.output)
-                    # Always show files in context after agent response
-                    if state_manager.session.files_in_context:
-                        # Extract just filenames from full paths for readability
-                        filenames = [
-                            Path(f).name for f in sorted(state_manager.session.files_in_context)
-                        ]
-                        await ui.muted(f"\nFiles in context: {', '.join(filenames)}")
-                else:
-                    # Fallback: show that the request was processed
-                    await ui.muted("Request completed")
-                    # Show files in context even for empty responses
-                    if state_manager.session.files_in_context:
-                        filenames = [
-                            Path(f).name for f in sorted(state_manager.session.files_in_context)
-                        ]
-                        await ui.muted(f"Files in context: {', '.join(filenames)}")
+            else:
+                # Fallback: show that the request was processed
+                await ui.muted("Request completed")
+                # Show files in context even for empty responses
+                if state_manager.session.files_in_context:
+                    filenames = [
+                        Path(f).name for f in sorted(state_manager.session.files_in_context)
+                    ]
+                    await ui.muted(f"Files in context: {', '.join(filenames)}")
     except CancelledError:
         await ui.muted("Request cancelled")
     except UserAbortError:
