@@ -50,7 +50,7 @@ class SearchConfig:
     exclude_patterns: List[str] = None
     max_file_size: int = 1024 * 1024  # 1MB
     timeout_seconds: int = 30
-    first_match_deadline: float = 60.0  # Timeout for finding first match
+    first_match_deadline: float = 3.0  # Timeout for finding first match
 
 
 # Fast-Glob Prefilter Configuration
