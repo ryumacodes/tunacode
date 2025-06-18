@@ -111,7 +111,7 @@ tunacode/
 │   └── utils/          # Utility functions
 ├── tests/              # Test files
 ├── scripts/            # Development and installation scripts
-├── documentation/      # Additional documentation
+├── docs/               # Documentation
 └── venv/              # Virtual environment (not committed)
 ```
 
