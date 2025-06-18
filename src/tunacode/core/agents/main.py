@@ -160,6 +160,7 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
                 if (
                     part.tool_name == "read_file"
                     and hasattr(part, "args")
+                    and isinstance(part.args, dict)
                     and "file_path" in part.args
                 ):
                     state_manager.session.files_in_context.add(part.args["file_path"])
@@ -477,10 +478,10 @@ async def process_request(
 
                             # Track specific operations
                             if tool_name in ["write_file", "update_file"] and hasattr(part, "args"):
-                                if "file_path" in part.args:
+                                if isinstance(part.args, dict) and "file_path" in part.args:
                                     files_modified.add(part.args["file_path"])
                             elif tool_name in ["run_command", "bash"] and hasattr(part, "args"):
-                                if "command" in part.args:
+                                if isinstance(part.args, dict) and "command" in part.args:
                                     commands_run.append(part.args["command"])
 
             # Build fallback response with context
