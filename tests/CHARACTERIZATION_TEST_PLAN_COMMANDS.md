@@ -36,7 +36,27 @@
     5.  Repeat for different inputs and paths until desired coverage is achieved for that function.
     6.  Move to the next function/method.
 
-## 4. Test Implementation Plan
+## 4. Summary of Actions Taken (June 2025)
+
+### Implementation Steps
+
+1. **Test File Creation:**
+   - Created `tests/characterization/test_characterization_commands.py` for modular, isolated characterization tests of `commands.py`.
+   - Initial tests cover `CommandFactory`, `CommandRegistry`, and `ModelCommand` behaviors, focusing on documenting current outputs and registry logic.
+
+2. **Dependency Setup:**
+   - Added `requirements.txt` with all necessary dependencies (`typer`, `pytest`, `pytest-asyncio`, `pydantic-ai[logfire]`, `sentry_sdk`).
+   - Installed all dependencies to ensure the CLI and tests run in the local environment.
+
+3. **Test Execution & Results:**
+   - Ran the new test suite with `pytest`.
+   - Most tests pass, but one test revealed a case-sensitivity inconsistency in `CommandRegistry.is_command` for primary command names (see below).
+
+4. **Insights:**
+   - **CommandRegistry**: `is_command()` only matches aliases as lowercased, not the mixed-case primary name. This is a characterization of current behavior, not a correctness judgment.
+   - **ModelCommand**: Output is printed to the console, so output tests use `capsys` to capture and assert on the actual output.
+
+---
 
 *   **Setup**:
     *   Ensure `pytest` (or your chosen test runner) is configured.
