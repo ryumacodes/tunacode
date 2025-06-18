@@ -69,10 +69,10 @@ tunacode
 
 ## Documentation
 
-- [**Features**](documentation/FEATURES.md) - All features, tools, and commands
-- [**Advanced Configuration**](documentation/ADVANCED-CONFIG.md) - Provider setup, MCP, customization
-- [**Architecture**](documentation/ARCHITECTURE.md) - Source code organization and design
-- [**Development**](documentation/DEVELOPMENT.md) - Contributing and development setup
+- [**Features**](docs/FEATURES.md) - All features, tools, and commands
+- [**Advanced Configuration**](docs/ADVANCED-CONFIG.md) - Provider setup, MCP, customization
+- [**Architecture**](docs/ARCHITECTURE.md) - Source code organization and design
+- [**Development**](docs/DEVELOPMENT.md) - Contributing and development setup
 
 ## Links
 

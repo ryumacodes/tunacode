@@ -250,9 +250,9 @@ await grep("class.*Tool", ".", include_files="*.py", use_regex=True)
   - Fixed lambda closure bug in match object creation
 
 ### Documentation
-- **`documentation/fast-glob-prefilter-enhancement.md`**: Comprehensive technical documentation
-- **`documentation/parallel-grep-architecture.md`**: Visual flow charts and architecture diagrams
-- **`documentation/spelling-fixes.md`**: Minor spelling corrections
+- **`docs/fast-glob-prefilter-enhancement.md`**: Comprehensive technical documentation
+- **`docs/parallel-grep-architecture.md`**: Visual flow charts and architecture diagrams
+- **`docs/spelling-fixes.md`**: Minor spelling corrections
 
 ### Project Files  
 - **`README.md`**: Updated to reflect 6 core tools (bash, grep, read_file, write_file, update_file, run_command)
