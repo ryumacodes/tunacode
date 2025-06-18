@@ -1,0 +1,1 @@
+"""Agent characterization tests package."""
