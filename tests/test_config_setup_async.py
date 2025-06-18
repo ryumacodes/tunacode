@@ -3,6 +3,12 @@
 import asyncio
 import pytest
 from unittest.mock import MagicMock, patch
+import sys
+import types
+sys.modules['tunacode.cli.main'] = types.SimpleNamespace(app=None)
+sys.modules['tunacode.ui.console'] = types.SimpleNamespace()
+if 'prompt_toolkit.styles' not in sys.modules:
+    pytest.skip("prompt_toolkit not available", allow_module_level=True)
 from tunacode.core.state import StateManager
 from tunacode.core.setup.config_setup import ConfigSetup
 from tunacode.exceptions import ConfigurationError
