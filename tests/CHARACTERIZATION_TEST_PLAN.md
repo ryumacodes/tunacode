@@ -4,38 +4,35 @@
 This document outlines the remaining characterization tests needed to capture the current behavior of the TunaCode codebase. The goal is to achieve ~80% code coverage with golden-master tests that preserve existing behavior during refactoring.
 
 ## Completed Tests ✓
-1. **File Operation Tools** (tests/test_characterization_*.py)
+
+### 1. File Operation Tools (tests/test_characterization_*.py)
    - `test_characterization_read_file.py` - ReadFileTool behavior
    - `test_characterization_write_file.py` - WriteFileTool behavior
    - `test_characterization_update_file.py` - UpdateFileTool behavior
    - `test_characterization_bash.py` - BashTool behavior
 
+### 2. Search and Directory Tools
+   - `test_grep_fast_glob.py` - Fast glob search functionality
+   - `test_grep_legacy_compat.py` - Legacy grep compatibility
+   - `test_grep_timeout.py` - Grep timeout behavior
+   - `test_list_dir.py` - ListDirTool functionality
+
 ## Remaining Tests to Implement
 
 ### 1. Core Tool Tests
 
-#### A. GrepTool (`/home/tuna/tunacode/tests/test_characterization_grep.py`)
+#### A. GrepTool - PARTIALLY COMPLETE ✓
 - **Location**: `src/tunacode/tools/grep.py`
-- **Key behaviors to capture**:
-  - Fast-glob prefiltering with MAX_GLOB limit
-  - Three search strategies (python, ripgrep, hybrid)
-  - 3-second deadline for first match
-  - TooBroadPatternError behavior
-  - File pattern expansion ({py,js,ts} syntax)
-  - Context lines handling
-  - Binary file skipping
-  - Large repository performance
+- **Existing tests**: `test_grep_fast_glob.py`, `test_grep_legacy_compat.py`, `test_grep_timeout.py`
+- **Additional behaviors to capture in characterization tests**:
+  - Full integration test scenarios
+  - Edge cases not covered by unit tests
+  - Performance characteristics with real repositories
 
-#### B. ListDirTool (`/home/tuna/tunacode/tests/test_characterization_list_dir.py`)
+#### B. ListDirTool - COMPLETE ✓
 - **Location**: `src/tunacode/tools/list_dir.py`
-- **Key behaviors to capture**:
-  - Directory sorting (dirs first, then files)
-  - Type indicators (/, *, @, ?)
-  - Hidden file filtering
-  - Max entries limit
-  - Permission errors
-  - Symlink handling
-  - Non-existent directory errors
+- **Existing test**: `test_list_dir.py`
+- **Status**: Basic functionality is tested
 
 #### C. RunCommandTool (`/home/tuna/tunacode/tests/test_characterization_run_command.py`)
 - **Location**: `src/tunacode/tools/run_command.py`
@@ -46,8 +43,10 @@ This document outlines the remaining characterization tests needed to capture th
 
 ### 2. Agent System Tests
 
-#### A. Main Agent (`/home/tuna/tunacode/tests/test_characterization_agent.py`)
+#### A. Main Agent - COMPLETE ✅
 - **Location**: `src/tunacode/core/agents/main.py`
+- **Test file**: `tests/test_characterization_agent_main.py`
+- **Detailed plan**: `tests/CHARACTERIZATION_TEST_PLAN_AGENT_MAIN.md`
 - **Key functions**:
   - `get_or_create_agent()` - Lazy agent creation
   - `process_request()` - Main processing loop
@@ -205,7 +204,6 @@ This document outlines the remaining characterization tests needed to capture th
 ## Execution Order
 
 1. **High Priority** (Complete first):
-   - GrepTool - Complex search logic
    - Main Agent - Core processing loop
    - StateManager - Central state tracking
    - CommandRegistry - Command routing
@@ -223,10 +221,28 @@ This document outlines the remaining characterization tests needed to capture th
 
 ## Success Metrics
 
-- [ ] All core tools have characterization tests
-- [ ] Agent system behavior is captured
+- [x] Basic file operation tools have characterization tests (read, write, update, bash)
+- [x] Grep tool has test coverage (fast_glob, legacy_compat, timeout)
+- [x] ListDir tool has test coverage
+- [x] Agent system behavior is captured (main.py agent)
 - [ ] Command system is fully tested
 - [ ] State management is covered
 - [ ] ~80% overall code coverage achieved
 - [ ] Tests pass without modifying source code
 - [ ] Refactoring can proceed safely
+
+## Test Coverage Status
+
+### Completed
+- File operations: ReadFile, WriteFile, UpdateFile, Bash
+- Search tools: Grep (with variants), ListDir
+- Agent system: Main Agent (core.agents.main)
+
+### High Priority Remaining
+1. StateManager (`src/tunacode/core/state.py`)
+2. CommandRegistry & Commands (`src/tunacode/cli/commands.py`)
+
+### Medium Priority Remaining
+1. ToolHandler (`src/tunacode/core/tool_handler.py`)
+2. SetupCoordinator (`src/tunacode/core/setup/coordinator.py`)
+3. REPL (`src/tunacode/cli/repl.py`)

@@ -50,3 +50,10 @@ SIDEKICK.md
 REFACTOR*
 .claude/
 .aider*
+
+# Agent workflow temporary files
+.current_scratchpad_file
+.current_qa_log_path
+.qa_temp/
+scratchpad_*.md
+*.tmp
