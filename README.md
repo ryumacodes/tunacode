@@ -8,7 +8,7 @@
 
 **AI-powered CLI coding assistant**
 
-![Demo](demo.gif)
+![Demo](docs/assets/demo.gif)
 
 </div>
 
