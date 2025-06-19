@@ -128,14 +128,17 @@ if 'pydantic_ai' not in sys.modules:
 if 'prompt_toolkit' not in sys.modules:
     pt = types.ModuleType('prompt_toolkit')
     application = types.ModuleType('prompt_toolkit.application')
-    def run_in_terminal(func):
+    async def run_in_terminal(func):
         return func()
     application.run_in_terminal = run_in_terminal
     application.current = types.ModuleType('prompt_toolkit.application.current')
     application.current.get_app = lambda: None
     key_binding = types.ModuleType('prompt_toolkit.key_binding')
     class KeyBindings:
-        pass
+        def add(self, *args, **kwargs):
+            def decorator(func):
+                return func
+            return decorator
     key_binding.KeyBindings = KeyBindings
     completion = types.ModuleType('prompt_toolkit.completion')
     class Completer:
@@ -174,7 +177,10 @@ if 'prompt_toolkit' not in sys.modules:
     validation = types.ModuleType('prompt_toolkit.validation')
     class Validator:
         pass
+    class ValidationError(Exception):
+        pass
     validation.Validator = Validator
+    validation.ValidationError = ValidationError
     pt.application = application
     pt.completion = completion
     pt.validation = validation
@@ -182,6 +188,12 @@ if 'prompt_toolkit' not in sys.modules:
     pt.formatted_text = formatted_text
     pt.document = document
     pt.lexers = lexers
+    styles = types.ModuleType('prompt_toolkit.styles')
+    class Style:
+        def __init__(self, *args, **kwargs):
+            pass
+    styles.Style = Style
+    pt.styles = styles
     pt.shortcuts = shortcuts
     sys.modules['prompt_toolkit'] = pt
     sys.modules['prompt_toolkit.application'] = application
@@ -193,3 +205,4 @@ if 'prompt_toolkit' not in sys.modules:
     sys.modules['prompt_toolkit.lexers'] = lexers
     sys.modules['prompt_toolkit.document'] = document
     sys.modules['prompt_toolkit.validation'] = validation
+    sys.modules['prompt_toolkit.styles'] = styles
