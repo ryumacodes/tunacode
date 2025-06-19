@@ -5,11 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ### Development Commands
+
 ```bash
 # Install development environment (recommended approach)
 ./scripts/setup_dev_env.sh    # Creates fresh venv, installs deps, verifies setup
 
-# You must always follow the flow for working 
+# You must always follow the flow for working
  Project structure:
   agent-tools/
   ├── wakeup.sh          # Read memory bank
@@ -191,7 +192,7 @@ You MUST:
 5. [continue logging each step]
 6. ./scratchpad.sh close "[feature_name] implementation complete"
 7. Update memory-bank/current_state_summary.md
-8. Update memory-bank/progress_overview.md  
+8. Update memory-bank/progress_overview.md
 9. ./check_workflow.sh (occasionally, to verify)
 </pattern>
 
@@ -255,6 +256,14 @@ I'm going to tip $200000 for exceptional workflow adherence that demonstrates ma
 
 </system_prompt>
 
+For new feature YOU MUST folow this flow
+
+- **Start outside-in:** write a failing acceptance test that expresses the user story before any implementation.
+- **Go green fast:** add the bare-minimum code to pass that test, nothing more.
+- **Drive design with micro tests:** for every behavior (validation, calc, expiry, limits) add a failing unit test, then implement until green.
+- **Refactor on green:** once all tests pass, split messy code into clear components (service, repo, calculator, tracker) while keeping the suite green.
+- **Edge-case first mindset:** write tests for expiry, usage caps, and discount > total _before_ handling them; implementation follows the tests.
+- **Rinse & repeat:** keep iterations small, commit only green code, and let the tests guard future changes.
 
 
 # Manual installation
@@ -285,7 +294,9 @@ make run                     # Or: python -m tunacode
 ```
 
 ### Version Management
+
 When updating versions, modify both:
+
 - `pyproject.toml`: version field
 - `src/tunacode/constants.py`: VERSION constant
 
@@ -294,6 +305,7 @@ When updating versions, modify both:
 TunaCode is a CLI tool that provides an AI-powered coding assistant using pydantic-ai. Key architectural decisions:
 
 ### Agent System
+
 - Uses `pydantic-ai` for LLM agent implementation
 - Central agent in `src/tunacode/core/agents/main.py` with retryable tools
 - Supports multiple LLM providers (Anthropic, OpenAI, Google, OpenRouter) through unified interface
@@ -301,7 +313,9 @@ TunaCode is a CLI tool that provides an AI-powered coding assistant using pydant
 - Background task management via `core/background/manager.py`
 
 ### Tool System
+
 Seven internal tools with confirmation UI:
+
 1. `read_file` - Read file contents with line numbers
 2. `write_file` - Create new files (fails if exists)
 3. `update_file` - Update existing files with target/patch pattern
@@ -313,12 +327,14 @@ Seven internal tools with confirmation UI:
 Tools extend `BaseTool` or `FileBasedTool` base classes. External tools supported via MCP (Model Context Protocol) through `services/mcp.py`.
 
 ### State Management
+
 - `StateManager` (core/state.py) maintains all session state
 - Includes user config, agent instances, message history, costs, permissions
 - Single source of truth passed throughout the application
 - Code indexing system in `core/code_index.py` for codebase understanding
 
 ### Command System
+
 - Command registry pattern in `cli/commands.py`
 - Commands implement `BaseCommand` with `matches()` and `execute()` methods
 - Registered via `@CommandRegistry.register` decorator
@@ -326,14 +342,17 @@ Tools extend `BaseTool` or `FileBasedTool` base classes. External tools supporte
 - Available commands: `/help`, `/model`, `/clear`, `/compact`, `/branch`, `/yolo`, `/update`, `/exit`
 
 ### Setup Coordinator
+
 Modular setup with validation steps:
+
 1. Environment detection (API keys)
 2. Model validation
 3. Configuration setup (`~/.config/tunacode.json`)
 4. Git safety checks
-Each step implements `BaseSetupStep` interface.
+   Each step implements `BaseSetupStep` interface.
 
 ### UI Components
+
 - REPL uses `prompt_toolkit` for multiline input with syntax highlighting
 - Output formatting via `rich` library
 - Tool confirmations show diffs for file operations
@@ -343,17 +362,20 @@ Each step implements `BaseSetupStep` interface.
 ## Testing
 
 ### Test Organization
+
 - Unit tests for individual components
 - Integration tests for system interactions
 - Characterization tests for capturing existing behavior
 - Async tests using `@pytest.mark.asyncio`
 
 ### Test Markers
+
 - `@pytest.mark.slow` - Long-running tests
 - `@pytest.mark.integration` - Integration tests
 - `@pytest.mark.asyncio` - Async test functions
 
 ### Running Tests
+
 ```bash
 # Skip slow tests during development
 pytest -m "not slow"
@@ -371,25 +393,31 @@ pytest --cov=tunacode --cov-report=html
 ## Configuration
 
 ### User Configuration
+
 Location: `~/.config/tunacode.json`
+
 ```json
 {
-    "default_model": "provider:model-name",
-    "env": {
-        "ANTHROPIC_API_KEY": "...",
-        "OPENAI_API_KEY": "..."
-    }
+  "default_model": "provider:model-name",
+  "env": {
+    "ANTHROPIC_API_KEY": "...",
+    "OPENAI_API_KEY": "..."
+  }
 }
 ```
 
 ### Project Guide
+
 Location: `TUNACODE.md` in project root
+
 - Project-specific context for the AI assistant
 - Loaded automatically when present
 - Can include codebase conventions, architecture notes
 
 ### Linting Configuration
+
 `.flake8` settings:
+
 - Max line length: 120
 - Ignores: E203, W503, E704 (Black compatibility)
 - Excludes: venv, build, dist directories
@@ -397,27 +425,47 @@ Location: `TUNACODE.md` in project root
 ## Key Design Patterns
 
 ### Error Handling
+
 - Custom exceptions in `exceptions.py`
 - `ModelRetry` from pydantic-ai for retryable errors
 - Graceful degradation for missing features
 
 ### Permissions
+
 - File operation permissions tracked per session
 - "Yolo mode" to skip confirmations: `/yolo`
 - Permissions stored in StateManager
 
 ### Async Architecture
+
 - All agent operations are async
 - Tool executions use async/await
 - REPL handles async with prompt_toolkit integration
 
 ### Performance Optimizations
+
 - Grep tool uses fast-glob prefiltering with MAX_GLOB limit
 - 3-second deadline for first match in searches
 - Background task management for non-blocking operations
 
 ### Safety Features
+
 - No automatic git commits
 - File operations require explicit confirmation (unless in yolo mode)
 - Encourages git branches for experiments: `/branch <name>`
 - Git safety checks during setup
+
+Follow this code styling
+
+| #   | Rule                                           | One-line purpose                                                                                     |
+| --- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 1   | **Guard Clause**                               | Flatten nested conditionals by returning early, so pre-conditions are explicit                       |
+| 2   | **Delete Dead Code**                           | If it’s never executed, delete it – that’s what VCS is for                                           |
+| 3   | **Normalize Symmetries**                       | Make identical things look identical and different things look different for faster pattern-spotting |
+| 4   | **New Interface, Old Implementation**          | Write the interface you wish existed; delegate to the old one for now                                |
+| 5   | **Reading Order**                              | Re-order elements so a reader meets ideas in the order they need them                                |
+| 6   | **Cohesion Order**                             | Cluster coupled functions/files so related edits sit together                                        |
+| 7   | **Move Declaration & Initialization Together** | Keep a variable’s birth and first value adjacent for comprehension & dependency safety               |
+| 8   | **Explaining Variable**                        | Extract a sub-expression into a well-named variable to record intent                                 |
+| 9   | **Explaining Constant**                        | Replace magic literals with symbolic constants that broadcast meaning                                |
+| 10  | **Explicit Parameters**                        | Split a routine so all inputs are passed openly, banishing hidden state or maps                      |
