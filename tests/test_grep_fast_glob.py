@@ -311,6 +311,8 @@ class TestFastGlobPrefilter:
         """Test that fast_glob handles permission errors gracefully."""
         # Create a directory we can't read (on Unix-like systems)
         if os.name != 'nt':  # Skip on Windows
+            if hasattr(os, 'geteuid') and os.geteuid() == 0:
+                pytest.skip("Permission test unreliable as root")
             restricted_dir = self.test_path / "restricted"
             restricted_dir.mkdir()
             (restricted_dir / "secret.py").write_text("secret")
