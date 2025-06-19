@@ -2,6 +2,7 @@
 Tool handling business logic, separated from UI concerns.
 """
 
+from tunacode.constants import READ_ONLY_TOOLS
 from tunacode.core.state import StateManager
 from tunacode.types import ToolArgs, ToolConfirmationRequest, ToolConfirmationResponse, ToolName
 
@@ -22,6 +23,10 @@ class ToolHandler:
         Returns:
             bool: True if confirmation is required, False otherwise.
         """
+        # Skip confirmation for read-only tools
+        if is_read_only_tool(tool_name):
+            return False
+
         return not (self.state.session.yolo or tool_name in self.state.session.tool_ignore)
 
     def process_confirmation(self, response: ToolConfirmationResponse, tool_name: ToolName) -> bool:
@@ -55,3 +60,16 @@ class ToolHandler:
         """
         filepath = args.get("filepath")
         return ToolConfirmationRequest(tool_name=tool_name, args=args, filepath=filepath)
+
+
+def is_read_only_tool(tool_name: str) -> bool:
+    """
+    Check if a tool is read-only (safe to execute without confirmation).
+
+    Args:
+        tool_name: Name of the tool to check.
+
+    Returns:
+        bool: True if the tool is read-only, False otherwise.
+    """
+    return tool_name in READ_ONLY_TOOLS

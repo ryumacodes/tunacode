@@ -4,12 +4,15 @@ Main agent functionality and coordination for the TunaCode CLI.
 Handles agent creation, configuration, and request processing.
 """
 
+import asyncio
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Iterator, List, Optional, Tuple
 
+from tunacode.constants import READ_ONLY_TOOLS
 from tunacode.core.state import StateManager
 from tunacode.services.mcp import get_mcp_servers
 from tunacode.tools.bash import bash
@@ -21,6 +24,27 @@ from tunacode.tools.update_file import update_file
 from tunacode.tools.write_file import write_file
 from tunacode.types import (AgentRun, ErrorMessage, FallbackResponse, ModelName, PydanticAgent,
                             ResponseState, SimpleResult, ToolCallback, ToolCallId, ToolName)
+
+
+class ToolBuffer:
+    """Buffer for collecting read-only tool calls to execute in parallel."""
+
+    def __init__(self):
+        self.read_only_tasks: List[Tuple[Any, Any]] = []
+
+    def add(self, part: Any, node: Any) -> None:
+        """Add a read-only tool call to the buffer."""
+        self.read_only_tasks.append((part, node))
+
+    def flush(self) -> List[Tuple[Any, Any]]:
+        """Return buffered tasks and clear the buffer."""
+        tasks = self.read_only_tasks
+        self.read_only_tasks = []
+        return tasks
+
+    def has_tasks(self) -> bool:
+        """Check if there are buffered tasks."""
+        return len(self.read_only_tasks) > 0
 
 
 # Lazy import for Agent and Tool
@@ -38,9 +62,134 @@ def get_model_messages():
     return messages.ModelRequest, messages.ToolReturnPart
 
 
+async def execute_tools_parallel(
+    tool_calls: List[Tuple[Any, Any]], callback: ToolCallback, return_exceptions: bool = True
+) -> List[Any]:
+    """
+    Execute multiple tool calls in parallel using asyncio.
+
+    Args:
+        tool_calls: List of (part, node) tuples
+        callback: The tool callback function to execute
+        return_exceptions: Whether to return exceptions or raise them
+
+    Returns:
+        List of results in the same order as input, with exceptions for failed calls
+    """
+    # Get max parallel from environment or default to CPU count
+    max_parallel = int(os.environ.get("TUNACODE_MAX_PARALLEL", os.cpu_count() or 4))
+
+    async def execute_with_error_handling(part, node):
+        try:
+            return await callback(part, node)
+        except Exception as e:
+            return e
+
+    # If we have more tools than max_parallel, execute in batches
+    if len(tool_calls) > max_parallel:
+        results = []
+        for i in range(0, len(tool_calls), max_parallel):
+            batch = tool_calls[i : i + max_parallel]
+            batch_tasks = [execute_with_error_handling(part, node) for part, node in batch]
+            batch_results = await asyncio.gather(*batch_tasks, return_exceptions=return_exceptions)
+            results.extend(batch_results)
+        return results
+    else:
+        tasks = [execute_with_error_handling(part, node) for part, node in tool_calls]
+        return await asyncio.gather(*tasks, return_exceptions=return_exceptions)
+
+
+def batch_read_only_tools(tool_calls: List[Any]) -> Iterator[List[Any]]:
+    """
+    Batch tool calls so read-only tools can be executed in parallel.
+
+    Yields batches where:
+    - Read-only tools are grouped together
+    - Write/execute tools are in their own batch (single item)
+    - Order within each batch is preserved
+
+    Args:
+        tool_calls: List of tool call objects with 'tool' attribute
+
+    Yields:
+        Batches of tool calls
+    """
+    if not tool_calls:
+        return
+
+    current_batch = []
+
+    for tool_call in tool_calls:
+        tool_name = tool_call.tool if hasattr(tool_call, "tool") else None
+
+        if tool_name in READ_ONLY_TOOLS:
+            # Add to current batch
+            current_batch.append(tool_call)
+        else:
+            # Yield any pending read-only batch
+            if current_batch:
+                yield current_batch
+                current_batch = []
+
+            # Yield write/execute tool as single-item batch
+            yield [tool_call]
+
+    # Yield any remaining read-only tools
+    if current_batch:
+        yield current_batch
+
+
+async def create_buffering_callback(
+    original_callback: ToolCallback, buffer: ToolBuffer, state_manager: StateManager
+) -> ToolCallback:
+    """
+    Create a callback wrapper that buffers read-only tools for parallel execution.
+
+    Args:
+        original_callback: The original tool callback
+        buffer: ToolBuffer instance to store read-only tools
+        state_manager: StateManager for UI access
+
+    Returns:
+        A wrapped callback function
+    """
+
+    async def buffering_callback(part, node):
+        tool_name = getattr(part, "tool_name", None)
+
+        if tool_name in READ_ONLY_TOOLS:
+            # Buffer read-only tools
+            buffer.add(part, node)
+            return
+
+        # Non-read-only tool encountered - flush buffer first
+        if buffer.has_tasks():
+            buffered_tasks = buffer.flush()
+
+            # Execute buffered read-only tools in parallel
+            if state_manager.session.show_thoughts:
+                from tunacode.ui import console as ui
+
+                await ui.muted(f"Executing {len(buffered_tasks)} read-only tools in parallel")
+
+            await execute_tools_parallel(buffered_tasks, original_callback)
+
+        # Execute the non-read-only tool
+        return await original_callback(part, node)
+
+    return buffering_callback
+
+
 async def _process_node(node, tool_callback: Optional[ToolCallback], state_manager: StateManager):
     from tunacode.ui import console as ui
     from tunacode.utils.token_counter import estimate_tokens
+
+    # Create buffer and wrapped callback for parallel execution
+    buffer = ToolBuffer()
+    if tool_callback:
+        buffering_callback = await create_buffering_callback(tool_callback, buffer, state_manager)
+    else:
+        buffering_callback = tool_callback
 
     if hasattr(node, "request"):
         state_manager.session.messages.append(node.request)
@@ -170,7 +319,7 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
                             f"\nFILES IN CONTEXT: {list(state_manager.session.files_in_context)}"
                         )
 
-                await tool_callback(part, node)
+                await buffering_callback(part, node)
 
             elif part.part_kind == "tool-return":
                 obs_msg = f"OBSERVATION[{part.tool_name}]: {part.content[:2_000]}"
@@ -185,10 +334,21 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
                     await ui.muted(f"TOOL RESULT: {display_content}")
 
         # If no structured tool calls found, try parsing JSON from text content
-        if not has_tool_calls and tool_callback:
+        if not has_tool_calls and buffering_callback:
             for part in node.model_response.parts:
                 if hasattr(part, "content") and isinstance(part.content, str):
-                    await extract_and_execute_tool_calls(part.content, tool_callback, state_manager)
+                    await extract_and_execute_tool_calls(
+                        part.content, buffering_callback, state_manager
+                    )
+
+    # Final flush: execute any remaining buffered read-only tools
+    if tool_callback and buffer.has_tasks():
+        buffered_tasks = buffer.flush()
+        if state_manager.session.show_thoughts:
+            await ui.muted(
+                f"Final flush: Executing {len(buffered_tasks)} remaining read-only tools in parallel"
+            )
+        await execute_tools_parallel(buffered_tasks, tool_callback)
 
 
 def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
