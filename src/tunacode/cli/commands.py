@@ -72,44 +72,45 @@ class CommandSpec:
 
 
 class SimpleCommand(Command):
-    """Base class for simple commands without complex logic."""
+    """Base class for simple commands without complex logic.
 
-    def __init__(self, spec: CommandSpec):
-        self.spec = spec
+    This class provides a standard implementation for commands that don't
+    require special initialization or complex behavior. It reads all
+    properties from a class-level CommandSpec attribute.
+    """
+
+    spec: CommandSpec
 
     @property
     def name(self) -> str:
         """The primary name of the command."""
-        return self.spec.name
+        return self.__class__.spec.name
 
     @property
     def aliases(self) -> CommandArgs:
         """Alternative names/aliases for the command."""
-        return self.spec.aliases
+        return self.__class__.spec.aliases
 
     @property
     def description(self) -> str:
         """Description of what the command does."""
-        return self.spec.description
+        return self.__class__.spec.description
 
     @property
     def category(self) -> CommandCategory:
         """Category this command belongs to."""
-        return self.spec.category
+        return self.__class__.spec.category
 
 
 class YoloCommand(SimpleCommand):
     """Toggle YOLO mode (skip confirmations)."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="yolo",
-                aliases=["/yolo"],
-                description="Toggle YOLO mode (skip tool confirmations)",
-                category=CommandCategory.DEVELOPMENT,
-            )
-        )
+    spec = CommandSpec(
+        name="yolo",
+        aliases=["/yolo"],
+        description="Toggle YOLO mode (skip tool confirmations)",
+        category=CommandCategory.DEVELOPMENT,
+    )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         state = context.state_manager.session
@@ -123,15 +124,12 @@ class YoloCommand(SimpleCommand):
 class DumpCommand(SimpleCommand):
     """Dump message history."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="dump",
-                aliases=["/dump"],
-                description="Dump the current message history",
-                category=CommandCategory.DEBUG,
-            )
-        )
+    spec = CommandSpec(
+        name="dump",
+        aliases=["/dump"],
+        description="Dump the current message history",
+        category=CommandCategory.DEBUG,
+    )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         await ui.dump_messages(context.state_manager.session.messages)
@@ -140,29 +138,33 @@ class DumpCommand(SimpleCommand):
 class ThoughtsCommand(SimpleCommand):
     """Toggle display of agent thoughts."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="thoughts",
-                aliases=["/thoughts"],
-                description="Show or hide agent thought messages",
-                category=CommandCategory.DEBUG,
-            )
-        )
+    spec = CommandSpec(
+        name="thoughts",
+        aliases=["/thoughts"],
+        description="Show or hide agent thought messages",
+        category=CommandCategory.DEBUG,
+    )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         state = context.state_manager.session
-        if args:
-            arg = args[0].lower()
-            if arg in {"on", "1", "true"}:
-                state.show_thoughts = True
-            elif arg in {"off", "0", "false"}:
-                state.show_thoughts = False
-            else:
-                await ui.error("Usage: /thoughts [on|off]")
-                return
-        else:
+
+        # No args - toggle
+        if not args:
             state.show_thoughts = not state.show_thoughts
+            status = "ON" if state.show_thoughts else "OFF"
+            await ui.success(f"Thought display {status}")
+            return
+
+        # Parse argument
+        arg = args[0].lower()
+        if arg in {"on", "1", "true"}:
+            state.show_thoughts = True
+        elif arg in {"off", "0", "false"}:
+            state.show_thoughts = False
+        else:
+            await ui.error("Usage: /thoughts [on|off]")
+            return
+
         status = "ON" if state.show_thoughts else "OFF"
         await ui.success(f"Thought display {status}")
 
@@ -170,15 +172,12 @@ class ThoughtsCommand(SimpleCommand):
 class IterationsCommand(SimpleCommand):
     """Configure maximum agent iterations for ReAct reasoning."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="iterations",
-                aliases=["/iterations"],
-                description="Set maximum agent iterations for complex reasoning",
-                category=CommandCategory.DEBUG,
-            )
-        )
+    spec = CommandSpec(
+        name="iterations",
+        aliases=["/iterations"],
+        description="Set maximum agent iterations for complex reasoning",
+        category=CommandCategory.DEBUG,
+    )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         state = context.state_manager.session
@@ -207,15 +206,12 @@ class IterationsCommand(SimpleCommand):
 class ClearCommand(SimpleCommand):
     """Clear screen and message history."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="clear",
-                aliases=["/clear"],
-                description="Clear the screen and message history",
-                category=CommandCategory.NAVIGATION,
-            )
-        )
+    spec = CommandSpec(
+        name="clear",
+        aliases=["/clear"],
+        description="Clear the screen and message history",
+        category=CommandCategory.NAVIGATION,
+    )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         # Patch any orphaned tool calls before clearing
@@ -232,15 +228,12 @@ class ClearCommand(SimpleCommand):
 class FixCommand(SimpleCommand):
     """Fix orphaned tool calls that cause API errors."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="fix",
-                aliases=["/fix"],
-                description="Fix orphaned tool calls causing API errors",
-                category=CommandCategory.DEBUG,
-            )
-        )
+    spec = CommandSpec(
+        name="fix",
+        aliases=["/fix"],
+        description="Fix orphaned tool calls causing API errors",
+        category=CommandCategory.DEBUG,
+    )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         from tunacode.core.agents.main import patch_tool_messages
@@ -265,17 +258,12 @@ class FixCommand(SimpleCommand):
 class ParseToolsCommand(SimpleCommand):
     """Parse and execute JSON tool calls from the last response."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="parsetools",
-                aliases=["/parsetools"],
-                description=(
-                    "Parse JSON tool calls from last response when structured calling fails"
-                ),
-                category=CommandCategory.DEBUG,
-            )
-        )
+    spec = CommandSpec(
+        name="parsetools",
+        aliases=["/parsetools"],
+        description=("Parse JSON tool calls from last response when structured calling fails"),
+        category=CommandCategory.DEBUG,
+    )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         from tunacode.core.agents.main import extract_and_execute_tool_calls
@@ -316,15 +304,12 @@ class ParseToolsCommand(SimpleCommand):
 class RefreshConfigCommand(SimpleCommand):
     """Refresh configuration from defaults."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="refresh",
-                aliases=["/refresh"],
-                description="Refresh configuration from defaults (useful after updates)",
-                category=CommandCategory.SYSTEM,
-            )
-        )
+    spec = CommandSpec(
+        name="refresh",
+        aliases=["/refresh"],
+        description="Refresh configuration from defaults (useful after updates)",
+        category=CommandCategory.SYSTEM,
+    )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
@@ -346,76 +331,17 @@ class RefreshConfigCommand(SimpleCommand):
         await ui.success(f"Configuration refreshed - max iterations: {max_iterations}")
 
 
-class TunaCodeCommand(SimpleCommand):
-    """Use BM25 to inspect the codebase and read relevant files."""
-
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="tunaCode",
-                aliases=["/tunaCode"],
-                description="Scan repo with BM25 and display key files",
-                category=CommandCategory.DEVELOPMENT,
-            )
-        )
-
-    async def execute(self, args: List[str], context: CommandContext) -> None:
-        from pathlib import Path
-
-        from tunacode.constants import UI_COLORS
-        from tunacode.utils.file_utils import DotDict
-
-        from ..tools.read_file import read_file
-        from ..utils.bm25 import BM25, tokenize
-        from ..utils.text_utils import ext_to_lang
-
-        colors = DotDict(UI_COLORS)
-
-        query = " ".join(args) if args else "overview"
-        await ui.info("Building BM25 index of repository")
-
-        docs: List[str] = []
-        paths: List[Path] = []
-        exts = {".py", ".js", ".ts", ".java", ".c", ".cpp", ".md", ".txt"}
-        for path in Path(".").rglob("*"):
-            if path.is_file() and path.suffix in exts:
-                try:
-                    docs.append(path.read_text(encoding="utf-8"))
-                    paths.append(path)
-                except Exception:
-                    continue
-
-        if not docs:
-            await ui.error("No files found to index")
-            return
-
-        bm25 = BM25(docs)
-        scores = bm25.get_scores(tokenize(query))
-        ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:5]
-
-        for idx in ranked:
-            file_path = paths[idx]
-            content = await read_file(str(file_path))
-            lang = ext_to_lang(str(file_path))
-            await ui.panel(
-                str(file_path),
-                f"```{lang}\n{content}\n```",
-                border_style=colors.muted,
-            )
-
-
 class HelpCommand(SimpleCommand):
     """Show help information."""
 
+    spec = CommandSpec(
+        name="help",
+        aliases=["/help"],
+        description="Show help information",
+        category=CommandCategory.SYSTEM,
+    )
+
     def __init__(self, command_registry=None):
-        super().__init__(
-            CommandSpec(
-                name="help",
-                aliases=["/help"],
-                description="Show help information",
-                category=CommandCategory.SYSTEM,
-            )
-        )
         self._command_registry = command_registry
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
@@ -425,15 +351,12 @@ class HelpCommand(SimpleCommand):
 class BranchCommand(SimpleCommand):
     """Create and switch to a new git branch."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="branch",
-                aliases=["/branch"],
-                description="Create and switch to a new git branch",
-                category=CommandCategory.DEVELOPMENT,
-            )
-        )
+    spec = CommandSpec(
+        name="branch",
+        aliases=["/branch"],
+        description="Create and switch to a new git branch",
+        category=CommandCategory.DEVELOPMENT,
+    )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         import os
@@ -470,15 +393,14 @@ class BranchCommand(SimpleCommand):
 class CompactCommand(SimpleCommand):
     """Compact conversation context."""
 
+    spec = CommandSpec(
+        name="compact",
+        aliases=["/compact"],
+        description="Summarize and compact the conversation history",
+        category=CommandCategory.SYSTEM,
+    )
+
     def __init__(self, process_request_callback: Optional[ProcessRequestCallback] = None):
-        super().__init__(
-            CommandSpec(
-                name="compact",
-                aliases=["/compact"],
-                description="Summarize and compact the conversation history",
-                category=CommandCategory.SYSTEM,
-            )
-        )
         self._process_request = process_request_callback
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
@@ -579,15 +501,12 @@ class CompactCommand(SimpleCommand):
 class UpdateCommand(SimpleCommand):
     """Update TunaCode to the latest version."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="update",
-                aliases=["/update"],
-                description="Update TunaCode to the latest version",
-                category=CommandCategory.SYSTEM,
-            )
-        )
+    spec = CommandSpec(
+        name="update",
+        aliases=["/update"],
+        description="Update TunaCode to the latest version",
+        category=CommandCategory.SYSTEM,
+    )
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         import shutil
@@ -673,19 +592,16 @@ class UpdateCommand(SimpleCommand):
 class ModelCommand(SimpleCommand):
     """Manage model selection."""
 
-    def __init__(self):
-        super().__init__(
-            CommandSpec(
-                name="model",
-                aliases=["/model"],
-                description="Switch model (e.g., /model gpt-4 or /model openai:gpt-4)",
-                category=CommandCategory.MODEL,
-            )
-        )
+    spec = CommandSpec(
+        name="model",
+        aliases=["/model"],
+        description="Switch model (e.g., /model gpt-4 or /model openai:gpt-4)",
+        category=CommandCategory.MODEL,
+    )
 
     async def execute(self, args: CommandArgs, context: CommandContext) -> Optional[str]:
+        # No arguments - show current model
         if not args:
-            # No arguments - show current model
             current_model = context.state_manager.session.current_model
             await ui.info(f"Current model: {current_model}")
             await ui.muted("Usage: /model <provider:model-name> [default]")
@@ -715,10 +631,10 @@ class ModelCommand(SimpleCommand):
             utils.user_configuration.set_default_model(model_name, context.state_manager)
             await ui.muted("Updating default model")
             return "restart"
-        else:
-            # Show success message with the new model
-            await ui.success(f"Switched to model: {model_name}")
-            return None
+
+        # Show success message with the new model
+        await ui.success(f"Switched to model: {model_name}")
+        return None
 
 
 @dataclass
@@ -808,7 +724,6 @@ class CommandRegistry:
             UpdateCommand,
             HelpCommand,
             BranchCommand,
-            # TunaCodeCommand,  # TODO: Temporarily disabled
             CompactCommand,
             ModelCommand,
         ]

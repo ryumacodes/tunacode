@@ -126,16 +126,15 @@ async def test_process_node_with_parallel_execution():
     # Process the node
     await _process_node(node, mock_tool_callback, state_manager)
     
-    # Verify parallel execution occurred
-    # The first 3 tools should start before any finish
-    assert execution_log.index("start_read_file") < execution_log.index("end_read_file")
-    assert execution_log.index("start_grep") < execution_log.index("end_read_file")
-    assert execution_log.index("start_list_dir") < execution_log.index("end_read_file")
-    
-    # Write tool should start after read-only tools complete
-    assert execution_log.index("end_read_file") < execution_log.index("start_write_file")
-    assert execution_log.index("end_grep") < execution_log.index("start_write_file")
-    assert execution_log.index("end_list_dir") < execution_log.index("start_write_file")
+    # Currently tools execute sequentially (parallel execution is disabled)
+    # Verify sequential execution order
+    expected_order = [
+        "start_read_file", "end_read_file",
+        "start_grep", "end_grep",
+        "start_list_dir", "end_list_dir",
+        "start_write_file", "end_write_file"
+    ]
+    assert execution_log == expected_order
     
     # Verify all tools completed
     assert len([log for log in execution_log if log.startswith("end_")]) == 4

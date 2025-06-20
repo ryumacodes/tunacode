@@ -47,7 +47,7 @@ class GitSafetySetup(BaseSetup):
 
             if result.returncode != 0:
                 await panel(
-                    "⚠️  Git Not Found",
+                    " Git Not Found",
                     "Git is not installed or not in PATH. TunaCode will modify files directly.\n"
                     "It's strongly recommended to install Git for safety.",
                     border_style="yellow",
@@ -65,7 +65,7 @@ class GitSafetySetup(BaseSetup):
 
             if result.returncode != 0:
                 await panel(
-                    "⚠️  Not a Git Repository",
+                    " Not a Git Repository",
                     "This directory is not a Git repository. TunaCode will modify files directly.\n"
                     "Consider initializing a Git repository for safety: git init",
                     border_style="yellow",
@@ -81,7 +81,7 @@ class GitSafetySetup(BaseSetup):
             if not current_branch:
                 # Detached HEAD state
                 await panel(
-                    "⚠️  Detached HEAD State",
+                    " Detached HEAD State",
                     "You're in a detached HEAD state. TunaCode will continue without creating a branch.",
                     border_style="yellow",
                 )
@@ -110,7 +110,7 @@ class GitSafetySetup(BaseSetup):
 
             if has_changes:
                 message += (
-                    "\n⚠️  You have uncommitted changes that will be brought to the new branch."
+                    "\n You have uncommitted changes that will be brought to the new branch."
                 )
 
             create_branch = await yes_no_prompt(f"{message}\n\nCreate safety branch?", default=True)
@@ -118,7 +118,7 @@ class GitSafetySetup(BaseSetup):
             if not create_branch:
                 # User declined - show warning
                 await panel(
-                    "⚠️  Working Without Safety Branch",
+                    " Working Without Safety Branch",
                     "You've chosen to work directly on your current branch.\n"
                     "TunaCode will modify files in place. Make sure you have backups!",
                     border_style="red",
@@ -153,7 +153,7 @@ class GitSafetySetup(BaseSetup):
 
             except subprocess.CalledProcessError as e:
                 await panel(
-                    "❌ Failed to Create Branch",
+                    " Failed to Create Branch",
                     f"Could not create branch '{new_branch}': {str(e)}\n"
                     "Continuing on current branch.",
                     border_style="red",
@@ -162,7 +162,7 @@ class GitSafetySetup(BaseSetup):
         except Exception as e:
             # Non-fatal error - just warn the user
             await panel(
-                "⚠️  Git Safety Setup Failed",
+                " Git Safety Setup Failed",
                 f"Could not set up Git safety: {str(e)}\n"
                 "TunaCode will continue without branch protection.",
                 border_style="yellow",

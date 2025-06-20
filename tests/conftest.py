@@ -88,6 +88,14 @@ if 'pydantic_ai' not in sys.modules:
         async def iter(self, *args, **kwargs):
             if False:
                 yield None
+        def run_mcp_servers(self):
+            # Return a context manager for MCP servers
+            class MCPContext:
+                async def __aenter__(self):
+                    return self
+                async def __aexit__(self, exc_type, exc, tb):
+                    pass
+            return MCPContext()
     pai.Agent = Agent
     pai.Tool = lambda *args, **kwargs: None
     messages = types.ModuleType('pydantic_ai.messages')
@@ -191,7 +199,12 @@ if 'prompt_toolkit' not in sys.modules:
     styles = types.ModuleType('prompt_toolkit.styles')
     class Style:
         def __init__(self, *args, **kwargs):
-            pass
+            self._style_rules = []
+        @classmethod
+        def from_dict(cls, style_dict):
+            return cls()
+        def get_attrs_for_style_str(self, style_str):
+            return None
     styles.Style = Style
     pt.styles = styles
     pt.shortcuts = shortcuts

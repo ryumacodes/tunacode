@@ -8,6 +8,16 @@ from tunacode.core.state import StateManager
 
 # Avoid heavy imports from setup package
 sys.modules['tunacode.cli.main'] = types.SimpleNamespace(app=None)
+@pytest.fixture(autouse=True)
+def cleanup_modules():
+    """Automatically restore sys.modules after each test."""
+    original = sys.modules.get('tunacode.ui.console')
+    yield
+    if original is not None:
+        sys.modules['tunacode.ui.console'] = original
+    else:
+        sys.modules.pop('tunacode.ui.console', None)
+
 sys.modules['tunacode.ui.console'] = types.SimpleNamespace()
 
 if 'prompt_toolkit.styles' not in sys.modules:

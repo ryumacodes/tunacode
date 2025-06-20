@@ -140,6 +140,10 @@ class TestReadFileCharacterization:
     
     async def test_read_file_with_permission_denied(self):
         """Capture behavior when file permissions deny reading."""
+        # Skip test if running as root (root can read anything)
+        if os.getuid() == 0:
+            pytest.skip("Permission tests don't work when running as root")
+            
         # Arrange
         test_file = Path(self.temp_dir) / "no_read.txt"
         test_file.write_text("Secret content")

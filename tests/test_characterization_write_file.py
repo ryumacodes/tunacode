@@ -184,6 +184,10 @@ class TestWriteFileCharacterization:
     
     async def test_write_with_permission_denied(self):
         """Capture behavior when directory permissions deny writing."""
+        # Skip test if running as root (root can write anywhere)
+        if os.getuid() == 0:
+            pytest.skip("Permission tests don't work when running as root")
+            
         # Arrange
         protected_dir = Path(self.temp_dir) / "protected"
         protected_dir.mkdir()

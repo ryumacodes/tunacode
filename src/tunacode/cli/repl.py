@@ -250,7 +250,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                                 await extract_and_execute_tool_calls(
                                     part.content, tool_callback_with_state, state_manager
                                 )
-                                await ui.warning("🔧 Recovered using JSON tool parsing")
+                                await ui.warning(" Recovered using JSON tool parsing")
                                 return  # Successfully recovered
                             except Exception:
                                 pass  # Fallback failed, continue with normal error handling
