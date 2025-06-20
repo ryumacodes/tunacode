@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.32] - 2025-06-20
+
+### Fixed
+
+- Cleaned up root directory by removing 100+ test files
+  - Removed performance test files (perf_test_*.txt)
+  - Removed test plan markdown files from root
+  - Removed test api/components directories from src
+  - Removed various test files (file*.txt, module_*.py, etc.)
+  - Kept all legitimate test files in tests/ directory
+
+## [0.0.31] - 2025-06-19
+
 ### Added
 
 - New `list_dir` tool for efficient directory listing
