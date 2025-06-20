@@ -60,6 +60,14 @@ tunacode
 | `!<command>` | Run shell command |
 | `exit` | Exit TunaCode |
 
+## Performance
+
+TunaCode leverages parallel execution for read-only operations, achieving **3x faster** file operations:
+
+![Parallel Execution Performance](docs/assets/parrelel_work_3x.png)
+
+Multiple file reads, directory listings, and searches execute concurrently using async I/O, making code exploration significantly faster.
+
 ## Safety First
 
 ⚠️ **Important**: TunaCode can modify your codebase. Always:

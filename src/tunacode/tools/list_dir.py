@@ -5,6 +5,7 @@ Directory listing tool for agent operations in the TunaCode application.
 Provides efficient directory listing without using shell commands.
 """
 
+import asyncio
 import os
 from pathlib import Path
 from typing import List, Tuple
@@ -47,42 +48,52 @@ class ListDirTool(FileBasedTool):
         if not dir_path.is_dir():
             raise NotADirectoryError(f"Not a directory: {dir_path}")
 
-        # Collect entries
-        entries: List[Tuple[str, bool, str]] = []  # (name, is_dir, type_indicator)
+        # Collect entries in a background thread to prevent blocking the event loop
+        def _scan_directory(path: Path) -> List[Tuple[str, bool, str]]:
+            """Synchronous helper that scans a directory and returns entry metadata."""
+            collected: List[Tuple[str, bool, str]] = []
+            try:
+                with os.scandir(path) as scanner:
+                    for entry in scanner:
+                        # Skip hidden files if requested
+                        if not show_hidden and entry.name.startswith("."):
+                            continue
+
+                        try:
+                            is_directory = entry.is_dir(follow_symlinks=False)
+                            is_symlink = entry.is_symlink()
+
+                            # Determine type indicator
+                            if is_symlink:
+                                type_indicator = "@"  # Symlink
+                            elif is_directory:
+                                type_indicator = "/"  # Directory
+                            elif entry.is_file():
+                                # Check if executable
+                                if os.access(entry.path, os.X_OK):
+                                    type_indicator = "*"  # Executable
+                                else:
+                                    type_indicator = ""  # Regular file
+                            else:
+                                type_indicator = "?"  # Unknown type
+
+                            collected.append((entry.name, is_directory, type_indicator))
+
+                        except (OSError, PermissionError):
+                            # If we can't stat the entry, include it with unknown type
+                            collected.append((entry.name, False, "?"))
+            except PermissionError:
+                # Re-raise for the outer async context to handle uniformly
+                raise
+
+            return collected
 
         try:
-            with os.scandir(dir_path) as scanner:
-                for entry in scanner:
-                    # Skip hidden files if requested
-                    if not show_hidden and entry.name.startswith("."):
-                        continue
-
-                    try:
-                        is_directory = entry.is_dir(follow_symlinks=False)
-                        is_symlink = entry.is_symlink()
-
-                        # Determine type indicator
-                        if is_symlink:
-                            type_indicator = "@"  # Symlink
-                        elif is_directory:
-                            type_indicator = "/"  # Directory
-                        elif entry.is_file():
-                            # Check if executable
-                            if os.access(entry.path, os.X_OK):
-                                type_indicator = "*"  # Executable
-                            else:
-                                type_indicator = ""  # Regular file
-                        else:
-                            type_indicator = "?"  # Unknown type
-
-                        entries.append((entry.name, is_directory, type_indicator))
-
-                    except (OSError, PermissionError):
-                        # If we can't stat the entry, include it with unknown type
-                        entries.append((entry.name, False, "?"))
-
+            entries: List[Tuple[str, bool, str]] = await asyncio.to_thread(
+                _scan_directory, dir_path
+            )
         except PermissionError as e:
-            raise PermissionError(f"Permission denied accessing directory: {dir_path}")
+            raise PermissionError(f"Permission denied accessing directory: {dir_path}") from e
 
         # Sort entries: directories first, then files, both alphabetically
         entries.sort(key=lambda x: (not x[1], x[0].lower()))

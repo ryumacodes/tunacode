@@ -58,7 +58,7 @@ async def test_already_on_tunacode_branch(monkeypatch):
             return MagicMock(returncode=0, stdout="main-tunacode")
         return MagicMock(returncode=0)
     monkeypatch.setattr("subprocess.run", run_side_effect)
-    with patch("tunacode.core.setup.git_safety_setup.ui.info", new=AsyncMock()) as mock_info:
+    with patch("tunacode.ui.console.info", new=AsyncMock()) as mock_info:
         await setup.execute()
         mock_info.assert_called()
         assert "Already on a TunaCode branch" in mock_info.call_args[0][0]
@@ -82,7 +82,7 @@ async def test_create_branch_with_uncommitted_changes(monkeypatch):
         return MagicMock(returncode=0)
     monkeypatch.setattr("subprocess.run", run_side_effect)
     with patch("tunacode.core.setup.git_safety_setup.yes_no_prompt", new=AsyncMock(return_value=True)):
-        with patch("tunacode.core.setup.git_safety_setup.ui.success", new=AsyncMock()) as mock_success:
+        with patch("tunacode.ui.console.success", new=AsyncMock()) as mock_success:
             await setup.execute()
             mock_success.assert_called()
             assert "Created and switched to new branch" in mock_success.call_args[0][0]
@@ -106,7 +106,7 @@ async def test_branch_already_exists_and_switch(monkeypatch):
         return MagicMock(returncode=0)
     monkeypatch.setattr("subprocess.run", run_side_effect)
     with patch("tunacode.core.setup.git_safety_setup.yes_no_prompt", new=AsyncMock(return_value=True)):
-        with patch("tunacode.core.setup.git_safety_setup.ui.success", new=AsyncMock()) as mock_success:
+        with patch("tunacode.ui.console.success", new=AsyncMock()) as mock_success:
             await setup.execute()
             mock_success.assert_called()
             assert "Switched to existing branch" in mock_success.call_args[0][0]

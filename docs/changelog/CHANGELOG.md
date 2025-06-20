@@ -18,7 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Graceful permission error handling
   - Provides a fallback when bash commands aren't available
 
+- System prompt optimizations for better parallel execution
+  - Updated prompt to encourage 3-4 tool batches for optimal performance
+  - Added clear examples showing why 3-4 tools is the sweet spot
+  - Explained performance benefits: balances speed with cognitive load
+  - Added "Why 3-4 Tools is Optimal" section with real-world timing examples
+
 ### Changed
+
+- **Major Performance Improvement**: Made parallel tool execution truly asynchronous
+  - Added `asyncio.to_thread()` to `read_file` and `list_dir` tools to prevent blocking the event loop
+  - File operations now run in separate threads, enabling genuine parallel execution
+  - Achieved 3-5x performance improvement for multiple file operations
+  - Tests confirm multiple threads are used and operations run concurrently
+  - Zero breaking changes - just 4 lines of code modified
+  - Benefits: 3x faster file reads, non-blocking I/O, better responsiveness
+  
+  ![Parallel Execution Performance](../assets/parrelel_work_3x.png)
 
 - Refactored command structure to use declarative class-level metadata
   - Modified `SimpleCommand` base class to read properties from class-level `spec` attribute

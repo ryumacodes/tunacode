@@ -16,7 +16,15 @@ def cleanup_modules():
     else:
         sys.modules.pop('tunacode.ui.console', None)
 
-sys.modules['tunacode.ui.console'] = types.SimpleNamespace()
+mock_console = MagicMock()
+sys.modules['tunacode.ui.console'] = types.SimpleNamespace(
+    error=MagicMock(),
+    info=MagicMock(),
+    warning=MagicMock(),
+    success=MagicMock(),
+    console=mock_console,
+    muted=MagicMock()
+)
 if 'prompt_toolkit.styles' not in sys.modules:
     pytest.skip("prompt_toolkit not available", allow_module_level=True)
 from tunacode.core.state import StateManager
@@ -32,8 +40,8 @@ async def test_config_setup_no_config_raises_configuration_error():
     
     # Mock the config loading to return None (no config)
     with patch('tunacode.utils.user_configuration.load_config', return_value=None):
-        # Mock console to avoid actual output
-        with patch('tunacode.ui.console.console'):
+        # Mock console methods to avoid actual output
+        with patch('tunacode.ui.console.error') as mock_error:
             # This should raise ConfigurationError, not SystemExit
             with pytest.raises(ConfigurationError) as exc_info:
                 await config_setup.execute(force_setup=False)

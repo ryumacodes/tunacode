@@ -72,25 +72,26 @@ async def test_read_only_tools_execute_in_parallel():
     await _process_node(mock_node, timing_callback, state)
     total_time = time.time() - start_time
     
-    # Currently parallel execution is disabled - tools execute sequentially
+    # With our async I/O improvements, tools now execute in parallel!
     # 1. All tools should have been called
     assert len(execution_times) == 3
     
-    # 2. Execution should be sequential - total time should be close to 0.3s
+    # 2. Execution should be PARALLEL - total time should be ~0.1s (not 0.3s)
     # Allow some timing variance
-    assert total_time >= 0.25, f"Expected sequential execution (~0.3s), but took {total_time:.2f}s"
+    assert total_time < 0.25, f"Expected parallel execution (~0.1s), but took {total_time:.2f}s"
     
-    # 3. Tools should execute one after another
+    # 3. Tools should still be called
     tool_names = [t[0] for t in execution_times]
     assert set(tool_names) == {'read_file', 'grep', 'list_dir'}
     
-    # Check sequential execution order
-    expected_order = [
+    # With parallel execution, tools may overlap - we can't guarantee order
+    # But we should see all start/end events
+    expected_events = {
         'start_read_file', 'end_read_file',
         'start_grep', 'end_grep', 
         'start_list_dir', 'end_list_dir'
-    ]
-    assert call_order == expected_order
+    }
+    assert set(call_order) == expected_events
 
 
 @pytest.mark.asyncio

@@ -109,9 +109,7 @@ class GitSafetySetup(BaseSetup):
             )
 
             if has_changes:
-                message += (
-                    "\n You have uncommitted changes that will be brought to the new branch."
-                )
+                message += "\n You have uncommitted changes that will be brought to the new branch."
 
             create_branch = await yes_no_prompt(f"{message}\n\nCreate safety branch?", default=True)
 

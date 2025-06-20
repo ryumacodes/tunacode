@@ -1,10 +1,12 @@
 # Current State Summary
 
 ## Last Session Outcome
-- Cleaned up dead code in the TunaCode codebase
-- Removed TunaCodeCommand class - a fully implemented BM25 search feature that was disabled
-- Eliminated 57 lines of unused code from src/tunacode/cli/commands.py
-- Confirmed SimpleCommand base class is actively used by 13 commands (not dead code)
+- Updated documentation to reflect recent feature additions:
+  - Added new `list_dir` tool to developer tools list (now 7 tools total)
+  - Created dedicated "Performance Features" section highlighting parallel execution
+  - Added "List Directory Tool Features" section with detailed capabilities
+  - Emphasized async/parallel nature of read-only tools (`read_file`, `grep`, `list_dir`)
+  - Documented the 3-5x performance improvements from true async I/O
 
 ## Immediate Next Steps
 1. Continue finding and fixing nested conditionals that can be flattened with guard clauses

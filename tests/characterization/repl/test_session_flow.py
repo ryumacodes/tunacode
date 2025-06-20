@@ -18,12 +18,12 @@ async def test_repl_agent_busy_message():
     busy_task.done.return_value = False
     state_manager.session.current_task = busy_task
 
-    with patch.object(repl_mod.ui, "muted", new=AsyncMock()) as muted, \
-         patch.object(repl_mod.ui, "success", new=AsyncMock()), \
-         patch.object(repl_mod.ui, "line", new=AsyncMock()), \
+    with patch("tunacode.ui.console.muted", new=AsyncMock()) as muted, \
+         patch("tunacode.ui.console.success", new=AsyncMock()), \
+         patch("tunacode.ui.console.line", new=AsyncMock()), \
          patch.object(repl_mod.agent, "get_or_create_agent") as get_agent, \
-         patch.object(repl_mod.ui, "info", new=AsyncMock()), \
-         patch.object(repl_mod.ui, "warning", new=AsyncMock()):
+         patch("tunacode.ui.console.info", new=AsyncMock()), \
+         patch("tunacode.ui.console.warning", new=AsyncMock()):
 
         agent_instance = MagicMock()
         mcp_context = AsyncMock()
@@ -36,7 +36,7 @@ async def test_repl_agent_busy_message():
         inputs = ["do something", "exit"]
         async def fake_multiline_input(*a, **kw):
             return inputs.pop(0)
-        with patch.object(repl_mod.ui, "multiline_input", new=fake_multiline_input), \
+        with patch("tunacode.ui.console.multiline_input", new=fake_multiline_input), \
              patch("tunacode.cli.repl.get_app") as get_app:
 
             bg_task = MagicMock()
@@ -58,12 +58,12 @@ async def test_repl_session_restart_and_end():
     state_manager.session.input_sessions = {}
     state_manager.session.show_thoughts = False
 
-    with patch.object(repl_mod.ui, "muted", new=AsyncMock()), \
-         patch.object(repl_mod.ui, "success", new=AsyncMock()), \
-         patch.object(repl_mod.ui, "line", new=AsyncMock()), \
+    with patch("tunacode.ui.console.muted", new=AsyncMock()), \
+         patch("tunacode.ui.console.success", new=AsyncMock()), \
+         patch("tunacode.ui.console.line", new=AsyncMock()), \
          patch.object(repl_mod.agent, "get_or_create_agent") as get_agent, \
-         patch.object(repl_mod.ui, "info", new=AsyncMock()) as info, \
-         patch.object(repl_mod.ui, "warning", new=AsyncMock()), \
+         patch("tunacode.ui.console.info", new=AsyncMock()) as info, \
+         patch("tunacode.ui.console.warning", new=AsyncMock()), \
          patch.object(repl_mod, "_handle_command", new=AsyncMock(side_effect=["restart", None])) as handle_cmd:
 
         agent_instance = MagicMock()
@@ -77,7 +77,7 @@ async def test_repl_session_restart_and_end():
         inputs = ["/restart", "exit"]
         async def fake_multiline_input(*a, **kw):
             return inputs.pop(0)
-        with patch.object(repl_mod.ui, "multiline_input", new=fake_multiline_input), \
+        with patch("tunacode.ui.console.multiline_input", new=fake_multiline_input), \
              patch("tunacode.cli.repl.get_app") as get_app:
 
             bg_task = MagicMock()
