@@ -11,16 +11,27 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-from tunacode.tools.base import BaseTool
 from tunacode.exceptions import ToolExecutionError
-
+from tunacode.tools.base import BaseTool
 
 # Configuration
 MAX_RESULTS = 5000  # Maximum files to return
 EXCLUDE_DIRS = {
-    "node_modules", ".git", "__pycache__", ".venv", "venv",
-    "dist", "build", ".pytest_cache", ".mypy_cache", ".tox",
-    "target", ".next", ".nuxt", "coverage", ".coverage"
+    "node_modules",
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".tox",
+    "target",
+    ".next",
+    ".nuxt",
+    "coverage",
+    ".coverage",
 }
 
 
@@ -105,7 +116,7 @@ class GlobTool(BaseTool):
                         output.append("")  # Empty line between directories
                     output.append(f"📁 {match_dir}/")
                     current_dir = match_dir
-                
+
                 filename = os.path.basename(match)
                 output.append(f"  - {filename}")
 
@@ -117,10 +128,10 @@ class GlobTool(BaseTool):
     def _expand_brace_pattern(self, pattern: str) -> List[str]:
         """
         Expand brace patterns like "*.{py,js,ts}" into multiple patterns.
-        
+
         Args:
             pattern: Pattern that may contain braces
-            
+
         Returns:
             List of expanded patterns
         """
@@ -130,14 +141,14 @@ class GlobTool(BaseTool):
         # Find the brace expression
         start = pattern.find("{")
         end = pattern.find("}")
-        
+
         if start == -1 or end == -1 or end < start:
             return [pattern]
 
         # Extract parts
         prefix = pattern[:start]
-        suffix = pattern[end + 1:]
-        options = pattern[start + 1:end].split(",")
+        suffix = pattern[end + 1 :]
+        options = pattern[start + 1 : end].split(",")
 
         # Generate all combinations
         patterns = []
@@ -157,7 +168,7 @@ class GlobTool(BaseTool):
     ) -> List[str]:
         """
         Perform the actual glob search using os.scandir for speed.
-        
+
         Args:
             root: Root directory to search
             patterns: List of glob patterns to match
@@ -165,14 +176,15 @@ class GlobTool(BaseTool):
             include_hidden: Whether to include hidden files
             exclude_dirs: Set of directory names to exclude
             max_results: Maximum results to return
-            
+
         Returns:
             List of matching file paths
         """
+
         def search_sync():
             matches = []
             stack = [root]
-            
+
             # Compile patterns to regex for faster matching
             compiled_patterns = []
             for pat in patterns:
@@ -184,7 +196,9 @@ class GlobTool(BaseTool):
                     regex_pat = regex_pat.replace("__STARSTAR__", ".*")
                     compiled_patterns.append((pat, re.compile(regex_pat, re.IGNORECASE)))
                 else:
-                    compiled_patterns.append((pat, re.compile(fnmatch.translate(pat), re.IGNORECASE)))
+                    compiled_patterns.append(
+                        (pat, re.compile(fnmatch.translate(pat), re.IGNORECASE))
+                    )
 
             while stack and len(matches) < max_results:
                 current_dir = stack.pop()
@@ -203,7 +217,7 @@ class GlobTool(BaseTool):
                             elif entry.is_file(follow_symlinks=False):
                                 # Check against patterns
                                 rel_path = os.path.relpath(entry.path, root)
-                                
+
                                 for original_pat, compiled_pat in compiled_patterns:
                                     # For ** patterns, match against full relative path
                                     if "**" in original_pat:
@@ -227,7 +241,7 @@ class GlobTool(BaseTool):
 
         # Import re here to avoid issues at module level
         import re
-        
+
         # Run the synchronous search in the thread pool
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, search_sync)

@@ -182,7 +182,12 @@ async def create_buffering_callback(
     return buffering_callback
 
 
-async def _process_node(node, tool_callback: Optional[ToolCallback], state_manager: StateManager, tool_buffer: Optional[ToolBuffer] = None):
+async def _process_node(
+    node,
+    tool_callback: Optional[ToolCallback],
+    state_manager: StateManager,
+    tool_buffer: Optional[ToolBuffer] = None,
+):
     from tunacode.ui import console as ui
     from tunacode.utils.token_counter import estimate_tokens
 
@@ -206,34 +211,37 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
             # Show raw API response data
             import json
             import re
-            
+
             # Display the raw model response parts
-            await ui.muted("\n" + "="*60)
+            await ui.muted("\n" + "=" * 60)
             await ui.muted("📡 RAW API RESPONSE DATA:")
-            await ui.muted("="*60)
-            
+            await ui.muted("=" * 60)
+
             for idx, part in enumerate(node.model_response.parts):
-                part_data = {
-                    "part_index": idx,
-                    "part_kind": getattr(part, 'part_kind', 'unknown')
-                }
-                
+                part_data = {"part_index": idx, "part_kind": getattr(part, "part_kind", "unknown")}
+
                 # Add part-specific data
-                if hasattr(part, 'content'):
-                    part_data['content'] = part.content[:200] + "..." if len(str(part.content)) > 200 else part.content
-                if hasattr(part, 'tool_name'):
-                    part_data['tool_name'] = part.tool_name
-                if hasattr(part, 'args'):
-                    part_data['args'] = part.args
-                if hasattr(part, 'tool_call_id'):
-                    part_data['tool_call_id'] = part.tool_call_id
-                
+                if hasattr(part, "content"):
+                    part_data["content"] = (
+                        part.content[:200] + "..." if len(str(part.content)) > 200 else part.content
+                    )
+                if hasattr(part, "tool_name"):
+                    part_data["tool_name"] = part.tool_name
+                if hasattr(part, "args"):
+                    part_data["args"] = part.args
+                if hasattr(part, "tool_call_id"):
+                    part_data["tool_call_id"] = part.tool_call_id
+
                 await ui.muted(json.dumps(part_data, indent=2))
-            
-            await ui.muted("="*60)
-            
+
+            await ui.muted("=" * 60)
+
             # Count how many tool calls are in this response
-            tool_count = sum(1 for part in node.model_response.parts if hasattr(part, 'part_kind') and part.part_kind == "tool-call")
+            tool_count = sum(
+                1
+                for part in node.model_response.parts
+                if hasattr(part, "part_kind") and part.part_kind == "tool-call"
+            )
             if tool_count > 0:
                 await ui.muted(f"\n🔧 MODEL RESPONSE: Contains {tool_count} tool call(s)")
 
@@ -293,7 +301,7 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
                 if state_manager.session.show_thoughts:
                     # Show each tool as it's collected
                     tool_desc = f"📥 COLLECTED: {part.tool_name}"
-                    if hasattr(part, 'args') and isinstance(part.args, dict):
+                    if hasattr(part, "args") and isinstance(part.args, dict):
                         if part.tool_name == "read_file" and "file_path" in part.args:
                             tool_desc += f" → {part.args['file_path']}"
                         elif part.tool_name == "grep" and "pattern" in part.args:
@@ -330,24 +338,29 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
         # Execute tool calls - with ACTUAL parallel execution for read-only batches
         if tool_parts:
             if state_manager.session.show_thoughts:
-                await ui.muted(f"\n📊 NODE SUMMARY: {len(tool_parts)} tool(s) collected in this response")
-                
+                await ui.muted(
+                    f"\n📊 NODE SUMMARY: {len(tool_parts)} tool(s) collected in this response"
+                )
+
             # Check if ALL tools in this node are read-only
             all_read_only = all(part.tool_name in READ_ONLY_TOOLS for part in tool_parts)
-            
+
             if all_read_only and len(tool_parts) > 1 and buffering_callback:
                 # Execute read-only tools in parallel!
                 import time
+
                 start_time = time.time()
-                
+
                 if state_manager.session.show_thoughts:
                     await ui.muted("\n" + "=" * 60)
-                    await ui.muted(f"🚀 PARALLEL BATCH: Executing {len(tool_parts)} read-only tools concurrently")
+                    await ui.muted(
+                        f"🚀 PARALLEL BATCH: Executing {len(tool_parts)} read-only tools concurrently"
+                    )
                     await ui.muted("=" * 60)
-                    
+
                     for idx, part in enumerate(tool_parts, 1):
                         tool_desc = f"  [{idx}] {part.tool_name}"
-                        if hasattr(part, 'args') and isinstance(part.args, dict):
+                        if hasattr(part, "args") and isinstance(part.args, dict):
                             if part.tool_name == "read_file" and "file_path" in part.args:
                                 tool_desc += f" → {part.args['file_path']}"
                             elif part.tool_name == "grep" and "pattern" in part.args:
@@ -358,23 +371,28 @@ async def _process_node(node, tool_callback: Optional[ToolCallback], state_manag
                                 tool_desc += f" → pattern: '{part.args['pattern']}'"
                         await ui.muted(tool_desc)
                     await ui.muted("=" * 60)
-                
+
                 # Execute in parallel
                 tool_tuples = [(part, node) for part in tool_parts]
                 await execute_tools_parallel(tool_tuples, buffering_callback)
-                
+
                 if state_manager.session.show_thoughts:
                     elapsed_time = (time.time() - start_time) * 1000
                     sequential_estimate = len(tool_parts) * 100
                     speedup = sequential_estimate / elapsed_time if elapsed_time > 0 else 1.0
-                    await ui.muted(f"✅ Parallel batch completed in {elapsed_time:.0f}ms ({speedup:.1f}x faster than sequential)")
-                    
+                    await ui.muted(
+                        f"✅ Parallel batch completed in {elapsed_time:.0f}ms ({speedup:.1f}x faster than sequential)"
+                    )
+
             else:
                 # Sequential execution for mixed or write/execute tools
                 for part in tool_parts:
-                    if state_manager.session.show_thoughts and part.tool_name not in READ_ONLY_TOOLS:
+                    if (
+                        state_manager.session.show_thoughts
+                        and part.tool_name not in READ_ONLY_TOOLS
+                    ):
                         await ui.muted(f"\n⚠️  SEQUENTIAL: {part.tool_name} (write/execute tool)")
-                    
+
                     # Execute the tool
                     if buffering_callback:
                         await buffering_callback(part, node)
@@ -650,13 +668,14 @@ async def process_request(
     # Show what we're sending to the API when thoughts are enabled
     if state_manager.session.show_thoughts:
         from tunacode.ui import console as ui
-        await ui.muted("\n" + "="*60)
+
+        await ui.muted("\n" + "=" * 60)
         await ui.muted("📤 SENDING TO API:")
         await ui.muted(f"Message: {message}")
         await ui.muted(f"Model: {model}")
         await ui.muted(f"Message History Length: {len(mh)}")
-        await ui.muted("="*60)
-    
+        await ui.muted("=" * 60)
+
     async with agent.iter(message, message_history=mh) as agent_run:
         i = 0
         async for node in agent_run:
@@ -695,21 +714,22 @@ async def process_request(
 
         # Final flush: execute any remaining buffered read-only tools
         if tool_callback and tool_buffer.has_tasks():
-            from tunacode.ui import console as ui
             import time
-            
+
+            from tunacode.ui import console as ui
+
             buffered_tasks = tool_buffer.flush()
             start_time = time.time()
-            
+
             await ui.muted("\n" + "=" * 60)
             await ui.muted(
                 f"🚀 FINAL BATCH: Executing {len(buffered_tasks)} buffered read-only tools"
             )
             await ui.muted("=" * 60)
-            
+
             for idx, (part, node) in enumerate(buffered_tasks, 1):
                 tool_desc = f"  [{idx}] {part.tool_name}"
-                if hasattr(part, 'args') and isinstance(part.args, dict):
+                if hasattr(part, "args") and isinstance(part.args, dict):
                     if part.tool_name == "read_file" and "file_path" in part.args:
                         tool_desc += f" → {part.args['file_path']}"
                     elif part.tool_name == "grep" and "pattern" in part.args:
@@ -722,13 +742,13 @@ async def process_request(
                         tool_desc += f" → pattern: '{part.args['pattern']}'"
                 await ui.muted(tool_desc)
             await ui.muted("=" * 60)
-            
+
             await execute_tools_parallel(buffered_tasks, tool_callback)
-            
+
             elapsed_time = (time.time() - start_time) * 1000
             sequential_estimate = len(buffered_tasks) * 100
             speedup = sequential_estimate / elapsed_time if elapsed_time > 0 else 1.0
-            
+
             await ui.muted(
                 f"✅ Final batch completed in {elapsed_time:.0f}ms "
                 f"(~{speedup:.1f}x faster than sequential)\n"
