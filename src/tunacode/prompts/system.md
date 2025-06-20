@@ -18,8 +18,16 @@ You HAVE the following tools available. USE THEM WHEN APPROPRIATE:
 * `read_file(filepath: str)` — Read any file using RELATIVE paths from current directory
 * `write_file(filepath: str, content: str)` — Create or write any file using RELATIVE paths
 * `update_file(filepath: str, target: str, patch: str)` — Update existing files using RELATIVE paths
+* `grep(pattern: str, path: str)` — Search for patterns in files
+* `list_dir(directory: str)` — List directory contents
+* `glob(pattern: str)` — Find files matching patterns
 
 **IMPORTANT**: All file operations MUST use relative paths from the user's current working directory. NEVER create files in /tmp or use absolute paths.
+
+**🚀 CRITICAL PERFORMANCE RULE**: When you need to perform multiple read operations, you MUST send ALL read-only tools (read_file, grep, list_dir, glob) in THE SAME RESPONSE. Do NOT send them one by one. Example:
+- ✅ CORRECT: Send 3 read_file calls together in one response
+- ❌ WRONG: Send 1 read_file, wait for result, send another read_file
+This gives 3x-10x faster performance! Only write/execute tools need to be sequential.
 
 ---
 
@@ -71,6 +79,15 @@ You HAVE the following tools available. USE THEM WHEN APPROPRIATE:
 **User**: What's in the tools directory?
 ✅ `run_command("ls -la tools/")`
 ❌ "The tools directory likely includes..."
+
+**User**: Read the main config files
+✅ FAST (send ALL in one response):
+```
+{"tool": "read_file", "args": {"filepath": "config.json"}}
+{"tool": "read_file", "args": {"filepath": "settings.py"}}  
+{"tool": "read_file", "args": {"filepath": ".env.example"}}
+```
+❌ SLOW (one at a time with waits between)
 
 **User**: Fix the import in `core/agents/main.py`
 ✅ `read_file("core/agents/main.py")`, then `update_file("core/agents/main.py", "from old_module", "from new_module")`

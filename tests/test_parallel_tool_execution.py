@@ -81,11 +81,11 @@ def test_batch_read_only_tools_separates_correctly():
     """Test that batch_read_only_tools correctly separates read-only from other tools."""
     
     tool_calls = [
-        Mock(tool=TOOL_READ_FILE, args={"filepath": "file1.py"}),
-        Mock(tool=TOOL_GREP, args={"pattern": "test"}),
-        Mock(tool=TOOL_WRITE_FILE, args={"filepath": "out.txt"}),
-        Mock(tool=TOOL_LIST_DIR, args={"path": "/tmp"}),
-        Mock(tool=TOOL_READ_FILE, args={"filepath": "file2.py"}),
+        Mock(tool_name=TOOL_READ_FILE, args={"filepath": "file1.py"}),
+        Mock(tool_name=TOOL_GREP, args={"pattern": "test"}),
+        Mock(tool_name=TOOL_WRITE_FILE, args={"filepath": "out.txt"}),
+        Mock(tool_name=TOOL_LIST_DIR, args={"path": "/tmp"}),
+        Mock(tool_name=TOOL_READ_FILE, args={"filepath": "file2.py"}),
     ]
     
     batches = list(batch_read_only_tools(tool_calls))
@@ -95,26 +95,26 @@ def test_batch_read_only_tools_separates_correctly():
     
     # First batch: read-only tools
     assert len(batches[0]) == 2
-    assert batches[0][0].tool == TOOL_READ_FILE
-    assert batches[0][1].tool == TOOL_GREP
+    assert batches[0][0].tool_name == TOOL_READ_FILE
+    assert batches[0][1].tool_name == TOOL_GREP
     
     # Second batch: write tool (alone)
     assert len(batches[1]) == 1
-    assert batches[1][0].tool == TOOL_WRITE_FILE
+    assert batches[1][0].tool_name == TOOL_WRITE_FILE
     
     # Third batch: remaining read-only tools
     assert len(batches[2]) == 2
-    assert batches[2][0].tool == TOOL_LIST_DIR
-    assert batches[2][1].tool == TOOL_READ_FILE
+    assert batches[2][0].tool_name == TOOL_LIST_DIR
+    assert batches[2][1].tool_name == TOOL_READ_FILE
 
 
 def test_batch_read_only_tools_preserves_order_within_batches():
     """Test that tool order is preserved within each batch."""
     
     tool_calls = [
-        Mock(tool=TOOL_READ_FILE, args={"filepath": "a.py"}),
-        Mock(tool=TOOL_READ_FILE, args={"filepath": "b.py"}),
-        Mock(tool=TOOL_READ_FILE, args={"filepath": "c.py"}),
+        Mock(tool_name=TOOL_READ_FILE, args={"filepath": "a.py"}),
+        Mock(tool_name=TOOL_READ_FILE, args={"filepath": "b.py"}),
+        Mock(tool_name=TOOL_READ_FILE, args={"filepath": "c.py"}),
     ]
     
     batches = list(batch_read_only_tools(tool_calls))
@@ -137,8 +137,8 @@ def test_batch_read_only_tools_handles_only_write_tools():
     """Test that batch_read_only_tools handles only write/execute tools."""
     
     tool_calls = [
-        Mock(tool=TOOL_WRITE_FILE, args={"filepath": "out1.txt"}),
-        Mock(tool=TOOL_WRITE_FILE, args={"filepath": "out2.txt"}),
+        Mock(tool_name=TOOL_WRITE_FILE, args={"filepath": "out1.txt"}),
+        Mock(tool_name=TOOL_WRITE_FILE, args={"filepath": "out2.txt"}),
     ]
     
     batches = list(batch_read_only_tools(tool_calls))

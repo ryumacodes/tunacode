@@ -164,7 +164,7 @@ class ThoughtsCommand(SimpleCommand):
         else:
             state.show_thoughts = not state.show_thoughts
         status = "ON" if state.show_thoughts else "OFF"
-        await ui.success(f"Thought display ")
+        await ui.success(f"Thought display {status}")
 
 
 class IterationsCommand(SimpleCommand):

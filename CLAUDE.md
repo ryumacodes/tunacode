@@ -339,7 +339,20 @@ Tools extend `BaseTool` or `FileBasedTool` base classes. External tools supporte
 - Commands implement `BaseCommand` with `matches()` and `execute()` methods
 - Registered via `@CommandRegistry.register` decorator
 - Shell command execution with `!` prefix (e.g., `!ls`)
-- Available commands: `/help`, `/model`, `/clear`, `/compact`, `/branch`, `/yolo`, `/update`, `/exit`
+- Available commands: `/help`, `/model`, `/clear`, `/compact`, `/branch`, `/yolo`, `/update`, `/exit`, `/thoughts`
+
+### Parallel Tool Execution
+
+- Read-only tools (read_file, grep, list_dir) execute in parallel for 3x performance improvement
+- Write/execute tools remain sequential for safety
+- Enhanced visual feedback when `/thoughts on` is enabled:
+  - Clear batch headers: "🚀 PARALLEL BATCH #X: Executing Y read-only tools concurrently"
+  - Detailed tool listing with arguments for each batch
+  - Sequential warnings for write/execute tools: "⚠️ SEQUENTIAL: tool_name (write/execute tool)"
+  - Completion confirmations: "✅ Parallel batch completed successfully"
+- Controlled by `TUNACODE_MAX_PARALLEL` environment variable (defaults to CPU count)
+- Automatic batching of consecutive read-only tools
+- Read-only tools skip confirmation prompts automatically
 
 ### Setup Coordinator
 
