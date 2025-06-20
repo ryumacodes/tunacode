@@ -345,6 +345,11 @@ async def _process_node(
             # Check if ALL tools in this node are read-only
             all_read_only = all(part.tool_name in READ_ONLY_TOOLS for part in tool_parts)
 
+            # TODO: Currently only batches if ALL tools are read-only. Should be updated to use
+            # batch_read_only_tools() function to group consecutive read-only tools and execute
+            # them in parallel even when mixed with write/execute tools. For example:
+            # [read, read, write, read] should execute as: [read||read], [write], [read]
+            # instead of all sequential. The batch_read_only_tools() function exists but is unused.
             if all_read_only and len(tool_parts) > 1 and buffering_callback:
                 # Execute read-only tools in parallel!
                 import time
