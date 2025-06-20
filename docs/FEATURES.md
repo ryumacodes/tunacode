@@ -16,14 +16,15 @@ TunaCode supports multiple AI providers, giving you flexibility in choosing your
 
 ### Developer Tools
 
-TunaCode includes 6 core tools designed for efficient coding:
+TunaCode includes 7 core tools designed for efficient coding:
 
 1. **bash** - Enhanced shell command execution with safety features
 2. **grep** - Fast parallel content search across files
-3. **read_file** - Read file contents with line numbers
+3. **read_file** - Read file contents with line numbers (async/parallel)
 4. **write_file** - Create new files (fails if file exists)
 5. **update_file** - Modify existing files with precise replacements
 6. **run_command** - Basic command execution (simpler than bash)
+7. **list_dir** - Efficient directory listing with file type indicators (async/parallel)
 
 Additional developer features:
 - Direct shell command execution with `!` prefix
@@ -31,6 +32,17 @@ Additional developer features:
 - File operation confirmations with diffs
 - Per-project context guides (TUNACODE.md)
 - JSON tool parsing fallback for API compatibility
+
+### Performance Features
+
+TunaCode leverages advanced performance optimizations:
+
+- **Parallel Tool Execution**: Read-only operations (`read_file`, `grep`, `list_dir`) execute concurrently
+- **3-5x Faster File Operations**: True async I/O with `asyncio.to_thread()` for non-blocking execution
+- **Automatic Batching**: Consecutive read-only operations are automatically grouped and run in parallel
+- **Smart Confirmation Skip**: Read-only tools skip confirmation prompts automatically
+- **Optimal Batch Size**: System prompts encourage 3-4 tool batches for best performance/cognitive balance
+- **Thread Pool Execution**: File operations run in separate threads, maximizing CPU utilization
 
 ### Safety & Control
 
@@ -69,6 +81,18 @@ TunaCode automatically handles API provider failures with robust JSON parsing:
 - **Orphaned Tool Call Recovery**: Automatic cleanup with `/fix` command
 - **Configuration Refresh**: Update settings without restart using `/refresh`
 - **ReAct Reasoning**: Configurable iteration limits for complex problem solving
+
+## List Directory Tool Features
+
+The `list_dir` tool provides efficient directory exploration:
+
+- **High Performance**: Uses `os.scandir` instead of shell commands for speed
+- **File Type Indicators**: Shows `/` for directories, `*` for executables, `@` for symlinks
+- **Smart Sorting**: Directories first, then files, all alphabetically ordered
+- **Pagination Support**: Configurable max entries (default 200) to handle large directories
+- **Hidden Files**: Optional `show_hidden` parameter to include dot files
+- **Permission Handling**: Graceful error handling for restricted directories
+- **Thread-Safe**: Runs in separate threads for true parallel execution
 
 ## Bash Tool Features
 

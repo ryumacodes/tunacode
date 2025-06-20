@@ -247,6 +247,125 @@ class TestGlobCharacterization:
         # Assert - Golden master (case insensitive matching)
         assert "File.PY" in result
         assert "another.Py" in result
+    
+    async def test_glob_negation_patterns(self):
+        """Capture behavior with negation patterns (not supported, but test anyway)."""
+        # Create test files
+        Path(self.temp_dir, "include_me.py").write_text("# Include")
+        Path(self.temp_dir, "exclude_me.log").write_text("# Exclude")
+        Path(self.temp_dir, "test.py").write_text("# Test")
+        Path(self.temp_dir, "debug.log").write_text("# Debug")
+        
+        # Act - Try negation pattern (likely not supported)
+        result = await glob("!*.log", directory=self.temp_dir, recursive=False)
+        
+        # Assert - Golden master (captures actual behavior)
+        # Negation likely not supported, so might return empty or all files
+        # or files that literally match "!*.log"
+        assert isinstance(result, list)
+    
+    async def test_glob_complex_brace_expansion(self):
+        """Capture behavior with complex brace expansions."""
+        # Create files for complex patterns
+        Path(self.temp_dir, "app.js").write_text("// JS")
+        Path(self.temp_dir, "app.jsx").write_text("// JSX")
+        Path(self.temp_dir, "app.ts").write_text("// TS")
+        Path(self.temp_dir, "app.tsx").write_text("// TSX")
+        Path(self.temp_dir, "style.css").write_text("/* CSS */")
+        Path(self.temp_dir, "style.scss").write_text("/* SCSS */")
+        Path(self.temp_dir, "config.json").write_text("{}")
+        Path(self.temp_dir, "config.yaml").write_text("key: value")
+        
+        # Test nested brace expansion
+        result = await glob("*.{j,t}s{,x}", directory=self.temp_dir, recursive=False)
+        
+        # Should match .js, .jsx, .ts, .tsx
+        js_files = [f for f in ["app.js", "app.jsx", "app.ts", "app.tsx"] if f in result]
+        assert len(js_files) == 4
+        
+        # Test multiple brace groups
+        result2 = await glob("{app,style}.{js,css}", directory=self.temp_dir, recursive=False)
+        expected = ["app.js", "style.css"]
+        matches = [f for f in expected if f in result2]
+        assert len(matches) == 2
+    
+    async def test_glob_symlink_handling(self):
+        """Capture behavior with symbolic links."""
+        if sys.platform == "win32" and not os.environ.get("CI"):
+            pytest.skip("Symlink creation may require admin rights on Windows")
+        
+        # Create target files and directories
+        target_file = Path(self.temp_dir, "target.py")
+        target_file.write_text("# Target file")
+        
+        target_dir = Path(self.temp_dir, "target_dir")
+        target_dir.mkdir()
+        Path(target_dir, "nested.py").write_text("# Nested file")
+        
+        # Create symlinks
+        try:
+            link_file = Path(self.temp_dir, "link_to_file.py")
+            link_file.symlink_to(target_file)
+            
+            link_dir = Path(self.temp_dir, "link_to_dir")
+            link_dir.symlink_to(target_dir)
+            
+            # Test glob with symlinks
+            result = await glob("*.py", directory=self.temp_dir, recursive=False)
+            
+            # Should include both regular files and symlinked files
+            assert "target.py" in result
+            assert "link_to_file.py" in result
+            
+            # Test recursive glob through symlinked directory
+            result_recursive = await glob("**/*.py", directory=self.temp_dir)
+            
+            # Should find files in symlinked directories
+            assert any("nested.py" in item for item in result_recursive)
+        except OSError:
+            pytest.skip("Symlink creation not supported")
+    
+    async def test_glob_with_brackets_in_pattern(self):
+        """Capture behavior with bracket patterns []."""
+        # Create files with single character variations
+        for char in 'abc123':
+            Path(self.temp_dir, f"file{char}.txt").write_text(f"Content {char}")
+        
+        # Test character class
+        result = await glob("file[a-c].txt", directory=self.temp_dir, recursive=False)
+        
+        # Should match filea.txt, fileb.txt, filec.txt
+        assert len([f for f in ["filea.txt", "fileb.txt", "filec.txt"] if f in result]) == 3
+        
+        # Test numeric range
+        result2 = await glob("file[1-3].txt", directory=self.temp_dir, recursive=False)
+        assert len([f for f in ["file1.txt", "file2.txt", "file3.txt"] if f in result2]) == 3
+        
+        # Test negated character class
+        result3 = await glob("file[!a-c].txt", directory=self.temp_dir, recursive=False)
+        # Should match file1.txt, file2.txt, file3.txt
+        assert any(f"file{n}.txt" in result3 for n in "123")
+    
+    async def test_glob_question_mark_pattern(self):
+        """Capture behavior with ? wildcard."""
+        # Create files with similar names
+        Path(self.temp_dir, "test.py").write_text("# test")
+        Path(self.temp_dir, "text.py").write_text("# text")
+        Path(self.temp_dir, "tent.py").write_text("# tent")
+        Path(self.temp_dir, "toast.py").write_text("# toast")
+        
+        # Test single ? wildcard
+        result = await glob("te?t.py", directory=self.temp_dir, recursive=False)
+        
+        # Should match test.py, text.py, tent.py but not toast.py
+        matches = [f for f in ["test.py", "text.py", "tent.py"] if f in result]
+        assert len(matches) == 3
+        assert "toast.py" not in result
+        
+        # Test multiple ? wildcards
+        result2 = await glob("t??t.py", directory=self.temp_dir, recursive=False)
+        # Should match test.py, text.py, tent.py
+        assert len([f for f in ["test.py", "text.py", "tent.py"] if f in result2]) == 3
         # Original lowercase files still found
         assert "file1.py" in result
         assert "file2.py" in result

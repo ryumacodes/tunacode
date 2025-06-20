@@ -43,6 +43,7 @@ dev = [
     "isort",
     "pytest",
     "pytest-cov",
+    "pytest-asyncio",
     "textual-dev",
 ]
 

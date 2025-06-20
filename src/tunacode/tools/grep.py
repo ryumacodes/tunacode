@@ -18,7 +18,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from tunacode.exceptions import TooBroadPatternError, ToolExecutionError
 from tunacode.tools.base import BaseTool
@@ -149,6 +149,7 @@ class ParallelGrep(BaseTool):
         max_results: int = 50,
         context_lines: int = 2,
         search_type: str = "smart",  # smart, ripgrep, python, hybrid
+        return_format: str = "string",  # "string" (default) or "list" (legacy)
     ) -> str:
         """
         Execute parallel grep search with fast-glob prefiltering and multiple strategies.
@@ -177,6 +178,8 @@ class ParallelGrep(BaseTool):
             )
 
             if not candidates:
+                if return_format == "list":
+                    return []
                 return f"No files found matching pattern: {include_pattern}"
 
             # 2️⃣ Smart strategy selection based on candidate count
@@ -220,15 +223,23 @@ class ParallelGrep(BaseTool):
             strategy_info = f"Strategy: {search_type} (was {original_search_type}), Files: {len(candidates)}/{MAX_GLOB}"
             formatted_results = self._format_results(results, pattern, config)
 
-            # Add strategy info to results
-            if formatted_results.startswith("Found"):
-                lines = formatted_results.split("\n")
-                lines[1] = (
-                    f"Strategy: {search_type} | Candidates: {len(candidates)} files | " + lines[1]
-                )
-                return "\n".join(lines)
+            if return_format == "list":
+                # Legacy: return list of file paths with at least one match
+                file_set = set()
+                for r in results:
+                    file_set.add(r.file_path)
+                return list(file_set)
             else:
-                return f"{formatted_results}\n\n{strategy_info}"
+                # Add strategy info to results
+                if formatted_results.startswith("Found"):
+                    lines = formatted_results.split("\n")
+                    lines[1] = (
+                        f"Strategy: {search_type} | Candidates: {len(candidates)} files | "
+                        + lines[1]
+                    )
+                    return "\n".join(lines)
+                else:
+                    return f"{formatted_results}\n\n{strategy_info}"
 
         except TooBroadPatternError:
             # Re-raise TooBroadPatternError without wrapping it
@@ -298,7 +309,7 @@ class ParallelGrep(BaseTool):
                             # Check if this is a match line
                             if '"type":"match"' in line:
                                 first_match_found = True
-                    except:
+                    except Exception:
                         pass
 
                     # Small sleep to avoid busy waiting
@@ -315,13 +326,13 @@ class ParallelGrep(BaseTool):
                 raise
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 return None
-            except Exception as e:
+            except Exception:
                 # Make sure to clean up the process
                 if "process" in locals():
                     try:
                         process.kill()
                         process.wait()
-                    except:
+                    except Exception:
                         pass
                 return None
 
@@ -351,9 +362,7 @@ class ParallelGrep(BaseTool):
             regex_pattern = None
 
         # Track search progress
-        start_time = time.time()
         first_match_event = asyncio.Event()
-        results_list = []
 
         async def search_with_monitoring(file_path: Path):
             """Search a file and signal when first match is found."""
@@ -633,6 +642,7 @@ class ParallelGrep(BaseTool):
 async def grep(
     pattern: str,
     directory: str = ".",
+    path: Optional[str] = None,  # Alias for directory
     case_sensitive: bool = False,
     use_regex: bool = False,
     include_files: Optional[str] = None,
@@ -640,7 +650,8 @@ async def grep(
     max_results: int = 50,
     context_lines: int = 2,
     search_type: str = "smart",
-) -> str:
+    return_format: str = "string",
+) -> Union[str, List[str]]:
     """
     Advanced parallel grep search with multiple strategies.
 
@@ -663,6 +674,10 @@ async def grep(
         grep("function.*export", "src/", use_regex=True, include_files="*.js,*.ts")
         grep("import.*pandas", ".", include_files="*.py", search_type="hybrid")
     """
+    # Handle path alias for directory
+    if path is not None:
+        directory = path
+
     tool = ParallelGrep()
     return await tool._execute(
         pattern=pattern,
@@ -674,4 +689,5 @@ async def grep(
         max_results=max_results,
         context_lines=context_lines,
         search_type=search_type,
+        return_format=return_format,
     )

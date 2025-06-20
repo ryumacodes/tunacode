@@ -5,6 +5,7 @@ File reading tool for agent operations in the TunaCode application.
 Provides safe file reading with size limits and proper error handling.
 """
 
+import asyncio
 import os
 
 from tunacode.constants import (ERROR_FILE_DECODE, ERROR_FILE_DECODE_DETAILS, ERROR_FILE_NOT_FOUND,
@@ -40,9 +41,14 @@ class ReadFileTool(FileBasedTool):
                 await self.ui.error(err_msg)
             raise ToolExecutionError(tool_name=self.tool_name, message=err_msg, original_error=None)
 
-        with open(filepath, "r", encoding="utf-8") as file:
-            content = file.read()
-            return content
+        # Run the blocking file I/O in a separate thread to avoid blocking the event loop
+        def _read_sync(path: str) -> str:
+            """Synchronous helper to read file contents (runs in thread)."""
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read()
+
+        content: str = await asyncio.to_thread(_read_sync, filepath)
+        return content
 
     async def _handle_error(self, error: Exception, filepath: str = None) -> ToolResult:
         """Handle errors with specific messages for common cases.

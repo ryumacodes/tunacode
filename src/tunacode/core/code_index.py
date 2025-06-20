@@ -207,7 +207,7 @@ class CodeIndex:
                         first_bytes = f.read(2)
                         if first_bytes == b"#!":
                             return True
-                except:
+                except Exception:
                     pass
             return False
 
@@ -215,7 +215,7 @@ class CodeIndex:
         try:
             if file_path.stat().st_size > 10 * 1024 * 1024:  # 10MB
                 return False
-        except:
+        except Exception:
             return False
 
         return True

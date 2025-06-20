@@ -267,7 +267,9 @@ class TestProcessRequest:
         # Track iteration values during processing
         iteration_values = []
         
-        async def track_iterations(node, callback, sm):
+        async def track_iterations(*args):
+            # args = (node, tool_callback, state_manager, tool_buffer)
+            sm = args[2] if len(args) > 2 else self.state_manager
             iteration_values.append(sm.session.current_iteration)
         
         nodes = [MockNode(), MockNode(), MockNode()]

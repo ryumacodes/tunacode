@@ -10,17 +10,20 @@ import tunacode.ui.console as console_mod
 
 def test_console_object_is_rich_console():
     # Should be a rich.console.Console instance
-    assert hasattr(console_mod, "console")
-    assert console_mod.console.__class__.__name__ == "Console"
+    from tunacode.ui import console as ui_console
+    assert hasattr(ui_console, "console")
+    assert ui_console.console.__class__.__name__ == "Console"
 
 def test_markdown_returns_markdown_object():
     from rich.markdown import Markdown
-    md = console_mod.markdown("# Title")
+    from tunacode.ui import console as ui_console
+    md = ui_console.markdown("# Title")
     assert isinstance(md, Markdown)
     # Current behavior: Markdown object has 'markup' attribute, not '_text'
     assert "# Title" in md.markup
 
 def test_reexported_functions_available():
     # Smoke test: all __all__ functions are present
-    for name in console_mod.__all__:
-        assert hasattr(console_mod, name)
+    from tunacode.ui import console as ui_console
+    for name in ui_console.__all__:
+        assert hasattr(ui_console, name)

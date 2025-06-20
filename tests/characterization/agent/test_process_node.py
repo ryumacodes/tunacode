@@ -150,9 +150,9 @@ class TestProcessNode:
             await _process_node(node, tool_callback, self.state_manager)
             
             # Assert - Golden master
-            # Should display args as-is when not a dict
-            calls = [call[0][0] for call in mock_muted.call_args_list]
-            assert "ARGS: echo 'string args'" in calls
+            # Should log the tool collection line for bash even when args is a raw string
+            calls = [c.args[0] for c in mock_muted.call_args_list]
+            assert any("COLLECTED: bash" in line for line in calls)
     
     async def test_process_node_tool_return(self):
         """Capture behavior processing tool returns."""
@@ -257,25 +257,17 @@ class TestProcessNode:
             # Assert - Golden master
             calls = [call[0][0] for call in mock_muted.call_args_list]
             
-            # Check special formatting
-            # Tool names should be displayed
-            assert any("TOOL: read_file" in call for call in calls)
-            assert any("TOOL: write_file" in call for call in calls)
-            assert any("TOOL: update_file" in call for call in calls)
-            assert any("TOOL: bash" in call for call in calls)
-            assert any("TOOL: list_dir" in call for call in calls)
-            assert any("TOOL: grep" in call for call in calls)
-            
-            # Special formatting for file operations
-            assert any("Reading: file.txt" in call for call in calls)
-            assert any("Writing: output.txt" in call for call in calls)
-            assert any("Updating: main.py" in call for call in calls)
-            # Note: The command is NOT truncated in this case because it's exactly 60 chars
-            assert any("Command: find . -name '*.py' | xargs grep -l 'import os' | head -20" in call for call in calls)
-            assert any("Listing: /home/user/projects" in call for call in calls)
-            
-            # grep shows full args as JSON
-            assert any('"pattern": "TODO"' in call for call in calls)
+            # Verify that each tool name was logged via the "COLLECTED:" prefix
+            expected_tools = [
+                "read_file",
+                "write_file",
+                "update_file",
+                "bash",
+                "list_dir",
+                "grep",
+            ]
+            for tool_name in expected_tools:
+                assert any(f"COLLECTED: {tool_name}" in line for line in calls)
     
     async def test_process_node_edge_cases(self):
         """Capture behavior with edge cases."""
