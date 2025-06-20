@@ -1,2 +1,0 @@
-Content number 42
-With some additional text
