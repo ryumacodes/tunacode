@@ -11,6 +11,7 @@ from tunacode.constants import (
     TOOL_RUN_COMMAND,
     TOOL_GREP,
     TOOL_LIST_DIR,
+    TOOL_GLOB,
 )
 
 
@@ -50,6 +51,7 @@ def test_tool_categorization_is_complete():
         TOOL_RUN_COMMAND,
         TOOL_GREP,
         TOOL_LIST_DIR,
+        TOOL_GLOB,
     }
     
     categorized_tools = set(READ_ONLY_TOOLS) | set(WRITE_TOOLS) | set(EXECUTE_TOOLS)
@@ -78,6 +80,7 @@ def test_correct_tool_categorization():
     assert TOOL_READ_FILE in READ_ONLY_TOOLS
     assert TOOL_GREP in READ_ONLY_TOOLS
     assert TOOL_LIST_DIR in READ_ONLY_TOOLS
+    assert TOOL_GLOB in READ_ONLY_TOOLS
     
     # Write tools should include these
     assert TOOL_WRITE_FILE in WRITE_TOOLS
@@ -96,6 +99,7 @@ def test_is_read_only_tool_helper():
     assert is_read_only_tool(TOOL_READ_FILE) is True
     assert is_read_only_tool(TOOL_GREP) is True
     assert is_read_only_tool(TOOL_LIST_DIR) is True
+    assert is_read_only_tool(TOOL_GLOB) is True
     
     # Test non-read-only tools
     assert is_read_only_tool(TOOL_WRITE_FILE) is False

@@ -1,9 +1,20 @@
 import sys
 import types
+import pytest
 from importlib import reload
 
 # Avoid importing heavy CLI main module when importing tool_ui
 sys.modules['tunacode.cli.main'] = types.SimpleNamespace(app=None)
+@pytest.fixture(autouse=True)
+def cleanup_modules():
+    """Automatically restore sys.modules after each test."""
+    original = sys.modules.get('tunacode.ui.console')
+    yield
+    if original is not None:
+        sys.modules['tunacode.ui.console'] = original
+    else:
+        sys.modules.pop('tunacode.ui.console', None)
+
 sys.modules['tunacode.ui.console'] = types.SimpleNamespace()
 
 import pytest

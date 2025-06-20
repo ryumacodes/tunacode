@@ -214,7 +214,7 @@ async def _process_node(
 
             # Display the raw model response parts
             await ui.muted("\n" + "=" * 60)
-            await ui.muted("📡 RAW API RESPONSE DATA:")
+            await ui.muted(" RAW API RESPONSE DATA:")
             await ui.muted("=" * 60)
 
             for idx, part in enumerate(node.model_response.parts):
@@ -243,7 +243,7 @@ async def _process_node(
                 if hasattr(part, "part_kind") and part.part_kind == "tool-call"
             )
             if tool_count > 0:
-                await ui.muted(f"\n🔧 MODEL RESPONSE: Contains {tool_count} tool call(s)")
+                await ui.muted(f"\n MODEL RESPONSE: Contains {tool_count} tool call(s)")
 
             # Display LLM response content
             for part in node.model_response.parts:
@@ -300,7 +300,7 @@ async def _process_node(
                 # Display tool call details when thoughts are enabled
                 if state_manager.session.show_thoughts:
                     # Show each tool as it's collected
-                    tool_desc = f"📥 COLLECTED: {part.tool_name}"
+                    tool_desc = f" COLLECTED: {part.tool_name}"
                     if hasattr(part, "args") and isinstance(part.args, dict):
                         if part.tool_name == "read_file" and "file_path" in part.args:
                             tool_desc += f" → {part.args['file_path']}"
@@ -339,7 +339,7 @@ async def _process_node(
         if tool_parts:
             if state_manager.session.show_thoughts:
                 await ui.muted(
-                    f"\n📊 NODE SUMMARY: {len(tool_parts)} tool(s) collected in this response"
+                    f"\n NODE SUMMARY: {len(tool_parts)} tool(s) collected in this response"
                 )
 
             # Check if ALL tools in this node are read-only
@@ -354,7 +354,7 @@ async def _process_node(
                 if state_manager.session.show_thoughts:
                     await ui.muted("\n" + "=" * 60)
                     await ui.muted(
-                        f"🚀 PARALLEL BATCH: Executing {len(tool_parts)} read-only tools concurrently"
+                        f" PARALLEL BATCH: Executing {len(tool_parts)} read-only tools concurrently"
                     )
                     await ui.muted("=" * 60)
 
@@ -381,7 +381,7 @@ async def _process_node(
                     sequential_estimate = len(tool_parts) * 100
                     speedup = sequential_estimate / elapsed_time if elapsed_time > 0 else 1.0
                     await ui.muted(
-                        f"✅ Parallel batch completed in {elapsed_time:.0f}ms ({speedup:.1f}x faster than sequential)"
+                        f" Parallel batch completed in {elapsed_time:.0f}ms ({speedup:.1f}x faster than sequential)"
                     )
 
             else:
@@ -391,7 +391,7 @@ async def _process_node(
                         state_manager.session.show_thoughts
                         and part.tool_name not in READ_ONLY_TOOLS
                     ):
-                        await ui.muted(f"\n⚠️  SEQUENTIAL: {part.tool_name} (write/execute tool)")
+                        await ui.muted(f"\n SEQUENTIAL: {part.tool_name} (write/execute tool)")
 
                     # Execute the tool
                     if buffering_callback:

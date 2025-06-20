@@ -18,6 +18,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Graceful permission error handling
   - Provides a fallback when bash commands aren't available
 
+### Changed
+
+- Refactored command structure to use declarative class-level metadata
+  - Modified `SimpleCommand` base class to read properties from class-level `spec` attribute
+  - Removed unnecessary `__init__` methods from 11 SimpleCommand subclasses
+  - Commands now define their metadata declaratively as class attributes
+  - Special handling preserved for `HelpCommand` and `CompactCommand` which require dependency injection
+  - Benefits: Cleaner code, better readability, reduced boilerplate
+
+### Removed
+
+- Dead code cleanup in commands system
+  - Removed `TunaCodeCommand` class (57 lines) - a fully implemented but disabled BM25 search feature
+  - Removed associated TODO comment for the disabled command
+
 ## [0.0.30] - 2025-06-14
 
 ### Added
