@@ -88,12 +88,16 @@ async def _tool_confirm(tool_call, node, state_manager: StateManager):
 
 async def _tool_handler(part, node, state_manager: StateManager):
     """Handle tool execution with separated business logic and UI."""
-    await ui.info(f"Tool({part.tool_name})")
+    # Create tool handler with state first to check if confirmation is needed
+    tool_handler = ToolHandler(state_manager)
+
+    # Only show tool info for tools that require confirmation
+    if tool_handler.should_confirm(part.tool_name):
+        await ui.info(f"Tool({part.tool_name})")
+
     state_manager.session.spinner.stop()
 
     try:
-        # Create tool handler with state
-        tool_handler = ToolHandler(state_manager)
         args = _parse_args(part.args)
 
         # Use a synchronous function in run_in_terminal to avoid async deadlocks

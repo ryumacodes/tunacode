@@ -184,8 +184,8 @@ class IterationsCommand(SimpleCommand):
         if args:
             try:
                 new_limit = int(args[0])
-                if new_limit < 1 or new_limit > 50:
-                    await ui.error("Iterations must be between 1 and 50")
+                if new_limit < 1 or new_limit > 100:
+                    await ui.error("Iterations must be between 1 and 100")
                     return
 
                 # Update the user config
@@ -198,9 +198,9 @@ class IterationsCommand(SimpleCommand):
             except ValueError:
                 await ui.error("Please provide a valid number")
         else:
-            current = state.user_config.get("settings", {}).get("max_iterations", 15)
+            current = state.user_config.get("settings", {}).get("max_iterations", 40)
             await ui.info(f"Current maximum iterations: {current}")
-            await ui.muted("Usage: /iterations <number> (1-50)")
+            await ui.muted("Usage: /iterations <number> (1-100)")
 
 
 class ClearCommand(SimpleCommand):
