@@ -656,8 +656,8 @@ async def process_request(
 ) -> AgentRun:
     agent = get_or_create_agent(model, state_manager)
     mh = state_manager.session.messages.copy()
-    # Get max iterations from config (default: 20)
-    max_iterations = state_manager.session.user_config.get("settings", {}).get("max_iterations", 20)
+    # Get max iterations from config (default: 40)
+    max_iterations = state_manager.session.user_config.get("settings", {}).get("max_iterations", 40)
     fallback_enabled = state_manager.session.user_config.get("settings", {}).get(
         "fallback_response", True
     )
