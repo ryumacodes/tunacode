@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.33] - 2025-06-21
+
+### Changed
+
+- **Increased default iteration limits** for more complex reasoning tasks
+  - Default max_iterations increased from 20 to 40
+  - Maximum allowed iterations via `/iterations` command increased from 50 to 100
+  - Fixed outdated fallback value (15 → 40) in iterations command display
+  - Benefits: Allows AI to handle more complex multi-step tasks without hitting limits
+
+### Added
+
+- Comprehensive characterization tests for iteration limits behavior
+- Characterization tests for tool UI behavior capturing read-only tool optimizations
+
+### Fixed
+
+- Aligned all iteration limit defaults across the codebase
+  - Updated defaults.py, main.py, and commands.py to use consistent values
+  - Fixed discrepancy where commands.py showed 15 as default instead of the actual default
+
 ## [0.0.32] - 2025-06-20
 
 ### Fixed
