@@ -37,7 +37,7 @@ class TestProcessRequest:
         self.state_manager.session.user_config = {
             "settings": {
                 "max_retries": 3,
-                "max_iterations": 20,
+                "max_iterations": 40,
                 "fallback_response": True,
                 "fallback_verbosity": "normal"
             }
@@ -250,11 +250,11 @@ class TestProcessRequest:
                     await process_request("openai:gpt-4", message, self.state_manager, AsyncMock())
                     
                     # Assert - Golden master
-                    calls = [call[0][0] for call in mock_muted.call_args_list]
+                    calls = [str(call[0][0]) if call[0] else "" for call in mock_muted.call_args_list]
                     
-                    # Should show iteration progress
-                    assert any("ITERATION: 1/20" in call for call in calls)
-                    assert any("ITERATION: 2/20" in call for call in calls)
+                    # Should show iteration progress (default is now 40)
+                    assert any("ITERATION: 1/40" in call for call in calls)
+                    assert any("ITERATION: 2/40" in call for call in calls)
                     
                     # Should show tool summary
                     assert any("TOOLS USED: read_file: 2, bash: 1" in call for call in calls)

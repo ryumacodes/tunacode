@@ -82,9 +82,13 @@ class ConfigSetup(BaseSetup):
                 ):
                     self.state_manager.session.user_config = {}
                 self.state_manager.session.user_config = DEFAULT_USER_CONFIG.copy()
-                user_configuration.save_config(
-                    self.state_manager
-                )  # Save the default config initially
+                try:
+                    user_configuration.save_config(
+                        self.state_manager
+                    )  # Save the default config initially
+                except ConfigurationError as e:
+                    await ui.error(str(e))
+                    raise
                 await self._onboarding()
             else:
                 # No config found - show CLI usage instead of onboarding
@@ -172,11 +176,12 @@ class ConfigSetup(BaseSetup):
             # Compare configs to see if anything changed
             current_config = json.dumps(self.state_manager.session.user_config, sort_keys=True)
             if initial_config != current_config:
-                if user_configuration.save_config(self.state_manager):
+                try:
+                    user_configuration.save_config(self.state_manager)
                     message = f"Config saved to: [bold]{self.config_file}[/bold]"
                     await ui.panel("Finished", message, top=0, border_style=UI_COLORS["success"])
-                else:
-                    await ui.error("Failed to save configuration.")
+                except ConfigurationError as e:
+                    await ui.error(str(e))
         else:
             await ui.panel(
                 "Setup canceled",
@@ -320,8 +325,9 @@ class ConfigSetup(BaseSetup):
         ]
 
         # Save the configuration
-        if user_configuration.save_config(self.state_manager):
+        try:
+            user_configuration.save_config(self.state_manager)
             await ui.warning("Model set without validation - verify the model name is correct")
             await ui.success(f"Configuration saved to: {self.config_file}")
-        else:
-            await ui.error("Failed to save configuration.")
+        except ConfigurationError as e:
+            await ui.error(str(e))
