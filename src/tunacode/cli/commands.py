@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Type
 
 from .. import utils
-from ..exceptions import ValidationError
+from ..exceptions import ConfigurationError, ValidationError
 from ..types import CommandArgs, CommandContext, CommandResult, ProcessRequestCallback
 from ..ui import console as ui
 
@@ -628,9 +628,13 @@ class ModelCommand(SimpleCommand):
 
         # Check if setting as default
         if len(args) > 1 and args[1] == "default":
-            utils.user_configuration.set_default_model(model_name, context.state_manager)
-            await ui.muted("Updating default model")
-            return "restart"
+            try:
+                utils.user_configuration.set_default_model(model_name, context.state_manager)
+                await ui.muted("Updating default model")
+                return "restart"
+            except ConfigurationError as e:
+                await ui.error(str(e))
+                return None
 
         # Show success message with the new model
         await ui.success(f"Switched to model: {model_name}")
@@ -667,6 +671,35 @@ class CommandFactory:
         for key, value in kwargs.items():
             if hasattr(self.dependencies, key):
                 setattr(self.dependencies, key, value)
+
+
+class InitCommand(SimpleCommand):
+    """Creates or updates TUNACODE.md with project-specific context."""
+
+    spec = CommandSpec(
+        name="/init",
+        aliases=[],
+        description="Analyze codebase and create/update TUNACODE.md file",
+        category=CommandCategory.DEVELOPMENT,
+    )
+
+    async def execute(self, args, context: CommandContext) -> CommandResult:
+        """Execute the init command."""
+        # Minimal implementation to make test pass
+        prompt = """Please analyze this codebase and create a TUNACODE.md file containing:
+1. Build/lint/test commands - especially for running a single test
+2. Code style guidelines including imports, formatting, types, naming conventions, error handling, etc.
+
+The file you create will be given to agentic coding agents (such as yourself) that operate in this repository.
+Make it about 20 lines long.
+If there's already a TUNACODE.md, improve it.
+If there are Cursor rules (in .cursor/rules/ or .cursorrules) or Copilot rules (in .github/copilot-instructions.md),
+make sure to include them."""
+
+        # Call the agent to analyze and create/update the file
+        await context.process_request(prompt, context.state_manager)
+
+        return None
 
 
 class CommandRegistry:
@@ -726,6 +759,7 @@ class CommandRegistry:
             BranchCommand,
             CompactCommand,
             ModelCommand,
+            InitCommand,
         ]
 
         # Register all discovered commands

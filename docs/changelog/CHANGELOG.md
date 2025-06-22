@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.34] - 2025-06-22
+
+### Added
+
+- **Context Loading for TUNACODE.md**: Agent now automatically loads project-specific context from TUNACODE.md files
+  - Implemented synchronous context injection to avoid event loop issues
+  - Context is appended to system prompt on agent creation
+  - Handles missing/malformed TUNACODE.md files gracefully
+  - Created comprehensive test suite for context injection functionality
+  - Benefits: AI assistant now understands project-specific conventions and guidelines automatically
+
+- **Comprehensive characterization tests** for file operations
+  - Created extensive test suite achieving high coverage across core tools
+  - Added tests for ReadFileTool, WriteFileTool, UpdateFileTool, BashTool, GrepTool, ListDirTool
+  - Test coverage: 91% read_file, 89% write_file, 75% bash, 71% update_file
+  - Created detailed test plan documentation (CHARACTERIZATION_TEST_PLAN.md)
+  - Benefits: Enables safe refactoring with comprehensive regression prevention
+
+### Fixed
+
+- **Configuration persistence bug** when using CLI flags
+  - Fixed issue where JSON config file failed to save when `~/.config` directory didn't exist
+  - `save_config` function now creates the config directory with proper permissions (0o700) if missing
+  - Replaced silent failure with proper error handling that raises ConfigurationError with meaningful messages
+  - Updated all callers to handle ConfigurationError exceptions appropriately
+  - Added comprehensive tests for directory creation and error scenarios
+  - Benefits: Users can now use `tunacode --model "provider:model" --key "api-key"` reliably
+
 ## [0.0.33] - 2025-06-21
 
 ### Changed

@@ -38,20 +38,22 @@ class TestAgentCreation:
         with patch('tunacode.core.agents.main.get_agent_tool', return_value=(mock_agent_class, mock_tool_class)):
             with patch('builtins.open', mock_open(read_data=system_prompt)):
                 with patch('tunacode.core.agents.main.get_mcp_servers', return_value=[]):
-                    # Act
-                    result = get_or_create_agent(model, self.state_manager)
-                    
-                    # Assert - Golden master
-                    assert model in self.state_manager.session.agents
-                    assert self.state_manager.session.agents[model] == mock_agent_class.return_value
-                    
-                    # Verify agent was created with correct parameters
-                    mock_agent_class.assert_called_once()
-                    call_kwargs = mock_agent_class.call_args.kwargs
-                    assert call_kwargs['model'] == model
-                    assert call_kwargs['system_prompt'] == system_prompt
-                    assert len(call_kwargs['tools']) == 8  # All 8 tools registered
-                    assert call_kwargs['mcp_servers'] == []
+                    # Mock TUNACODE.md not existing to get predictable system prompt
+                    with patch('pathlib.Path.exists', return_value=False):
+                        # Act
+                        result = get_or_create_agent(model, self.state_manager)
+                        
+                        # Assert - Golden master
+                        assert model in self.state_manager.session.agents
+                        assert self.state_manager.session.agents[model] == mock_agent_class.return_value
+                        
+                        # Verify agent was created with correct parameters
+                        mock_agent_class.assert_called_once()
+                        call_kwargs = mock_agent_class.call_args.kwargs
+                        assert call_kwargs['model'] == model
+                        assert call_kwargs['system_prompt'] == system_prompt
+                        assert len(call_kwargs['tools']) == 8  # All 8 tools registered
+                        assert call_kwargs['mcp_servers'] == []
     
     def test_get_or_create_agent_cached(self):
         """Capture behavior when agent already exists."""
@@ -83,12 +85,14 @@ class TestAgentCreation:
         with patch('tunacode.core.agents.main.get_agent_tool', return_value=(mock_agent_class, mock_tool_class)):
             with patch('builtins.open', side_effect=mock_open_side_effect):
                 with patch('tunacode.core.agents.main.get_mcp_servers', return_value=[]):
-                    # Act
-                    result = get_or_create_agent(model, self.state_manager)
-                    
-                    # Assert - Golden master
-                    call_kwargs = mock_agent_class.call_args.kwargs
-                    assert call_kwargs['system_prompt'] == fallback_prompt
+                    # Mock TUNACODE.md not existing
+                    with patch('pathlib.Path.exists', return_value=False):
+                        # Act
+                        result = get_or_create_agent(model, self.state_manager)
+                        
+                        # Assert - Golden master
+                        call_kwargs = mock_agent_class.call_args.kwargs
+                        assert call_kwargs['system_prompt'] == fallback_prompt
     
     def test_get_or_create_agent_default_prompt(self):
         """Capture behavior when neither prompt file exists."""
@@ -100,12 +104,14 @@ class TestAgentCreation:
         with patch('tunacode.core.agents.main.get_agent_tool', return_value=(mock_agent_class, mock_tool_class)):
             with patch('builtins.open', side_effect=FileNotFoundError):
                 with patch('tunacode.core.agents.main.get_mcp_servers', return_value=[]):
-                    # Act
-                    result = get_or_create_agent(model, self.state_manager)
-                    
-                    # Assert - Golden master
-                    call_kwargs = mock_agent_class.call_args.kwargs
-                    assert call_kwargs['system_prompt'] == "You are a helpful AI assistant for software development tasks."
+                    # Mock TUNACODE.md not existing
+                    with patch('pathlib.Path.exists', return_value=False):
+                        # Act
+                        result = get_or_create_agent(model, self.state_manager)
+                        
+                        # Assert - Golden master
+                        call_kwargs = mock_agent_class.call_args.kwargs
+                        assert call_kwargs['system_prompt'] == "You are a helpful AI assistant for software development tasks."
     
     def test_get_or_create_agent_tools_registered(self):
         """Capture behavior of tool registration with max_retries."""

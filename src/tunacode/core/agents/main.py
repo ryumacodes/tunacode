@@ -457,6 +457,26 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
                 # Use a default system prompt if neither file exists
                 system_prompt = "You are a helpful AI assistant for software development tasks."
 
+        # Load TUNACODE.md context
+        # Use sync version of get_code_style to avoid nested event loop issues
+        try:
+            from pathlib import Path as PathlibPath
+
+            tunacode_path = PathlibPath.cwd() / "TUNACODE.md"
+            if tunacode_path.exists():
+                tunacode_content = tunacode_path.read_text(encoding="utf-8")
+                if tunacode_content.strip():
+                    # Log that we found TUNACODE.md
+                    print("📄 TUNACODE.md located: Loading context...")
+
+                    system_prompt += "\n\n# Project Context from TUNACODE.md\n" + tunacode_content
+            else:
+                # Log that TUNACODE.md was not found
+                print("📄 TUNACODE.md not found: Using default context")
+        except Exception:
+            # Ignore errors loading TUNACODE.md
+            pass
+
         state_manager.session.agents[model] = Agent(
             model=model,
             system_prompt=system_prompt,
@@ -669,6 +689,14 @@ async def process_request(
 
     # Create a request-level buffer for batching read-only tools across nodes
     tool_buffer = ToolBuffer()
+
+    # Show TUNACODE.md preview if it was loaded and thoughts are enabled
+    if state_manager.session.show_thoughts and hasattr(state_manager, "tunacode_preview"):
+        from tunacode.ui import console as ui
+
+        await ui.muted(state_manager.tunacode_preview)
+        # Clear the preview after displaying it once
+        delattr(state_manager, "tunacode_preview")
 
     # Show what we're sending to the API when thoughts are enabled
     if state_manager.session.show_thoughts:

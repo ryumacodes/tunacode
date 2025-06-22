@@ -58,11 +58,23 @@ def save_config(state_manager: "StateManager") -> bool:
     """Save user config to file"""
     app_settings = ApplicationSettings()
     try:
+        # Ensure config directory exists
+        app_settings.paths.config_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+        # Write config file
         with open(app_settings.paths.config_file, "w") as f:
             json.dump(state_manager.session.user_config, f, indent=4)
         return True
-    except Exception:
-        return False
+    except PermissionError as e:
+        raise ConfigurationError(
+            f"Permission denied writing to {app_settings.paths.config_file}: {e}"
+        )
+    except OSError as e:
+        raise ConfigurationError(
+            f"Failed to save configuration to {app_settings.paths.config_file}: {e}"
+        )
+    except Exception as e:
+        raise ConfigurationError(f"Unexpected error saving configuration: {e}")
 
 
 def get_mcp_servers(state_manager: "StateManager") -> MCPServers:
@@ -73,4 +85,9 @@ def get_mcp_servers(state_manager: "StateManager") -> MCPServers:
 def set_default_model(model_name: ModelName, state_manager: "StateManager") -> bool:
     """Set the default model in the user config and save"""
     state_manager.session.user_config["default_model"] = model_name
-    return save_config(state_manager)
+    try:
+        save_config(state_manager)
+        return True
+    except ConfigurationError:
+        # Re-raise ConfigurationError to be handled by caller
+        raise

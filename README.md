@@ -3,6 +3,7 @@
 <div align="center">
 
 [![PyPI version](https://badge.fury.io/py/tunacode-cli.svg)](https://badge.fury.io/py/tunacode-cli)
+[![Downloads](https://pepy.tech/badge/tunacode-cli)](https://pepy.tech/project/tunacode-cli)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -41,6 +42,17 @@ tunacode --model "openrouter:openai/gpt-4o" --key "sk-or-your-openrouter-key"
 
 Your config is saved to `~/.config/tunacode.json` (edit directly with `nvim ~/.config/tunacode.json`)
 
+### Recommended Models
+
+Based on extensive testing, these models provide the best performance:
+- `google/gemini-2.5-pro` - Excellent for complex reasoning
+- `openai/gpt-4.1` - Strong general-purpose model
+- `deepseek/deepseek-r1-0528` - Great for code generation
+- `openai/gpt-4.1-mini` - Fast and cost-effective
+- `anthropic/claude-4-sonnet-20250522` - Superior context handling
+
+*Note: Formal evaluations coming soon. Any model can work, but these have shown the best results in practice.*
+
 ## Start Coding
 
 ```bash
@@ -67,6 +79,13 @@ TunaCode leverages parallel execution for read-only operations, achieving **3x f
 ![Parallel Execution Performance](docs/assets/parrelel_work_3x.png)
 
 Multiple file reads, directory listings, and searches execute concurrently using async I/O, making code exploration significantly faster.
+
+## Features in Development
+
+- **Streaming UI**: Currently working on implementing streaming responses for better user experience
+- **Bug Fixes**: Actively addressing issues - please report any bugs you encounter!
+
+*Note: While the tool is fully functional, we're focusing on stability and core features before optimizing for speed.*
 
 ## Safety First
 
