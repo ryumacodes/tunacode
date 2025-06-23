@@ -181,26 +181,29 @@ class IterationsCommand(SimpleCommand):
 
     async def execute(self, args: List[str], context: CommandContext) -> None:
         state = context.state_manager.session
-        if args:
-            try:
-                new_limit = int(args[0])
-                if new_limit < 1 or new_limit > 100:
-                    await ui.error("Iterations must be between 1 and 100")
-                    return
 
-                # Update the user config
-                if "settings" not in state.user_config:
-                    state.user_config["settings"] = {}
-                state.user_config["settings"]["max_iterations"] = new_limit
-
-                await ui.success(f"Maximum iterations set to {new_limit}")
-                await ui.muted("Higher values allow more complex reasoning but may be slower")
-            except ValueError:
-                await ui.error("Please provide a valid number")
-        else:
+        # Guard clause - handle "no args" case first and return early
+        if not args:
             current = state.user_config.get("settings", {}).get("max_iterations", 40)
             await ui.info(f"Current maximum iterations: {current}")
             await ui.muted("Usage: /iterations <number> (1-100)")
+            return
+
+        # update the logic to not be as nested messely, the above guars needing to get as messy
+        try:
+            new_limit = int(args[0])
+            if new_limit < 1 or new_limit > 100:
+                await ui.error("Iterations must be between 1 and 100")
+                return
+
+            # Update the user config
+            if "settings" not in state.user_config:
+                state.user_config["settings"] = {}
+            state.user_config["settings"]["max_iterations"] = new_limit
+
+            await ui.success(f"Maximum iterations set to {new_limit}")
+        except ValueError:
+            await ui.error("Please provide a valid number")
 
 
 class ClearCommand(SimpleCommand):
@@ -288,7 +291,9 @@ class ParseToolsCommand(SimpleCommand):
 
                         try:
                             await extract_and_execute_tool_calls(
-                                part.content, tool_callback_with_state, context.state_manager
+                                part.content,
+                                tool_callback_with_state,
+                                context.state_manager,
                             )
                             await ui.success("JSON tool parsing completed")
                             found_content = True
@@ -524,7 +529,8 @@ class UpdateCommand(SimpleCommand):
                 result = subprocess.run(
                     ["pipx", "list"], capture_output=True, text=True, timeout=10
                 )
-                if "tunacode" in result.stdout.lower():
+                pipx_installed = "tunacode" in result.stdout.lower()
+                if pipx_installed:
                     installation_method = "pipx"
             except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
                 pass
@@ -555,12 +561,22 @@ class UpdateCommand(SimpleCommand):
             if installation_method == "pipx":
                 await ui.info("Updating via pipx...")
                 result = subprocess.run(
-                    ["pipx", "upgrade", "tunacode"], capture_output=True, text=True, timeout=60
+                    ["pipx", "upgrade", "tunacode"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
                 )
             else:  # pip
                 await ui.info("Updating via pip...")
                 result = subprocess.run(
-                    [sys.executable, "-m", "pip", "install", "--upgrade", "tunacode-cli"],
+                    [
+                        sys.executable,
+                        "-m",
+                        "pip",
+                        "install",
+                        "--upgrade",
+                        "tunacode-cli",
+                    ],
                     capture_output=True,
                     text=True,
                     timeout=60,
