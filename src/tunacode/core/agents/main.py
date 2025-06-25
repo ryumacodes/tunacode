@@ -23,8 +23,18 @@ from tunacode.tools.read_file import read_file
 from tunacode.tools.run_command import run_command
 from tunacode.tools.update_file import update_file
 from tunacode.tools.write_file import write_file
-from tunacode.types import (AgentRun, ErrorMessage, FallbackResponse, ModelName, PydanticAgent,
-                            ResponseState, SimpleResult, ToolCallback, ToolCallId, ToolName)
+from tunacode.types import (
+    AgentRun,
+    ErrorMessage,
+    FallbackResponse,
+    ModelName,
+    PydanticAgent,
+    ResponseState,
+    SimpleResult,
+    ToolCallback,
+    ToolCallId,
+    ToolName,
+)
 
 
 class ToolBuffer:
