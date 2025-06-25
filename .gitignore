@@ -57,3 +57,8 @@ REFACTOR*
 .qa_temp/
 scratchpad_*.md
 *.tmp
+
+# Memory bank and agent tools
+memory-bank/
+llm-agent-tools/
+.researcher/
