@@ -40,7 +40,7 @@ $PIP -q install build twine setuptools_scm packaging pytest black isort flake8 >
 
 # ── run tests and linting before publishing --------------------------------
 log "Running linting checks"
-if ! make lint; then
+if ! make lint-check; then
     die "Linting failed! Fix linting errors before publishing."
 fi
 

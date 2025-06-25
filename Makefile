@@ -18,6 +18,11 @@ lint:
 	venv/bin/isort src/
 	venv/bin/flake8 src/
 
+lint-check:
+	venv/bin/black --check src/
+	venv/bin/isort --check-only src/
+	venv/bin/flake8 src/
+
 test:
 	venv/bin/python -m pytest -q tests/characterization tests/test_security.py
 
