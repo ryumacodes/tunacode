@@ -8,7 +8,9 @@ ignore =
     # Line break before binary operator (conflicts with black)
     W503,
     # Multiple statements on one line (def) - Protocol methods
-    E704
+    E704,
+    # Line too long (covered by black)
+    E501
 exclude = 
     venv,
     build,
