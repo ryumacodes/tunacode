@@ -10,30 +10,11 @@ from rich.pretty import Pretty
 from rich.table import Table
 
 from tunacode.configuration.models import ModelRegistry
-from tunacode.constants import (
-    APP_NAME,
-    CMD_CLEAR,
-    CMD_COMPACT,
-    CMD_DUMP,
-    CMD_EXIT,
-    CMD_HELP,
-    CMD_MODEL,
-    CMD_YOLO,
-    DESC_CLEAR,
-    DESC_COMPACT,
-    DESC_DUMP,
-    DESC_EXIT,
-    DESC_HELP,
-    DESC_MODEL,
-    DESC_MODEL_DEFAULT,
-    DESC_MODEL_SWITCH,
-    DESC_YOLO,
-    PANEL_AVAILABLE_COMMANDS,
-    PANEL_ERROR,
-    PANEL_MESSAGE_HISTORY,
-    PANEL_MODELS,
-    UI_COLORS,
-)
+from tunacode.constants import (APP_NAME, CMD_CLEAR, CMD_COMPACT, CMD_DUMP, CMD_EXIT, CMD_HELP,
+                                CMD_MODEL, CMD_YOLO, DESC_CLEAR, DESC_COMPACT, DESC_DUMP, DESC_EXIT,
+                                DESC_HELP, DESC_MODEL, DESC_MODEL_DEFAULT, DESC_MODEL_SWITCH,
+                                DESC_YOLO, PANEL_AVAILABLE_COMMANDS, PANEL_ERROR,
+                                PANEL_MESSAGE_HISTORY, PANEL_MODELS, UI_COLORS)
 from tunacode.core.state import StateManager
 from tunacode.utils.file_utils import DotDict
 

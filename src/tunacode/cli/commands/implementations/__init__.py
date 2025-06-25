@@ -2,14 +2,8 @@
 
 # Import all command classes for easy access
 from .conversation import CompactCommand
-from .debug import (
-    DumpCommand,
-    FixCommand,
-    IterationsCommand,
-    ParseToolsCommand,
-    ThoughtsCommand,
-    YoloCommand,
-)
+from .debug import (DumpCommand, FixCommand, IterationsCommand, ParseToolsCommand, ThoughtsCommand,
+                    YoloCommand)
 from .development import BranchCommand, InitCommand
 from .model import ModelCommand
 from .system import ClearCommand, HelpCommand, RefreshConfigCommand, UpdateCommand

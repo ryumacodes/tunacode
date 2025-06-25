@@ -11,25 +11,11 @@ commands.py module while enabling better organization and maintainability.
 
 # Import base classes and infrastructure
 from .base import Command, CommandCategory, CommandSpec, SimpleCommand
-
 # Import all command implementations for backward compatibility
-from .implementations import (
-    BranchCommand,
-    ClearCommand,
-    CompactCommand,
-    DumpCommand,
-    FixCommand,
-    HelpCommand,
-    InitCommand,
-    IterationsCommand,
-    ModelCommand,
-    ParseToolsCommand,
-    RefreshConfigCommand,
-    ThoughtsCommand,
-    UpdateCommand,
-    YoloCommand,
-)
-
+from .implementations import (BranchCommand, ClearCommand, CompactCommand, DumpCommand, FixCommand,
+                              HelpCommand, InitCommand, IterationsCommand, ModelCommand,
+                              ParseToolsCommand, RefreshConfigCommand, ThoughtsCommand,
+                              UpdateCommand, YoloCommand)
 # Import registry and factory
 from .registry import CommandDependencies, CommandFactory, CommandRegistry
 
