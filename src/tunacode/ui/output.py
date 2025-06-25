@@ -5,8 +5,13 @@ from rich.console import Console
 from rich.padding import Padding
 
 from tunacode.configuration.settings import ApplicationSettings
-from tunacode.constants import (MSG_UPDATE_AVAILABLE, MSG_UPDATE_INSTRUCTION, MSG_VERSION_DISPLAY,
-                                UI_COLORS, UI_THINKING_MESSAGE)
+from tunacode.constants import (
+    MSG_UPDATE_AVAILABLE,
+    MSG_UPDATE_INSTRUCTION,
+    MSG_VERSION_DISPLAY,
+    UI_COLORS,
+    UI_THINKING_MESSAGE,
+)
 from tunacode.core.state import StateManager
 from tunacode.utils.file_utils import DotDict
 
