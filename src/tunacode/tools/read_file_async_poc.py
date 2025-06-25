@@ -150,17 +150,18 @@ async def read_file_async(filepath: str) -> str:
 # Benchmarking utilities for testing
 async def benchmark_read_performance():
     """Benchmark the performance difference between sync and async reads."""
+    import contextlib
+    import tempfile
     import time
 
     from tunacode.tools.read_file import read_file as read_file_sync
 
-    # Create some test files
+    # Create some test files using tempfile for secure temporary file creation
     test_files = []
-    for i in range(10):
-        filepath = f"/tmp/test_file_{i}.txt"
-        with open(filepath, "w") as f:
-            f.write("x" * 10000)  # 10KB file
-        test_files.append(filepath)
+    for _ in range(10):
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as temp_file:
+            temp_file.write("x" * 10000)  # 10KB file
+            test_files.append(temp_file.name)
 
     # Test synchronous reads (sequential)
     start_time = time.time()
@@ -174,9 +175,10 @@ async def benchmark_read_performance():
     await asyncio.gather(*tasks)
     async_time = time.time() - start_time
 
-    # Cleanup
+    # Cleanup using safe file removal
     for filepath in test_files:
-        os.unlink(filepath)
+        with contextlib.suppress(OSError):
+            os.unlink(filepath)
 
     print(f"Synchronous reads: {sync_time:.3f}s")
     print(f"Async reads: {async_time:.3f}s")
