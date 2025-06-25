@@ -6,17 +6,10 @@ from typing import Any, Dict, List, Optional, Type
 from ...exceptions import ValidationError
 from ...types import CommandArgs, CommandContext, ProcessRequestCallback
 from .base import Command, CommandCategory
-
 # Import all command implementations
 from .implementations.conversation import CompactCommand
-from .implementations.debug import (
-    DumpCommand,
-    FixCommand,
-    IterationsCommand,
-    ParseToolsCommand,
-    ThoughtsCommand,
-    YoloCommand,
-)
+from .implementations.debug import (DumpCommand, FixCommand, IterationsCommand, ParseToolsCommand,
+                                    ThoughtsCommand, YoloCommand)
 from .implementations.development import BranchCommand, InitCommand
 from .implementations.model import ModelCommand
 from .implementations.system import ClearCommand, HelpCommand, RefreshConfigCommand, UpdateCommand
