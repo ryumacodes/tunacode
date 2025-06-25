@@ -159,7 +159,7 @@ async def benchmark_read_performance():
     # Create some test files using tempfile for secure temporary file creation
     test_files = []
     for _ in range(10):
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as temp_file:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as temp_file:
             temp_file.write("x" * 10000)  # 10KB file
             test_files.append(temp_file.name)
 
