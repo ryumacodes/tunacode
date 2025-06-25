@@ -10,7 +10,9 @@ ignore =
     # Multiple statements on one line (def) - Protocol methods
     E704,
     # Line too long (covered by black)
-    E501
+    E501,
+    # Maximum number of physical live code lines (we allow up to 500 lines)
+    LLW405
 exclude = 
     venv,
     build,
