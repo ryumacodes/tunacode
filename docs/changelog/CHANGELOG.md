@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.35] - 2025-06-25
+
 ### Security
 
 - **Critical Security Fix**: Resolved subprocess shell injection vulnerabilities
@@ -20,6 +22,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added complete security test suite (12 tests) covering command injection scenarios
   - Integrated security tests into `make test` command for continuous protection
   - Benefits: Prevents command injection attacks while preserving CLI functionality
+
+- **Fixed B108 security issue** in `read_file_async_poc.py`
+  - Replaced hardcoded `/tmp/test_file_{i}.txt` paths with secure `tempfile.NamedTemporaryFile()`
+  - Added proper error handling for file cleanup operations
+  - Applied Python best practices: using `_` for unused loop variables and `contextlib.suppress()`
+
+### Changed
+
+- **Refactored commands.py into modular package structure**
+  - Split monolithic 877-line file into 9 focused modules (largest: 222 lines)
+  - Organized commands by logical categories: system, debug, development, model, conversation
+  - All files now comply with 500-line limit for better maintainability
+  - Maintained full backward compatibility - existing imports still work
+  - Benefits: Easier navigation, cleaner git diffs, better testing isolation
 
 ## [0.0.34] - 2025-06-22
 
