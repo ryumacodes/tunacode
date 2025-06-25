@@ -52,8 +52,8 @@ Homepage = "https://github.com/larock22/tunacode"
 Repository = "https://github.com/larock22/tunacode"
 
 [tool.black]
-line-length = 100
+line-length = 500
 
 [tool.isort]
-line_length = 100
+line_length = 500
 profile = "black"
