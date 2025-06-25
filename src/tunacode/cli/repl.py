@@ -22,6 +22,7 @@ from tunacode.core.tool_handler import ToolHandler
 from tunacode.exceptions import AgentError, UserAbortError, ValidationError
 from tunacode.ui import console as ui
 from tunacode.ui.tool_ui import ToolUI
+from tunacode.utils.security import CommandSecurityError, safe_subprocess_run
 
 from ..types import CommandContext, CommandResult, StateManager, ToolArgs
 from .commands import CommandRegistry
@@ -320,13 +321,24 @@ async def repl(state_manager: StateManager):
                 def run_shell():
                     try:
                         if command:
-                            result = subprocess.run(command, shell=True, capture_output=False)
-                            if result.returncode != 0:
-                                # Use print directly since we're in a terminal context
-                                print(f"\nCommand exited with code {result.returncode}")
+                            # Use secure subprocess execution for shell commands
+                            # Note: User shell commands are inherently risky but this is by design
+                            # We validate but allow shell features since it's explicit user intent
+                            try:
+                                result = safe_subprocess_run(
+                                    command,
+                                    shell=True,
+                                    validate=True,  # Still validate for basic safety
+                                    capture_output=False,
+                                )
+                                if result.returncode != 0:
+                                    print(f"\nCommand exited with code {result.returncode}")
+                            except CommandSecurityError as e:
+                                print(f"\nSecurity validation failed: {str(e)}")
+                                print("If you need to run this command, please ensure it's safe.")
                         else:
                             shell = os.environ.get("SHELL", "bash")
-                            subprocess.run(shell)
+                            subprocess.run(shell)  # Interactive shell is safe
                     except Exception as e:
                         print(f"\nShell command failed: {str(e)}")
 

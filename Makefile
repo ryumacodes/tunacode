@@ -19,7 +19,7 @@ lint:
 	venv/bin/flake8 src/
 
 test:
-	venv/bin/python -m pytest -q tests/characterization
+	venv/bin/python -m pytest -q tests/characterization tests/test_security.py
 
 coverage:
 	pytest --cov=src/tunacode --cov-report=term

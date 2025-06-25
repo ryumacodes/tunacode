@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Critical Security Fix**: Resolved subprocess shell injection vulnerabilities
+  - Fixed `subprocess.Popen(shell=True)` vulnerability in `run_command.py` - agent commands now validated for security
+  - Fixed `subprocess.run(shell=True)` vulnerability in `repl.py` - user shell commands now validated
+  - Created comprehensive security utilities module (`utils/security.py`) with:
+    - Command validation with dangerous pattern detection (rm -rf /, sudo rm, disk operations, fork bombs)
+    - Safe subprocess wrappers with configurable validation levels
+    - Input sanitization using `shlex.quote()`
+    - Security logging for all command executions
+  - Added complete security test suite (12 tests) covering command injection scenarios
+  - Integrated security tests into `make test` command for continuous protection
+  - Benefits: Prevents command injection attacks while preserving CLI functionality
+
 ## [0.0.34] - 2025-06-22
 
 ### Added

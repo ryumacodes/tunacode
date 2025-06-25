@@ -14,6 +14,7 @@ from tunacode.constants import (CMD_OUTPUT_FORMAT, CMD_OUTPUT_NO_ERRORS, CMD_OUT
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import BaseTool
 from tunacode.types import ToolResult
+from tunacode.utils.security import CommandSecurityError, safe_subprocess_popen
 
 
 class RunCommandTool(BaseTool):
@@ -34,16 +35,23 @@ class RunCommandTool(BaseTool):
 
         Raises:
             FileNotFoundError: If command not found
+            CommandSecurityError: If command fails security validation
             Exception: Any command execution errors
         """
-        process = subprocess.Popen(
-            command,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        stdout, stderr = process.communicate()
+        try:
+            # Use secure subprocess execution with validation
+            process = safe_subprocess_popen(
+                command,
+                shell=True,  # CLI tool requires shell features
+                validate=True,  # Enable security validation
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            stdout, stderr = process.communicate()
+        except CommandSecurityError as e:
+            # Security validation failed - return error without execution
+            return f"Security validation failed: {str(e)}"
         output = stdout.strip() or CMD_OUTPUT_NO_OUTPUT
         error = stderr.strip() or CMD_OUTPUT_NO_ERRORS
         resp = CMD_OUTPUT_FORMAT.format(output=output, error=error).strip()
@@ -70,6 +78,8 @@ class RunCommandTool(BaseTool):
         """
         if isinstance(error, FileNotFoundError):
             err_msg = ERROR_COMMAND_EXECUTION.format(command=command, error=error)
+        elif isinstance(error, CommandSecurityError):
+            err_msg = f"Command blocked for security: {str(error)}"
         else:
             # Use parent class handling for other errors
             await super()._handle_error(error, command)
