@@ -7,8 +7,13 @@ Provides high-level setup functions for initializing the application and its age
 
 from typing import Any, Optional
 
-from tunacode.core.setup import (AgentSetup, ConfigSetup, EnvironmentSetup, GitSafetySetup,
-                                 SetupCoordinator)
+from tunacode.core.setup import (
+    AgentSetup,
+    ConfigSetup,
+    EnvironmentSetup,
+    GitSafetySetup,
+    SetupCoordinator,
+)
 from tunacode.core.state import StateManager
 
 

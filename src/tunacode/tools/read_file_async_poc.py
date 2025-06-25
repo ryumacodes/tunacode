@@ -11,8 +11,14 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
-from tunacode.constants import (ERROR_FILE_DECODE, ERROR_FILE_DECODE_DETAILS, ERROR_FILE_NOT_FOUND,
-                                ERROR_FILE_TOO_LARGE, MAX_FILE_SIZE, MSG_FILE_SIZE_LIMIT)
+from tunacode.constants import (
+    ERROR_FILE_DECODE,
+    ERROR_FILE_DECODE_DETAILS,
+    ERROR_FILE_NOT_FOUND,
+    ERROR_FILE_TOO_LARGE,
+    MAX_FILE_SIZE,
+    MSG_FILE_SIZE_LIMIT,
+)
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
 from tunacode.types import ToolResult
