@@ -7,7 +7,7 @@ Centralizes all magic strings, UI text, error messages, and application constant
 
 # Application info
 APP_NAME = "TunaCode"
-APP_VERSION = "0.0.34"
+APP_VERSION = "0.0.35"
 
 # File patterns
 GUIDE_FILE_PATTERN = "{name}.md"
