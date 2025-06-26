@@ -3,10 +3,12 @@ Characterization tests for TunaCode UI prompt rendering and management.
 Covers: PromptConfig, PromptManager, prompt customization, and error paths.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 import tunacode.ui.prompt_manager as prompt_mod
+
 
 def test_prompt_config_defaults():
     config = prompt_mod.PromptConfig()
@@ -14,10 +16,12 @@ def test_prompt_config_defaults():
     assert config.is_password is False
     assert config.validator is None
 
+
 def test_prompt_manager_creates_style():
     mgr = prompt_mod.PromptManager()
     style = mgr._create_style()
     assert hasattr(style, "get_attrs_for_style_str")
+
 
 def test_prompt_manager_get_session_creates_prompt_session():
     config = prompt_mod.PromptConfig()
@@ -28,6 +32,7 @@ def test_prompt_manager_get_session_creates_prompt_session():
         result = mgr.get_session("test", config)
         assert result is session
         mock_session.assert_called_once()
+
 
 def test_prompt_manager_handles_user_abort():
     config = prompt_mod.PromptConfig()

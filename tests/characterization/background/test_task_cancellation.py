@@ -1,6 +1,9 @@
-import pytest
 import asyncio
+
+import pytest
+
 from tunacode.core.background.manager import BackgroundTaskManager
+
 
 @pytest.mark.asyncio
 async def test_shutdown_cancels_running_tasks():
@@ -20,8 +23,11 @@ async def test_shutdown_cancels_running_tasks():
     await started.wait()
     await manager.shutdown()
     task = manager.tasks[task_id]
-    assert task.cancelled() or (task.done() and isinstance(task.exception(), asyncio.CancelledError))
+    assert task.cancelled() or (
+        task.done() and isinstance(task.exception(), asyncio.CancelledError)
+    )
     assert cancelled.is_set()
+
 
 @pytest.mark.asyncio
 async def test_shutdown_handles_multiple_tasks():

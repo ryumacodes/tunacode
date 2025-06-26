@@ -3,7 +3,6 @@ Test to ensure grep works without include_files parameter (legacy compatibility)
 This test ensures that removing unfiltered search paths doesn't break existing usage.
 """
 
-import asyncio
 import tempfile
 from pathlib import Path
 
@@ -23,10 +22,10 @@ class TestGrepLegacyCompat:
             (Path(tmpdir) / "test1.py").write_text("def hello():\n    return 'Hello'")
             (Path(tmpdir) / "test2.txt").write_text("Hello World")
             (Path(tmpdir) / "test3.js").write_text("console.log('Hello');")
-            
+
             # Call grep without include_files - this should work via filtered path
             result = await grep("Hello", tmpdir)
-            
+
             # Should find matches in all files
             assert "Found" in result and "matches" in result
             assert "test1.py" in result
@@ -39,7 +38,7 @@ class TestGrepLegacyCompat:
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create test content
             (Path(tmpdir) / "main.py").write_text("import os\nimport sys")
-            
+
             # Test each search type
             for search_type in ["smart", "ripgrep", "python", "hybrid"]:
                 result = await grep("import", tmpdir, search_type=search_type)
@@ -53,10 +52,10 @@ class TestGrepLegacyCompat:
         """Test regex search without include_files."""
         with tempfile.TemporaryDirectory() as tmpdir:
             (Path(tmpdir) / "test.py").write_text("value = 123\nresult = 456")
-            
+
             # Regex search without include_files
             result = await grep(r"\w+ = \d+", tmpdir, use_regex=True)
-            
+
             assert "Found" in result
             assert "value = 123" in result or "123" in result
             assert "result = 456" in result or "456" in result

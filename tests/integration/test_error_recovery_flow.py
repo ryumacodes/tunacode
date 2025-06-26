@@ -12,8 +12,9 @@ Uses real tool logic and tmp_path for isolation.
 """
 
 import pytest
-import asyncio
+
 from tunacode.tools import read_file, write_file
+
 
 @pytest.mark.asyncio
 async def test_error_recovery_flow(tmp_path):
@@ -33,6 +34,7 @@ async def test_error_recovery_flow(tmp_path):
     read_result2 = await read_file.read_file(str(file_path))
     assert isinstance(read_result2, str)
     assert read_result2 == "Recovery content"
+
 
 """
 Notes:

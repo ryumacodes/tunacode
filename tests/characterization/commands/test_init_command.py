@@ -2,14 +2,16 @@
 Test suite for the /init command that creates/updates TUNACODE.md files.
 Following strict TDD approach - acceptance test first.
 """
-import pytest
-from pathlib import Path
-import tempfile
+
 import os
-from unittest.mock import AsyncMock, patch, MagicMock
-from tunacode.types import CommandContext
-from tunacode.core.state import StateManager
+import tempfile
+from pathlib import Path
+
+import pytest
+
 from tunacode.cli.commands import CommandRegistry
+from tunacode.core.state import StateManager
+from tunacode.types import CommandContext
 
 
 @pytest.mark.asyncio
@@ -19,7 +21,7 @@ async def test_init_command_creates_tunacode_md_file():
     with tempfile.TemporaryDirectory() as tmpdir:
         old_cwd = os.getcwd()
         os.chdir(tmpdir)
-        
+
         try:
             # Create a minimal Python project structure
             Path("src").mkdir()
@@ -28,11 +30,11 @@ async def test_init_command_creates_tunacode_md_file():
             Path("tests/test_main.py").write_text("def test_hello(): assert True")
             Path("Makefile").write_text("test:\n\tpytest tests/")
             Path("pyproject.toml").write_text("[tool.black]\nline-length = 88")
-            
+
             # Setup command registry and context
             registry = CommandRegistry()
             state_manager = StateManager()
-            
+
             # Mock process_request to simulate agent creating the file
             async def mock_process_request(text, state_manager, output=True):
                 # Simulate agent creating TUNACODE.md
@@ -46,22 +48,21 @@ async def test_init_command_creates_tunacode_md_file():
 - Line length: 88 (Black)
 - Follow PEP 8
 """)
-            
+
             context = CommandContext(
-                state_manager=state_manager,
-                process_request=mock_process_request
+                state_manager=state_manager, process_request=mock_process_request
             )
-            
+
             # Act
-            result = await registry.execute("/init", context)
-            
+            await registry.execute("/init", context)
+
             # Assert
             assert Path("TUNACODE.md").exists()
             content = Path("TUNACODE.md").read_text()
             assert "make test" in content
             assert "pytest" in content
             assert "Code Style" in content
-            
+
         finally:
             os.chdir(old_cwd)
 
@@ -72,22 +73,20 @@ async def test_init_command_sends_correct_prompt():
     # Arrange
     state_manager = StateManager()
     prompt_sent = None
-    
+
     async def capture_prompt(text, state_manager, output=True):
         nonlocal prompt_sent
         prompt_sent = text
-    
-    context = CommandContext(
-        state_manager=state_manager,
-        process_request=capture_prompt
-    )
-    
+
+    context = CommandContext(state_manager=state_manager, process_request=capture_prompt)
+
     from tunacode.cli.commands import InitCommand
+
     command = InitCommand()
-    
+
     # Act
     await command.execute([], context)
-    
+
     # Assert
     assert prompt_sent is not None
     assert "TUNACODE.md" in prompt_sent
@@ -102,8 +101,9 @@ async def test_init_command_matches_correct_names():
     """Unit test: InitCommand should match '/init' command."""
     # Arrange
     from tunacode.cli.commands import InitCommand
+
     command = InitCommand()
-    
+
     # Assert
     assert command.name == "/init"
     assert command.aliases == []
@@ -117,18 +117,18 @@ async def test_init_command_improves_existing_tunacode_md():
     with tempfile.TemporaryDirectory() as tmpdir:
         old_cwd = os.getcwd()
         os.chdir(tmpdir)
-        
+
         try:
             # Create existing TUNACODE.md
             Path("TUNACODE.md").write_text("# Old content\nSome basic info")
-            
+
             # Create project files
             Path(".cursorrules").write_text("Always use type hints")
-            
+
             # Setup command registry and context
             registry = CommandRegistry()
             state_manager = StateManager()
-            
+
             # Mock process_request to simulate agent improving the file
             async def mock_process_request(text, state_manager, output=True):
                 # Simulate agent improving TUNACODE.md
@@ -140,66 +140,66 @@ async def test_init_command_improves_existing_tunacode_md():
 ## Code Style
 - Always use type hints (from .cursorrules)
 """)
-            
+
             context = CommandContext(
-                state_manager=state_manager,
-                process_request=mock_process_request
+                state_manager=state_manager, process_request=mock_process_request
             )
-            
+
             # Act
-            result = await registry.execute("/init", context)
-            
+            await registry.execute("/init", context)
+
             # Assert
             content = Path("TUNACODE.md").read_text()
             assert "type hints" in content
             assert ".cursorrules" in content
-            
+
         finally:
             os.chdir(old_cwd)
 
 
 @pytest.mark.asyncio
-async def test_init_command_sends_correct_prompt():
+async def test_init_command_sends_correct_prompt_duplicate():
     """Unit test: InitCommand should send the correct prompt to the agent."""
     # Arrange
     state_manager = StateManager()
     prompt_sent = None
-    
+
     async def capture_prompt(text, state_manager, output=True):
         nonlocal prompt_sent
         prompt_sent = text
-    
-    context = CommandContext(
-        state_manager=state_manager,
-        process_request=capture_prompt
-    )
-    
+
+    context = CommandContext(state_manager=state_manager, process_request=capture_prompt)
+
     from tunacode.cli.commands import InitCommand
+
     command = InitCommand()
-    
+
     # Act
     await command.execute([], context)
-    
+
     # Assert
     assert prompt_sent is not None
     assert "TUNACODE.md" in prompt_sent
     assert "Build/lint/test commands" in prompt_sent
     assert "Code style guidelines" in prompt_sent
+
     assert "20 lines long" in prompt_sent
     assert "Cursor rules" in prompt_sent
 
 
 @pytest.mark.asyncio
-async def test_init_command_matches_correct_names():
+async def test_init_command_matches_correct_names_duplicate():
     """Unit test: InitCommand should match '/init' command."""
     # Arrange
     from tunacode.cli.commands import InitCommand
+
     command = InitCommand()
-    
+
     # Assert
     assert command.name == "/init"
     assert command.aliases == []
     assert "TUNACODE.md" in command.description
+
 
 @pytest.mark.asyncio
 async def test_init_command_includes_cursor_rules_in_prompt():
@@ -207,22 +207,20 @@ async def test_init_command_includes_cursor_rules_in_prompt():
     # Arrange
     state_manager = StateManager()
     prompt_sent = None
-    
+
     async def capture_prompt(text, state_manager, output=True):
         nonlocal prompt_sent
         prompt_sent = text
-    
-    context = CommandContext(
-        state_manager=state_manager,
-        process_request=capture_prompt
-    )
-    
+
+    context = CommandContext(state_manager=state_manager, process_request=capture_prompt)
+
     from tunacode.cli.commands import InitCommand
+
     command = InitCommand()
-    
+
     # Act
     await command.execute([], context)
-    
+
     # Assert
     assert ".cursor/rules" in prompt_sent or ".cursorrules" in prompt_sent
     assert ".github/copilot-instructions.md" in prompt_sent
@@ -233,20 +231,18 @@ async def test_init_command_returns_none():
     """Unit test: InitCommand should return None after execution."""
     # Arrange
     state_manager = StateManager()
-    
+
     async def mock_process_request(text, state_manager, output=True):
         pass
-    
-    context = CommandContext(
-        state_manager=state_manager,
-        process_request=mock_process_request
-    )
-    
+
+    context = CommandContext(state_manager=state_manager, process_request=mock_process_request)
+
     from tunacode.cli.commands import InitCommand
+
     command = InitCommand()
-    
+
     # Act
     result = await command.execute([], context)
-    
+
     # Assert
     assert result is None

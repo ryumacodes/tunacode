@@ -1,5 +1,5 @@
-import pytest
-from tunacode.core.state import StateManager, SessionState
+from tunacode.core.state import SessionState, StateManager
+
 
 def test_state_manager_initialization_defaults():
     """
@@ -28,6 +28,7 @@ def test_state_manager_initialization_defaults():
     assert session.iteration_count == 0
     assert session.current_iteration == 0
 
+
 def test_state_manager_reset_session():
     """
     Characterization: reset_session creates a new SessionState instance.
@@ -39,6 +40,7 @@ def test_state_manager_reset_session():
     assert sm.session.user_config == {}
     assert sm.session.session_id != old_id
 
+
 def test_state_manager_no_singleton_enforced():
     """
     Characterization: Multiple StateManager instances can be created (no singleton).
@@ -47,6 +49,7 @@ def test_state_manager_no_singleton_enforced():
     sm2 = StateManager()
     assert sm1 is not sm2
     assert sm1.session is not sm2.session
+
 
 def test_state_manager_config_field_behavior():
     """
@@ -58,5 +61,6 @@ def test_state_manager_config_field_behavior():
     sm.reset_session()
     # After reset, config is empty
     assert sm.session.user_config == {}
+
 
 # Quirk: No error handling for config, no singleton pattern, all fields defaulted.

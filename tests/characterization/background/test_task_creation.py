@@ -1,6 +1,9 @@
-import pytest
 import asyncio
+
+import pytest
+
 from tunacode.core.background.manager import BackgroundTaskManager
+
 
 @pytest.mark.asyncio
 async def test_spawn_creates_task_and_returns_id():
@@ -19,6 +22,7 @@ async def test_spawn_creates_task_and_returns_id():
     assert task.done()
     assert task.result() == 42
 
+
 @pytest.mark.asyncio
 async def test_spawn_with_name_uses_given_name():
     manager = BackgroundTaskManager()
@@ -32,6 +36,7 @@ async def test_spawn_with_name_uses_given_name():
     await asyncio.wait([manager.tasks["mytask"]])
     assert manager.tasks["mytask"].done()
     assert manager.tasks["mytask"].result() == "named"
+
 
 @pytest.mark.asyncio
 async def test_spawn_multiple_tasks_unique_ids():

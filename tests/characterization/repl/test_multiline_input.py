@@ -1,8 +1,9 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
 
 import tunacode.cli.repl as repl_mod
+
 
 @pytest.mark.asyncio
 async def test_repl_multiline_input_handling():
@@ -14,13 +15,14 @@ async def test_repl_multiline_input_handling():
     state_manager.session.show_thoughts = False
 
     # Patch UI and agent
-    with patch.object(repl_mod.ui, "muted", new=AsyncMock()), \
-         patch.object(repl_mod.ui, "success", new=AsyncMock()), \
-         patch.object(repl_mod.ui, "line", new=AsyncMock()), \
-         patch.object(repl_mod.agent, "get_or_create_agent") as get_agent, \
-         patch.object(repl_mod.ui, "info", new=AsyncMock()), \
-         patch.object(repl_mod.ui, "warning", new=AsyncMock()):
-
+    with (
+        patch.object(repl_mod.ui, "muted", new=AsyncMock()),
+        patch.object(repl_mod.ui, "success", new=AsyncMock()),
+        patch.object(repl_mod.ui, "line", new=AsyncMock()),
+        patch.object(repl_mod.agent, "get_or_create_agent") as get_agent,
+        patch.object(repl_mod.ui, "info", new=AsyncMock()),
+        patch.object(repl_mod.ui, "warning", new=AsyncMock()),
+    ):
         agent_instance = MagicMock()
         mcp_context = AsyncMock()
         mcp_context.__aenter__ = AsyncMock(return_value=None)
@@ -30,11 +32,14 @@ async def test_repl_multiline_input_handling():
 
         # Simulate multiline_input returning a multi-line string, then "exit"
         inputs = ["first line\nsecond line\nthird line", "exit"]
+
         async def fake_multiline_input(*a, **kw):
             return inputs.pop(0)
-        with patch.object(repl_mod.ui, "multiline_input", new=fake_multiline_input), \
-             patch("tunacode.cli.repl.get_app") as get_app:
 
+        with (
+            patch.object(repl_mod.ui, "multiline_input", new=fake_multiline_input),
+            patch("tunacode.cli.repl.get_app") as get_app,
+        ):
             bg_task = MagicMock()
             bg_task.done.return_value = True
             get_app.return_value.create_background_task = MagicMock(return_value=bg_task)
