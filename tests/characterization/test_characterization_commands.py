@@ -4,10 +4,12 @@ Characterization tests for commands.py
 These tests aim to capture and document the current behavior of the commands module, providing a safety net for future refactoring.
 """
 
-import pytest
 from unittest import mock
+
+import pytest
+
 from tunacode.cli import commands
-import asyncio
+
 
 # Example: Test CommandFactory creation and dependency injection
 class TestCommandFactory:
@@ -28,13 +30,14 @@ class TestCommandFactory:
         cmd = factory.create_command(commands.CompactCommand)
         assert isinstance(cmd, commands.CompactCommand)
 
+
 # Example: Test CommandRegistry registration and lookup
 class TestCommandRegistry:
     def test_register_and_lookup(self):
         registry = commands.CommandRegistry()
         cmd = commands.YoloCommand()
         registry.register(cmd)
-        # Current behavior: is_command converts input to lowercase, 
+        # Current behavior: is_command converts input to lowercase,
         # but primary name is registered as-is, so "yolo" should match
         assert registry.is_command("yolo")
         # But aliases are registered in lowercase
@@ -60,18 +63,18 @@ class TestCommandRegistry:
         assert registry.is_command("update")
         assert registry.is_command("thoughts")
 
+
 # Test individual command behaviors
 @pytest.mark.asyncio
 class TestCommandBehaviors:
-    
     async def test_model_command_no_args(self, capsys):
         """Test ModelCommand with no arguments shows current model."""
         cmd = commands.ModelCommand()
         context = mock.Mock()
         context.state_manager.session.current_model = "openai:gpt-4"
-        
+
         # Mock the UI info function to capture output
-        with mock.patch('tunacode.ui.console.info') as mock_info:
+        with mock.patch("tunacode.ui.console.info") as mock_info:
             await cmd.execute([], context)
             # Check that info was called with the current model
             mock_info.assert_called()
@@ -81,11 +84,11 @@ class TestCommandBehaviors:
         cmd = commands.ModelCommand()
         context = mock.Mock()
         context.state_manager.session.current_model = "openai:gpt-3.5"
-        
+
         # Mock the UI warning function
-        with mock.patch('tunacode.ui.console.warning') as mock_warning:
+        with mock.patch("tunacode.ui.console.warning"):
             result = await cmd.execute(["anthropic:claude-3"], context)
-        
+
         # Model should be updated
         assert context.state_manager.session.current_model == "anthropic:claude-3"
         assert result is None  # No restart needed
@@ -94,9 +97,9 @@ class TestCommandBehaviors:
         """Test ModelCommand with invalid model format."""
         cmd = commands.ModelCommand()
         context = mock.Mock()
-        
+
         # Mock the UI error function
-        with mock.patch('tunacode.ui.console.error') as mock_error:
+        with mock.patch("tunacode.ui.console.error") as mock_error:
             await cmd.execute(["gpt-4"], context)  # Missing provider prefix
             # Check that error was called about missing provider
             mock_error.assert_called_once()
@@ -107,30 +110,30 @@ class TestCommandBehaviors:
         cmd = commands.YoloCommand()
         context = mock.Mock()
         context.state_manager.session.yolo = False
-        
+
         # Mock the UI functions
-        with mock.patch('tunacode.ui.console.success') as mock_success:
-            with mock.patch('tunacode.ui.console.info') as mock_info:
+        with mock.patch("tunacode.ui.console.success"):
+            with mock.patch("tunacode.ui.console.info"):
                 await cmd.execute([], context)
-        
+
         # Should toggle yolo mode
-        assert context.state_manager.session.yolo == True
-        
+        assert context.state_manager.session.yolo
+
         # Toggle back
-        with mock.patch('tunacode.ui.console.info') as mock_info:
+        with mock.patch("tunacode.ui.console.info"):
             await cmd.execute([], context)
-        assert context.state_manager.session.yolo == False
+        assert not context.state_manager.session.yolo
 
     async def test_clear_command(self):
         """Test ClearCommand clears message history."""
         cmd = commands.ClearCommand()
         context = mock.Mock()
         context.state_manager.session.messages = ["msg1", "msg2", "msg3"]
-        
+
         # Mock the UI clear function
-        with mock.patch('tunacode.ui.console.clear') as mock_clear:
+        with mock.patch("tunacode.ui.console.clear"):
             result = await cmd.execute([], context)
-        
+
         # Should clear messages and command returns None
         assert context.state_manager.session.messages == []
         assert result is None
@@ -139,9 +142,9 @@ class TestCommandBehaviors:
         """Test BranchCommand with no arguments shows usage."""
         cmd = commands.BranchCommand()
         context = mock.Mock()
-        
+
         # Mock the UI error function
-        with mock.patch('tunacode.ui.console.error') as mock_error:
+        with mock.patch("tunacode.ui.console.error") as mock_error:
             await cmd.execute([], context)
             # Check that error was called with usage info
             mock_error.assert_called_once()
@@ -153,29 +156,27 @@ class TestCommandBehaviors:
         cmd = commands.ThoughtsCommand()
         context = mock.Mock()
         context.state_manager.session.show_thoughts = False
-        
+
         # Turn on
         await cmd.execute(["on"], context)
-        assert context.state_manager.session.show_thoughts == True
-        
+        assert context.state_manager.session.show_thoughts
+
         # Turn off
         await cmd.execute(["off"], context)
-        assert context.state_manager.session.show_thoughts == False
-        
+        assert not context.state_manager.session.show_thoughts
+
         # Toggle (no args)
         await cmd.execute([], context)
-        assert context.state_manager.session.show_thoughts == True
+        assert context.state_manager.session.show_thoughts
 
     async def test_iterations_command_show_current(self, capsys):
         """Test IterationsCommand shows current iteration limit."""
         cmd = commands.IterationsCommand()
         context = mock.Mock()
-        context.state_manager.session.user_config = {
-            "settings": {"max_iterations": 20}
-        }
-        
+        context.state_manager.session.user_config = {"settings": {"max_iterations": 20}}
+
         # Mock the UI info function
-        with mock.patch('tunacode.ui.console.info') as mock_info:
+        with mock.patch("tunacode.ui.console.info") as mock_info:
             await cmd.execute([], context)
             # Check that info was called with the iteration limit
             mock_info.assert_called()
@@ -185,12 +186,10 @@ class TestCommandBehaviors:
         """Test IterationsCommand updates iteration limit."""
         cmd = commands.IterationsCommand()
         context = mock.Mock()
-        context.state_manager.session.user_config = {
-            "settings": {"max_iterations": 20}
-        }
-        
+        context.state_manager.session.user_config = {"settings": {"max_iterations": 20}}
+
         result = await cmd.execute(["30"], context)
-        
+
         # Should update the limit
         assert context.state_manager.session.user_config["settings"]["max_iterations"] == 30
         assert result is None
@@ -201,10 +200,10 @@ class TestCommandBehaviors:
         registry.discover_commands()  # Changed from auto_discover to discover_commands
         cmd = commands.HelpCommand(registry)
         context = mock.Mock()
-        
+
         await cmd.execute([], context)
         captured = capsys.readouterr()
-        
+
         # Should display available commands table (uses rich box drawing)
         assert "Available Commands" in (captured.out + captured.err)
         # Verify some command names are present
@@ -215,18 +214,22 @@ class TestCommandBehaviors:
         """Test UpdateCommand when installation method not detected."""
         cmd = commands.UpdateCommand()
         context = mock.Mock()
-        
+
         # Mock subprocess to simulate no installation found
-        with mock.patch('subprocess.run') as mock_run:
+        with mock.patch("subprocess.run") as mock_run:
             mock_run.return_value.returncode = 1
             mock_run.return_value.stdout = ""
-            
+
             # Mock the UI muted function to capture output
-            with mock.patch('tunacode.ui.console.muted') as mock_muted, \
-                 mock.patch('tunacode.ui.console.error') as mock_error:
+            with (
+                mock.patch("tunacode.ui.console.muted") as mock_muted,
+                mock.patch("tunacode.ui.console.error") as mock_error,
+            ):
                 await cmd.execute([], context)
                 # One of the UI functions should have been called noting manual options
-                output = "".join(str(c) for c in (*mock_muted.call_args_list, *mock_error.call_args_list))
+                output = "".join(
+                    str(c) for c in (*mock_muted.call_args_list, *mock_error.call_args_list)
+                )
                 assert "pip" in output or "pipx" in output
 
     async def test_compact_command_callback(self):
@@ -237,17 +240,17 @@ class TestCommandBehaviors:
         mock_result.result = mock.Mock()
         mock_result.result.output = "Test summary of the conversation"
         callback.return_value = mock_result
-        
+
         cmd = commands.CompactCommand(callback)
         context = mock.Mock()
         context.state_manager.session.messages = ["msg1", "msg2"]
-        
+
         # Mock the UI functions
-        with mock.patch('tunacode.ui.panels.panel') as mock_panel:
-            with mock.patch('tunacode.ui.console.info') as mock_info:
-                with mock.patch('tunacode.ui.console.success') as mock_success:
+        with mock.patch("tunacode.ui.panels.panel"):
+            with mock.patch("tunacode.ui.console.info"):
+                with mock.patch("tunacode.ui.console.success"):
                     result = await cmd.execute([], context)
-        
+
         # Should call the callback
         callback.assert_called_once()
         # Result is None, not "compact"
@@ -259,41 +262,42 @@ class TestCommandBehaviors:
         context = mock.Mock()
         context.state_manager.session.messages = ["msg1", "msg2"]
         context.state_manager.session.current_model = "test-model"
-        
+
         # Mock the UI dump_messages function
-        with mock.patch('tunacode.ui.console.dump_messages') as mock_dump:
+        with mock.patch("tunacode.ui.console.dump_messages") as mock_dump:
             await cmd.execute([], context)
             # Check that dump_messages was called with session.messages list
             mock_dump.assert_called_once_with(context.state_manager.session.messages)
+
 
 # Test CommandSpec properties
 class TestCommandSpec:
     def test_simple_command_properties(self):
         """Test that SimpleCommand correctly uses CommandSpec."""
         cmd = commands.YoloCommand()
-        
+
         assert cmd.name == "yolo"
         assert "/yolo" in cmd.aliases
         assert cmd.category == commands.CommandCategory.DEVELOPMENT
         assert "confirmation" in cmd.description.lower()
 
+
 # Test edge cases and error handling
 @pytest.mark.asyncio
 class TestCommandEdgeCases:
-    
     async def test_branch_command_creates_branch(self):
         """Test BranchCommand creates git branch."""
         cmd = commands.BranchCommand()
         context = mock.Mock()
-        
-        with mock.patch('subprocess.run') as mock_run:
+
+        with mock.patch("subprocess.run") as mock_run:
             # Simulate successful git commands
             mock_run.return_value.returncode = 0
-            
+
             # Mock the UI success function
-            with mock.patch('tunacode.ui.console.success') as mock_success:
+            with mock.patch("tunacode.ui.console.success"):
                 result = await cmd.execute(["feature-branch"], context)
-            
+
             # Should have called git checkout -b
             calls = mock_run.call_args_list
             assert any("checkout" in str(call) and "-b" in str(call) for call in calls)
@@ -304,22 +308,25 @@ class TestCommandEdgeCases:
         """Test FixCommand runs black formatter."""
         cmd = commands.FixCommand()
         context = mock.Mock()
-        
+
         context.state_manager = mock.Mock()
         context.state_manager.session = mock.Mock()
         context.state_manager.session.messages = []
-        
+
         # In current implementation FixCommand no longer formats with black; it only
         # patches orphaned tool messages and logs status. Verify it completes without
         # invoking subprocesses.
-        with mock.patch('subprocess.Popen') as mock_popen, \
-             mock.patch('tunacode.ui.console.info') as mock_info, \
-             mock.patch('tunacode.ui.console.success') as mock_success:
+        with (
+            mock.patch("subprocess.Popen") as mock_popen,
+            mock.patch("tunacode.ui.console.info") as mock_info,
+            mock.patch("tunacode.ui.console.success") as mock_success,
+        ):
             await cmd.execute([], context)
 
             # Ensure no subprocess was spawned
             mock_popen.assert_not_called()
             # One of the UI functions should have been called to inform the user
             assert mock_info.called or mock_success.called
+
 
 # Note: These are characterization tests. If you change the underlying implementation and these tests fail, update the tests only if you intend to change the behavior!

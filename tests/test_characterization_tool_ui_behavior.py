@@ -16,13 +16,21 @@ Key behaviors captured:
 - Unknown/custom tools are treated as requiring confirmation
 """
 
-from unittest.mock import AsyncMock, Mock, call, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from tunacode.cli.repl import _tool_confirm, _tool_handler
-from tunacode.constants import (TOOL_BASH, TOOL_GLOB, TOOL_GREP, TOOL_LIST_DIR, TOOL_READ_FILE,
-                                TOOL_RUN_COMMAND, TOOL_UPDATE_FILE, TOOL_WRITE_FILE)
+from tunacode.constants import (
+    TOOL_BASH,
+    TOOL_GLOB,
+    TOOL_GREP,
+    TOOL_LIST_DIR,
+    TOOL_READ_FILE,
+    TOOL_RUN_COMMAND,
+    TOOL_UPDATE_FILE,
+    TOOL_WRITE_FILE,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -49,7 +57,7 @@ pytestmark = pytest.mark.asyncio
 
 class TestToolUICharacterization:
     """Golden-master tests for tool UI behavior.
-    
+
     These tests use mocking to isolate and capture the exact UI behavior
     when tools are executed. The tests verify:
     1. Which UI messages are shown (or not shown)
@@ -60,7 +68,7 @@ class TestToolUICharacterization:
 
     def setup_method(self):
         """Set up test fixtures.
-        
+
         Creates a mock StateManager with all the necessary attributes
         that the tool handlers expect. This includes:
         - session.yolo: Controls whether to skip all confirmations
@@ -79,13 +87,13 @@ class TestToolUICharacterization:
 
     async def test_read_only_tools_no_ui_output(self):
         """Capture behavior: read-only tools produce no UI output but still call run_in_terminal.
-        
+
         This test verifies that read-only tools (read_file, grep, list_dir, glob):
         1. Do NOT show the "Tool(tool_name)" info message
         2. Still call run_in_terminal (for consistency in the code flow)
         3. The confirm_func inside run_in_terminal returns False immediately
         4. Spinner is stopped and restarted around the operation
-        
+
         This behavior was implemented to reduce UI clutter for safe, read-only operations
         while maintaining the same code path for all tools.
         """
@@ -126,13 +134,13 @@ class TestToolUICharacterization:
 
     async def test_write_tools_show_ui_output(self):
         """Capture behavior: write/execute tools show Tool info and confirmation.
-        
+
         This test verifies that write/execute tools (write_file, update_file, bash, run_command):
         1. DO show the "Tool(tool_name)" info message
         2. Call run_in_terminal for user confirmation
         3. The confirm_func presents the full confirmation dialog
         4. Spinner lifecycle is maintained
-        
+
         These tools modify files or execute commands, so they require explicit
         user confirmation for safety (unless in yolo mode).
         """
@@ -171,13 +179,13 @@ class TestToolUICharacterization:
 
     async def test_yolo_mode_behavior(self):
         """Capture behavior: yolo mode skips confirmations and info messages for all tools.
-        
+
         YOLO (You Only Live Once) mode is activated with /yolo command and:
         1. Skips ALL confirmation dialogs
         2. Skips the "Tool()" info messages for ALL tools (even write/execute)
         3. Makes the tool execution flow much faster but less safe
         4. Affects both read-only and write/execute tools equally
-        
+
         This test verifies that in yolo mode, even dangerous write operations
         proceed without any UI interaction.
         """
@@ -232,15 +240,15 @@ class TestToolUICharacterization:
 
     async def test_tool_ignore_list_behavior(self):
         """Capture behavior: tools in ignore list don't show info and skip confirmation.
-        
+
         The tool_ignore list is populated when user selects option 2 during confirmation:
         "Yes, and don't ask again for commands like this"
-        
+
         Tools in this list behave like they're in yolo mode:
         1. No "Tool()" info message
         2. No confirmation dialog
         3. run_in_terminal is still called but returns immediately
-        
+
         This allows users to selectively skip confirmations for specific tools
         they trust, without enabling full yolo mode.
         """
@@ -271,16 +279,16 @@ class TestToolUICharacterization:
 
     async def test_unknown_tool_behavior(self):
         """Capture behavior: unknown tools are treated as requiring confirmation.
-        
+
         When the system encounters a tool name that's not in the predefined lists
         (READ_ONLY_TOOLS, WRITE_TOOLS, EXECUTE_TOOLS), it defaults to the safe
         behavior of requiring confirmation.
-        
+
         This ensures that:
         1. New tools default to safe behavior
         2. MCP (Model Context Protocol) tools get proper confirmation
         3. Custom tools from extensions are handled safely
-        
+
         The unknown tool gets the full treatment: info message + confirmation dialog.
         """
         with patch("tunacode.cli.repl.ui.info") as mock_info:
@@ -307,18 +315,18 @@ class TestToolUICharacterization:
 
     async def test_tool_confirm_skip_for_read_only(self):
         """Capture behavior: _tool_confirm also skips for read-only tools.
-        
+
         This tests the _tool_confirm function directly (as opposed to _tool_handler).
         The _tool_confirm function is an alternative entry point that:
         1. Checks if tool needs confirmation
         2. If yes, shows the confirmation UI
         3. If no (read-only tools), returns immediately
-        
+
         For read-only tools:
         - No confirmation UI is shown
         - Spinner is not manipulated (no stop/start)
         - Function returns without any user interaction
-        
+
         Note: MCP tools might still get logged even when skipping confirmation.
         """
         with patch("tunacode.cli.repl._tool_ui") as mock_tool_ui:
@@ -340,16 +348,16 @@ class TestToolUICharacterization:
 
     async def test_mcp_tool_logging_behavior(self):
         """Capture behavior: MCP tools might get logged even when skipping confirmation.
-        
+
         MCP (Model Context Protocol) tools are external tools that aren't built into
         TunaCode. Even when they're read-only and skip confirmation, they still get
         logged so users can see what external tools are being used.
-        
+
         This test simulates:
         1. Making read_file appear as an MCP tool (not in internal_tools list)
         2. Verifying that even though confirmation is skipped (read-only)
         3. The MCP tool still gets logged via log_mcp
-        
+
         This provides transparency about external tool usage while maintaining
         the streamlined UI for read-only operations.
         """
@@ -380,15 +388,15 @@ class TestToolUICharacterization:
 
     async def test_confirmation_abort_behavior(self):
         """Capture behavior: user abort during confirmation.
-        
+
         When a user is presented with a confirmation dialog and chooses to abort
         (option 3: "No, and tell Claude what to do differently"), the system:
-        
+
         1. Shows the initial "Tool()" info message
         2. Calls run_in_terminal which returns True (abort signal)
         3. Raises UserAbortError to stop execution
         4. Calls patch_tool_messages to clean up any orphaned tool calls
-        
+
         This ensures that when users abort, the system state remains clean and
         the LLM gets proper feedback about the aborted operation.
         """
@@ -421,16 +429,16 @@ class TestToolUICharacterization:
 
     async def test_spinner_lifecycle(self):
         """Capture behavior: spinner stops during interaction and restarts after.
-        
+
         The spinner is a visual indicator that shows the AI is "thinking" or processing.
         During tool confirmations, the spinner must be stopped so users can interact
         with the confirmation dialog, then restarted after the interaction.
-        
+
         This test verifies the spinner lifecycle:
         1. Spinner.stop() is called BEFORE any user interaction
         2. User interaction happens (confirmation dialog)
         3. Spinner.start() is called AFTER interaction completes
-        
+
         This ensures a smooth UI experience where the spinner doesn't interfere
         with user input and resumes to show ongoing processing.
         """

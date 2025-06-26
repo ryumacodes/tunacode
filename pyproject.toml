@@ -38,9 +38,7 @@ tunacode = "tunacode.cli.main:app"
 [project.optional-dependencies]
 dev = [
     "build",
-    "black", 
-    "flake8",
-    "isort",
+    "ruff",
     "pytest",
     "pytest-cov",
     "pytest-asyncio",
@@ -51,9 +49,27 @@ dev = [
 Homepage = "https://github.com/larock22/tunacode"
 Repository = "https://github.com/larock22/tunacode"
 
-[tool.black]
+[tool.ruff]
 line-length = 100
 
-[tool.isort]
-line_length = 100
-profile = "black"
+[tool.ruff.lint]
+extend-select = ["I"]
+ignore = ["E203", "E501"]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "build",
+    "dist",
+    "venv",
+]

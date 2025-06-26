@@ -12,11 +12,9 @@ Uses real tool logic, mocks LLM at the agent boundary, and uses tmp_path for fil
 """
 
 import pytest
-import asyncio
-from unittest.mock import patch, AsyncMock
 
-from tunacode.core.state import StateManager
-from tunacode.tools import write_file, list_dir, read_file, update_file
+from tunacode.tools import list_dir, read_file, update_file, write_file
+
 
 @pytest.mark.asyncio
 async def test_multi_tool_operations(tmp_path, monkeypatch):
@@ -53,6 +51,7 @@ async def test_multi_tool_operations(tmp_path, monkeypatch):
     read_result2 = await read_file.read_file(str(file_path))
     assert isinstance(read_result2, str)
     assert read_result2 == updated_content
+
 
 """
 Notes:

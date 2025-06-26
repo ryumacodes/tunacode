@@ -1,5 +1,5 @@
-import pytest
-from tunacode.core.state import StateManager, SessionState
+from tunacode.core.state import StateManager
+
 
 def test_no_permission_fields_present():
     """
@@ -11,6 +11,7 @@ def test_no_permission_fields_present():
     permission_fields = [f for f in session.__dataclass_fields__ if "permission" in f]
     assert permission_fields == []
 
+
 def test_no_permission_state_transitions():
     """
     Characterization: No permission state transitions or inheritance logic present.
@@ -19,5 +20,6 @@ def test_no_permission_state_transitions():
     # No methods or fields for permission transitions
     assert not hasattr(sm.session, "set_permission")
     assert not hasattr(sm.session, "inherit_permission")
+
 
 # Quirk: Permission state and inheritance not implemented in current StateManager.

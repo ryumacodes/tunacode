@@ -1,7 +1,9 @@
 """Characterization tests for CodeIndex search operations."""
 
 import pytest
+
 from tunacode.core.code_index import CodeIndex
+
 
 @pytest.fixture
 def populated_index(tmp_path):
@@ -14,34 +16,41 @@ def populated_index(tmp_path):
     index.build_index()
     return index
 
+
 def test_lookup_exact_basename(populated_index):
     results = populated_index.lookup("foo.py")
     # Current behavior: no files indexed due to tmp path
     assert results == []
+
 
 def test_lookup_partial_basename(populated_index):
     results = populated_index.lookup("foo")
     # Current behavior: no files indexed due to tmp path
     assert results == []
 
+
 def test_lookup_symbol_class(populated_index):
     results = populated_index.lookup("Foo")
     # Current behavior: no files indexed due to tmp path
     assert results == []
+
 
 def test_lookup_symbol_function(populated_index):
     results = populated_index.lookup("bar")
     # Current behavior: no files indexed due to tmp path
     assert results == []
 
+
 def test_lookup_file_type_filter(populated_index):
     results = populated_index.lookup("foo", file_type=".py")
     assert all(str(p).endswith(".py") for p in results)
+
 
 def test_lookup_path_component(populated_index):
     results = populated_index.lookup("README")
     # Current behavior: no files indexed due to tmp path
     assert results == []
+
 
 def test_find_imports(populated_index):
     results = populated_index.find_imports("os")
@@ -49,6 +58,7 @@ def test_find_imports(populated_index):
     assert results == []
     results = populated_index.find_imports("sys")
     assert results == []
+
 
 def test_lookup_nonexistent(populated_index):
     results = populated_index.lookup("notfound")

@@ -1,7 +1,9 @@
 """Characterization tests for CodeIndex symbol extraction."""
 
 import pytest
+
 from tunacode.core.code_index import CodeIndex
+
 
 @pytest.fixture
 def pyfile(tmp_path):
@@ -9,10 +11,12 @@ def pyfile(tmp_path):
         file = tmp_path / name
         file.write_text(content)
         return file
+
     return _create
 
+
 def test_extracts_classes_and_functions(tmp_path, pyfile):
-    code = '''
+    code = """
 import os
 from sys import path
 class Foo:
@@ -23,7 +27,7 @@ def bar():
     pass
 def _private():
     pass
-'''
+"""
     f = pyfile("mod.py", code)
     index = CodeIndex(root_dir=str(tmp_path))
     index._index_python_file(f, f.relative_to(tmp_path))
@@ -34,12 +38,13 @@ def _private():
     assert "bar" in index._function_definitions
     assert "_private" in index._function_definitions
 
+
 def test_extracts_imports(tmp_path, pyfile):
-    code = '''
+    code = """
 import os
 from sys import path
 from foo.bar import baz
-'''
+"""
     f = pyfile("mod.py", code)
     index = CodeIndex(root_dir=str(tmp_path))
     index._index_python_file(f, f.relative_to(tmp_path))
@@ -50,6 +55,7 @@ from foo.bar import baz
     assert "os" in imports
     assert "sys" in imports
     assert "foo" in imports
+
 
 def test_symbol_extraction_error_handling(tmp_path, pyfile, caplog):
     # Should not raise on bad file
