@@ -12,6 +12,22 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator, List, Optional, Tuple
 
+from pydantic_ai import Agent
+
+# Import streaming types with fallback for older versions
+try:
+    from pydantic_ai.messages import (
+        PartDeltaEvent,
+        TextPartDelta,
+    )
+
+    STREAMING_AVAILABLE = True
+except ImportError:
+    # Fallback for older pydantic-ai versions
+    PartDeltaEvent = None
+    TextPartDelta = None
+    STREAMING_AVAILABLE = False
+
 from tunacode.constants import READ_ONLY_TOOLS
 from tunacode.core.state import StateManager
 from tunacode.services.mcp import get_mcp_servers
@@ -197,6 +213,7 @@ async def _process_node(
     tool_callback: Optional[ToolCallback],
     state_manager: StateManager,
     tool_buffer: Optional[ToolBuffer] = None,
+    streaming_callback: Optional[callable] = None,
 ):
     from tunacode.ui import console as ui
     from tunacode.utils.token_counter import estimate_tokens
@@ -215,6 +232,16 @@ async def _process_node(
 
     if hasattr(node, "model_response"):
         state_manager.session.messages.append(node.model_response)
+
+        # Stream content to callback if provided
+        # Use this as fallback when true token streaming is not available
+        if streaming_callback and not STREAMING_AVAILABLE:
+            for part in node.model_response.parts:
+                if hasattr(part, "content") and isinstance(part.content, str):
+                    content = part.content.strip()
+                    if content and not content.startswith('{"thought"'):
+                        # Stream non-JSON content (actual response content)
+                        await streaming_callback(content)
 
         # Enhanced display when thoughts are enabled
         if state_manager.session.show_thoughts:
@@ -683,6 +710,7 @@ async def process_request(
     message: str,
     state_manager: StateManager,
     tool_callback: Optional[ToolCallback] = None,
+    streaming_callback: Optional[callable] = None,
 ) -> AgentRun:
     agent = get_or_create_agent(model, state_manager)
     mh = state_manager.session.messages.copy()
@@ -723,7 +751,19 @@ async def process_request(
         i = 0
         async for node in agent_run:
             state_manager.session.current_iteration = i + 1
-            await _process_node(node, tool_callback, state_manager, tool_buffer)
+
+            # Handle token-level streaming for model request nodes
+            if streaming_callback and STREAMING_AVAILABLE and Agent.is_model_request_node(node):
+                async with node.stream(agent_run.ctx) as request_stream:
+                    async for event in request_stream:
+                        if isinstance(event, PartDeltaEvent) and isinstance(
+                            event.delta, TextPartDelta
+                        ):
+                            # Stream individual token deltas
+                            if event.delta.content_delta:
+                                await streaming_callback(event.delta.content_delta)
+
+            await _process_node(node, tool_callback, state_manager, tool_buffer, streaming_callback)
             if hasattr(node, "result") and node.result and hasattr(node.result, "output"):
                 if node.result.output:
                     response_state.has_user_response = True
