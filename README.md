@@ -33,7 +33,7 @@ Choose your AI provider and set your API key:
 # OpenAI
 tunacode --model "openai:gpt-4o" --key "sk-your-openai-key"
 
-# Anthropic Claude  
+# Anthropic Claude
 tunacode --model "anthropic:claude-3.5-sonnet" --key "sk-ant-your-anthropic-key"
 
 # OpenRouter (100+ models)
@@ -45,13 +45,14 @@ Your config is saved to `~/.config/tunacode.json` (edit directly with `nvim ~/.c
 ### Recommended Models
 
 Based on extensive testing, these models provide the best performance:
+
 - `google/gemini-2.5-pro` - Excellent for complex reasoning
 - `openai/gpt-4.1` - Strong general-purpose model
 - `deepseek/deepseek-r1-0528` - Great for code generation
 - `openai/gpt-4.1-mini` - Fast and cost-effective
 - `anthropic/claude-4-sonnet-20250522` - Superior context handling
 
-*Note: Formal evaluations coming soon. Any model can work, but these have shown the best results in practice.*
+_Note: Formal evaluations coming soon. Any model can work, but these have shown the best results in practice._
 
 ## Start Coding
 
@@ -61,16 +62,16 @@ tunacode
 
 ## Basic Commands
 
-| Command | Description |
-| ------- | ----------- |
-| `/help` | Show all commands |
-| `/model <provider:name>` | Switch model |
-| `/clear` | Clear message history |
-| `/compact` | Summarize conversation |
-| `/branch <name>` | Create Git branch |
-| `/yolo` | Skip confirmations |
-| `!<command>` | Run shell command |
-| `exit` | Exit TunaCode |
+| Command                  | Description            |
+| ------------------------ | ---------------------- |
+| `/help`                  | Show all commands      |
+| `/model <provider:name>` | Switch model           |
+| `/clear`                 | Clear message history  |
+| `/compact`               | Summarize conversation |
+| `/branch <name>`         | Create Git branch      |
+| `/yolo`                  | Skip confirmations     |
+| `!<command>`             | Run shell command      |
+| `exit`                   | Exit TunaCode          |
 
 ## Performance
 
@@ -85,11 +86,12 @@ Multiple file reads, directory listings, and searches execute concurrently using
 - **Streaming UI**: Currently working on implementing streaming responses for better user experience
 - **Bug Fixes**: Actively addressing issues - please report any bugs you encounter!
 
-*Note: While the tool is fully functional, we're focusing on stability and core features before optimizing for speed.*
+_Note: While the tool is fully functional, we're focusing on stability and core features before optimizing for speed._
 
 ## Safety First
 
 ⚠️ **Important**: TunaCode can modify your codebase. Always:
+
 - Use Git branches before making changes
 - Review file modifications before confirming
 - Keep backups of important work
@@ -110,4 +112,3 @@ Multiple file reads, directory listings, and searches execute concurrently using
 ---
 
 MIT License - see [LICENSE](LICENSE) file
-
