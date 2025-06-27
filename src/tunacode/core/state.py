@@ -42,6 +42,10 @@ class SessionState:
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     iteration_count: int = 0
     current_iteration: int = 0
+    # Track streaming state to prevent spinner conflicts
+    is_streaming_active: bool = False
+    # Track streaming panel reference for tool handler access
+    streaming_panel: Optional[Any] = None
 
 
 class StateManager:

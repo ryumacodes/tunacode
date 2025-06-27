@@ -24,6 +24,8 @@ class TestToolHandlerUIMessages:
         state_manager.session.spinner = Mock()
         state_manager.session.spinner.stop = Mock()
         state_manager.session.spinner.start = Mock()
+        state_manager.session.is_streaming_active = False
+        state_manager.session.streaming_panel = None
 
         # Mock UI functions
         with patch("tunacode.cli.repl.ui.info") as mock_info:
@@ -59,6 +61,8 @@ class TestToolHandlerUIMessages:
         state_manager.session.spinner = Mock()
         state_manager.session.spinner.stop = Mock()
         state_manager.session.spinner.start = Mock()
+        state_manager.session.is_streaming_active = False
+        state_manager.session.streaming_panel = None
 
         # Mock UI functions
         with patch("tunacode.cli.repl.ui.info") as mock_info:
@@ -91,6 +95,8 @@ class TestToolHandlerUIMessages:
         state_manager.session.spinner = Mock()
         state_manager.session.spinner.stop = Mock()
         state_manager.session.spinner.start = Mock()
+        state_manager.session.is_streaming_active = False
+        state_manager.session.streaming_panel = None
 
         # Mock UI functions
         with patch("tunacode.cli.repl.ui.info") as mock_info:

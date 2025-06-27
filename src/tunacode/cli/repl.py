@@ -70,8 +70,9 @@ async def _tool_confirm(tool_call, node, state_manager: StateManager):
             await _tool_ui.log_mcp(title, args)
         return
 
-    # Stop spinner during user interaction
-    state_manager.session.spinner.stop()
+    # Stop spinner during user interaction (only if not streaming)
+    if not state_manager.session.is_streaming_active and state_manager.session.spinner:
+        state_manager.session.spinner.stop()
 
     # Create confirmation request
     request = tool_handler.create_confirmation_request(tool_call.tool_name, args)
@@ -84,7 +85,10 @@ async def _tool_confirm(tool_call, node, state_manager: StateManager):
         raise UserAbortError("User aborted.")
 
     await ui.line()  # Add line after user input
-    state_manager.session.spinner.start()
+
+    # Restart spinner (only if not streaming)
+    if not state_manager.session.is_streaming_active and state_manager.session.spinner:
+        state_manager.session.spinner.start()
 
 
 async def _tool_handler(part, node, state_manager: StateManager):
@@ -96,7 +100,19 @@ async def _tool_handler(part, node, state_manager: StateManager):
     if tool_handler.should_confirm(part.tool_name):
         await ui.info(f"Tool({part.tool_name})")
 
-    state_manager.session.spinner.stop()
+    # Stop spinner only if not streaming
+    if not state_manager.session.is_streaming_active and state_manager.session.spinner:
+        state_manager.session.spinner.stop()
+
+    # Track if we need to stop/restart streaming panel
+    streaming_panel = None
+    if state_manager.session.is_streaming_active and hasattr(
+        state_manager.session, "streaming_panel"
+    ):
+        streaming_panel = state_manager.session.streaming_panel
+        # Stop the streaming panel to prevent UI interference during confirmation
+        if streaming_panel and tool_handler.should_confirm(part.tool_name):
+            await streaming_panel.stop()
 
     try:
         args = _parse_args(part.args)
@@ -128,7 +144,13 @@ async def _tool_handler(part, node, state_manager: StateManager):
         patch_tool_messages("Operation aborted by user.", state_manager)
         raise
     finally:
-        state_manager.session.spinner.start()
+        # Restart streaming panel if it was stopped
+        if streaming_panel and tool_handler.should_confirm(part.tool_name):
+            await streaming_panel.start()
+
+        # Restart spinner only if not streaming
+        if not state_manager.session.is_streaming_active and state_manager.session.spinner:
+            state_manager.session.spinner.start()
 
 
 # Initialize command registry
@@ -204,9 +226,15 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             # Stop spinner before starting streaming display (Rich.Live conflict)
             await ui.spinner(False, state_manager.session.spinner, state_manager)
 
+            # Mark that streaming is active to prevent spinner conflicts
+            state_manager.session.is_streaming_active = True
+
             # Use streaming agent processing
             streaming_panel = ui.StreamingAgentPanel()
             await streaming_panel.start()
+
+            # Store streaming panel reference in session for tool handler access
+            state_manager.session.streaming_panel = streaming_panel
 
             try:
 
@@ -222,6 +250,10 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                 )
             finally:
                 await streaming_panel.stop()
+                # Clear streaming panel reference
+                state_manager.session.streaming_panel = None
+                # Mark streaming as inactive
+                state_manager.session.is_streaming_active = False
                 # Don't restart spinner - it will be stopped in the outer finally block anyway
         else:
             # Use normal agent processing
