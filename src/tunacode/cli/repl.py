@@ -278,7 +278,12 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                     and res.result is not None
                     and hasattr(res.result, "output")
                 ):
-                    await ui.agent(res.result.output)
+                    output = res.result.output
+                    # Filter out JSON responses with "thought" field
+                    if isinstance(output, str) and not (
+                        output.strip().startswith('{"thought"') or '"tool_uses"' in output
+                    ):
+                        await ui.agent(output)
                 else:
                     # Fallback: show that the request was processed
                     await ui.muted("Request completed")
