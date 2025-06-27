@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.37] - 2025-06-27
+
+### Added
+
+- **Streaming-first UI with token-level display** (#41)
+  - Real-time character-by-character display using pydantic-ai's streaming API
+  - Rich.Live integration for smooth progressive updates with proper UI coordination
+  - Graceful handling of spinner conflicts during streaming
+  - New `/streaming` command to toggle streaming on/off
+  - Backward compatibility with graceful fallback for older pydantic-ai versions
+  - Streaming enabled by default for better user experience
+  - Token streaming hooks into pydantic-ai's `is_model_request_node()` mechanism
+  - Chunk fallback when token streaming is unavailable
+  - New `StreamingAgentPanel` class in `ui/panels.py`
+  - Enhanced `process_request()` to support streaming callbacks with token deltas
+  - Benefits: Immediate visual feedback during LLM generation, modern UX, responsive interface
+
 ## [0.0.35] - 2025-06-25
 
 ### Security
