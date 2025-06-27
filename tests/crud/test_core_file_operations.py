@@ -10,7 +10,6 @@ import os
 import tempfile
 import time
 from pathlib import Path
-from typing import List
 
 import pytest
 
@@ -41,7 +40,7 @@ class TestCoreFileOperations:
         await write_file("file1.txt", "Hello World")
         await write_file("file2.txt", "Hello Python")
         await write_file("file3.txt", "Goodbye World")
-        
+
         # Search for "Hello"
         results = await grep("Hello", return_format="list")
         assert len(results) == 2
@@ -55,12 +54,12 @@ class TestCoreFileOperations:
         await write_file("script.py", "import os\nprint('Hello')")
         await write_file("app.js", "console.log('Hello');")
         await write_file("doc.txt", "Hello there")
-        
+
         # Search only in Python files
         py_results = await grep("Hello", include_files="*.py", return_format="list")
         assert len(py_results) == 1
         assert "script.py" in py_results[0]
-        
+
         # Search only in JS files
         js_results = await grep("Hello", include_files="*.js", return_format="list")
         assert len(js_results) == 1
@@ -70,16 +69,22 @@ class TestCoreFileOperations:
     async def test_search_regex_patterns(self, temp_workspace):
         """Test searching using regex patterns."""
         # Create files with patterns
-        await write_file("code.py", "def test_function():\n    pass\ndef another_function():\n    pass")
+        await write_file(
+            "code.py", "def test_function():\n    pass\ndef another_function():\n    pass"
+        )
         await write_file("utils.py", "class TestClass:\n    def method(self):\n        pass")
-        
+
         # Search for function definitions
-        func_results = await grep(r"^def \w+", include_files="*.py", return_format="list", use_regex=True)
+        func_results = await grep(
+            r"^def \w+", include_files="*.py", return_format="list", use_regex=True
+        )
         assert len(func_results) == 1
         assert "code.py" in func_results[0]
-        
+
         # Search for class definitions
-        class_results = await grep(r"^class \w+", include_files="*.py", return_format="list", use_regex=True)
+        class_results = await grep(
+            r"^class \w+", include_files="*.py", return_format="list", use_regex=True
+        )
         assert len(class_results) == 1
         assert "utils.py" in class_results[0]
 
@@ -87,11 +92,11 @@ class TestCoreFileOperations:
     async def test_search_case_sensitivity(self, temp_workspace):
         """Test case-sensitive vs case-insensitive search."""
         await write_file("test.txt", "Hello HELLO hello")
-        
+
         # Case-insensitive (default)
         results_insensitive = await grep("hello", case_sensitive=False, return_format="list")
         assert len(results_insensitive) == 1
-        
+
         # Case-sensitive
         results_sensitive = await grep("hello", case_sensitive=True, return_format="list")
         assert len(results_sensitive) == 1  # Still finds the file with lowercase "hello"
@@ -100,7 +105,7 @@ class TestCoreFileOperations:
     async def test_search_empty_results(self, temp_workspace):
         """Test behavior when no matches found."""
         await write_file("test.txt", "Some content")
-        
+
         # Search for non-existent pattern
         results = await grep("NonExistentPattern", return_format="list")
         assert len(results) == 0
@@ -113,7 +118,7 @@ class TestCoreFileOperations:
         """Test reading a basic text file."""
         content = "Line 1\nLine 2\nLine 3"
         await write_file("test.txt", content)
-        
+
         result = await read_file("test.txt")
         assert "Line 1" in result
         assert "Line 2" in result
@@ -127,7 +132,7 @@ class TestCoreFileOperations:
         # Create file with 20 lines
         content = "\n".join([f"Line {i}" for i in range(1, 21)])
         await write_file("test.txt", content)
-        
+
         # Read lines 5-10
         result = await read_file("test.txt", offset=5, limit=5)
         assert "Line 6" in result  # Line numbers are 1-based, so offset 5 starts at line 6
@@ -139,7 +144,7 @@ class TestCoreFileOperations:
     async def test_read_empty_file(self, temp_workspace):
         """Test reading an empty file."""
         await write_file("empty.txt", "")
-        
+
         result = await read_file("empty.txt")
         # Should handle empty file gracefully
         assert isinstance(result, str)
@@ -149,7 +154,10 @@ class TestCoreFileOperations:
         """Test reading a non-existent file."""
         with pytest.raises(Exception) as exc_info:
             await read_file("nonexistent.txt")
-        assert "not found" in str(exc_info.value).lower() or "no such file" in str(exc_info.value).lower()
+        assert (
+            "not found" in str(exc_info.value).lower()
+            or "no such file" in str(exc_info.value).lower()
+        )
 
     # ========== UPDATE TESTS ==========
 
@@ -157,9 +165,9 @@ class TestCoreFileOperations:
     async def test_update_simple_replacement(self, temp_workspace):
         """Test basic string replacement."""
         await write_file("test.txt", "Hello World")
-        
+
         await update_file("test.txt", target="World", patch="Universe")
-        
+
         content = await read_file("test.txt")
         assert "Hello Universe" in content
         assert "World" not in content
@@ -170,15 +178,15 @@ class TestCoreFileOperations:
         original = """def old_function():
     # Old implementation
     return 42"""
-        
+
         await write_file("code.py", original)
-        
+
         await update_file(
             "code.py",
             target="def old_function():\n    # Old implementation\n    return 42",
-            patch="def new_function():\n    # New implementation\n    return 100"
+            patch="def new_function():\n    # New implementation\n    return 100",
         )
-        
+
         content = await read_file("code.py")
         assert "new_function" in content
         assert "return 100" in content
@@ -191,10 +199,10 @@ class TestCoreFileOperations:
     def method(self):
         # TODO: implement this
         pass"""
-        
+
         await write_file("test.py", code)
         await update_file("test.py", target="# TODO: implement this", patch="# Implemented")
-        
+
         content = await read_file("test.py")
         assert "        # Implemented" in content  # Preserves indentation
 
@@ -204,7 +212,7 @@ class TestCoreFileOperations:
     async def test_create_simple_file(self, temp_workspace):
         """Test creating a basic text file."""
         await write_file("new_file.txt", "Hello, World!")
-        
+
         # Verify file exists and has correct content
         assert Path("new_file.txt").exists()
         content = await read_file("new_file.txt")
@@ -214,7 +222,7 @@ class TestCoreFileOperations:
     async def test_create_nested_directories(self, temp_workspace):
         """Test creating files in nested directories."""
         await write_file("src/components/Button.tsx", "export const Button = () => {}")
-        
+
         assert Path("src/components/Button.tsx").exists()
         content = await read_file("src/components/Button.tsx")
         assert "Button" in content
@@ -223,7 +231,7 @@ class TestCoreFileOperations:
     async def test_create_already_exists(self, temp_workspace):
         """Test that creating an existing file fails."""
         await write_file("test.txt", "Original content")
-        
+
         # Attempt to create again should fail
         with pytest.raises(Exception) as exc_info:
             await write_file("test.txt", "New content")
@@ -238,17 +246,17 @@ class TestCoreFileOperations:
         await write_file("config.json", '{"debug": true, "port": 3000}')
         await write_file("settings.json", '{"debug": false, "host": "localhost"}')
         await write_file("app.json", '{"name": "app", "debug": true}')
-        
+
         # Search for files with debug settings
         debug_files = await grep("debug", include_files="*.json", return_format="list")
         assert len(debug_files) == 3
-        
+
         # Read and update each file to disable debug
         for file_path in debug_files:
             content = await read_file(file_path)
             if '"debug": true' in content:
                 await update_file(file_path, target='"debug": true', patch='"debug": false')
-        
+
         # Verify all debug flags are now false
         remaining_debug = await grep('"debug": true', include_files="*.json", return_format="list")
         assert len(remaining_debug) == 0
@@ -269,30 +277,26 @@ class Class_{i}:
     pass"""
             await write_file(filename, content)
             files_created.append(filename)
-        
+
         # Search for all TODOs
         todo_files = await grep("TODO:", include_files="*.py", return_format="list", use_regex=True)
         assert len(todo_files) == 5
-        
+
         # Update all TODOs to mark as implemented
         for file_path in todo_files:
             content = await read_file(file_path)
             # Update function TODOs
             if "TODO: implement" in content:
-                await update_file(file_path, 
-                    target="# TODO: implement", 
-                    patch="# Implemented"
-                )
+                await update_file(file_path, target="# TODO: implement", patch="# Implemented")
             # Update class TODOs
             content = await read_file(file_path)  # Re-read after first update
             if "TODO: add methods" in content:
-                await update_file(file_path, 
-                    target="# TODO: add methods", 
-                    patch="# Methods added"
-                )
-        
+                await update_file(file_path, target="# TODO: add methods", patch="# Methods added")
+
         # Verify no TODOs remain
-        remaining_todos = await grep("TODO:", include_files="*.py", return_format="list", use_regex=True)
+        remaining_todos = await grep(
+            "TODO:", include_files="*.py", return_format="list", use_regex=True
+        )
         assert len(remaining_todos) == 0
 
     @pytest.mark.asyncio
@@ -300,24 +304,28 @@ class Class_{i}:
         """Test batch operations across multiple file types."""
         # Create files of different types
         file_types = {
-            'py': 'print("Python file")',
-            'js': 'console.log("JavaScript file");',
-            'tsx': 'export const Component = () => <div>React</div>;',
-            'json': '{"type": "JSON file"}'
+            "py": 'print("Python file")',
+            "js": 'console.log("JavaScript file");',
+            "tsx": "export const Component = () => <div>React</div>;",
+            "json": '{"type": "JSON file"}',
         }
-        
+
         created_files = []
         for ext, content in file_types.items():
             for i in range(3):
                 filename = f"file_{i}.{ext}"
                 await write_file(filename, f"// File number {i}\n{content}")
                 created_files.append(filename)
-        
+
         # Search across different file types
-        py_files = await grep("file", include_files="*.py", return_format="list", case_sensitive=False)
-        js_files = await grep("file", include_files="*.js", return_format="list", case_sensitive=False)
+        py_files = await grep(
+            "file", include_files="*.py", return_format="list", case_sensitive=False
+        )
+        js_files = await grep(
+            "file", include_files="*.js", return_format="list", case_sensitive=False
+        )
         all_files = await grep("file", return_format="list", case_sensitive=False)
-        
+
         assert len(py_files) == 3
         assert len(js_files) == 3
         assert len(all_files) == 12  # 3 files × 4 extensions
@@ -334,7 +342,7 @@ class Class_{i}:
             await write_file(f"perf_test_{i}.txt", f"Content number {i}\nWith some additional text")
         create_time = time.time() - start_time
         assert create_time < 10  # Should complete within 10 seconds
-        
+
         # Search across all files
         start_time = time.time()
         results = await grep("Content", include_files="perf_test_*.txt", return_format="list")
@@ -348,14 +356,14 @@ class Class_{i}:
         # Create files with unicode content
         await write_file("unicode.txt", "Hello 世界 🌍 Émojis работает")
         await write_file("code.py", "# -*- coding: utf-8 -*-\nprint('Ñoño')")
-        
+
         # Search for unicode content
         chinese_results = await grep("世界", return_format="list")
         assert len(chinese_results) == 1
-        
+
         emoji_results = await grep("🌍", return_format="list")
         assert len(emoji_results) == 1
-        
+
         # Read unicode content
         content = await read_file("unicode.txt")
         assert "世界" in content
@@ -369,10 +377,10 @@ class Class_{i}:
         # Test with path containing null bytes (if supported by OS)
         invalid_paths = [
             "../../../etc/passwd",  # Path traversal attempt
-            "con.txt" if os.name == 'nt' else "/dev/null",  # Reserved names
-            "file_with_very_" + "long_" * 100 + "name.txt"  # Very long filename
+            "con.txt" if os.name == "nt" else "/dev/null",  # Reserved names
+            "file_with_very_" + "long_" * 100 + "name.txt",  # Very long filename
         ]
-        
+
         for invalid_path in invalid_paths:
             try:
                 await write_file(invalid_path, "test")
@@ -386,11 +394,11 @@ class Class_{i}:
     async def test_concurrent_file_access(self, temp_workspace):
         """Test handling of concurrent file access."""
         await write_file("shared.txt", "Initial content")
-        
+
         # Simulate concurrent reads
         read_tasks = [read_file("shared.txt") for _ in range(10)]
         results = await asyncio.gather(*read_tasks)
-        
+
         # All reads should succeed and return same content
         assert len(results) == 10
         assert all("Initial content" in r for r in results)
@@ -399,7 +407,9 @@ class Class_{i}:
     async def test_search_with_complex_patterns(self, temp_workspace):
         """Test complex search scenarios."""
         # Create a realistic codebase structure
-        await write_file("src/api/auth.py", """
+        await write_file(
+            "src/api/auth.py",
+            """
 import jwt
 from datetime import datetime
 
@@ -412,9 +422,12 @@ def authenticate(username, password):
 def generate_token(username):
     # TODO: Add expiration
     return jwt.encode({"user": username}, "secret")
-""")
-        
-        await write_file("src/api/users.py", """
+""",
+        )
+
+        await write_file(
+            "src/api/users.py",
+            """
 from .auth import authenticate
 
 class UserManager:
@@ -422,15 +435,18 @@ class UserManager:
         token = authenticate(username, password)
         # TODO: Store session
         return token
-""")
-        
+""",
+        )
+
         # Search for security issues
         security_patterns = [
             (r'password == ["\']\w+["\']', "Hardcoded passwords"),
-            (r'TODO:.*password', "Password-related TODOs"),
-            (r'jwt\.encode.*["\']secret["\']', "Hardcoded JWT secret")
+            (r"TODO:.*password", "Password-related TODOs"),
+            (r'jwt\.encode.*["\']secret["\']', "Hardcoded JWT secret"),
         ]
-        
+
         for pattern, description in security_patterns:
-            results = await grep(pattern, include_files="**/*.py", return_format="list", use_regex=True)
+            results = await grep(
+                pattern, include_files="**/*.py", return_format="list", use_regex=True
+            )
             assert len(results) > 0, f"Should find {description}"

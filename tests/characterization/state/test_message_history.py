@@ -1,5 +1,5 @@
-import pytest
 from tunacode.core.state import StateManager
+
 
 def test_message_history_defaults_and_append():
     """
@@ -10,6 +10,7 @@ def test_message_history_defaults_and_append():
     sm.session.messages.append({"role": "user", "content": "hello"})
     assert sm.session.messages[0]["content"] == "hello"
 
+
 def test_message_history_reset_on_session_reset():
     """
     Characterization: messages list is reset on session reset.
@@ -19,6 +20,7 @@ def test_message_history_reset_on_session_reset():
     sm.reset_session()
     assert sm.session.messages == []
 
+
 def test_message_history_is_per_session():
     """
     Characterization: messages list is per-session, not shared.
@@ -27,6 +29,7 @@ def test_message_history_is_per_session():
     sm2 = StateManager()
     sm1.session.messages.append({"role": "user", "content": "foo"})
     assert sm2.session.messages == []
+
 
 def test_message_history_mutation():
     """
@@ -40,5 +43,6 @@ def test_message_history_mutation():
     assert len(sm.session.messages) == 1
     sm.session.messages.clear()
     assert sm.session.messages == []
+
 
 # Quirk: No message validation, no history limits, only list storage.

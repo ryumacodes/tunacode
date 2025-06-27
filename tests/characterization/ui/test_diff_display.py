@@ -3,8 +3,8 @@ Characterization tests for TunaCode UI diff generation and display.
 Covers: Integration of render_file_diff and console output.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 
 def test_diff_display_renders_diff_and_prints():
     # Patch render_file_diff and console.print
@@ -12,6 +12,7 @@ def test_diff_display_renders_diff_and_prints():
         with patch("tunacode.ui.output.console.print") as mock_print:
             # Simulate a UI function that displays a diff
             from tunacode.ui import output
+
             # Assume a function like output.print_diff exists, or simulate the pattern
             if hasattr(output, "print_diff"):
                 output.print_diff("old", "new", "file.py")

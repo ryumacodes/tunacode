@@ -1,8 +1,9 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
 
 import tunacode.cli.repl as repl_mod
+
 
 @pytest.mark.asyncio
 async def test_repl_initialization_basic(monkeypatch):
@@ -15,11 +16,12 @@ async def test_repl_initialization_basic(monkeypatch):
     state_manager.session.show_thoughts = False
 
     # Patch UI methods
-    with patch.object(repl_mod.ui, "muted", new=AsyncMock()) as muted, \
-         patch.object(repl_mod.ui, "success", new=AsyncMock()) as success, \
-         patch.object(repl_mod.ui, "line", new=AsyncMock()) as line, \
-         patch.object(repl_mod.agent, "get_or_create_agent") as get_agent:
-
+    with (
+        patch.object(repl_mod.ui, "muted", new=AsyncMock()) as muted,
+        patch.object(repl_mod.ui, "success", new=AsyncMock()) as success,
+        patch.object(repl_mod.ui, "line", new=AsyncMock()) as line,
+        patch.object(repl_mod.agent, "get_or_create_agent") as get_agent,
+    ):
         # Mock agent instance and MCP context
         agent_instance = MagicMock()
         mcp_context = AsyncMock()
@@ -31,9 +33,11 @@ async def test_repl_initialization_basic(monkeypatch):
         # Patch the REPL loop to exit immediately
         async def fake_multiline_input(*a, **kw):
             return "exit"
-        with patch.object(repl_mod.ui, "multiline_input", new=fake_multiline_input), \
-             patch.object(repl_mod.ui, "info", new=AsyncMock()) as info:
 
+        with (
+            patch.object(repl_mod.ui, "multiline_input", new=fake_multiline_input),
+            patch.object(repl_mod.ui, "info", new=AsyncMock()) as info,
+        ):
             await repl_mod.repl(state_manager)
 
     # Check that startup UI was called

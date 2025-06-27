@@ -8,22 +8,17 @@ Simulates a user starting the REPL, entering commands/messages, using a tool, an
 - Uses real REPL and state manager logic.
 """
 
-import asyncio
 import pytest
-from unittest.mock import patch, AsyncMock
 
 from tunacode.cli import repl as repl_module
-from tunacode.ui import input as ui_input
 from tunacode.core.state import StateManager
+from tunacode.ui import input as ui_input
+
 
 @pytest.mark.asyncio
 async def test_full_session_flow(monkeypatch):
     # Simulate user input: help command, a regular message, then exit
-    user_inputs = iter([
-        "/help",
-        "hello world",
-        "exit"
-    ])
+    user_inputs = iter(["/help", "hello world", "exit"])
 
     async def fake_multiline_input(state_manager, command_registry):
         try:
@@ -39,13 +34,17 @@ async def test_full_session_flow(monkeypatch):
     async def fake_process_request(*args, **kwargs):
         class Result:
             result = type("FakeResult", (), {"output": "FAKE_AGENT_OUTPUT"})
+
         return Result()
+
     monkeypatch.setattr(repl_module.agent, "process_request", fake_process_request)
 
     # Patch UI output to collect outputs for assertion
     outputs = []
+
     async def fake_agent_output(msg):
         outputs.append(msg)
+
     monkeypatch.setattr(repl_module.ui, "agent", fake_agent_output)
 
     # Create a minimal state manager
@@ -58,6 +57,7 @@ async def test_full_session_flow(monkeypatch):
     # At minimum, we should have run without errors
     # The real behavior involves background tasks which are hard to capture in this test
     assert True  # Basic smoke test - no exceptions raised
+
 
 """
 Notes:

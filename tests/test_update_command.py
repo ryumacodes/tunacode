@@ -5,13 +5,14 @@ Tests command registration and basic execution without actually running updates.
 """
 
 import asyncio
-import sys
 import os
+import sys
+
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from tunacode.cli.commands import UpdateCommand, CommandRegistry
+from tunacode.cli.commands import CommandRegistry, UpdateCommand
 
 
 @pytest.mark.asyncio
@@ -29,7 +30,7 @@ async def test_update_command():
     # Test command registry
     registry = CommandRegistry()
     registry.discover_commands()
-    
+
     # Check if update command is registered
     assert "update" in registry._commands
     assert "/update" in registry._commands

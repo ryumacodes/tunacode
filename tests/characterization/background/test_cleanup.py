@@ -1,12 +1,17 @@
-import pytest
 import asyncio
+
+import pytest
+
 from tunacode.core.background.manager import BackgroundTaskManager
+
 
 @pytest.mark.asyncio
 async def test_shutdown_cleans_up_all_tasks():
     manager = BackgroundTaskManager()
+
     async def sleeper():
         await asyncio.sleep(0.01)
+
     ids = [manager.spawn(sleeper(), name=f"cleanup{i}") for i in range(3)]
     await manager.shutdown()
     # All tasks should be done or cancelled
@@ -16,15 +21,19 @@ async def test_shutdown_cleans_up_all_tasks():
     # State should still retain tasks, but all are finished
     assert all(t.done() or t.cancelled() for t in manager.tasks.values())
 
+
 @pytest.mark.asyncio
 async def test_shutdown_is_idempotent():
     manager = BackgroundTaskManager()
+
     async def sleeper():
         await asyncio.sleep(0.01)
+
     manager.spawn(sleeper(), name="idempotent")
     await manager.shutdown()
     # Second shutdown should not raise or hang
     await manager.shutdown()
+
 
 @pytest.mark.asyncio
 async def test_listeners_do_not_persist_after_shutdown():

@@ -1,8 +1,10 @@
 """
 Shared fixtures and utilities for agent characterization tests.
 """
-import pytest
+
 from unittest.mock import Mock
+
+import pytest
 
 
 @pytest.fixture
@@ -17,7 +19,7 @@ def state_manager():
             "max_retries": 3,
             "max_iterations": 20,
             "fallback_response": True,
-            "fallback_verbosity": "normal"
+            "fallback_verbosity": "normal",
         }
     }
     sm.session.show_thoughts = False
@@ -32,10 +34,11 @@ def state_manager():
 def mock_ui():
     """Mock UI console functions."""
     from unittest.mock import AsyncMock
+
     import tunacode.ui.console as ui
-    
+
     ui.muted = AsyncMock()
     ui.error = AsyncMock()
     ui.warning = AsyncMock()
-    
+
     return ui

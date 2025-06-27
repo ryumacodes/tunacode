@@ -1,5 +1,5 @@
-import pytest
 from tunacode.core.state import StateManager
+
 
 def test_user_config_defaults_and_mutation():
     """
@@ -10,6 +10,7 @@ def test_user_config_defaults_and_mutation():
     sm.session.user_config["theme"] = "dark"
     assert sm.session.user_config["theme"] == "dark"
 
+
 def test_user_config_reset_on_session_reset():
     """
     Characterization: user_config is reset to empty dict on session reset.
@@ -19,6 +20,7 @@ def test_user_config_reset_on_session_reset():
     sm.reset_session()
     assert sm.session.user_config == {}
 
+
 def test_user_config_is_per_session():
     """
     Characterization: user_config is per-session, not shared.
@@ -27,5 +29,6 @@ def test_user_config_is_per_session():
     sm2 = StateManager()
     sm1.session.user_config["x"] = 1
     assert sm2.session.user_config == {}
+
 
 # Quirk: No config file loading, no error handling for config, only in-memory dict.

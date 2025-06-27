@@ -1,7 +1,10 @@
-import pytest
 import asyncio
 from unittest.mock import Mock
+
+import pytest
+
 from tunacode.core.background.manager import BackgroundTaskManager
+
 
 @pytest.mark.asyncio
 async def test_task_runs_to_completion_and_result_is_accessible():
@@ -17,6 +20,7 @@ async def test_task_runs_to_completion_and_result_is_accessible():
     assert task.done()
     assert task.result() == "done"
 
+
 @pytest.mark.asyncio
 async def test_listener_is_called_on_task_completion():
     manager = BackgroundTaskManager()
@@ -31,6 +35,7 @@ async def test_listener_is_called_on_task_completion():
     task = manager.tasks[task_id]
     await asyncio.wait([task])
     callback.assert_called_once_with(task)
+
 
 @pytest.mark.asyncio
 async def test_multiple_listeners_are_called():

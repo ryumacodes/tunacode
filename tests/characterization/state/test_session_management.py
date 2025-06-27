@@ -1,5 +1,5 @@
-import pytest
 from tunacode.core.state import StateManager
+
 
 def test_session_persistence_and_reset():
     """
@@ -15,6 +15,7 @@ def test_session_persistence_and_reset():
     # New session_id after reset
     assert isinstance(sm.session.session_id, str)
 
+
 def test_multiple_sessions_are_independent():
     """
     Characterization: Multiple StateManager instances have independent sessions.
@@ -26,6 +27,7 @@ def test_multiple_sessions_are_independent():
     assert sm1.session.user_config == {"a": 1}
     assert sm2.session.user_config == {"b": 2}
 
+
 def test_session_id_is_unique():
     """
     Characterization: Each session gets a unique session_id.
@@ -33,5 +35,6 @@ def test_session_id_is_unique():
     sm1 = StateManager()
     sm2 = StateManager()
     assert sm1.session.session_id != sm2.session.session_id
+
 
 # Quirk: No session persistence to disk, no session loading, only in-memory session.

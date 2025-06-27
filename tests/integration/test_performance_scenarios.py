@@ -15,8 +15,9 @@ Uses real tool logic and tmp_path for isolation.
 """
 
 import pytest
-import asyncio
-from tunacode.tools import write_file, read_file, update_file
+
+from tunacode.tools import read_file, update_file, write_file
+
 
 @pytest.mark.asyncio
 async def test_performance_scenarios(tmp_path):
@@ -42,13 +43,16 @@ async def test_performance_scenarios(tmp_path):
 
     # Repeat the process to simulate load
     for i in range(3):
-        content = "\n".join(f"Iteration {i} - Line {j}" for j in range(500))  # Keep under size limit
+        content = "\n".join(
+            f"Iteration {i} - Line {j}" for j in range(500)
+        )  # Keep under size limit
         # For repeated updates, we need to know the current content
         current_content = await read_file.read_file(str(file_path))
         update_result = await update_file.update_file(str(file_path), current_content, content)
         assert "updated successfully" in update_result
         read_result = await read_file.read_file(str(file_path))
         assert read_result.startswith(f"Iteration {i}")
+
 
 """
 Notes:
