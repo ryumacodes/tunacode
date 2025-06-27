@@ -14,9 +14,7 @@ clean:
 	find . -type f -name "*.pyc" -delete
 
 lint:
-	venv/bin/black src/
-	venv/bin/isort src/
-	venv/bin/flake8 src/
+	ruff check . && ruff format .
 
 lint-check:
 	venv/bin/black --check src/

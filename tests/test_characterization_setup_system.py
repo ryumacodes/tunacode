@@ -1,26 +1,31 @@
-import pytest
-import importlib.util
 import importlib
+import importlib.util
 import sys
 import types
 from pathlib import Path
+
+import pytest
+
 from tunacode.core.state import StateManager
 
 # Avoid heavy imports from setup package
-sys.modules['tunacode.cli.main'] = types.SimpleNamespace(app=None)
+sys.modules["tunacode.cli.main"] = types.SimpleNamespace(app=None)
+
+
 @pytest.fixture(autouse=True)
 def cleanup_modules():
     """Automatically restore sys.modules after each test."""
-    original = sys.modules.get('tunacode.ui.console')
+    original = sys.modules.get("tunacode.ui.console")
     yield
     if original is not None:
-        sys.modules['tunacode.ui.console'] = original
+        sys.modules["tunacode.ui.console"] = original
     else:
-        sys.modules.pop('tunacode.ui.console', None)
+        sys.modules.pop("tunacode.ui.console", None)
 
-sys.modules['tunacode.ui.console'] = types.SimpleNamespace()
 
-if 'prompt_toolkit.styles' not in sys.modules:
+sys.modules["tunacode.ui.console"] = types.SimpleNamespace()
+
+if "prompt_toolkit.styles" not in sys.modules:
     pytest.skip("prompt_toolkit not available", allow_module_level=True)
 
 spec = importlib.util.spec_from_file_location(
@@ -32,8 +37,9 @@ spec.loader.exec_module(coordinator_module)
 SetupCoordinator = coordinator_module.SetupCoordinator
 BaseSetup = importlib.import_module("tunacode.core.setup.base").BaseSetup
 
-if 'prompt_toolkit.styles' not in sys.modules:
+if "prompt_toolkit.styles" not in sys.modules:
     pytest.skip("prompt_toolkit not available", allow_module_level=True)
+
 
 class DummyStep(BaseSetup):
     def __init__(self, state_manager, name):
@@ -56,12 +62,13 @@ class DummyStep(BaseSetup):
         self.validated = True
         return True
 
+
 @pytest.mark.asyncio
 async def test_setup_coordinator_runs_steps():
     state = StateManager()
     coord = SetupCoordinator(state)
-    step1 = DummyStep(state, 's1')
-    step2 = DummyStep(state, 's2')
+    step1 = DummyStep(state, "s1")
+    step2 = DummyStep(state, "s2")
     coord.register_step(step1)
     coord.register_step(step2)
     await coord.run_setup()

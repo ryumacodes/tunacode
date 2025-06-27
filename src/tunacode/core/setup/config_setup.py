@@ -107,7 +107,6 @@ class ConfigSetup(BaseSetup):
                     "--key 'your-key' --baseurl 'https://openrouter.ai/api/v1'[/green]"
                 )
                 console.print("\n[yellow]Run 'tunacode --help' for more options[/yellow]\n")
-                from tunacode.exceptions import ConfigurationError
 
                 raise ConfigurationError(
                     "No configuration found. Please use CLI flags to configure."

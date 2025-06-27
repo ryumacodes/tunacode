@@ -2,15 +2,17 @@
 Tests for tool handler UI message behavior.
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+
 from tunacode.cli.repl import _tool_handler
-from tunacode.constants import TOOL_READ_FILE, TOOL_WRITE_FILE, TOOL_GREP, TOOL_LIST_DIR
+from tunacode.constants import TOOL_GREP, TOOL_LIST_DIR, TOOL_READ_FILE, TOOL_WRITE_FILE
 
 
 class TestToolHandlerUIMessages:
     """Test that tool handler shows UI messages appropriately."""
-    
+
     @pytest.mark.asyncio
     async def test_read_only_tools_skip_tool_info_message(self):
         """Test that read-only tools don't show the Tool(name) info message."""
@@ -22,28 +24,30 @@ class TestToolHandlerUIMessages:
         state_manager.session.spinner = Mock()
         state_manager.session.spinner.stop = Mock()
         state_manager.session.spinner.start = Mock()
-        
+
         # Mock UI functions
-        with patch('tunacode.cli.repl.ui.info') as mock_info:
-            with patch('tunacode.cli.repl.run_in_terminal', new_callable=AsyncMock) as mock_terminal:
+        with patch("tunacode.cli.repl.ui.info") as mock_info:
+            with patch(
+                "tunacode.cli.repl.run_in_terminal", new_callable=AsyncMock
+            ) as mock_terminal:
                 # Mock run_in_terminal to return False (no abort)
                 mock_terminal.return_value = False
-                
+
                 # Test read-only tools
                 for tool_name in [TOOL_READ_FILE, TOOL_GREP, TOOL_LIST_DIR]:
                     mock_info.reset_mock()
-                    
+
                     part = Mock()
                     part.tool_name = tool_name
-                    part.args = '{}'
-                    
+                    part.args = "{}"
+
                     node = Mock()
-                    
+
                     await _tool_handler(part, node, state_manager)
-                    
+
                     # Should NOT have called ui.info for read-only tools
                     mock_info.assert_not_called()
-    
+
     @pytest.mark.asyncio
     async def test_write_tools_show_tool_info_message(self):
         """Test that write/execute tools show the Tool(name) info message."""
@@ -55,25 +59,27 @@ class TestToolHandlerUIMessages:
         state_manager.session.spinner = Mock()
         state_manager.session.spinner.stop = Mock()
         state_manager.session.spinner.start = Mock()
-        
+
         # Mock UI functions
-        with patch('tunacode.cli.repl.ui.info') as mock_info:
-            with patch('tunacode.cli.repl.run_in_terminal', new_callable=AsyncMock) as mock_terminal:
+        with patch("tunacode.cli.repl.ui.info") as mock_info:
+            with patch(
+                "tunacode.cli.repl.run_in_terminal", new_callable=AsyncMock
+            ) as mock_terminal:
                 # Mock run_in_terminal to return False (no abort)
                 mock_terminal.return_value = False
-                
+
                 # Test write tool
                 part = Mock()
                 part.tool_name = TOOL_WRITE_FILE
                 part.args = '{"filepath": "test.txt", "content": "test"}'
-                
+
                 node = Mock()
-                
+
                 await _tool_handler(part, node, state_manager)
-                
+
                 # Should have called ui.info for write tools
                 mock_info.assert_called_once_with(f"Tool({TOOL_WRITE_FILE})")
-    
+
     @pytest.mark.asyncio
     async def test_yolo_mode_still_skips_message_for_read_only(self):
         """Test that even in yolo mode, read-only tools don't show the message."""
@@ -85,21 +91,23 @@ class TestToolHandlerUIMessages:
         state_manager.session.spinner = Mock()
         state_manager.session.spinner.stop = Mock()
         state_manager.session.spinner.start = Mock()
-        
+
         # Mock UI functions
-        with patch('tunacode.cli.repl.ui.info') as mock_info:
-            with patch('tunacode.cli.repl.run_in_terminal', new_callable=AsyncMock) as mock_terminal:
+        with patch("tunacode.cli.repl.ui.info") as mock_info:
+            with patch(
+                "tunacode.cli.repl.run_in_terminal", new_callable=AsyncMock
+            ) as mock_terminal:
                 # Mock run_in_terminal to return False (no abort)
                 mock_terminal.return_value = False
-                
+
                 # Test read-only tool in yolo mode
                 part = Mock()
                 part.tool_name = TOOL_READ_FILE
                 part.args = '{"filepath": "test.txt"}'
-                
+
                 node = Mock()
-                
+
                 await _tool_handler(part, node, state_manager)
-                
+
                 # Should NOT have called ui.info even in yolo mode for read-only tools
                 mock_info.assert_not_called()

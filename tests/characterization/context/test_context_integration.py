@@ -3,7 +3,6 @@
 import os
 import tempfile
 from pathlib import Path
-from unittest import mock
 
 import pytest
 
@@ -27,27 +26,27 @@ async def test_context_loading_reads_tunacode_md():
 ## Code Style
 - Use type hints
 - Guard clauses preferred"""
-        
+
         tunacode_path.write_text(tunacode_content)
-        
+
         # Change to temp directory
         original_cwd = os.getcwd()
         try:
             os.chdir(tmpdir)
-            
+
             # Load context
             style = await get_code_style()
-            
+
             # Verify content
             assert "Run tests: `make test`" in style
             assert "Use type hints" in style
             assert "Guard clauses preferred" in style
-            
+
             # Also verify get_context works
             context = await get_context()
             assert "codeStyle" in context
             assert context["codeStyle"] == style
-            
+
         finally:
             os.chdir(original_cwd)
 
@@ -67,22 +66,22 @@ async def test_agent_creation_loads_tunacode_md():
 ## Code Style Guidelines
 - Use type hints for all functions
 - Prefer guard clauses over nested conditionals"""
-        
+
         tunacode_path.write_text(tunacode_content)
-        
+
         # Change to temp directory
         original_cwd = os.getcwd()
         try:
             os.chdir(tmpdir)
-            
+
             # Create agent
             state_manager = StateManager()
             agent = get_or_create_agent("openai:gpt-4", state_manager)
-            
+
             # We can't verify the system prompt due to pydantic_ai stubbing,
             # but the agent creation should complete without errors
             assert agent is not None
-            
+
         finally:
             os.chdir(original_cwd)
 
@@ -94,13 +93,13 @@ def test_agent_creation_handles_missing_tunacode_md():
         original_cwd = os.getcwd()
         try:
             os.chdir(tmpdir)
-            
+
             # Create agent (should not fail)
             state_manager = StateManager()
             agent = get_or_create_agent("openai:gpt-4", state_manager)
-            
+
             # Agent should be created successfully
             assert agent is not None
-            
+
         finally:
             os.chdir(original_cwd)

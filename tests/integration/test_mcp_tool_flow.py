@@ -11,32 +11,28 @@ If the MCP client logic is not available, this test serves as a placeholder.
 
 """
 
-import pytest
-import asyncio
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
-from tunacode.services import mcp as mcp_module
+import pytest
+
 from tunacode.core.state import StateManager
+from tunacode.services import mcp as mcp_module
+
 
 @pytest.mark.asyncio
 async def test_mcp_tool_flow(monkeypatch):
     # Patch client_streams to simulate a successful async context manager
     class FakeStream:
-        async def __aenter__(self): return (MagicMock(), MagicMock())
-        async def __aexit__(self, exc_type, exc, tb): pass
+        async def __aenter__(self):
+            return (MagicMock(), MagicMock())
 
-    monkeypatch.setattr(
-        mcp_module.QuietMCPServer,
-        "client_streams",
-        FakeStream().__aenter__
-    )
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+    monkeypatch.setattr(mcp_module.QuietMCPServer, "client_streams", FakeStream().__aenter__)
 
     # Patch MCPServerStdio init to avoid real subprocesses
-    monkeypatch.setattr(
-        mcp_module.QuietMCPServer,
-        "__init__",
-        lambda self, *a, **kw: None
-    )
+    monkeypatch.setattr(mcp_module.QuietMCPServer, "__init__", lambda self, *a, **kw: None)
 
     # Create a minimal state manager
     state_manager = StateManager()
@@ -45,6 +41,7 @@ async def test_mcp_tool_flow(monkeypatch):
     servers = mcp_module.get_mcp_servers(state_manager)
     assert isinstance(servers, list)
     # If configuration is empty, servers may be empty; this is acceptable for placeholder
+
 
 """
 Notes:

@@ -25,14 +25,14 @@ async def test_list_directory_with_files():
         Path(tmpdir, "file1.txt").touch()
         Path(tmpdir, "file2.py").touch()
         Path(tmpdir, ".hidden").touch()
-        
+
         subdir = Path(tmpdir, "subdir")
         subdir.mkdir()
         Path(subdir, "nested.txt").touch()
-        
+
         # Test without hidden files
         result = await list_dir(tmpdir)
-        
+
         # Check output contains expected elements
         assert f"Contents of '{tmpdir}':" in result
         assert "file1.txt" in result
@@ -51,10 +51,10 @@ async def test_list_directory_with_hidden_files():
         # Create test files
         Path(tmpdir, "visible.txt").touch()
         Path(tmpdir, ".hidden").touch()
-        
+
         # Test with hidden files
         result = await list_dir(tmpdir, show_hidden=True)
-        
+
         assert "visible.txt" in result
         assert ".hidden" in result
 
@@ -66,14 +66,14 @@ async def test_list_directory_max_entries():
         # Create many files
         for i in range(10):
             Path(tmpdir, f"file{i:02d}.txt").touch()
-        
+
         # Test with limit
         result = await list_dir(tmpdir, max_entries=5)
-        
+
         # Should only show 5 entries
         assert "Total: 5 entries" in result
         assert "Note: Output limited to 5 entries" in result
-        
+
         # Check files are sorted
         assert "file00.txt" in result
         assert "file01.txt" in result
@@ -114,19 +114,19 @@ async def test_list_directory_with_symlinks():
         # Create a file and directory
         file_path = Path(tmpdir, "original.txt")
         file_path.touch()
-        
+
         dir_path = Path(tmpdir, "original_dir")
         dir_path.mkdir()
-        
+
         # Create symlinks
         link_to_file = Path(tmpdir, "link_to_file")
         link_to_file.symlink_to(file_path)
-        
+
         link_to_dir = Path(tmpdir, "link_to_dir")
         link_to_dir.symlink_to(dir_path)
-        
+
         result = await list_dir(tmpdir)
-        
+
         # Check symlinks are indicated
         assert "link_to_file@" in result
         assert "link_to_dir@" in result
@@ -140,47 +140,48 @@ async def test_list_directory_executable_files():
         exec_file = Path(tmpdir, "script.sh")
         exec_file.touch()
         exec_file.chmod(0o755)
-        
+
         # Create regular file
         regular_file = Path(tmpdir, "regular.txt")
         regular_file.touch()
-        
+
         result = await list_dir(tmpdir)
-        
+
         # On Unix systems, executable should be marked
-        if os.name != 'nt':  # Not Windows
+        if os.name != "nt":  # Not Windows
             assert "script.sh*" in result
 
 
 @pytest.mark.asyncio
 async def test_tool_with_ui_logger():
     """Test ListDirTool with UI logger."""
+
     class MockUILogger:
         def __init__(self):
             self.messages = []
-        
+
         async def info(self, message: str):
             self.messages.append(("info", message))
-        
+
         async def error(self, message: str):
             self.messages.append(("error", message))
-        
+
         async def warning(self, message: str):
             self.messages.append(("warning", message))
-        
+
         async def debug(self, message: str):
             self.messages.append(("debug", message))
-        
+
         async def success(self, message: str):
             self.messages.append(("success", message))
-    
+
     ui = MockUILogger()
     tool = ListDirTool(ui)
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "test.txt").touch()
         await tool.execute(tmpdir)
-        
+
         # Check UI logging occurred
         assert len(ui.messages) > 0
         assert ui.messages[0][0] == "info"
