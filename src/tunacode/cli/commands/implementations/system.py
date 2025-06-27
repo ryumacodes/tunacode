@@ -175,3 +175,42 @@ class UpdateCommand(SimpleCommand):
             await ui.error(f"Update failed: {e}")
         except FileNotFoundError:
             await ui.error(f"Could not find {installation_method} executable")
+
+
+class StreamingCommand(SimpleCommand):
+    """Toggle streaming display on/off."""
+
+    spec = CommandSpec(
+        name="streaming",
+        aliases=["/streaming"],
+        description="Toggle streaming display on/off",
+        category=CommandCategory.SYSTEM,
+    )
+
+    async def execute(self, args: List[str], context: CommandContext) -> None:
+        current_setting = context.state_manager.session.user_config.get("settings", {}).get(
+            "enable_streaming", True
+        )
+
+        if args and args[0].lower() in ["on", "true", "1", "enable", "enabled"]:
+            new_setting = True
+        elif args and args[0].lower() in ["off", "false", "0", "disable", "disabled"]:
+            new_setting = False
+        else:
+            # Toggle current setting
+            new_setting = not current_setting
+
+        # Update the configuration
+        if "settings" not in context.state_manager.session.user_config:
+            context.state_manager.session.user_config["settings"] = {}
+        context.state_manager.session.user_config["settings"]["enable_streaming"] = new_setting
+
+        status = "enabled" if new_setting else "disabled"
+        await ui.success(f"Streaming display {status}")
+
+        if new_setting:
+            await ui.muted(
+                "Responses will be displayed progressively as they are generated (default)"
+            )
+        else:
+            await ui.muted("Responses will be displayed all at once after completion")
