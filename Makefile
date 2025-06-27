@@ -17,9 +17,8 @@ lint:
 	ruff check . && ruff format .
 
 lint-check:
-	venv/bin/black --check src/
-	venv/bin/isort --check-only src/
-	venv/bin/flake8 src/
+	ruff check .
+	ruff format --check .
 
 test:
 	venv/bin/python -m pytest -q tests/characterization tests/test_security.py
