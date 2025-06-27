@@ -3,8 +3,9 @@ import types
 
 import pytest
 
-from tunacode.cli.commands import CommandContext, CommandRegistry
+from tunacode.cli.commands import CommandRegistry
 from tunacode.core.state import StateManager
+from tunacode.types import CommandContext
 
 # Store original modules
 _original_modules = {}
