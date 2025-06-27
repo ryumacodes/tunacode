@@ -3,6 +3,7 @@
 from typing import Any, Optional, Union
 
 from rich.box import ROUNDED
+from rich.live import Live
 from rich.markdown import Markdown
 from rich.padding import Padding
 from rich.panel import Panel
@@ -72,6 +73,79 @@ async def agent(text: str, bottom: int = 1) -> None:
     """Display an agent panel with modern styling."""
     title = f"[bold {colors.primary}]●[/bold {colors.primary}] {APP_NAME}"
     await panel(title, Markdown(text), bottom=bottom, border_style=colors.primary)
+
+
+class StreamingAgentPanel:
+    """Streaming agent panel using Rich.Live for progressive display."""
+
+    def __init__(self, bottom: int = 1):
+        self.bottom = bottom
+        self.title = f"[bold {colors.primary}]●[/bold {colors.primary}] {APP_NAME}"
+        self.content = ""
+        self.live = None
+
+    def _create_panel(self) -> Panel:
+        """Create a Rich panel with current content."""
+        markdown_content = Markdown(self.content or "Thinking...")
+        panel_obj = Panel(
+            Padding(markdown_content, (0, 1, 0, 1)),
+            title=f"[bold]{self.title}[/bold]",
+            title_align="left",
+            border_style=colors.primary,
+            padding=(0, 1),
+            box=ROUNDED,
+        )
+        return Padding(
+            panel_obj,
+            (
+                DEFAULT_PANEL_PADDING["top"],
+                DEFAULT_PANEL_PADDING["right"],
+                self.bottom,
+                DEFAULT_PANEL_PADDING["left"],
+            ),
+        )
+
+    async def start(self):
+        """Start the live streaming display."""
+        from .output import console
+
+        self.live = Live(self._create_panel(), console=console, refresh_per_second=4)
+        self.live.start()
+
+    async def update(self, content_chunk: str):
+        """Update the streaming display with new content."""
+        self.content += content_chunk
+        if self.live:
+            self.live.update(self._create_panel())
+
+    async def set_content(self, content: str):
+        """Set the complete content (overwrites previous)."""
+        self.content = content
+        if self.live:
+            self.live.update(self._create_panel())
+
+    async def stop(self):
+        """Stop the live streaming display."""
+        if self.live:
+            self.live.stop()
+            self.live = None
+
+
+async def agent_streaming(content_stream, bottom: int = 1):
+    """Display an agent panel with streaming content updates.
+
+    Args:
+        content_stream: Async iterator yielding content chunks
+        bottom: Bottom padding for the panel
+    """
+    panel = StreamingAgentPanel(bottom=bottom)
+    await panel.start()
+
+    try:
+        async for chunk in content_stream:
+            await panel.update(chunk)
+    finally:
+        await panel.stop()
 
 
 async def error(text: str) -> None:

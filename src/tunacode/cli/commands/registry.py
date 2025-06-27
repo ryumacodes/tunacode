@@ -19,7 +19,13 @@ from .implementations.debug import (
 )
 from .implementations.development import BranchCommand, InitCommand
 from .implementations.model import ModelCommand
-from .implementations.system import ClearCommand, HelpCommand, RefreshConfigCommand, UpdateCommand
+from .implementations.system import (
+    ClearCommand,
+    HelpCommand,
+    RefreshConfigCommand,
+    StreamingCommand,
+    UpdateCommand,
+)
 
 
 @dataclass
@@ -106,6 +112,7 @@ class CommandRegistry:
             FixCommand,
             ParseToolsCommand,
             RefreshConfigCommand,
+            StreamingCommand,
             UpdateCommand,
             HelpCommand,
             BranchCommand,
