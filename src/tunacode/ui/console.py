@@ -27,7 +27,9 @@ from .output import (
 
 # Patch banner to use sync fast version
 from .panels import (
+    StreamingAgentPanel,
     agent,
+    agent_streaming,
     dump_messages,
     error,
     help,
@@ -79,11 +81,13 @@ __all__ = [
     "warning",
     # From panels module
     "agent",
+    "agent_streaming",
     "dump_messages",
     "error",
     "help",
     "models",
     "panel",
+    "StreamingAgentPanel",
     "sync_panel",
     "sync_tool_confirm",
     "tool_confirm",

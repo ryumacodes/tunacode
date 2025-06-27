@@ -195,38 +195,67 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             await ui.error(str(e))
             return
 
-        # Use normal agent processing
-        res = await agent.process_request(
-            state_manager.session.current_model,
-            text,
-            state_manager,
-            tool_callback=tool_callback_with_state,
+        # Check if streaming is enabled (default: True for better UX)
+        enable_streaming = state_manager.session.user_config.get("settings", {}).get(
+            "enable_streaming", True
         )
+
+        if enable_streaming:
+            # Stop spinner before starting streaming display (Rich.Live conflict)
+            await ui.spinner(False, state_manager.session.spinner, state_manager)
+
+            # Use streaming agent processing
+            streaming_panel = ui.StreamingAgentPanel()
+            await streaming_panel.start()
+
+            try:
+
+                async def streaming_callback(content: str):
+                    await streaming_panel.update(content)
+
+                res = await agent.process_request(
+                    state_manager.session.current_model,
+                    text,
+                    state_manager,
+                    tool_callback=tool_callback_with_state,
+                    streaming_callback=streaming_callback,
+                )
+            finally:
+                await streaming_panel.stop()
+                # Don't restart spinner - it will be stopped in the outer finally block anyway
+        else:
+            # Use normal agent processing
+            res = await agent.process_request(
+                state_manager.session.current_model,
+                text,
+                state_manager,
+                tool_callback=tool_callback_with_state,
+            )
         if output:
             if state_manager.session.show_thoughts:
                 new_msgs = state_manager.session.messages[start_idx:]
                 for msg in new_msgs:
                     if isinstance(msg, dict) and "thought" in msg:
                         await ui.muted(f"THOUGHT: {msg['thought']}")
-            # Check if result exists and has output
-            if hasattr(res, "result") and res.result is not None and hasattr(res.result, "output"):
-                await ui.agent(res.result.output)
-                # Always show files in context after agent response
-                if state_manager.session.files_in_context:
-                    # Extract just filenames from full paths for readability
-                    filenames = [
-                        Path(f).name for f in sorted(state_manager.session.files_in_context)
-                    ]
-                    await ui.muted(f"\nFiles in context: {', '.join(filenames)}")
-            else:
-                # Fallback: show that the request was processed
-                await ui.muted("Request completed")
-                # Show files in context even for empty responses
-                if state_manager.session.files_in_context:
-                    filenames = [
-                        Path(f).name for f in sorted(state_manager.session.files_in_context)
-                    ]
-                    await ui.muted(f"Files in context: {', '.join(filenames)}")
+
+            # Only display result if not streaming (streaming already showed content)
+            if not enable_streaming:
+                # Check if result exists and has output
+                if (
+                    hasattr(res, "result")
+                    and res.result is not None
+                    and hasattr(res.result, "output")
+                ):
+                    await ui.agent(res.result.output)
+                else:
+                    # Fallback: show that the request was processed
+                    await ui.muted("Request completed")
+
+            # Always show files in context after agent response
+            if state_manager.session.files_in_context:
+                # Extract just filenames from full paths for readability
+                filenames = [Path(f).name for f in sorted(state_manager.session.files_in_context)]
+                await ui.muted(f"\nFiles in context: {', '.join(filenames)}")
     except CancelledError:
         await ui.muted("Request cancelled")
     except UserAbortError:

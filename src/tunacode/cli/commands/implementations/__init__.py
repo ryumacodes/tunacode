@@ -12,13 +12,14 @@ from .debug import (
 )
 from .development import BranchCommand, InitCommand
 from .model import ModelCommand
-from .system import ClearCommand, HelpCommand, RefreshConfigCommand, UpdateCommand
+from .system import ClearCommand, HelpCommand, RefreshConfigCommand, StreamingCommand, UpdateCommand
 
 __all__ = [
     # System commands
     "HelpCommand",
     "ClearCommand",
     "RefreshConfigCommand",
+    "StreamingCommand",
     "UpdateCommand",
     # Debug commands
     "YoloCommand",
