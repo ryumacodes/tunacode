@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tunacode-cli"
-version = "0.0.39"
+version = "0.0.40"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
@@ -43,6 +43,7 @@ dev = [
     "pytest-cov",
     "pytest-asyncio",
     "textual-dev",
+    "pre-commit",
 ]
 
 [project.urls]
