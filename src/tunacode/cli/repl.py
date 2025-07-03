@@ -30,6 +30,21 @@ from .commands import CommandRegistry
 # Tool UI instance
 _tool_ui = ToolUI()
 
+# Message constants
+MSG_OPERATION_ABORTED = "Operation aborted."
+MSG_OPERATION_ABORTED_BY_USER = "Operation aborted by user."
+MSG_TOOL_INTERRUPTED = "Tool execution was interrupted"
+MSG_REQUEST_CANCELLED = "Request cancelled"
+MSG_REQUEST_COMPLETED = "Request completed"
+MSG_JSON_RECOVERY = "Recovered using JSON tool parsing"
+MSG_SESSION_ENDED = "Session ended. Happy coding!"
+MSG_AGENT_BUSY = "Agent is busy, press Ctrl+C to interrupt."
+MSG_HIT_CTRL_C = "Hit Ctrl+C again to exit"
+
+# Shell constants
+SHELL_ENV_VAR = "SHELL"
+DEFAULT_SHELL = "bash"
+
 
 def _parse_args(args) -> ToolArgs:
     """
@@ -141,7 +156,7 @@ async def _tool_handler(part, node, state_manager: StateManager):
             raise UserAbortError("User aborted.")
 
     except UserAbortError:
-        patch_tool_messages("Operation aborted by user.", state_manager)
+        patch_tool_messages(MSG_OPERATION_ABORTED_BY_USER, state_manager)
         raise
     finally:
         # Restart streaming panel if it was stopped
@@ -189,7 +204,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
     )
     try:
         # Patch any orphaned tool calls from previous requests before proceeding
-        patch_tool_messages("Tool execution was interrupted", state_manager)
+        patch_tool_messages(MSG_TOOL_INTERRUPTED, state_manager)
 
         # Clear tracking for new request when thoughts are enabled
         if state_manager.session.show_thoughts:
@@ -271,22 +286,21 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                         await ui.muted(f"THOUGHT: {msg['thought']}")
 
             # Only display result if not streaming (streaming already showed content)
-            if not enable_streaming:
-                # Check if result exists and has output
-                if (
-                    hasattr(res, "result")
-                    and res.result is not None
-                    and hasattr(res.result, "output")
-                ):
-                    output = res.result.output
-                    # Filter out JSON responses with "thought" field
-                    if isinstance(output, str) and not (
-                        output.strip().startswith('{"thought"') or '"tool_uses"' in output
-                    ):
-                        await ui.agent(output)
-                else:
-                    # Fallback: show that the request was processed
-                    await ui.muted("Request completed")
+            if enable_streaming:
+                pass  # Guard: streaming already showed content
+            elif not hasattr(res, "result") or res.result is None or not hasattr(res.result, "output"):
+                # Fallback: show that the request was processed
+                await ui.muted(MSG_REQUEST_COMPLETED)
+            else:
+                output = res.result.output
+                # Extract complex conditions into explaining variables
+                is_string_output = isinstance(output, str)
+                is_json_thought = output.strip().startswith('{"thought"') if is_string_output else False
+                has_tool_uses = '"tool_uses"' in output if is_string_output else False
+                is_displayable = is_string_output and not (is_json_thought or has_tool_uses)
+                
+                if is_displayable:
+                    await ui.agent(output)
 
             # Always show files in context after agent response
             if state_manager.session.files_in_context:
@@ -294,9 +308,9 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                 filenames = [Path(f).name for f in sorted(state_manager.session.files_in_context)]
                 await ui.muted(f"\nFiles in context: {', '.join(filenames)}")
     except CancelledError:
-        await ui.muted("Request cancelled")
+        await ui.muted(MSG_REQUEST_CANCELLED)
     except UserAbortError:
-        await ui.muted("Operation aborted.")
+        await ui.muted(MSG_OPERATION_ABORTED)
     except UnexpectedModelBehavior as e:
         error_message = str(e)
         await ui.muted(error_message)
@@ -321,7 +335,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                                 await extract_and_execute_tool_calls(
                                     part.content, tool_callback_with_state, state_manager
                                 )
-                                await ui.warning(" Recovered using JSON tool parsing")
+                                await ui.warning(f" {MSG_JSON_RECOVERY}")
                                 return  # Successfully recovered
                             except Exception:
                                 pass  # Fallback failed, continue with normal error handling
@@ -345,9 +359,8 @@ async def repl(state_manager: StateManager):
     action = None
     ctrl_c_pressed = False
 
-    # Professional startup information
     await ui.muted(f"• Model: {state_manager.session.current_model}")
-    await ui.success("Ready to assist with your development")
+    await ui.success("Ready to assist")
     await ui.line()
 
     instance = agent.get_or_create_agent(state_manager.session.current_model, state_manager)
@@ -360,7 +373,7 @@ async def repl(state_manager: StateManager):
                 if ctrl_c_pressed:
                     break
                 ctrl_c_pressed = True
-                await ui.warning("Hit Ctrl+C again to exit")
+                await ui.warning(MSG_HIT_CTRL_C)
                 continue
 
             if not line:
@@ -403,7 +416,7 @@ async def repl(state_manager: StateManager):
                                 print(f"\nSecurity validation failed: {str(e)}")
                                 print("If you need to run this command, please ensure it's safe.")
                         else:
-                            shell = os.environ.get("SHELL", "bash")
+                            shell = os.environ.get(SHELL_ENV_VAR, DEFAULT_SHELL)
                             subprocess.run(shell)  # Interactive shell is safe
                     except Exception as e:
                         print(f"\nShell command failed: {str(e)}")
@@ -414,7 +427,7 @@ async def repl(state_manager: StateManager):
 
             # Check if another task is already running
             if state_manager.session.current_task and not state_manager.session.current_task.done():
-                await ui.muted("Agent is busy, press Ctrl+C to interrupt.")
+                await ui.muted(MSG_AGENT_BUSY)
                 continue
 
             state_manager.session.current_task = get_app().create_background_task(
@@ -424,4 +437,4 @@ async def repl(state_manager: StateManager):
     if action == "restart":
         await repl(state_manager)
     else:
-        await ui.info("Session ended. Happy coding!")
+        await ui.info(MSG_SESSION_ENDED)
