@@ -87,7 +87,7 @@ async def multiline_input(
     )
     return await input(
         "multiline",
-        pretext="❯ ",  # Default prompt
+        pretext="> ",  # Default prompt
         key_bindings=kb,
         multiline=True,
         placeholder=placeholder,
