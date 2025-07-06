@@ -19,7 +19,6 @@ from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.application.current import get_app
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
-from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.agents import main as agent
 from tunacode.core.agents.main import patch_tool_messages
 from tunacode.core.tool_handler import ToolHandler
@@ -83,35 +82,7 @@ def _parse_args(args) -> ToolArgs:
 # ============================================================================
 
 
-async def _tool_confirm(tool_call, node, state_manager: StateManager):
-    """Confirm tool execution with separated business logic and UI."""
-    tool_handler = ToolHandler(state_manager)
-    args = _parse_args(tool_call.args)
-
-    if not tool_handler.should_confirm(tool_call.tool_name):
-        app_settings = ApplicationSettings()
-        if tool_call.tool_name not in app_settings.internal_tools:
-            title = _tool_ui._get_tool_title(tool_call.tool_name)
-            await _tool_ui.log_mcp(title, args)
-        return
-
-    if not state_manager.session.is_streaming_active and state_manager.session.spinner:
-        state_manager.session.spinner.stop()
-
-    request = tool_handler.create_confirmation_request(tool_call.tool_name, args)
-
-    response = await _tool_ui.show_confirmation(request, state_manager)
-
-    if not tool_handler.process_confirmation(response, tool_call.tool_name):
-        raise UserAbortError("User aborted.")
-
-    await ui.line()
-
-    if not state_manager.session.is_streaming_active and state_manager.session.spinner:
-        state_manager.session.spinner.start()
-
-
-async def _tool_handler(part, node, state_manager: StateManager):
+async def _tool_handler(part, state_manager: StateManager):
     """Handle tool execution with separated business logic and UI."""
     tool_handler = ToolHandler(state_manager)
 
@@ -220,7 +191,7 @@ async def _attempt_tool_recovery(e: Exception, state_manager: StateManager) -> b
             from tunacode.core.agents.main import extract_and_execute_tool_calls
 
             def tool_callback_with_state(part, node):
-                return _tool_handler(part, node, state_manager)
+                return _tool_handler(part, state_manager)
 
             await extract_and_execute_tool_calls(
                 part.content, tool_callback_with_state, state_manager
@@ -285,7 +256,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         start_idx = len(state_manager.session.messages)
 
         def tool_callback_with_state(part, node):
-            return _tool_handler(part, node, state_manager)
+            return _tool_handler(part, state_manager)
 
         try:
             from tunacode.utils.text_utils import expand_file_refs
