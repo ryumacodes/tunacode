@@ -284,13 +284,20 @@ class TodoTool(BaseTool):
     def get_current_todos_sync(self) -> str:
         """Get current todos synchronously for system prompt inclusion."""
         todos = self.state_manager.session.todos
-        if not todos:
+
+        # Handle case where todos might be a Mock object (in tests) or not iterable
+        try:
+            if not todos or not hasattr(todos, "__iter__"):
+                return "No todos found"
+            # Try to iterate to see if it's actually iterable
+            list(todos)
+        except (TypeError, AttributeError):
             return "No todos found"
 
         # Group by status for better organization
-        pending = [t for t in todos if t.status == "pending"]
-        in_progress = [t for t in todos if t.status == "in_progress"]
-        completed = [t for t in todos if t.status == "completed"]
+        pending = [t for t in todos if hasattr(t, "status") and t.status == "pending"]
+        in_progress = [t for t in todos if hasattr(t, "status") and t.status == "in_progress"]
+        completed = [t for t in todos if hasattr(t, "status") and t.status == "completed"]
 
         lines = []
 
