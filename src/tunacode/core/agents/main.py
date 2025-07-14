@@ -517,9 +517,13 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
 
         todo_tool = TodoTool(state_manager=state_manager)
 
-        if state_manager.session.todos:
+        try:
+            # Only add todo section if there are actual todos
             current_todos = todo_tool.get_current_todos_sync()
-            system_prompt += f'\n\n# Current Todo List\n\nYou have existing todos that need attention:\n\n{current_todos}\n\nRemember to check progress on these todos and update them as you work. Use todo("list") to see current status anytime.'
+            if current_todos != "No todos found":
+                system_prompt += f'\n\n# Current Todo List\n\nYou have existing todos that need attention:\n\n{current_todos}\n\nRemember to check progress on these todos and update them as you work. Use todo("list") to see current status anytime.'
+        except Exception:
+            pass
 
         state_manager.session.agents[model] = Agent(
             model=model,

@@ -72,3 +72,7 @@ class StateManager:
 
     def clear_todos(self) -> None:
         self._session.todos = []
+
+    def reset_session(self) -> None:
+        """Reset the session to a fresh state."""
+        self._session = SessionState()
