@@ -37,6 +37,7 @@ from tunacode.tools.grep import grep
 from tunacode.tools.list_dir import list_dir
 from tunacode.tools.read_file import read_file
 from tunacode.tools.run_command import run_command
+from tunacode.tools.todo import TodoTool
 from tunacode.tools.update_file import update_file
 from tunacode.tools.write_file import write_file
 from tunacode.types import (
@@ -514,6 +515,12 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             # Ignore errors loading TUNACODE.md
             pass
 
+        todo_tool = TodoTool(state_manager=state_manager)
+
+        if state_manager.session.todos:
+            current_todos = todo_tool.get_current_todos_sync()
+            system_prompt += f'\n\n# Current Todo List\n\nYou have existing todos that need attention:\n\n{current_todos}\n\nRemember to check progress on these todos and update them as you work. Use todo("list") to see current status anytime.'
+
         state_manager.session.agents[model] = Agent(
             model=model,
             system_prompt=system_prompt,
@@ -524,6 +531,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
                 Tool(list_dir, max_retries=max_retries),
                 Tool(read_file, max_retries=max_retries),
                 Tool(run_command, max_retries=max_retries),
+                Tool(todo_tool._execute, max_retries=max_retries),
                 Tool(update_file, max_retries=max_retries),
                 Tool(write_file, max_retries=max_retries),
             ],

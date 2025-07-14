@@ -36,6 +36,7 @@ TOOL_BASH = "bash"
 TOOL_GREP = "grep"
 TOOL_LIST_DIR = "list_dir"
 TOOL_GLOB = "glob"
+TOOL_TODO = "todo"
 
 # Tool categorization
 READ_ONLY_TOOLS = [TOOL_READ_FILE, TOOL_GREP, TOOL_LIST_DIR, TOOL_GLOB]
