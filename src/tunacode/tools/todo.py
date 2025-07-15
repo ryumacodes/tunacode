@@ -241,23 +241,17 @@ class TodoTool(BaseTool):
         lines = []
 
         if in_progress:
-            lines.append("🔄 IN PROGRESS:")
+            lines.append("IN PROGRESS:")
             for todo in in_progress:
-                priority_indicator = (
-                    "🔴" if todo.priority == "high" else "🟡" if todo.priority == "medium" else "🟢"
-                )
-                lines.append(f"  {todo.id}: {todo.content} {priority_indicator}")
+                lines.append(f"  {todo.id}: {todo.content} (priority: {todo.priority})")
 
         if pending:
-            lines.append("\n⏳ PENDING:")
+            lines.append("\nPENDING:")
             for todo in pending:
-                priority_indicator = (
-                    "🔴" if todo.priority == "high" else "🟡" if todo.priority == "medium" else "🟢"
-                )
-                lines.append(f"  {todo.id}: {todo.content} {priority_indicator}")
+                lines.append(f"  {todo.id}: {todo.content} (priority: {todo.priority})")
 
         if completed:
-            lines.append("\n✅ COMPLETED:")
+            lines.append("\nCOMPLETED:")
             for todo in completed:
                 lines.append(f"  {todo.id}: {todo.content}")
 
@@ -302,23 +296,17 @@ class TodoTool(BaseTool):
         lines = []
 
         if in_progress:
-            lines.append("🔄 IN PROGRESS:")
+            lines.append("IN PROGRESS:")
             for todo in in_progress:
-                priority_indicator = (
-                    "🔴" if todo.priority == "high" else "🟡" if todo.priority == "medium" else "🟢"
-                )
-                lines.append(f"  {todo.id}: {todo.content} {priority_indicator}")
+                lines.append(f"  {todo.id}: {todo.content} (priority: {todo.priority})")
 
         if pending:
-            lines.append("\n⏳ PENDING:")
+            lines.append("\nPENDING:")
             for todo in pending:
-                priority_indicator = (
-                    "🔴" if todo.priority == "high" else "🟡" if todo.priority == "medium" else "🟢"
-                )
-                lines.append(f"  {todo.id}: {todo.content} {priority_indicator}")
+                lines.append(f"  {todo.id}: {todo.content} (priority: {todo.priority})")
 
         if completed:
-            lines.append("\n✅ COMPLETED:")
+            lines.append("\nCOMPLETED:")
             for todo in completed:
                 lines.append(f"  {todo.id}: {todo.content}")
 
