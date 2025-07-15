@@ -80,17 +80,17 @@ class TodoCommand(SimpleCommand):
             if todo.status == "pending":
                 status_display = "○ pending"
             elif todo.status == "in_progress":
-                status_display = "⚡ in progress"
+                status_display = "○ in progress"
             else:
                 status_display = "✓ completed"
 
             # Priority with color coding
             if todo.priority == "high":
-                priority_display = "[red]🔴 high[/red]"
+                priority_display = "[red] high[/red]"
             elif todo.priority == "medium":
-                priority_display = "[yellow]🟡 medium[/yellow]"
+                priority_display = "[yellow] medium[/yellow]"
             else:
-                priority_display = "[green]🟢 low[/green]"
+                priority_display = "[green] low[/green]"
 
             # Format created date
             created_display = todo.created_at.strftime("%m/%d %H:%M")

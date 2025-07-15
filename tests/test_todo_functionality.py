@@ -257,11 +257,6 @@ class TestTodoTool:
         assert "PENDING:" in result
         assert "COMPLETED:" in result
 
-        # Check priority indicators (only shown for pending/in-progress)
-        assert "🔴" in result  # high priority
-        assert "🟡" in result  # medium priority
-        assert "🟢" in result  # low priority
-
     @pytest.mark.asyncio
     async def test_remove_todo(self):
         """Test removing todo via tool."""
@@ -419,14 +414,12 @@ class TestTodoIntegration:
         result = self.tool.get_current_todos_sync()
 
         # Verify the format and content
-        assert "🔄 IN PROGRESS:" in result
-        assert "⏳ PENDING:" in result
-        assert "✅ COMPLETED:" in result
+        assert "IN PROGRESS:" in result
+        assert "PENDING:" in result
+        assert "COMPLETED:" in result
         assert "Task 1" in result
         assert "Task 2" in result
         assert "Task 3" in result
-        assert "🔴" in result  # high priority indicator
-        assert "🟡" in result  # medium priority indicator
 
     def test_get_current_todos_sync_empty(self):
         """Test synchronous todo listing when no todos exist."""
