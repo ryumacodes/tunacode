@@ -62,9 +62,13 @@ class StateManager:
         self._session.todos.append(todo)
 
     def update_todo(self, todo_id: str, status: str) -> None:
+        from datetime import datetime
+        
         for todo in self._session.todos:
             if todo.id == todo_id:
                 todo.status = status
+                if status == "completed" and not todo.completed_at:
+                    todo.completed_at = datetime.now()
                 break
 
     def remove_todo(self, todo_id: str) -> None:

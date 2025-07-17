@@ -9,6 +9,18 @@ from typing import List, Literal, Optional, Union
 
 from pydantic_ai.exceptions import ModelRetry
 
+from tunacode.constants import (
+    MAX_TODOS_PER_SESSION,
+    MAX_TODO_CONTENT_LENGTH,
+    TODO_PRIORITIES,
+    TODO_PRIORITY_HIGH,
+    TODO_PRIORITY_LOW,
+    TODO_PRIORITY_MEDIUM,
+    TODO_STATUS_COMPLETED,
+    TODO_STATUS_IN_PROGRESS,
+    TODO_STATUS_PENDING,
+    TODO_STATUSES,
+)
 from tunacode.types import TodoItem, ToolResult, UILogger
 
 from .base import BaseTool
@@ -77,19 +89,27 @@ class TodoTool(BaseTool):
         """Add a new todo item."""
         if not content:
             raise ModelRetry("Content is required when adding a todo")
+        
+        # Validate content length
+        if len(content) > MAX_TODO_CONTENT_LENGTH:
+            raise ModelRetry(f"Todo content is too long. Maximum length is {MAX_TODO_CONTENT_LENGTH} characters")
+        
+        # Check todo limit
+        if len(self.state_manager.session.todos) >= MAX_TODOS_PER_SESSION:
+            raise ModelRetry(f"Cannot add more todos. Maximum of {MAX_TODOS_PER_SESSION} todos allowed per session")
 
-        # Generate simple numeric ID
-        new_id = str(len(self.state_manager.session.todos) + 1)
+        # Generate timestamp-based ID to ensure uniqueness
+        new_id = f"{int(datetime.now().timestamp() * 1000000)}"
 
         # Default priority if not specified
-        todo_priority = priority or "medium"
-        if todo_priority not in ["high", "medium", "low"]:
-            raise ModelRetry(f"Invalid priority '{todo_priority}'. Must be high, medium, or low")
+        todo_priority = priority or TODO_PRIORITY_MEDIUM
+        if todo_priority not in TODO_PRIORITIES:
+            raise ModelRetry(f"Invalid priority '{todo_priority}'. Must be one of: {', '.join(TODO_PRIORITIES)}")
 
         new_todo = TodoItem(
             id=new_id,
             content=content,
-            status="pending",
+            status=TODO_STATUS_PENDING,
             priority=todo_priority,
             created_at=datetime.now(),
         )
@@ -114,18 +134,18 @@ class TodoTool(BaseTool):
                 if not isinstance(todo_data, dict) or "content" not in todo_data:
                     raise ModelRetry("Each todo must be a dict with 'content' field")
                 todo_content = todo_data["content"]
-                todo_priority = todo_data.get("priority", priority or "medium")
-                if todo_priority not in ["high", "medium", "low"]:
+                todo_priority = todo_data.get("priority", priority or TODO_PRIORITY_MEDIUM)
+                if todo_priority not in TODO_PRIORITIES:
                     raise ModelRetry(
-                        f"Invalid priority '{todo_priority}'. Must be high, medium, or low"
+                        f"Invalid priority '{todo_priority}'. Must be one of: {', '.join(TODO_PRIORITIES)}"
                     )
                 todos_to_add.append((todo_content, todo_priority))
         elif isinstance(content, list):
             # List of strings format: ["task1", "task2", ...]
-            default_priority = priority or "medium"
-            if default_priority not in ["high", "medium", "low"]:
+            default_priority = priority or TODO_PRIORITY_MEDIUM
+            if default_priority not in TODO_PRIORITIES:
                 raise ModelRetry(
-                    f"Invalid priority '{default_priority}'. Must be high, medium, or low"
+                    f"Invalid priority '{default_priority}'. Must be one of: {', '.join(TODO_PRIORITIES)}"
                 )
             for task_content in content:
                 if not isinstance(task_content, str):
@@ -138,17 +158,27 @@ class TodoTool(BaseTool):
 
         if not todos_to_add:
             raise ModelRetry("No todos to add")
+        
+        # Check todo limit
+        current_count = len(self.state_manager.session.todos)
+        if current_count + len(todos_to_add) > MAX_TODOS_PER_SESSION:
+            available = MAX_TODOS_PER_SESSION - current_count
+            raise ModelRetry(f"Cannot add {len(todos_to_add)} todos. Only {available} slots available (max {MAX_TODOS_PER_SESSION} per session)")
 
         # Add all todos
         added_ids = []
         for task_content, task_priority in todos_to_add:
-            # Generate simple numeric ID
-            new_id = str(len(self.state_manager.session.todos) + 1)
+            # Validate content length
+            if len(task_content) > MAX_TODO_CONTENT_LENGTH:
+                raise ModelRetry(f"Todo content is too long: '{task_content[:50]}...'. Maximum length is {MAX_TODO_CONTENT_LENGTH} characters")
+            
+            # Generate timestamp-based ID to ensure uniqueness
+            new_id = f"{int(datetime.now().timestamp() * 1000000)}"
 
             new_todo = TodoItem(
                 id=new_id,
                 content=task_content,
-                status="pending",
+                status=TODO_STATUS_PENDING,
                 priority=task_priority,
                 created_at=datetime.now(),
             )
