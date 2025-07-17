@@ -16,6 +16,7 @@ async def test_repl_initialization_basic(monkeypatch):
     state_manager.session.input_sessions = {}
     state_manager.session.show_thoughts = False
     state_manager.session.total_tokens = 0
+    state_manager.session.max_tokens = 200000
     state_manager.session.user_config = {"context_window_size": 200000}
 
     def mock_update_token_count():
