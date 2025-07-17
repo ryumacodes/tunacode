@@ -50,9 +50,24 @@ class SessionState:
     is_streaming_active: bool = False
     # Track streaming panel reference for tool handler access
     streaming_panel: Optional[Any] = None
-    # Context window tracking
+    # Context window tracking (estimation based)
     total_tokens: int = 0
     max_tokens: int = 0
+    # API usage tracking (actual from providers)
+    last_call_usage: dict = field(
+        default_factory=lambda: {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cost": 0.0,
+        }
+    )
+    session_total_usage: dict = field(
+        default_factory=lambda: {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cost": 0.0,
+        }
+    )
 
     def update_token_count(self):
         """Calculates the total token count from messages and files in context."""
@@ -92,3 +107,10 @@ class StateManager:
     def reset_session(self) -> None:
         """Reset the session to a fresh state."""
         self._session = SessionState()
+
+        for todo in self._session.todos:
+            if todo.id == todo_id:
+                todo.status = status
+                if status == "completed":
+                    todo.completed_at = datetime.now()
+                break

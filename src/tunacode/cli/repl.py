@@ -327,17 +327,8 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                 # Fallback: show that the request was processed
                 await ui.muted(MSG_REQUEST_COMPLETED)
             else:
-                output = res.result.output
-                # Extract complex conditions into explaining variables
-                is_string_output = isinstance(output, str)
-                is_json_thought = (
-                    output.strip().startswith('{"thought"') if is_string_output else False
-                )
-                has_tool_uses = '"tool_uses"' in output if is_string_output else False
-                is_displayable = is_string_output and not (is_json_thought or has_tool_uses)
-
-                if is_displayable:
-                    await ui.agent(output)
+                # Use the dedicated function for displaying agent output
+                await _display_agent_output(res, enable_streaming)
 
             # Always show files in context after agent response
             if state_manager.session.files_in_context:
@@ -354,6 +345,36 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         await ui.muted(error_message)
         patch_tool_messages(error_message, state_manager)
     except Exception as e:
+        # Check if this might be a tool calling failure that we can recover from
+        error_str = str(e).lower()
+        if any(keyword in error_str for keyword in ["tool", "function", "call", "schema"]):
+            # Try to extract and execute tool calls from the last response
+            if state_manager.session.messages:
+                last_msg = state_manager.session.messages[-1]
+                if hasattr(last_msg, "parts"):
+                    for part in last_msg.parts:
+                        if hasattr(part, "content") and isinstance(part.content, str):
+                            from tunacode.core.agents.main import (
+                                extract_and_execute_tool_calls,
+                            )
+
+                            try:
+                                # Create a partial function that includes state_manager
+                                def tool_callback_with_state(part, node):
+                                    return _tool_handler(part, node, state_manager)
+
+                                await extract_and_execute_tool_calls(
+                                    part.content,
+                                    tool_callback_with_state,
+                                    state_manager,
+                                )
+                                await ui.warning(f" {MSG_JSON_RECOVERY}")
+                                return  # Successfully recovered
+                            except Exception:
+                                pass  # Fallback failed, continue with normal error handling
+
+        # Wrap unexpected exceptions in AgentError for better tracking
+
         if await _attempt_tool_recovery(e, state_manager):
             return  # Successfully recovered
 
@@ -469,4 +490,27 @@ async def repl(state_manager: StateManager):
         if action == "restart":
             await repl(state_manager)
         else:
+            # Show session cost summary if available
+            session_total = state_manager.session.session_total_usage
+            if session_total:
+                try:
+                    prompt = int(session_total.get("prompt_tokens", 0) or 0)
+                    completion = int(session_total.get("completion_tokens", 0) or 0)
+                    total_tokens = prompt + completion
+                    total_cost = float(session_total.get("cost", 0) or 0)
+
+                    # Only show summary if we have actual token usage
+                    if total_tokens > 0 or total_cost > 0:
+                        summary = (
+                            f"\n[bold cyan]TunaCode Session Summary[/bold cyan]\n"
+                            f"  - Total Tokens:      {total_tokens:,}\n"
+                            f"  - Prompt Tokens:     {prompt:,}\n"
+                            f"  - Completion Tokens: {completion:,}\n"
+                            f"  - [bold green]Total Session Cost: ${total_cost:.4f}[/bold green]"
+                        )
+                        ui.console.print(summary)
+                except (TypeError, ValueError):
+                    # Skip displaying summary if values can't be converted to numbers
+                    pass
+
             await ui.info(MSG_SESSION_ENDED)
