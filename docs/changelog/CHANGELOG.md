@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.41] - 2025-01-17
+
+### Added
+- Token usage and cost tracking system (PR #45) - @MclPio
+- Enhanced todo management with timestamp IDs and validation (PR #50) 
+- Todo management functionality (PR #49) - @Lftobs
+- Context window management with tiktoken-based token counting (PR #47) - @prudentbird
+
+### Fixed
+- Todo feature improvements with timestamp-based IDs and better validation
+- High-priority code quality issues post-PR merge
+- Test failures after token tracking PR merge
+
+### Changed
+- Applied ruff formatting and fixed linting errors
+- Removed unused tool confirmation functions and cleaned up interfaces
+- Flattened complex nested logic in REPL using TDD
+- Removed textual UI components and cleaned up emoji usage
+
+### Development
+- Improved code quality and maintainability
+- Enhanced parallel execution optimizations for read-only tools
+- Better error handling and fallback mechanisms
+
+### Contributors
+Special thanks to all contributors for this release:
+- @MclPio - Token usage and cost tracking implementation
+- @Lftobs - Todo management functionality 
+- @prudentbird - Context window management with tiktoken integration
+
 ## [0.0.37] - 2025-06-27
 
 ### Added
