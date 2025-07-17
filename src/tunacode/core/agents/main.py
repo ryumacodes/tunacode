@@ -525,6 +525,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         except Exception as e:
             # Log error but don't fail agent creation
             import sys
+
             print(f"Warning: Failed to load todos: {e}", file=sys.stderr)
 
         state_manager.session.agents[model] = Agent(

@@ -63,7 +63,7 @@ class StateManager:
 
     def update_todo(self, todo_id: str, status: str) -> None:
         from datetime import datetime
-        
+
         for todo in self._session.todos:
             if todo.id == todo_id:
                 todo.status = status
