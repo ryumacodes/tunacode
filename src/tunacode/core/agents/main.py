@@ -6,6 +6,7 @@ Handles agent creation, configuration, and request processing.
 
 import asyncio
 import json
+import logging
 import os
 import re
 from datetime import datetime, timezone
@@ -55,6 +56,9 @@ from tunacode.types import (
     ToolName,
     UsageTrackerProtocol,
 )
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class ToolBuffer:
@@ -114,6 +118,7 @@ async def execute_tools_parallel(
         try:
             return await callback(part, node)
         except Exception as e:
+            logger.error(f"Error executing parallel tool: {e}", exc_info=True)
             return e
 
     # If we have more tools than max_parallel, execute in batches
@@ -321,8 +326,8 @@ async def _process_node(
                             thought_obj = json.loads(content)
                             if "thought" in thought_obj:
                                 await ui.muted(f"REASONING: {thought_obj['thought']}")
-                    except (json.JSONDecodeError, KeyError):
-                        pass
+                    except (json.JSONDecodeError, KeyError) as e:
+                        logger.debug(f"Failed to parse thought JSON: {e}")
 
                     # Pattern 3: Multi-line thoughts with context
                     multiline_pattern = r'\{"thought":\s*"([^"]+(?:\\.[^"]*)*?)"\}'
@@ -519,9 +524,9 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             else:
                 # Log that TUNACODE.md was not found
                 print("📄 TUNACODE.md not found: Using default context")
-        except Exception:
-            # Ignore errors loading TUNACODE.md
-            pass
+        except Exception as e:
+            # Log errors loading TUNACODE.md at debug level
+            logger.debug(f"Error loading TUNACODE.md: {e}")
 
         todo_tool = TodoTool(state_manager=state_manager)
 
@@ -645,7 +650,9 @@ async def parse_json_tool_calls(
                     if isinstance(parsed, dict) and "tool" in parsed and "args" in parsed:
                         potential_jsons.append((parsed["tool"], parsed["args"]))
                 except json.JSONDecodeError:
-                    pass
+                    logger.debug(
+                        f"Failed to parse potential JSON tool call: {potential_json[:50]}..."
+                    )
                 start_pos = -1
 
     matches = potential_jsons
