@@ -345,36 +345,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         await ui.muted(error_message)
         patch_tool_messages(error_message, state_manager)
     except Exception as e:
-        # Check if this might be a tool calling failure that we can recover from
-        error_str = str(e).lower()
-        if any(keyword in error_str for keyword in ["tool", "function", "call", "schema"]):
-            # Try to extract and execute tool calls from the last response
-            if state_manager.session.messages:
-                last_msg = state_manager.session.messages[-1]
-                if hasattr(last_msg, "parts"):
-                    for part in last_msg.parts:
-                        if hasattr(part, "content") and isinstance(part.content, str):
-                            from tunacode.core.agents.main import (
-                                extract_and_execute_tool_calls,
-                            )
-
-                            try:
-                                # Create a partial function that includes state_manager
-                                def tool_callback_with_state(part, node):
-                                    return _tool_handler(part, node, state_manager)
-
-                                await extract_and_execute_tool_calls(
-                                    part.content,
-                                    tool_callback_with_state,
-                                    state_manager,
-                                )
-                                await ui.warning(f" {MSG_JSON_RECOVERY}")
-                                return  # Successfully recovered
-                            except Exception:
-                                pass  # Fallback failed, continue with normal error handling
-
-        # Wrap unexpected exceptions in AgentError for better tracking
-
+        # Try tool recovery for tool-related errors
         if await _attempt_tool_recovery(e, state_manager):
             return  # Successfully recovered
 

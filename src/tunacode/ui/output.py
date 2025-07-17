@@ -141,6 +141,13 @@ def get_context_window_display(total_tokens: int, max_tokens: int) -> str:
     Returns:
         A formatted string for display.
     """
+    # Ensure we have actual integers, not mocks or other objects
+    try:
+        total_tokens = int(total_tokens)
+        max_tokens = int(max_tokens)
+    except (TypeError, ValueError):
+        return ""
+    
     if max_tokens == 0:
         return ""
 
