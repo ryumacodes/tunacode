@@ -522,8 +522,10 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             current_todos = todo_tool.get_current_todos_sync()
             if current_todos != "No todos found":
                 system_prompt += f'\n\n# Current Todo List\n\nYou have existing todos that need attention:\n\n{current_todos}\n\nRemember to check progress on these todos and update them as you work. Use todo("list") to see current status anytime.'
-        except Exception:
-            pass
+        except Exception as e:
+            # Log error but don't fail agent creation
+            import sys
+            print(f"Warning: Failed to load todos: {e}", file=sys.stderr)
 
         state_manager.session.agents[model] = Agent(
             model=model,
