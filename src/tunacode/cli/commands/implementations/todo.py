@@ -106,7 +106,7 @@ class TodoCommand(SimpleCommand):
             return
 
         content = " ".join(args)
-        new_id = str(len(context.state_manager.session.todos) + 1)
+        new_id = f"{int(datetime.now().timestamp() * 1000000)}"
         new_todo = TodoItem(
             id=new_id,
             content=content,

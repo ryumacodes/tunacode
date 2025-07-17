@@ -139,3 +139,20 @@ MSG_UPDATE_AVAILABLE = "Update available: v{latest_version}"
 MSG_UPDATE_INSTRUCTION = "Exit, and run: [bold]pip install --upgrade tunacode-cli"
 MSG_VERSION_DISPLAY = "TunaCode CLI {version}"
 MSG_FILE_SIZE_LIMIT = " Please specify a smaller file or use other tools to process it."
+
+# Todo-related constants
+TODO_STATUS_PENDING = "pending"
+TODO_STATUS_IN_PROGRESS = "in_progress"
+TODO_STATUS_COMPLETED = "completed"
+TODO_STATUSES = [TODO_STATUS_PENDING, TODO_STATUS_IN_PROGRESS, TODO_STATUS_COMPLETED]
+
+TODO_PRIORITY_HIGH = "high"
+TODO_PRIORITY_MEDIUM = "medium"
+TODO_PRIORITY_LOW = "low"
+TODO_PRIORITIES = [TODO_PRIORITY_HIGH, TODO_PRIORITY_MEDIUM, TODO_PRIORITY_LOW]
+
+# Maximum number of todos allowed per session
+MAX_TODOS_PER_SESSION = 100
+
+# Maximum length for todo content
+MAX_TODO_CONTENT_LENGTH = 500

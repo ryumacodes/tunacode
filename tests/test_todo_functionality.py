@@ -141,33 +141,37 @@ class TestTodoCommand:
         """Test marking a todo as done."""
         # Add a todo first
         await self.command.add_todo(["Test", "task"], self.context)
+        todo_id = self.state_manager.session.todos[0].id
 
         # Mark it done
-        await self.command.mark_done(["1"], self.context)
+        await self.command.mark_done([todo_id], self.context)
         assert self.state_manager.session.todos[0].status == "completed"
 
     @pytest.mark.asyncio
     async def test_update_todo_status(self):
         """Test updating todo status."""
         await self.command.add_todo(["Test", "task"], self.context)
+        todo_id = self.state_manager.session.todos[0].id
 
-        await self.command.update_todo(["1", "in_progress"], self.context)
+        await self.command.update_todo([todo_id, "in_progress"], self.context)
         assert self.state_manager.session.todos[0].status == "in_progress"
 
     @pytest.mark.asyncio
     async def test_set_todo_priority(self):
         """Test setting todo priority."""
         await self.command.add_todo(["Test", "task"], self.context)
+        todo_id = self.state_manager.session.todos[0].id
 
-        await self.command.set_priority(["1", "high"], self.context)
+        await self.command.set_priority([todo_id, "high"], self.context)
         assert self.state_manager.session.todos[0].priority == "high"
 
     @pytest.mark.asyncio
     async def test_remove_todo(self):
         """Test removing a todo."""
         await self.command.add_todo(["Test", "task"], self.context)
+        todo_id = self.state_manager.session.todos[0].id
 
-        await self.command.remove_todo(["1"], self.context)
+        await self.command.remove_todo([todo_id], self.context)
         assert len(self.state_manager.session.todos) == 0
 
     @pytest.mark.asyncio
@@ -194,7 +198,7 @@ class TestTodoTool:
         """Test adding todo via tool."""
         result = await self.tool._execute(action="add", content="Test task", priority="high")
 
-        assert "Added todo 1: Test task (priority: high)" in result
+        assert "Test task (priority: high)" in result
         assert len(self.state_manager.session.todos) == 1
 
         todo = self.state_manager.session.todos[0]
@@ -215,9 +219,10 @@ class TestTodoTool:
         """Test updating todo status via tool."""
         # Add a todo first
         await self.tool._execute(action="add", content="Test task")
+        todo_id = self.state_manager.session.todos[0].id
 
-        result = await self.tool._execute(action="update", todo_id="1", status="in_progress")
-        assert "Updated todo 1: status to in_progress" in result
+        result = await self.tool._execute(action="update", todo_id=todo_id, status="in_progress")
+        assert "status to in_progress" in result
         assert self.state_manager.session.todos[0].status == "in_progress"
 
     @pytest.mark.asyncio
@@ -225,9 +230,10 @@ class TestTodoTool:
         """Test completing todo via tool."""
         # Add a todo first
         await self.tool._execute(action="add", content="Test task")
+        todo_id = self.state_manager.session.todos[0].id
 
-        result = await self.tool._execute(action="complete", todo_id="1")
-        assert "Marked todo 1 as completed" in result
+        result = await self.tool._execute(action="complete", todo_id=todo_id)
+        assert "as completed" in result
 
         todo = self.state_manager.session.todos[0]
         assert todo.status == "completed"
@@ -245,10 +251,12 @@ class TestTodoTool:
         # Add todos in different states
         await self.tool._execute(action="add", content="Pending task", priority="high")
         await self.tool._execute(action="add", content="In progress task", priority="medium")
-        await self.tool._execute(action="update", todo_id="2", status="in_progress")
+        todo2_id = self.state_manager.session.todos[1].id
+        await self.tool._execute(action="update", todo_id=todo2_id, status="in_progress")
         await self.tool._execute(action="add", content="Low priority pending task", priority="low")
         await self.tool._execute(action="add", content="Completed task", priority="medium")
-        await self.tool._execute(action="complete", todo_id="4")
+        todo4_id = self.state_manager.session.todos[3].id
+        await self.tool._execute(action="complete", todo_id=todo4_id)
 
         result = await self.tool._execute(action="list")
 
@@ -261,9 +269,10 @@ class TestTodoTool:
     async def test_remove_todo(self):
         """Test removing todo via tool."""
         await self.tool._execute(action="add", content="Test task")
+        todo_id = self.state_manager.session.todos[0].id
 
-        result = await self.tool._execute(action="remove", todo_id="1")
-        assert "Removed todo 1: Test task" in result
+        result = await self.tool._execute(action="remove", todo_id=todo_id)
+        assert "Test task" in result
         assert len(self.state_manager.session.todos) == 0
 
     @pytest.mark.asyncio
@@ -317,7 +326,8 @@ class TestTodoIntegration:
         assert self.state_manager.session.todos[1].content == "Tool task"
 
         # Update via tool
-        await self.tool._execute(action="update", todo_id="1", status="in_progress")
+        todo1_id = self.state_manager.session.todos[0].id
+        await self.tool._execute(action="update", todo_id=todo1_id, status="in_progress")
 
         # Verify the state was updated correctly
         assert self.state_manager.session.todos[0].status == "in_progress"
@@ -331,9 +341,13 @@ class TestTodoIntegration:
         # Add via tool
         await self.tool._execute(action="add", content="Second task")
 
-        # Verify IDs are sequential
-        assert self.state_manager.session.todos[0].id == "1"
-        assert self.state_manager.session.todos[1].id == "2"
+        # Verify IDs are unique timestamp-based strings
+        id1 = self.state_manager.session.todos[0].id
+        id2 = self.state_manager.session.todos[1].id
+        assert id1 != id2
+        assert len(id1) > 10  # Timestamp-based IDs are long
+        assert id1.isdigit()  # Should be numeric
+        assert id2.isdigit()  # Should be numeric
 
     @pytest.mark.asyncio
     async def test_add_multiple_todos_structured(self):
