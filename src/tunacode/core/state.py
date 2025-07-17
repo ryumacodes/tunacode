@@ -14,6 +14,7 @@ from tunacode.types import (
     MessageHistory,
     ModelName,
     SessionId,
+    TodoItem,
     ToolName,
     UserConfig,
 )
@@ -37,6 +38,7 @@ class SessionState:
     device_id: Optional[DeviceId] = None
     input_sessions: InputSessions = field(default_factory=dict)
     current_task: Optional[Any] = None
+    todos: list[TodoItem] = field(default_factory=list)
     # Enhanced tracking for thoughts display
     files_in_context: set[str] = field(default_factory=set)
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
@@ -56,5 +58,21 @@ class StateManager:
     def session(self) -> SessionState:
         return self._session
 
-    def reset_session(self):
+    def add_todo(self, todo: TodoItem) -> None:
+        self._session.todos.append(todo)
+
+    def update_todo(self, todo_id: str, status: str) -> None:
+        for todo in self._session.todos:
+            if todo.id == todo_id:
+                todo.status = status
+                break
+
+    def remove_todo(self, todo_id: str) -> None:
+        self._session.todos = [todo for todo in self._session.todos if todo.id != todo_id]
+
+    def clear_todos(self) -> None:
+        self._session.todos = []
+
+    def reset_session(self) -> None:
+        """Reset the session to a fresh state."""
         self._session = SessionState()
