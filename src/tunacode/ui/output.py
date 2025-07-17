@@ -147,7 +147,7 @@ def get_context_window_display(total_tokens: int, max_tokens: int) -> str:
         max_tokens = int(max_tokens)
     except (TypeError, ValueError):
         return ""
-    
+
     if max_tokens == 0:
         return ""
 
