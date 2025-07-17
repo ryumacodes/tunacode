@@ -10,6 +10,7 @@ Handles user input, command processing, and agent interaction in an interactive 
 # ============================================================================
 
 import json
+import logging
 import os
 import subprocess
 from asyncio.exceptions import CancelledError
@@ -49,6 +50,9 @@ MSG_AGENT_BUSY = "Agent is busy, press Ctrl+C to interrupt."
 MSG_HIT_CTRL_C = "Hit Ctrl+C again to exit"
 SHELL_ENV_VAR = "SHELL"
 DEFAULT_SHELL = "bash"
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # UTILITY FUNCTIONS
@@ -202,7 +206,8 @@ async def _attempt_tool_recovery(e: Exception, state_manager: StateManager) -> b
             await ui.warning(f" {MSG_JSON_RECOVERY}")
             return True
 
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to check triple quotes: {e}")
             continue
 
     return False
@@ -480,8 +485,8 @@ async def repl(state_manager: StateManager):
                             f"  - [bold green]Total Session Cost: ${total_cost:.4f}[/bold green]"
                         )
                         ui.console.print(summary)
-                except (TypeError, ValueError):
+                except (TypeError, ValueError) as e:
                     # Skip displaying summary if values can't be converted to numbers
-                    pass
+                    logger.debug(f"Failed to display token usage summary: {e}")
 
             await ui.info(MSG_SESSION_ENDED)

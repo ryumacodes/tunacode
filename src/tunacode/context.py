@@ -1,9 +1,12 @@
+import logging
 import subprocess
 from pathlib import Path
 from typing import Dict, List
 
 from tunacode.utils.ripgrep import ripgrep
 from tunacode.utils.system import list_cwd
+
+logger = logging.getLogger(__name__)
 
 
 async def get_git_status() -> Dict[str, object]:
@@ -29,7 +32,8 @@ async def get_git_status() -> Dict[str, object]:
                     behind = int(part.split("behind")[1].strip().strip(" ]"))
         dirty = any(line for line in lines[1:])
         return {"branch": branch, "ahead": ahead, "behind": behind, "dirty": dirty}
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to get git status: {e}")
         return {}
 
 
@@ -54,8 +58,8 @@ async def get_code_style() -> str:
         if file.exists():
             try:
                 parts.append(file.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to read TUNACODE.md at {file}: {e}")
         if current == current.parent:
             break
         current = current.parent

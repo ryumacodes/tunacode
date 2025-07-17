@@ -4,6 +4,7 @@ This tool allows the AI agent to manage todo items during task execution.
 It provides functionality for creating, updating, and tracking tasks.
 """
 
+import uuid
 from datetime import datetime
 from typing import List, Literal, Optional, Union
 
@@ -97,8 +98,8 @@ class TodoTool(BaseTool):
                 f"Cannot add more todos. Maximum of {MAX_TODOS_PER_SESSION} todos allowed per session"
             )
 
-        # Generate timestamp-based ID to ensure uniqueness
-        new_id = f"{int(datetime.now().timestamp() * 1000000)}"
+        # Generate UUID for guaranteed uniqueness
+        new_id = f"todo_{uuid.uuid4().hex[:8]}"
 
         # Default priority if not specified
         todo_priority = priority or TODO_PRIORITY_MEDIUM
@@ -177,8 +178,8 @@ class TodoTool(BaseTool):
                     f"Todo content is too long: '{task_content[:50]}...'. Maximum length is {MAX_TODO_CONTENT_LENGTH} characters"
                 )
 
-            # Generate timestamp-based ID to ensure uniqueness
-            new_id = f"{int(datetime.now().timestamp() * 1000000)}"
+            # Generate UUID for guaranteed uniqueness
+            new_id = f"todo_{uuid.uuid4().hex[:8]}"
 
             new_todo = TodoItem(
                 id=new_id,
@@ -314,19 +315,13 @@ class TodoTool(BaseTool):
         """Get current todos synchronously for system prompt inclusion."""
         todos = self.state_manager.session.todos
 
-        # Handle case where todos might be a Mock object (in tests) or not iterable
-        try:
-            if not todos or not hasattr(todos, "__iter__"):
-                return "No todos found"
-            # Try to iterate to see if it's actually iterable
-            list(todos)
-        except (TypeError, AttributeError):
+        if not todos:
             return "No todos found"
 
         # Group by status for better organization
-        pending = [t for t in todos if hasattr(t, "status") and t.status == "pending"]
-        in_progress = [t for t in todos if hasattr(t, "status") and t.status == "in_progress"]
-        completed = [t for t in todos if hasattr(t, "status") and t.status == "completed"]
+        pending = [t for t in todos if t.status == "pending"]
+        in_progress = [t for t in todos if t.status == "in_progress"]
+        completed = [t for t in todos if t.status == "completed"]
 
         lines = []
 
