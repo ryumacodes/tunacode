@@ -107,10 +107,3 @@ class StateManager:
     def reset_session(self) -> None:
         """Reset the session to a fresh state."""
         self._session = SessionState()
-
-        for todo in self._session.todos:
-            if todo.id == todo_id:
-                todo.status = status
-                if status == "completed":
-                    todo.completed_at = datetime.now()
-                break

@@ -15,10 +15,10 @@ _encoding_cache = {}
 @lru_cache(maxsize=8)
 def get_encoding(model_name: str):
     """Get the appropriate tiktoken encoding for a model.
-    
+
     Args:
         model_name: The model name in format "provider:model"
-        
+
     Returns:
         A tiktoken encoding instance
     """
@@ -27,13 +27,13 @@ def get_encoding(model_name: str):
     except ImportError:
         logger.warning("tiktoken not available, falling back to character estimation")
         return None
-    
+
     # Extract the model part from "provider:model" format
     if ":" in model_name:
         provider, model = model_name.split(":", 1)
     else:
         provider, model = "unknown", model_name
-    
+
     # Map common models to their tiktoken encodings
     if provider == "openai":
         if "gpt-4" in model:
@@ -48,7 +48,7 @@ def get_encoding(model_name: str):
     else:
         # Default encoding for unknown models
         encoding_name = "cl100k_base"
-    
+
     try:
         return tiktoken.get_encoding(encoding_name)
     except Exception as e:
@@ -78,7 +78,7 @@ def estimate_tokens(text: str, model_name: Optional[str] = None) -> int:
                 return len(encoding.encode(text))
             except Exception as e:
                 logger.error(f"Error counting tokens with tiktoken: {e}")
-    
+
     # Fallback to character-based estimation
     # This is roughly accurate for English text
     return len(text) // 4
