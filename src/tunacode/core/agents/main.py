@@ -30,6 +30,8 @@ except ImportError:
 
 from tunacode.constants import READ_ONLY_TOOLS
 from tunacode.core.state import StateManager
+from tunacode.core.token_usage.api_response_parser import ApiResponseParser
+from tunacode.core.token_usage.cost_calculator import CostCalculator
 from tunacode.services.mcp import get_mcp_servers
 from tunacode.tools.bash import bash
 from tunacode.tools.glob import glob
@@ -51,6 +53,7 @@ from tunacode.types import (
     ToolCallback,
     ToolCallId,
     ToolName,
+    UsageTrackerProtocol,
 )
 
 
@@ -215,6 +218,7 @@ async def _process_node(
     state_manager: StateManager,
     tool_buffer: Optional[ToolBuffer] = None,
     streaming_callback: Optional[callable] = None,
+    usage_tracker: Optional[UsageTrackerProtocol] = None,
 ):
     from tunacode.ui import console as ui
     from tunacode.utils.token_counter import estimate_tokens
@@ -233,6 +237,9 @@ async def _process_node(
 
     if hasattr(node, "model_response"):
         state_manager.session.messages.append(node.model_response)
+
+        if usage_tracker:
+            await usage_tracker.track_and_display(node.model_response)
 
         # Stream content to callback if provided
         # Use this as fallback when true token streaming is not available
@@ -735,7 +742,13 @@ async def process_request(
     fallback_enabled = state_manager.session.user_config.get("settings", {}).get(
         "fallback_response", True
     )
+    from tunacode.configuration.models import ModelRegistry
+    from tunacode.core.token_usage.usage_tracker import UsageTracker
 
+    parser = ApiResponseParser()
+    registry = ModelRegistry()
+    calculator = CostCalculator(registry)
+    usage_tracker = UsageTracker(parser, calculator, state_manager)
     response_state = ResponseState()
 
     # Reset iteration tracking for this request
@@ -779,7 +792,14 @@ async def process_request(
                             if event.delta.content_delta:
                                 await streaming_callback(event.delta.content_delta)
 
-            await _process_node(node, tool_callback, state_manager, tool_buffer, streaming_callback)
+            await _process_node(
+                node,
+                tool_callback,
+                state_manager,
+                tool_buffer,
+                streaming_callback,
+                usage_tracker,
+            )
             if hasattr(node, "result") and node.result and hasattr(node.result, "output"):
                 if node.result.output:
                     response_state.has_user_response = True
