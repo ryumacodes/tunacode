@@ -30,6 +30,7 @@ except ImportError:
     STREAMING_AVAILABLE = False
 
 from tunacode.constants import READ_ONLY_TOOLS
+from tunacode.core.agents.dspy_integration import DSPyIntegration
 from tunacode.core.state import StateManager
 from tunacode.core.token_usage.api_response_parser import ApiResponseParser
 from tunacode.core.token_usage.cost_calculator import CostCalculator
@@ -507,6 +508,16 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             except FileNotFoundError:
                 # Use a default system prompt if neither file exists
                 system_prompt = "You are a helpful AI assistant for software development tasks."
+        
+        # Enhance with DSPy optimization if enabled
+        use_dspy = state_manager.session.user_config.get("settings", {}).get("use_dspy_optimization", True)
+        if use_dspy:
+            try:
+                dspy_integration = DSPyIntegration(state_manager)
+                system_prompt = dspy_integration.enhance_system_prompt(system_prompt)
+                logger.info("Enhanced system prompt with DSPy optimizations")
+            except Exception as e:
+                logger.warning(f"Failed to enhance prompt with DSPy: {e}")
 
         # Load TUNACODE.md context
         # Use sync version of get_code_style to avoid nested event loop issues
@@ -749,6 +760,40 @@ async def process_request(
     fallback_enabled = state_manager.session.user_config.get("settings", {}).get(
         "fallback_response", True
     )
+    
+    # Check if DSPy optimization is enabled and if this is a complex task
+    use_dspy = state_manager.session.user_config.get("settings", {}).get("use_dspy_optimization", True)
+    dspy_integration = None
+    task_breakdown = None
+    
+    if use_dspy:
+        try:
+            dspy_integration = DSPyIntegration(state_manager)
+            
+            # Check if this is a complex task that needs planning
+            if dspy_integration.should_use_task_planner(message):
+                task_breakdown = dspy_integration.get_task_breakdown(message)
+                if task_breakdown and task_breakdown.get("requires_todo"):
+                    # Auto-create todos for complex tasks
+                    from tunacode.tools.todo import TodoTool
+                    todo_tool = TodoTool(state_manager=state_manager)
+                    
+                    if state_manager.session.show_thoughts:
+                        from tunacode.ui import console as ui
+                        await ui.muted("DSPy: Detected complex task - creating todo list")
+                    
+                    # Create todos from subtasks
+                    todos = []
+                    for subtask in task_breakdown["subtasks"][:5]:  # Limit to first 5
+                        todos.append({
+                            "content": subtask["task"],
+                            "priority": subtask.get("priority", "medium")
+                        })
+                    
+                    if todos:
+                        await todo_tool._execute(action="add_multiple", todos=todos)
+        except Exception as e:
+            logger.warning(f"DSPy task planning failed: {e}")
     from tunacode.configuration.models import ModelRegistry
     from tunacode.core.token_usage.usage_tracker import UsageTracker
 
