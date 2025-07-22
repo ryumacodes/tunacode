@@ -1,0 +1,26 @@
+Product Requirements Document: Fix TunaCode UI Safety Branch Warning
+
+Problem Statement:
+The TunaCode CLI is displaying an incorrect safety warning message that contains formatting issues. When running without a safety branch, the error message shows raw ANSI color codes instead of properly formatted text.
+
+Current Behavior:
+- Error message displays: "Working Without Safety Branch ... You've chosen to work directly on your current branch. TunaCode will modify files in place. Make sure you have backups!"
+- The message contains visible color codes: "[1] Yes (default)" shows as raw text with ANSI codes
+- Text "Thinking..." appears misaligned
+
+Expected Behavior:
+- Clean, properly formatted warning message without visible ANSI escape sequences
+- Properly aligned and readable confirmation options
+- Clear visual hierarchy in the terminal output
+
+Technical Requirements:
+1. Fix ANSI color code rendering in the safety branch warning dialog
+2. Ensure proper text alignment for all UI elements
+3. Maintain consistent formatting with other TunaCode prompts
+4. Test across different terminal emulators
+
+Success Criteria:
+- No visible ANSI escape sequences in output
+- Clean, professional appearance
+- Consistent with TunaCode's existing UI patterns
+- Works on common terminal environments (bash, zsh, Windows Terminal)

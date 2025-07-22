@@ -1,0 +1,74 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Analyze Current ANSI Color Code Issue",
+        "description": "Investigate the root cause of visible ANSI escape sequences in the safety branch warning dialog",
+        "details": "Locate the safety branch warning implementation in the TunaCode codebase. Examine how ANSI color codes are being applied and why they're rendering as visible text instead of formatting. Check if the issue is in the prompt generation, color utility functions, or terminal output handling. Review related UI components to understand the expected color formatting patterns.\n<info added on 2025-07-22T21:28:22.937Z>\nRoot cause identified: The issue is in `/home/fabian/tunacode/src/tunacode/ui/tool_ui.py` in the `show_sync_confirmation` method (lines 157-159). Rich console interprets square brackets `[` and `]` as markup tags for formatting. When displaying options like `\"  [1] Yes (default)\"` using `ui.console.print()`, Rich attempts to parse `[1]` as a markup tag, fails, and displays raw ANSI escape codes instead. The solution requires escaping the square brackets or using Rich's Text object to display literal text without markup interpretation. This affects the sync confirmation dialog used when async operations aren't available.\n</info added on 2025-07-22T21:28:22.937Z>",
+        "testStrategy": "Run TunaCode without a safety branch in different terminal environments to reproduce the issue. Document the exact ANSI codes being displayed and compare with working UI elements.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Fix ANSI Color Code Rendering",
+        "description": "Repair the color code implementation to properly format text without visible escape sequences",
+        "details": "Based on the analysis, fix the ANSI color code implementation. This may involve correcting color utility function calls, ensuring proper terminal detection, or fixing string formatting. Ensure colors are applied correctly using TunaCode's existing color system (likely using rich library). Update the safety warning dialog to use proper color formatting methods.",
+        "testStrategy": "Test the fix in multiple terminal environments (bash, zsh, Windows Terminal). Verify that colors render properly and no ANSI codes are visible as text. Compare output with other TunaCode prompts for consistency.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Fix Text Alignment and Layout",
+        "description": "Correct text alignment issues in the safety branch warning dialog",
+        "details": "Address the misaligned 'Thinking...' text and ensure proper spacing and alignment for all elements in the safety warning dialog. Review the layout structure and adjust padding, margins, or positioning as needed. Ensure consistent indentation and visual hierarchy throughout the warning message.",
+        "testStrategy": "Verify that all text elements are properly aligned and visually consistent. Test with different terminal widths to ensure responsive layout. Compare with other TunaCode dialogs for consistency.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Standardize UI Formatting Patterns",
+        "description": "Ensure the safety warning follows TunaCode's established UI patterns and conventions",
+        "details": "Review existing TunaCode UI components to identify consistent patterns for warnings, confirmations, and user prompts. Apply these patterns to the safety branch warning to ensure visual consistency. This includes standardizing color usage, text formatting, spacing, and interactive element styling (like the '[1] Yes (default)' option).",
+        "testStrategy": "Conduct side-by-side comparison with other TunaCode prompts and dialogs. Verify that styling, spacing, and interaction patterns match established conventions. Test user experience flow to ensure consistency.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Comprehensive Terminal Compatibility Testing",
+        "description": "Test the fixed safety warning across different terminal emulators and environments",
+        "details": "Perform comprehensive testing across common terminal environments including bash, zsh, Windows Terminal, macOS Terminal, and popular terminal emulators. Verify proper rendering, color support detection, and fallback behavior for terminals with limited color support. Document any environment-specific issues and ensure graceful degradation.",
+        "testStrategy": "Create a test matrix covering different terminals, operating systems, and color support levels. Test both the safety warning dialog and surrounding TunaCode functionality to ensure no regressions. Verify that the fix works consistently across all supported environments.",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-22T21:24:36.985Z",
+      "updated": "2025-07-22T21:28:26.843Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

@@ -508,9 +508,11 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             except FileNotFoundError:
                 # Use a default system prompt if neither file exists
                 system_prompt = "You are a helpful AI assistant for software development tasks."
-        
+
         # Enhance with DSPy optimization if enabled
-        use_dspy = state_manager.session.user_config.get("settings", {}).get("use_dspy_optimization", True)
+        use_dspy = state_manager.session.user_config.get("settings", {}).get(
+            "use_dspy_optimization", True
+        )
         if use_dspy:
             try:
                 dspy_integration = DSPyIntegration(state_manager)
@@ -760,36 +762,42 @@ async def process_request(
     fallback_enabled = state_manager.session.user_config.get("settings", {}).get(
         "fallback_response", True
     )
-    
+
     # Check if DSPy optimization is enabled and if this is a complex task
-    use_dspy = state_manager.session.user_config.get("settings", {}).get("use_dspy_optimization", True)
+    use_dspy = state_manager.session.user_config.get("settings", {}).get(
+        "use_dspy_optimization", True
+    )
     dspy_integration = None
     task_breakdown = None
-    
+
     if use_dspy:
         try:
             dspy_integration = DSPyIntegration(state_manager)
-            
+
             # Check if this is a complex task that needs planning
             if dspy_integration.should_use_task_planner(message):
                 task_breakdown = dspy_integration.get_task_breakdown(message)
                 if task_breakdown and task_breakdown.get("requires_todo"):
                     # Auto-create todos for complex tasks
                     from tunacode.tools.todo import TodoTool
+
                     todo_tool = TodoTool(state_manager=state_manager)
-                    
+
                     if state_manager.session.show_thoughts:
                         from tunacode.ui import console as ui
+
                         await ui.muted("DSPy: Detected complex task - creating todo list")
-                    
+
                     # Create todos from subtasks
                     todos = []
                     for subtask in task_breakdown["subtasks"][:5]:  # Limit to first 5
-                        todos.append({
-                            "content": subtask["task"],
-                            "priority": subtask.get("priority", "medium")
-                        })
-                    
+                        todos.append(
+                            {
+                                "content": subtask["task"],
+                                "priority": subtask.get("priority", "medium"),
+                            }
+                        )
+
                     if todos:
                         await todo_tool._execute(action="add_multiple", todos=todos)
         except Exception as e:
