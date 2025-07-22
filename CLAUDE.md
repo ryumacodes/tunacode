@@ -249,3 +249,7 @@ Follow this code styling
 | 8   | **Explaining Variable**                        | Extract a sub-expression into a well-named variable to record intent                                 |
 | 9   | **Explaining Constant**                        | Replace magic literals with symbolic constants that broadcast meaning                                |
 | 10  | **Explicit Parameters**                        | Split a routine so all inputs are passed openly, banishing hidden state or maps                      |
+
+## Task Master AI Instructions
+**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
+@./.taskmaster/CLAUDE.md
