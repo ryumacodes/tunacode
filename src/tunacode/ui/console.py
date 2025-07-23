@@ -43,7 +43,7 @@ from .prompt_manager import PromptConfig, PromptManager
 from .validators import ModelValidator
 
 # Create console object for backward compatibility
-console = RichConsole()
+console = RichConsole(force_terminal=True, legacy_windows=False)
 
 # Create key bindings object for backward compatibility
 kb = create_key_bindings()

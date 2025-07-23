@@ -19,7 +19,8 @@ from tunacode.utils.token_counter import format_token_count
 from .constants import SPINNER_TYPE
 from .decorators import create_sync_wrapper
 
-console = Console()
+# Create console with explicit settings to ensure ANSI codes work properly
+console = Console(force_terminal=True, legacy_windows=False)
 colors = DotDict(UI_COLORS)
 
 BANNER = """[bold cyan]
