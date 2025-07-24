@@ -86,7 +86,10 @@ class StreamingAgentPanel:
 
     def _create_panel(self) -> Panel:
         """Create a Rich panel with current content."""
-        markdown_content = Markdown(self.content or "Thinking...")
+        # Use the UI_THINKING_MESSAGE constant instead of hardcoded text
+        from tunacode.constants import UI_THINKING_MESSAGE
+
+        markdown_content = Markdown(self.content or UI_THINKING_MESSAGE)
         panel_obj = Panel(
             Padding(markdown_content, (0, 1, 0, 1)),
             title=f"[bold]{self.title}[/bold]",
