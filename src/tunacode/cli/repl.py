@@ -433,15 +433,19 @@ async def repl(state_manager: StateManager):
                                     capture_output=False,
                                 )
                                 if result.returncode != 0:
-                                    print(f"\nCommand exited with code {result.returncode}")
+                                    ui.console.print(
+                                        f"\nCommand exited with code {result.returncode}"
+                                    )
                             except CommandSecurityError as e:
-                                print(f"\nSecurity validation failed: {str(e)}")
-                                print("If you need to run this command, please ensure it's safe.")
+                                ui.console.print(f"\nSecurity validation failed: {str(e)}")
+                                ui.console.print(
+                                    "If you need to run this command, please ensure it's safe."
+                                )
                         else:
                             shell = os.environ.get(SHELL_ENV_VAR, DEFAULT_SHELL)
                             subprocess.run(shell)  # Interactive shell is safe
                     except Exception as e:
-                        print(f"\nShell command failed: {str(e)}")
+                        ui.console.print(f"\nShell command failed: {str(e)}")
 
                 await run_in_terminal(run_shell)
                 await ui.line()

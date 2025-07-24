@@ -178,7 +178,7 @@ class ToolUI:
         resp = input("  Choose an option [1/2/3]: ").strip() or "1"
 
         # Add spacing after user choice for better readability
-        print()
+        ui.console.print()
 
         if resp == "2":
             return ToolConfirmationResponse(approved=True, skip_future=True)
