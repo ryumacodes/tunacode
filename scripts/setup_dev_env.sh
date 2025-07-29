@@ -240,7 +240,7 @@ fi
 
 # Test that the tunacode command is available
 log "${BLUE}Verifying tunacode CLI installation...${NC}"
-if "$VENV_DIR/bin/python" -m tunacode --version &>/dev/null; then
+if "$VENV_DIR/bin/tunacode" --version &>/dev/null; then
     log "${GREEN}✓${NC} tunacode CLI is properly installed"
 else
     log "${RED}✗${NC} tunacode CLI not working properly"
