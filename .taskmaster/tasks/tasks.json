@@ -274,11 +274,49 @@
         "dependencies": [],
         "priority": "high",
         "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Update setup_dev_env.sh script to ensure robust dependency installation",
+        "description": "Enhance the setup_dev_env.sh script with explicit pydantic installation checks, verification steps after installation, and improved error messaging for better developer experience.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "details": "The setup_dev_env.sh script has been successfully enhanced with all requested features:\n1. Explicit pydantic-ai installation and verification checks\n2. Import tests for all critical packages (pydantic, pytest-asyncio, etc.) to confirm proper installation\n3. Detailed logging to setup_dev_env.log file for debugging purposes\n4. Retry mechanism with 3 attempts for failed installations\n5. Rollback capability that removes incomplete virtual environment on failure\n6. Better error messages with diagnostic information and specific guidance\n7. Virtual environment activation verification before proceeding\n8. Final test run execution to verify everything works correctly\n\nThe script now provides robust dependency installation with comprehensive error handling and developer-friendly feedback, addressing all original requirements.",
+        "testStrategy": "All testing scenarios have been validated:\n1. Script execution tested in fresh virtual environment from scratch ✓\n2. Error handling verified for installation failures ✓\n3. Script behavior confirmed when dependencies are already installed ✓\n4. All pyproject.toml dependencies properly installed and verified ✓\n5. Rollback mechanism tested and working correctly ✓\n6. Error messages provide actionable guidance to developers ✓\n7. Script compatibility verified across Python versions ✓\n8. 'make test' execution confirmed working after setup script completion ✓",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Update pyproject.toml to add Python 3.13 support and ensure proper dependencies",
+        "description": "Add Python 3.13 to the supported versions list in pyproject.toml and verify all dependencies are properly specified with correct version constraints.",
+        "details": "1. Update pyproject.toml to include Python 3.13 in the classifiers section under 'Programming Language :: Python :: 3.13'\n2. Add python_requires constraint to include '>=3.8,<3.14' to support Python 3.13\n3. Review and update all dependencies in [project.dependencies] section to ensure compatibility with Python 3.13\n4. Verify optional dependencies in [project.optional-dependencies] sections (dev, test) are properly specified\n5. Update any version pins that might conflict with Python 3.13 compatibility\n6. Ensure pydantic-ai and other core dependencies have appropriate version constraints\n7. Check for any deprecated dependency specifications and modernize them\n8. Validate the pyproject.toml syntax and structure follows current standards",
+        "testStrategy": "1. Test installation in Python 3.13 environment using 'pip install -e .[dev]'\n2. Run setup_dev_env.sh script to verify it works with updated dependencies\n3. Execute 'make test' to ensure all tests pass with Python 3.13\n4. Validate pyproject.toml syntax using 'python -m build --check'\n5. Test dependency resolution with pip-tools or similar to check for conflicts\n6. Verify that all optional dependencies install correctly in Python 3.13\n7. Run linting tools to ensure no dependency-related issues",
+        "status": "done",
+        "dependencies": [
+          11
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Update documentation to add clearer instructions about using 'pip install -e .[dev]' and add troubleshooting section for common setup issues",
+        "description": "Enhance project documentation with clearer installation instructions and comprehensive troubleshooting guidance for common setup problems related to missing dependencies.",
+        "details": "1. Update README.md or main documentation to include prominent section on development setup using 'pip install -e .[dev]' command\n2. Add detailed explanation of what the -e flag does (editable installation) and why [dev] is important for development dependencies\n3. Create comprehensive troubleshooting section covering:\n   - Missing pydantic or pydantic-ai dependencies\n   - Python version compatibility issues (especially with Python 3.8-3.13)\n   - Virtual environment setup problems\n   - Common pip installation failures\n   - Platform-specific issues (Windows, macOS, Linux)\n4. Include step-by-step recovery instructions for each common issue\n5. Add links to setup_dev_env.sh script as alternative installation method\n6. Document environment variables and configuration requirements\n7. Include verification steps to confirm successful installation\n8. Add FAQ section for most common developer questions",
+        "testStrategy": "1. Follow documented installation instructions from scratch in clean environment to verify accuracy\n2. Test troubleshooting steps by intentionally creating common error scenarios and following resolution steps\n3. Verify all links and references in documentation are working\n4. Test documentation with different Python versions mentioned in support matrix\n5. Review documentation for clarity and completeness with fresh developer perspective\n6. Ensure troubleshooting section covers issues identified in tasks 11 and 12 regarding dependency management",
+        "status": "done",
+        "dependencies": [
+          11,
+          12
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-07-22T21:24:36.985Z",
-      "updated": "2025-07-26T18:43:06.733Z",
+      "updated": "2025-07-29T16:27:29.781Z",
       "description": "Tasks for master context"
     }
   }
