@@ -1,0 +1,266 @@
+name: ESC Cancellation Tests
+
+on:
+  push:
+    branches: [ master, main, esc-interrupt-tunacode ]
+    paths:
+      - 'src/tunacode/core/abort_controller.py'
+      - 'src/tunacode/utils/cancellable_processing.py'
+      - 'src/tunacode/utils/keyboard_monitor.py'
+      - 'tests/test_esc_interrupt_*.py'
+      - '.github/workflows/esc-cancellation-tests.yml'
+  pull_request:
+    branches: [ master, main ]
+    paths:
+      - 'src/tunacode/core/abort_controller.py'
+      - 'src/tunacode/utils/cancellable_processing.py'
+      - 'src/tunacode/utils/keyboard_monitor.py'
+      - 'tests/test_esc_interrupt_*.py'
+      - '.github/workflows/esc-cancellation-tests.yml'
+
+jobs:
+  cancellation-unit-tests:
+    name: "Unit Tests - ESC Cancellation"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        exclude:
+          # Skip some combinations to reduce CI load
+          - os: macos-latest
+            python-version: "3.9"
+          - os: macos-latest 
+            python-version: "3.10"
+
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        pip install pytest-asyncio pytest-timeout psutil
+        
+    - name: Run unit cancellation tests
+      run: |
+        # Run only the unit tests with strict timeout
+        pytest -xvs tests/test_esc_interrupt_unit.py \
+          -m "cancellation" \
+          --timeout=120 \
+          --tb=short
+          
+    - name: Run unit cancellation tests (all)
+      run: |
+        # Run all unit tests including unmarked ones
+        pytest -xvs tests/test_esc_interrupt_unit.py \
+          --timeout=120 \
+          --tb=short
+
+  cancellation-integration-tests:
+    name: "Integration Tests - ESC Cancellation"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        pip install pytest-asyncio pytest-timeout psutil
+        # Install pexpect for subprocess testing
+        pip install pexpect
+        
+    - name: Run integration cancellation tests
+      run: |
+        # Run integration tests with longer timeout
+        pytest -xvs tests/test_esc_interrupt_integration.py \
+          -m "integration and cancellation" \
+          --timeout=300 \
+          --tb=short
+          
+    - name: Run subprocess integration tests
+      run: |
+        # Run subprocess tests separately (these are slower)
+        pytest -xvs tests/test_esc_interrupt_integration.py::TestSubprocessIntegration \
+          --timeout=600 \
+          --tb=short
+
+  cancellation-concurrency-tests:
+    name: "Concurrency Tests - ESC Cancellation"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        pip install pytest-asyncio pytest-timeout psutil
+        
+    - name: Run concurrency torture tests
+      run: |
+        # Run concurrency tests with extended timeout
+        pytest -xvs tests/test_esc_interrupt_concurrency.py \
+          -m "slow and cancellation" \
+          --timeout=900 \
+          --tb=short
+          
+    - name: Run parametrized concurrency tests
+      run: |
+        # Run parametrized tests separately
+        pytest -xvs tests/test_esc_interrupt_concurrency.py \
+          -k "test_parametrized_concurrency_stress" \
+          --timeout=300 \
+          --tb=short
+
+  cancellation-timing-validation:
+    name: "Timing Validation - ESC Cancellation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        pip install pytest-asyncio pytest-timeout
+        
+    - name: Run timing validation tests
+      run: |
+        # Ensure cancellation happens within 2 seconds wall-clock time
+        timeout 120s pytest -xvs \
+          tests/test_esc_interrupt_unit.py::TestCancellationMarker::test_cancellation_timing \
+          --tb=short
+          
+        # Verify the test itself completed quickly
+        if [ $? -eq 0 ]; then
+          echo "✅ Cancellation timing test passed within timeout"
+        else
+          echo "❌ Cancellation timing test failed or exceeded timeout"
+          exit 1
+        fi
+
+  cancellation-memory-leak-check:
+    name: "Memory Leak Check - ESC Cancellation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        pip install pytest-asyncio pytest-timeout psutil memory-profiler
+        
+    - name: Run memory leak detection tests
+      run: |
+        # Run specific memory-related tests
+        pytest -xvs \
+          tests/test_esc_interrupt_unit.py::TestEscInterruptUnit::test_memory_leak_detection \
+          tests/test_esc_interrupt_concurrency.py::TestEscInterruptConcurrency::test_memory_pressure_during_cancellation \
+          --timeout=600 \
+          --tb=short
+
+  cancellation-fallback-trigger:
+    name: "Fallback Plan Trigger Check"
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: [cancellation-unit-tests, cancellation-integration-tests, cancellation-concurrency-tests]
+    
+    steps:
+    - name: Check for consecutive failures
+      run: |
+        echo "🚨 ESC Cancellation tests have failed in multiple areas"
+        echo "This may trigger the fallback plan: implement pre-emptive 'Press Esc to cancel' window"
+        echo ""
+        echo "Failed test categories:"
+        echo "- Unit tests: ${{ needs.cancellation-unit-tests.result }}"
+        echo "- Integration tests: ${{ needs.cancellation-integration-tests.result }}"
+        echo "- Concurrency tests: ${{ needs.cancellation-concurrency-tests.result }}"
+        echo ""
+        echo "Consider implementing the simpler pre-emptive cancellation UI while debugging the trio-asyncio integration."
+        
+        # Create an issue comment or annotation
+        exit 1
+
+  test-summary:
+    name: "ESC Cancellation Test Summary"
+    runs-on: ubuntu-latest
+    needs: [cancellation-unit-tests, cancellation-integration-tests, cancellation-concurrency-tests, cancellation-timing-validation, cancellation-memory-leak-check]
+    if: always()
+    
+    steps:
+    - name: Test Results Summary
+      run: |
+        echo "## ESC Cancellation Test Results Summary"
+        echo ""
+        echo "✅ **Unit Tests:** ${{ needs.cancellation-unit-tests.result == 'success' && '✅ PASSED' || '❌ FAILED' }}"
+        echo "✅ **Integration Tests:** ${{ needs.cancellation-integration-tests.result == 'success' && '✅ PASSED' || '❌ FAILED' }}"
+        echo "✅ **Concurrency Tests:** ${{ needs.cancellation-concurrency-tests.result == 'success' && '✅ PASSED' || '❌ FAILED' }}"
+        echo "✅ **Timing Validation:** ${{ needs.cancellation-timing-validation.result == 'success' && '✅ PASSED' || '❌ FAILED' }}"
+        echo "✅ **Memory Leak Check:** ${{ needs.cancellation-memory-leak-check.result == 'success' && '✅ PASSED' || '❌ FAILED' }}"
+        echo ""
+        
+        # Determine overall result
+        if [[ "${{ needs.cancellation-unit-tests.result }}" == "success" && \
+              "${{ needs.cancellation-integration-tests.result }}" == "success" && \
+              "${{ needs.cancellation-concurrency-tests.result }}" == "success" && \
+              "${{ needs.cancellation-timing-validation.result }}" == "success" && \
+              "${{ needs.cancellation-memory-leak-check.result }}" == "success" ]]; then
+          echo "🎉 **Overall Result: ALL TESTS PASSED**"
+          echo ""
+          echo "The ESC interrupt functionality behaves exactly like Ctrl-C across every code path!"
+          exit 0
+        else
+          echo "⚠️ **Overall Result: SOME TESTS FAILED**"
+          echo ""
+          echo "Review the failing tests above. If more than two consecutive CI runs fail,"
+          echo "consider implementing the fallback pre-emptive cancellation window."
+          exit 1
+        fi

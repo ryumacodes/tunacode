@@ -9,6 +9,7 @@ Handles user input, command processing, and agent interaction in an interactive 
 # IMPORTS AND DEPENDENCIES
 # ============================================================================
 
+import asyncio
 import json
 import logging
 import os
@@ -460,10 +461,45 @@ async def repl(state_manager: StateManager):
                 await ui.muted(MSG_AGENT_BUSY)
                 continue
 
-            state_manager.session.current_task = get_app().create_background_task(
-                process_request(line, state_manager)
-            )
-            await state_manager.session.current_task
+            # Reset interruption state
+            from tunacode.core.interrupt_controller import reset_global_interrupt
+            state_manager.session.task_interrupted = False
+            reset_global_interrupt()
+            
+            # Create the agent processing task
+            agent_task = asyncio.create_task(process_request(line, state_manager))
+            state_manager.session.current_task = agent_task
+            
+            # Monitor for Esc key during agent processing
+            from tunacode.utils.simple_esc_monitor import start_esc_monitoring, stop_esc_monitoring
+            from tunacode.core.interrupt_controller import get_interrupt_controller
+            
+            interrupt_controller = get_interrupt_controller()
+            
+            def on_esc_interrupt():
+                """Handle Esc key during processing."""
+                interrupt_controller.trigger_interrupt()
+                state_manager.session.task_interrupted = True
+                if not agent_task.done():
+                    agent_task.cancel()
+            
+            # Start Esc monitoring
+            esc_monitoring_active = start_esc_monitoring(on_esc_interrupt)
+            
+            try:
+                # Wait for the agent task to complete
+                await agent_task
+            except asyncio.CancelledError:
+                # Task was cancelled
+                if state_manager.session.task_interrupted or interrupt_controller.is_interrupted():
+                    await ui.muted(MSG_REQUEST_CANCELLED)
+                else:
+                    # Cancelled by Ctrl+C or other signal
+                    await ui.muted(MSG_REQUEST_CANCELLED)
+            finally:
+                # Stop Esc monitoring
+                if esc_monitoring_active:
+                    stop_esc_monitoring()
 
             state_manager.session.update_token_count()
             context_display = get_context_window_display(

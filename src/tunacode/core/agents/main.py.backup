@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import trio_asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator, List, Optional, Tuple
@@ -103,7 +104,7 @@ async def execute_tools_parallel(
     tool_calls: List[Tuple[Any, Any]], callback: ToolCallback, return_exceptions: bool = True
 ) -> List[Any]:
     """
-    Execute multiple tool calls in parallel using asyncio.
+    Execute multiple tool calls sequentially (temporarily disabled parallel execution).
 
     Args:
         tool_calls: List of (part, node) tuples
@@ -113,40 +114,18 @@ async def execute_tools_parallel(
     Returns:
         List of results in the same order as input, with exceptions for failed calls
     """
-    # Get max parallel from environment or default to CPU count
-    max_parallel = int(os.environ.get("TUNACODE_MAX_PARALLEL", os.cpu_count() or 4))
-
-    async def execute_with_error_handling(part, node):
+    results = []
+    for part, node in tool_calls:
         try:
-            # Check for interrupt before executing tool
-            from tunacode.core.interrupt_controller import check_global_interrupt
-            await check_global_interrupt()
-            
-            return await callback(part, node)
+            result = await callback(part, node)
+            results.append(result)
         except Exception as e:
-            logger.error(f"Error executing parallel tool: {e}", exc_info=True)
-            return e
-
-    # If we have more tools than max_parallel, execute in batches
-    if len(tool_calls) > max_parallel:
-        results = []
-        for i in range(0, len(tool_calls), max_parallel):
-            # Check for interrupt before each batch
-            from tunacode.core.interrupt_controller import check_global_interrupt
-            await check_global_interrupt()
-            
-            batch = tool_calls[i : i + max_parallel]
-            batch_tasks = [execute_with_error_handling(part, node) for part, node in batch]
-            batch_results = await asyncio.gather(*batch_tasks, return_exceptions=return_exceptions)
-            results.extend(batch_results)
-        return results
-    else:
-        # Check for interrupt before executing tools
-        from tunacode.core.interrupt_controller import check_global_interrupt
-        await check_global_interrupt()
-        
-        tasks = [execute_with_error_handling(part, node) for part, node in tool_calls]
-        return await asyncio.gather(*tasks, return_exceptions=return_exceptions)
+            logger.error(f"Error executing tool: {e}", exc_info=True)
+            if return_exceptions:
+                results.append(e)
+            else:
+                raise
+    return results
 
 
 def batch_read_only_tools(tool_calls: List[Any]) -> Iterator[List[Any]]:
@@ -853,13 +832,65 @@ async def process_request(
         await ui.muted(f"Message History Length: {len(mh)}")
         await ui.muted("=" * 60)
 
-    async with agent.iter(message, message_history=mh) as agent_run:
+    # Run the entire agent processing in asyncio context, bridged to trio
+    async def run_agent_processing():
+        async with agent.iter(message, message_history=mh) as agent_run:
+            i = 0
+            async for node in agent_run:
+                state_manager.session.current_iteration = i + 1
+
+                # Handle token-level streaming for model request nodes
+                if streaming_callback and STREAMING_AVAILABLE and Agent.is_model_request_node(node):
+                    async with node.stream(agent_run.ctx) as request_stream:
+                        async for event in request_stream:
+                            if isinstance(event, PartDeltaEvent) and isinstance(
+                                event.delta, TextPartDelta
+                            ):
+                                # Stream individual token deltas
+                                if event.delta.content_delta:
+                                    await streaming_callback(event.delta.content_delta)
+
+                await _process_node(
+                    node,
+                    tool_callback,
+                    state_manager,
+                    tool_buffer,
+                    streaming_callback,
+                    usage_tracker,
+                )
+                if hasattr(node, "result") and node.result and hasattr(node.result, "output"):
+                    if node.result.output:
+                        response_state.has_user_response = True
+                i += 1
+                state_manager.session.iteration_count = i
+
+                # Display iteration progress if thoughts are enabled
+                if state_manager.session.show_thoughts:
+                    from tunacode.ui import console as ui
+
+                    await ui.muted(f"\nITERATION: {i}/{max_iterations}")
+
+                    # Show summary of tools used so far
+                    if state_manager.session.tool_calls:
+                        tool_summary = {}
+                        for tc in state_manager.session.tool_calls:
+                            tool_name = tc.get("tool", "unknown")
+                            tool_summary[tool_name] = tool_summary.get(tool_name, 0) + 1
+
+                        summary_parts = [f"{name}: {count}" for name, count in tool_summary.items()]
+                        await ui.muted(f"Tools used: {', '.join(summary_parts)}")
+
+                # Check if we've reached max iterations
+                if i >= max_iterations:
+                    if state_manager.session.show_thoughts:
+                        await ui.muted(f"\n⚠️ Reached maximum iterations ({max_iterations})")
+                    break
+
+        return agent_run, i
+    
+    agent_run, i = await trio_asyncio.aio_as_trio(run_agent_processing)()
         i = 0
         async for node in agent_run:
-            # Check for interrupt before processing each node
-            from tunacode.core.interrupt_controller import check_global_interrupt
-            await check_global_interrupt()
-            
             state_manager.session.current_iteration = i + 1
 
             # Handle token-level streaming for model request nodes

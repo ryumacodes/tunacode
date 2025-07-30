@@ -1,0 +1,87 @@
+"""
+Shared interrupt helpers for TunaCode.
+
+cancel_current_task()
+    – Cancels the running asyncio.Task (agent thinking)
+    – Sets the interrupt_event so deep loops break out
+Only runs on a user key‑press, so overhead is negligible.
+"""
+
+import asyncio
+from tunacode.core.state import StateManager
+
+
+def cancel_current_task(state_manager: StateManager) -> None:
+    """Safely stop the current agent task and raise the interrupt flag."""
+    from .esc_debug import log_task_cancellation, log_cleanup_start, log_esc_event, log_asyncio_info
+    
+    log_cleanup_start()
+    
+    # Signal interrupt first (this is already logged in signal_interrupt)
+    state_manager.signal_interrupt()
+    
+    # Cancel the current task
+    task = getattr(state_manager.session, "current_task", None)
+    if task and not task.done():
+        task_name = getattr(task, 'get_name', lambda: 'unknown')()
+        log_task_cancellation(task_name)
+        
+        try:
+            loop = asyncio.get_running_loop()
+            log_asyncio_info(f"Using event loop: {type(loop).__name__}")
+            loop.call_soon_threadsafe(task.cancel)
+            log_esc_event("TASK_CANCEL_SCHEDULED", f"Task cancellation scheduled via call_soon_threadsafe")
+        except RuntimeError as e:
+            log_esc_event("TASK_CANCEL_NO_LOOP", f"No event loop running: {e}")
+            # No event loop running, try to cancel directly
+            try:
+                task.cancel()
+                log_esc_event("TASK_CANCEL_DIRECT", "Task cancelled directly")
+            except Exception as cancel_e:
+                log_esc_event("TASK_CANCEL_FAILED", f"Direct cancellation failed: {cancel_e}")
+                pass
+    else:
+        if task is None:
+            log_esc_event("TASK_CANCEL_NONE", "No current task to cancel")
+        elif task.done():
+            log_esc_event("TASK_CANCEL_DONE", "Current task already done")
+    
+    # Clean up any streaming operations
+    if hasattr(state_manager.session, 'streaming_panel') and state_manager.session.streaming_panel:
+        log_esc_event("CLEANUP_STREAMING", "Cleaning up streaming panel")
+        try:
+            # Stop streaming panel if active
+            import asyncio
+            loop = asyncio.get_running_loop()
+            if loop:
+                loop.create_task(_cleanup_streaming_panel(state_manager))
+                log_esc_event("CLEANUP_STREAMING_SCHEDULED", "Streaming cleanup task scheduled")
+        except Exception as e:
+            log_esc_event("CLEANUP_STREAMING_FAILED", f"Streaming cleanup failed: {e}")
+            pass
+    
+    # Stop spinner if active
+    if state_manager.session.spinner:
+        log_esc_event("CLEANUP_SPINNER", "Stopping spinner")
+        try:
+            state_manager.session.spinner.stop()
+            log_esc_event("CLEANUP_SPINNER_DONE", "Spinner stopped")
+        except Exception as e:
+            log_esc_event("CLEANUP_SPINNER_FAILED", f"Spinner stop failed: {e}")
+            pass
+
+
+async def _cleanup_streaming_panel(state_manager: StateManager) -> None:
+    """Clean up streaming panel safely."""
+    from .esc_debug import log_cleanup_complete, log_esc_event
+    
+    try:
+        if state_manager.session.streaming_panel:
+            log_esc_event("CLEANUP_STREAM_STOP", "Stopping streaming panel")
+            await state_manager.session.streaming_panel.stop()
+            state_manager.session.streaming_panel = None
+            state_manager.session.is_streaming_active = False
+            log_cleanup_complete()
+    except Exception as e:
+        log_esc_event("CLEANUP_STREAM_ERROR", f"Streaming panel cleanup error: {e}")
+        pass

@@ -1,0 +1,211 @@
+"""
+ESC key monitoring during agent processing for TunaCode.
+"""
+
+import asyncio
+from contextlib import asynccontextmanager
+from typing import Optional
+
+from prompt_toolkit.application import get_app_or_none
+from prompt_toolkit.key_binding import KeyBindings
+
+from ..core.state import StateManager
+from ..utils.interrupts import cancel_current_task
+
+
+class InterruptMonitor:
+    """Monitor for ESC key presses during agent processing."""
+    
+    def __init__(self, state_manager: StateManager):
+        self.state_manager = state_manager
+        self.original_key_bindings: Optional[KeyBindings] = None
+        self.esc_key_bindings: Optional[KeyBindings] = None
+    
+    def create_esc_key_bindings(self) -> KeyBindings:
+        """Create key bindings that monitor for ESC during agent processing."""
+        from ..utils.esc_debug import log_esc_key_bindings_created, log_esc_key_press
+        
+        kb = KeyBindings()
+        
+        @kb.add("escape")
+        def esc_handler(event):
+            """Handle ESC key press during agent processing - IMMEDIATE response."""
+            log_esc_key_press()
+            # Set interrupt flag IMMEDIATELY and SYNCHRONOUSLY - no async tasks!
+            self._handle_escape_immediate()
+        
+        log_esc_key_bindings_created()
+        return kb
+    
+    async def _on_escape(self):
+        """
+        ESC detected while the agent is 'thinking'.
+        Cancel the live asyncio.Task *immediately* and raise interrupt_event
+        so inner loops break out.
+        """
+        from ..utils.esc_debug import log_esc_handler_start, log_visual_feedback, log_esc_event
+        
+        log_esc_handler_start()
+        
+        if self.state_manager:
+            # Provide immediate visual feedback
+            try:
+                from ..ui import console as ui
+                feedback_msg = "🛑 ESC pressed - Interrupting agent processing..."
+                await ui.warning(feedback_msg)
+                log_visual_feedback(feedback_msg)
+            except Exception as e:
+                log_esc_event("VISUAL_FB_ERROR", f"Failed to show visual feedback: {e}")
+                pass  # Don't let UI errors prevent interruption
+            
+            # Signal the interrupt first
+            log_esc_event("INTERRUPT_SIGNAL", "Signaling interrupt event")
+            self.state_manager.signal_interrupt()
+            
+            # Then cancel the current task
+            log_esc_event("TASK_CANCEL_REQ", "Requesting task cancellation")
+            cancel_current_task(self.state_manager)
+        else:
+            log_esc_event("ESC_NO_STATE", "ESC handler called but no state manager available")
+    
+    def _handle_escape_immediate(self):
+        """
+        Handle ESC key press IMMEDIATELY and SYNCHRONOUSLY.
+        This is called directly from the key handler and must be fast and blocking-free.
+        Acts like SIGINT - IMMEDIATE TASK TERMINATION.
+        """
+        from ..utils.esc_debug import log_esc_handler_start, log_esc_event
+        from ..utils.interrupts import cancel_current_task
+        
+        log_esc_handler_start()
+        
+        if self.state_manager:
+            # Signal interrupt IMMEDIATELY - this is thread-safe and synchronous
+            log_esc_event("INTERRUPT_SIGNAL_IMMEDIATE", "Setting interrupt flag synchronously")
+            self.state_manager.signal_interrupt()
+            
+            # Print immediate visual feedback (synchronous)
+            print("🛑 ESC pressed - KILLING TASK IMMEDIATELY LIKE SIGINT!")
+            
+            # IMMEDIATELY cancel the current task - NO MERCY
+            log_esc_event("TASK_KILL_IMMEDIATE", "Killing current task immediately")
+            try:
+                cancel_current_task(self.state_manager)
+                print("💀 TASK KILLED IMMEDIATELY")
+            except Exception as e:
+                log_esc_event("TASK_KILL_FAILED", f"Immediate task kill failed: {e}")
+                print(f"❌ Task kill failed: {e}")
+            
+            # Schedule async cleanup for later (non-blocking)
+            try:
+                import asyncio
+                loop = asyncio.get_running_loop()
+                if loop:
+                    loop.call_soon_threadsafe(self._schedule_async_cleanup)
+                    log_esc_event("ASYNC_CLEANUP_SCHEDULED", "Async cleanup scheduled")
+            except RuntimeError:
+                # No event loop running, skip async cleanup
+                log_esc_event("NO_LOOP_FOR_CLEANUP", "No event loop for cleanup scheduling")
+                pass
+        else:
+            log_esc_event("ESC_IMMEDIATE_NO_STATE", "ESC immediate handler - no state manager available")
+    
+    def _schedule_async_cleanup(self):
+        """Schedule async cleanup operations without blocking the interrupt."""
+        import asyncio
+        asyncio.create_task(self._async_cleanup())
+    
+    async def _async_cleanup(self):
+        """Perform async cleanup operations after interrupt flag is set."""
+        from ..utils.esc_debug import log_visual_feedback, log_esc_event
+        
+        try:
+            # Provide additional visual feedback via UI system
+            from ..ui import console as ui
+            feedback_msg = "🟢 Interrupt processed - stopping agent..."
+            await ui.success(feedback_msg)
+            log_visual_feedback(feedback_msg)
+        except Exception as e:
+            log_esc_event("ASYNC_VISUAL_FB_ERROR", f"Failed to show async visual feedback: {e}")
+        
+        # Cancel current task if needed
+        if self.state_manager:
+            log_esc_event("ASYNC_TASK_CANCEL", "Performing async task cancellation")
+            cancel_current_task(self.state_manager)
+    
+    def enable_esc_monitoring(self):
+        """Enable ESC key monitoring by adding ESC bindings to the current app."""
+        from ..utils.esc_debug import log_esc_event, log_prompt_toolkit_info
+        
+        app = get_app_or_none()
+        if app is None:
+            log_esc_event("ESC_SETUP_FAIL", "No prompt_toolkit app found - ESC monitoring cannot be enabled")
+            return
+        
+        log_prompt_toolkit_info(f"Found prompt_toolkit app: {type(app).__name__}")
+        
+        # Create ESC key bindings if not already created
+        if self.esc_key_bindings is None:
+            log_esc_event("ESC_BINDINGS_CREATE", "Creating ESC key bindings")
+            self.esc_key_bindings = self.create_esc_key_bindings()
+        
+        # Store original bindings so we can restore them
+        self.original_key_bindings = app.key_bindings
+        original_count = len(self.original_key_bindings.bindings) if self.original_key_bindings else 0
+        log_esc_event("ESC_BINDINGS_BACKUP", f"Backed up {original_count} original key bindings")
+        
+        # Create combined bindings with our ESC monitoring
+        if self.original_key_bindings:
+            # Create new bindings that include both original and ESC monitoring
+            app.key_bindings = KeyBindings()
+            
+            # Copy all original bindings
+            app.key_bindings.bindings.extend(self.original_key_bindings.bindings)
+            
+            # Add our ESC monitoring bindings (higher priority as they're added last)
+            app.key_bindings.bindings.extend(self.esc_key_bindings.bindings)
+            
+            total_bindings = len(app.key_bindings.bindings)
+            log_esc_event("ESC_BINDINGS_MERGE", f"Merged bindings: {original_count} original + ESC = {total_bindings} total")
+        else:
+            # Just use our ESC bindings if no originals exist
+            app.key_bindings = self.esc_key_bindings
+            log_esc_event("ESC_BINDINGS_ONLY", "No original bindings - using ESC bindings only")
+    
+    def disable_esc_monitoring(self):
+        """Disable ESC key monitoring by restoring original bindings."""
+        app = get_app_or_none()
+        if app is None or self.original_key_bindings is None:
+            return
+        
+        # Restore original key bindings
+        app.key_bindings = self.original_key_bindings
+        self.original_key_bindings = None
+
+
+@asynccontextmanager
+async def escape_monitor_context(state_manager: StateManager):
+    """Context manager for ESC monitoring during agent processing operations."""
+    from ..utils.esc_debug import log_esc_monitoring_setup, log_esc_event
+    
+    log_esc_monitoring_setup()
+    
+    monitor = InterruptMonitor(state_manager)
+    
+    # Ensure interrupt event is initialized
+    log_esc_event("INTERRUPT_INIT", "Initializing interrupt event")
+    state_manager.ensure_interrupt_event()
+    
+    # Clear any previous interrupt state
+    log_esc_event("INTERRUPT_CLEAR", "Clearing any previous interrupt state")
+    state_manager.clear_interrupt()
+    
+    try:
+        # Enable ESC monitoring
+        log_esc_event("ESC_ENABLE", "Enabling ESC monitoring")
+        monitor.enable_esc_monitoring()
+        yield monitor
+    finally:
+        # Disable ESC monitoring and clean up
+        log_esc_event("ESC_DISABLE", "Disabling ESC monitoring and cleaning up")
+        monitor.disable_esc_monitoring()

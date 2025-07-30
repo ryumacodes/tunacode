@@ -48,6 +48,8 @@ class SessionState:
     current_iteration: int = 0
     # Track streaming state to prevent spinner conflicts
     is_streaming_active: bool = False
+    # Track if the current task was interrupted by Esc
+    task_interrupted: bool = False
     # Track streaming panel reference for tool handler access
     streaming_panel: Optional[Any] = None
     # Context window tracking (estimation based)

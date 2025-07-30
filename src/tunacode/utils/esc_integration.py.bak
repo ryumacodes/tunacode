@@ -1,0 +1,179 @@
+"""
+ESC Integration Module
+
+This module provides integration between different ESC handling systems in TunaCode,
+ensuring that both the existing escape_pressed flag system and the new interrupt_event
+system are properly coordinated.
+"""
+
+import asyncio
+from typing import Optional
+
+from ..core.state import StateManager
+
+
+def handle_esc_pressed(state_manager: Optional[StateManager] = None):
+    """
+    Universal ESC handler that integrates all ESC detection systems.
+    
+    This function should be called by any ESC detection mechanism to ensure
+    proper coordination between different interrupt systems.
+    Acts like SIGINT - IMMEDIATE TASK TERMINATION.
+    
+    Args:
+        state_manager: The state manager instance to update
+    """
+    if not state_manager:
+        return
+    
+    # Set the new interrupt_event for our cooperative streaming system
+    state_manager.signal_interrupt()
+    
+    # Also set any legacy escape_pressed flag if it exists
+    if hasattr(state_manager.session, 'escape_pressed'):
+        state_manager.session.escape_pressed = True
+    
+    # Print visual feedback (matching the existing system's style)
+    print("🔴 ESCAPE KEY PRESSED!!! - Setting interrupt flag")
+    print("🟢 State manager found, setting interrupt flags")
+    print(f"🔵 interrupt_event set to: {state_manager.is_interrupted()}")
+    
+    # IMMEDIATELY KILL THE CURRENT TASK - LIKE SIGINT
+    print("💀 KILLING CURRENT TASK IMMEDIATELY - NO MERCY")
+    _force_cancel_current_task_from_integration(state_manager)
+
+
+async def handle_esc_pressed_async(state_manager: Optional[StateManager] = None):
+    """
+    Async version of ESC handler for use in async contexts.
+    Acts like SIGINT - IMMEDIATE TASK TERMINATION.
+    
+    Args:
+        state_manager: The state manager instance to update
+    """
+    if not state_manager:
+        return
+    
+    # Set the new interrupt_event for our cooperative streaming system
+    state_manager.signal_interrupt()
+    
+    # Also set any legacy escape_pressed flag if it exists
+    if hasattr(state_manager.session, 'escape_pressed'):
+        state_manager.session.escape_pressed = True
+    
+    # Print visual feedback using the UI system
+    try:
+        from ..ui import console as ui
+        await ui.warning("🔴 ESCAPE KEY PRESSED!!! - Setting interrupt flag")
+        await ui.success("🟢 State manager found, setting interrupt flags")
+        
+        # Check interrupt status AFTER setting it
+        is_interrupted = state_manager.is_interrupted()
+        await ui.info(f"🔵 interrupt_event set to: {is_interrupted}")
+        
+        # Debug: Also check if interrupt event exists
+        has_event = state_manager.session.interrupt_event is not None
+        await ui.info(f"🔧 interrupt_event exists: {has_event}")
+        
+        # IMMEDIATELY KILL THE CURRENT TASK - LIKE SIGINT
+        await ui.warning("💀 KILLING CURRENT TASK IMMEDIATELY - NO MERCY")
+        _force_cancel_current_task_from_integration(state_manager)
+        
+    except Exception as e:
+        # Fallback to print if UI system isn't available
+        print("🔴 ESCAPE KEY PRESSED!!! - Setting interrupt flag")
+        print("🟢 State manager found, setting interrupt flags")
+        print(f"🔵 interrupt_event set to: {state_manager.is_interrupted()}")
+        print(f"🔧 interrupt_event exists: {state_manager.session.interrupt_event is not None}")
+        print("💀 KILLING CURRENT TASK IMMEDIATELY - NO MERCY")
+        _force_cancel_current_task_from_integration(state_manager)
+
+
+def check_any_interruption(state_manager: Optional[StateManager] = None, debug: bool = False, force_cancel: bool = True) -> bool:
+    """
+    Check if any interruption system has been triggered.
+    
+    This function checks both the new interrupt_event and any legacy escape_pressed
+    flag to determine if an interruption has been requested.
+    
+    Args:
+        state_manager: The state manager instance to check
+        debug: If True, print debug information
+        force_cancel: If True, immediately cancel current task when interruption detected
+        
+    Returns:
+        True if any interruption has been detected, False otherwise
+    """
+    if not state_manager:
+        if debug:
+            print("DEBUG: No state manager provided")
+        return False
+    
+    # Check new interrupt_event system
+    is_interrupted = state_manager.is_interrupted()
+    if debug:
+        has_event = state_manager.session.interrupt_event is not None
+        is_set = state_manager.session.interrupt_event.is_set() if has_event else False
+        print(f"DEBUG: interrupt_event exists: {has_event}, is_set: {is_set}, is_interrupted(): {is_interrupted}")
+    
+    if is_interrupted:
+        if debug:
+            print("DEBUG: Interruption detected via interrupt_event")
+        if force_cancel:
+            print("🔥 INTERRUPT DETECTED - FORCING IMMEDIATE TASK CANCELLATION")
+            _force_cancel_current_task_from_integration(state_manager)
+        return True
+    
+    # Check legacy escape_pressed flag if it exists
+    if hasattr(state_manager.session, 'escape_pressed'):
+        escape_pressed = getattr(state_manager.session, 'escape_pressed', False)
+        if debug:
+            print(f"DEBUG: escape_pressed flag exists: True, value: {escape_pressed}")
+        if escape_pressed:
+            if debug:
+                print("DEBUG: Interruption detected via escape_pressed flag")
+            if force_cancel:
+                print("🔥 LEGACY ESC DETECTED - FORCING IMMEDIATE TASK CANCELLATION")
+                _force_cancel_current_task_from_integration(state_manager)
+            return True
+    else:
+        if debug:
+            print("DEBUG: escape_pressed flag does not exist")
+    
+    if debug:
+        print("DEBUG: No interruption detected")
+    return False
+
+
+def _force_cancel_current_task_from_integration(state_manager: StateManager):
+    """
+    Force cancel the current task from the integration layer.
+    
+    This ensures that ANY ESC detection (old or new) immediately cancels
+    the running task, acting like SIGINT.
+    """
+    try:
+        from ..utils.interrupts import cancel_current_task
+        print("💀 INTEGRATION LAYER - FORCE CANCELLING TASK")
+        cancel_current_task(state_manager)
+    except Exception as e:
+        print(f"❌ Failed to cancel task from integration layer: {e}")
+        # Even if cancellation fails, we still return True to indicate interruption
+
+
+def clear_all_interrupts(state_manager: Optional[StateManager] = None):
+    """
+    Clear all interrupt flags from all systems.
+    
+    Args:
+        state_manager: The state manager instance to clear
+    """
+    if not state_manager:
+        return
+    
+    # Clear new interrupt_event system
+    state_manager.clear_interrupt()
+    
+    # Clear legacy escape_pressed flag if it exists
+    if hasattr(state_manager.session, 'escape_pressed'):
+        state_manager.session.escape_pressed = False

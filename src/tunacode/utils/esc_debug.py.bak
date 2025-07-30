@@ -1,0 +1,279 @@
+"""
+ESC Interruption Debug Logger for TunaCode
+
+This module provides comprehensive logging for the ESC interruption flow:
+1. User input detection
+2. ESC key registration and monitoring
+3. ESC trigger detection
+4. Interrupt event propagation
+5. Task cancellation
+6. Agent processing interrupt handling
+
+All events are logged to esc.log with timestamps and context information.
+"""
+
+import asyncio
+import logging
+import threading
+import time
+from contextlib import contextmanager
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+# Create dedicated ESC debug logger
+esc_logger = logging.getLogger('tunacode.esc_debug')
+esc_logger.setLevel(logging.DEBUG)
+
+# Create file handler for esc.log
+log_file = Path.cwd() / "esc.log"
+file_handler = logging.FileHandler(log_file, mode='w')  # Overwrite on each run
+file_handler.setLevel(logging.DEBUG)
+
+# Create detailed formatter with thread and async task info
+formatter = logging.Formatter(
+    '%(asctime)s.%(msecs)03d | %(levelname)-8s | T:%(thread)d | %(funcName)-20s | %(message)s',
+    datefmt='%H:%M:%S'
+)
+file_handler.setFormatter(formatter)
+esc_logger.addHandler(file_handler)
+
+# Also add console handler for immediate feedback
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_formatter = logging.Formatter('🐛 ESC-DEBUG: %(message)s')
+console_handler.setFormatter(console_formatter)
+esc_logger.addHandler(console_handler)
+
+
+class EscDebugContext:
+    """Context manager for tracking ESC debug sessions."""
+    
+    def __init__(self):
+        self.session_id = int(time.time() * 1000) % 100000  # Last 5 digits of timestamp
+        self.start_time = time.time()
+        self.events_logged = 0
+    
+    def __enter__(self):
+        self.log_event("SESSION_START", f"ESC debug session {self.session_id} started")
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        duration = time.time() - self.start_time
+        self.log_event("SESSION_END", 
+                      f"ESC debug session {self.session_id} ended. "
+                      f"Duration: {duration:.3f}s, Events: {self.events_logged}")
+    
+    def log_event(self, event_type: str, message: str, **kwargs):
+        """Log an ESC debug event with context."""
+        self.events_logged += 1
+        
+        # Get current task info
+        try:
+            loop = asyncio.get_running_loop() 
+            current_task = asyncio.current_task(loop)
+            task_info = f"Task:{current_task.get_name()}" if current_task else "NoTask"
+        except RuntimeError:
+            task_info = "NoLoop"
+        
+        # Get thread info
+        thread_name = threading.current_thread().name
+        
+        # Build context info
+        context_parts = [f"S{self.session_id}", task_info, f"TH:{thread_name}"]
+        if kwargs:
+            context_parts.extend([f"{k}:{v}" for k, v in kwargs.items()])
+        context = " | ".join(context_parts)
+        
+        # Log with event type and context
+        esc_logger.debug(f"[{event_type:15s}] {context} | {message}")
+
+
+# Global debug context (will be set when debugging is enabled)
+_debug_context: Optional[EscDebugContext] = None
+
+# Check if ESC debugging should be automatically enabled
+import os
+_ESC_DEBUG_ENABLED = os.getenv('TUNACODE_ESC_DEBUG', '').lower() in ('1', 'true', 'yes', 'on')
+
+
+def get_debug_context() -> Optional[EscDebugContext]:
+    """Get the current debug context."""
+    return _debug_context
+
+
+def set_debug_context(context: Optional[EscDebugContext]):
+    """Set the current debug context."""
+    global _debug_context
+    _debug_context = context
+
+
+@contextmanager
+def esc_debug_session():
+    """Context manager for ESC debugging sessions."""
+    context = EscDebugContext()
+    old_context = get_debug_context()
+    set_debug_context(context)
+    try:
+        with context:
+            yield context
+    finally:
+        set_debug_context(old_context)
+
+
+def log_esc_event(event_type: str, message: str, **kwargs):
+    """Log an ESC debug event if debugging is active."""
+    context = get_debug_context()
+    if context:
+        context.log_event(event_type, message, **kwargs)
+    elif _ESC_DEBUG_ENABLED:
+        # Auto-enable debugging if environment variable is set
+        _auto_enable_debugging()
+        context = get_debug_context()
+        if context:
+            context.log_event(event_type, message, **kwargs)
+
+
+def log_user_input(input_text: str, input_type: str = "multiline"):
+    """Log user input detection."""
+    log_esc_event("USER_INPUT", f"Input received: '{input_text[:50]}...'" if len(input_text) > 50 else f"Input received: '{input_text}'", 
+                  type=input_type, length=len(input_text))
+
+
+def log_thinking_start(model: str, message_length: int):
+    """Log when agent thinking/processing starts."""
+    log_esc_event("THINKING_START", f"Agent processing started", 
+                  model=model, msg_len=message_length)
+
+
+def log_esc_monitoring_setup():
+    """Log ESC monitoring setup."""
+    log_esc_event("ESC_SETUP", "ESC monitoring context manager entered")
+
+
+def log_esc_key_bindings_created():
+    """Log ESC key bindings creation."""
+    log_esc_event("ESC_BINDINGS", "ESC key bindings created and installed")
+
+
+def log_esc_key_press():
+    """Log ESC key press detection."""
+    log_esc_event("ESC_PRESSED", "ESC key press detected by prompt_toolkit")
+
+
+def log_esc_handler_start():
+    """Log ESC handler execution start."""
+    log_esc_event("ESC_HANDLER", "ESC handler (_on_escape) execution started")
+
+
+def log_interrupt_signal():
+    """Log interrupt event signaling."""
+    log_esc_event("INTERRUPT_SIG", "Interrupt event signaled (asyncio.Event.set())")
+
+
+def log_task_cancellation(task_name: str = "unknown"):
+    """Log task cancellation."""
+    log_esc_event("TASK_CANCEL", f"Current task cancellation initiated", task=task_name)
+
+
+def log_interrupt_check(location: str, interrupted: bool):
+    """Log interrupt checking in agent processing."""
+    log_esc_event("INTERRUPT_CHK", f"Interrupt check at {location}", 
+                  location=location, interrupted=interrupted)
+
+
+def log_cancellation_error():
+    """Log when CancelledError is raised."""
+    log_esc_event("CANCELLED_ERR", "asyncio.CancelledError raised - processing interrupted")
+
+
+def log_cleanup_start():
+    """Log cleanup operations start."""
+    log_esc_event("CLEANUP_START", "Interrupt cleanup operations started")
+
+
+def log_cleanup_complete():
+    """Log cleanup operations complete."""
+    log_esc_event("CLEANUP_DONE", "Interrupt cleanup operations completed")
+
+
+def log_visual_feedback(message: str):
+    """Log visual feedback shown to user."""
+    log_esc_event("VISUAL_FB", f"Visual feedback: {message}")
+
+
+def log_error(error_type: str, error_msg: str):
+    """Log errors in ESC processing."""
+    log_esc_event("ERROR", f"{error_type}: {error_msg}")
+
+
+def log_state_manager_action(action: str, details: str = ""):
+    """Log state manager actions."""
+    log_esc_event("STATE_MGR", f"{action} {details}".strip())
+
+
+def log_prompt_toolkit_info(info: str):
+    """Log prompt_toolkit related information."""
+    log_esc_event("PROMPT_TK", info)
+
+
+def log_asyncio_info(info: str):
+    """Log asyncio related information.""" 
+    log_esc_event("ASYNCIO", info)
+
+
+# Global auto-debug context for environment variable enabling
+_auto_debug_context: Optional[EscDebugContext] = None
+
+def _auto_enable_debugging():
+    """Auto-enable ESC debugging when environment variable is set."""
+    global _auto_debug_context
+    if _auto_debug_context is None:
+        _auto_debug_context = EscDebugContext()
+        _auto_debug_context.__enter__()
+        set_debug_context(_auto_debug_context)
+        # Print notification that auto-debugging is enabled
+        print("🐛 ESC debugging auto-enabled via TUNACODE_ESC_DEBUG environment variable")
+        print(f"📝 Debug log: {get_debug_log_path()}")
+
+# Convenience function to enable debugging
+def enable_esc_debugging():
+    """Enable ESC debugging and return the context manager."""
+    return esc_debug_session()
+
+
+def get_debug_log_path() -> Path:
+    """Get the path to the debug log file."""
+    return log_file
+
+
+def print_debug_summary():
+    """Print a summary of the debug log."""
+    if log_file.exists():
+        with open(log_file, 'r') as f:
+            lines = f.readlines()
+        
+        print(f"\n=== ESC DEBUG LOG SUMMARY ===")
+        print(f"Log file: {log_file}")
+        print(f"Total events: {len(lines)}")
+        
+        if lines:
+            print(f"First event: {lines[0].strip()}")
+            print(f"Last event: {lines[-1].strip()}")
+        
+        # Count event types
+        event_counts = {}
+        for line in lines:
+            if '[' in line and ']' in line:
+                start = line.find('[') + 1
+                end = line.find(']')
+                if start < end:
+                    event_type = line[start:end].strip()
+                    event_counts[event_type] = event_counts.get(event_type, 0) + 1
+        
+        if event_counts:
+            print(f"\nEvent counts:")
+            for event_type, count in sorted(event_counts.items()):
+                print(f"  {event_type}: {count}")
+    else:
+        print("No debug log found.")
