@@ -343,6 +343,11 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
 
     # --- ERROR HANDLING ---
     except CancelledError:
+        # Clean up streaming panel if it's active
+        if state_manager.session.streaming_panel:
+            await state_manager.session.streaming_panel.stop()
+            state_manager.session.streaming_panel = None
+            state_manager.session.is_streaming_active = False
         await ui.muted(MSG_REQUEST_CANCELLED)
     except UserAbortError:
         await ui.muted(MSG_OPERATION_ABORTED)
@@ -483,13 +488,19 @@ async def repl(state_manager: StateManager):
                 if not agent_task.done():
                     agent_task.cancel()
             
-            # Start Esc monitoring
+            # Start Esc monitoring with a small delay to avoid terminal conflicts
+            await asyncio.sleep(0.1)  # Allow Rich to set up properly
             esc_monitoring_active = start_esc_monitoring(on_esc_interrupt)
             
             try:
                 # Wait for the agent task to complete
                 await agent_task
             except asyncio.CancelledError:
+                # Clean up streaming panel if it's active
+                if state_manager.session.streaming_panel:
+                    await state_manager.session.streaming_panel.stop()
+                    state_manager.session.streaming_panel = None
+                    state_manager.session.is_streaming_active = False
                 # Task was cancelled
                 if state_manager.session.task_interrupted or interrupt_controller.is_interrupted():
                     await ui.muted(MSG_REQUEST_CANCELLED)

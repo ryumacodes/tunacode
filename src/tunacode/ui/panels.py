@@ -119,7 +119,7 @@ class StreamingAgentPanel:
         """Start the live streaming display."""
         from .output import console
 
-        self.live = Live(self._create_panel(), console=console, refresh_per_second=4)
+        self.live = Live(self._create_panel(), console=console, refresh_per_second=4, transient=True)
         self.live.start()
 
     async def update(self, content_chunk: str):
@@ -137,8 +137,14 @@ class StreamingAgentPanel:
     async def stop(self):
         """Stop the live streaming display."""
         if self.live:
-            self.live.stop()
-            self.live = None
+            try:
+                # Ensure clean exit even if interrupted
+                self.live.stop()
+            except Exception:
+                # Ignore any errors during stop
+                pass
+            finally:
+                self.live = None
 
 
 async def agent_streaming(content_stream, bottom: int = 1):

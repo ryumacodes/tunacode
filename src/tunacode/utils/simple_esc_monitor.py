@@ -41,9 +41,17 @@ class SimpleEscMonitor:
     def _monitor(self):
         """Monitor for Esc key in background thread."""
         try:
-            # Save and set terminal to raw mode
+            # Save terminal settings
             self._original_settings = termios.tcgetattr(sys.stdin.fileno())
-            tty.setraw(sys.stdin.fileno())
+            
+            # Set terminal to cbreak mode instead of raw mode
+            # This is less intrusive and allows Rich to continue working
+            new_settings = termios.tcgetattr(sys.stdin.fileno())
+            new_settings[3] &= ~termios.ECHO
+            new_settings[3] &= ~termios.ICANON
+            new_settings[6][termios.VMIN] = 0
+            new_settings[6][termios.VTIME] = 0
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, new_settings)
             
             while self._monitoring:
                 try:
