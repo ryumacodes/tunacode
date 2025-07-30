@@ -1,4 +1,4 @@
-# TunaCode
+# TunaCode CLI
 
 <div align="center">
 
