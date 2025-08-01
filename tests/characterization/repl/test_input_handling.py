@@ -81,12 +81,14 @@ async def test_repl_input_validation(inputs, expected_process_calls):
         with (
             patch.object(repl_mod.ui, "multiline_input", new=fake_multiline_input),
             patch("tunacode.cli.repl.get_app") as get_app,
-            patch.object(repl_mod, "process_request", new=mock_process_request),
+            patch("tunacode.cli.repl.process_request", new=AsyncMock()),
         ):
-            # Mock background task creation to properly handle coroutines
+            # Mock background task creation
+            # Use AsyncMock to properly handle the coroutine passed to create_background_task
             def mock_create_background_task(coro):
-                # Create and return a task from the coroutine
-                return asyncio.create_task(coro)
+                # Create a task that properly handles the coroutine to avoid RuntimeWarning
+                task = asyncio.create_task(coro)
+                return task
 
             get_app.return_value.create_background_task = MagicMock(
                 side_effect=mock_create_background_task
