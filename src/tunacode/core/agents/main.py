@@ -18,10 +18,7 @@ from tunacode.core.logging.logger import get_logger
 
 # Import streaming types with fallback for older versions
 try:
-    from pydantic_ai.messages import (
-        PartDeltaEvent,
-        TextPartDelta,
-    )
+    from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
 
     STREAMING_AVAILABLE = True
 except ImportError:

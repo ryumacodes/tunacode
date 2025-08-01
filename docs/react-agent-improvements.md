@@ -1,7 +1,7 @@
 # ReAct Agent Improvements and Tool Call Fixes
 
-**Date**: 2025-05-30  
-**Status**: Completed  
+**Date**: 2025-05-30
+**Status**: Completed
 **Priority**: High (Critical bug fixes + Enhancement)
 
 ## Overview
@@ -11,12 +11,12 @@ This document details the comprehensive improvements made to TunaCode's ReAct (R
 ## Problems Addressed
 
 ### 1. Critical Issue: Orphaned Tool Call API Errors
-**Symptom**: 
+**Symptom**:
 ```
 status_code: 400, model_name: gpt-4.1, body: {'message': "An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'. The following tool_call_ids did not have response messages: call_QUf1yHfLKFXKDREe0VF95Ms3"
 ```
 
-**Root Cause**: 
+**Root Cause**:
 - When agent iterations reached the limit or were interrupted, tool calls could be left without corresponding responses
 - OpenAI's API requires every tool call to have a matching tool response message
 - The existing `patch_tool_messages()` function wasn't being called proactively
@@ -91,7 +91,7 @@ if state_manager.session.show_thoughts and i > 1:
 **Pattern Examples**:
 - `💭 REASONING:` - Explicit JSON thoughts
 - `🎯 PLANNING:` - "I need to..." statements
-- `🎯 ACTION:` - "Let me..." statements  
+- `🎯 ACTION:` - "Let me..." statements
 - `🎯 OBSERVATION:` - "The output shows..." analysis
 - `🎯 DECISION:` - "Based on..., I should..." conclusions
 
@@ -114,8 +114,8 @@ if state_manager.session.show_thoughts and i > 1:
 Follow this pattern for complex tasks:
 
 1. **THINK**: Output {"thought": "I need to understand the task..."} to reason about what to do
-2. **ACT**: Use tools to gather information or make changes  
-3. **OBSERVE**: Analyze tool outputs with {"thought": "The output shows..."} 
+2. **ACT**: Use tools to gather information or make changes
+3. **OBSERVE**: Analyze tool outputs with {"thought": "The output shows..."}
 4. **ITERATE**: Continue thinking and acting until the task is complete
 ```
 

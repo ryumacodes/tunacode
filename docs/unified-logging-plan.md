@@ -87,7 +87,7 @@ def setup_logging(config_path=None):
 logging:
   version: 1
   disable_existing_loggers: false
-  
+
   formatters:
     simple:
       format: "[%(levelname)s] %(message)s"
@@ -96,7 +96,7 @@ logging:
     json:
       class: "pythonjsonlogger.jsonlogger.JsonFormatter"
       format: "%(asctime)s %(name)s %(levelname)s %(message)s"
-  
+
   handlers:
     ui:
       class: "tunacode.logging.RichHandler"
@@ -114,11 +114,11 @@ logging:
       level: "DEBUG"
       formatter: "json"
       filename: "tunacode.json.log"
-  
+
   root:
     level: "DEBUG"
     handlers: ["ui", "file", "json_file"]
-  
+
   loggers:
     "tunacode.ui":
       level: "INFO"

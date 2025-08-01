@@ -1,6 +1,6 @@
 # File Context Visibility Improvements
 
-**Date**: 2025-06-14  
+**Date**: 2025-06-14
 **Title**: Always Show Files in Context and Simplify Thoughts Display
 
 ## Overview
@@ -28,7 +28,7 @@ Modified the agent's response handling to always show files in context after eac
 
 When thoughts mode is enabled, tool arguments are now displayed more concisely:
 - `read_file`: Shows only "Reading: filename.py" instead of full JSON
-- `write_file`: Shows "Writing: filename.py" 
+- `write_file`: Shows "Writing: filename.py"
 - `update_file`: Shows "Updating: filename.py"
 - `run_command`: Shows the command being run
 - Other tools: Show simplified argument summary

@@ -9,7 +9,7 @@ TunaCode is a powerful AI-powered CLI coding assistant with comprehensive featur
 TunaCode supports multiple AI providers, giving you flexibility in choosing your preferred model:
 
 - **Anthropic Claude** - Including Claude 3.5 Sonnet and Haiku models
-- **OpenAI GPT** - GPT-4o, GPT-4o-mini, and other OpenAI models  
+- **OpenAI GPT** - GPT-4o, GPT-4o-mini, and other OpenAI models
 - **Google Gemini** - Gemini 2.0 Flash and other Google models
 - **OpenRouter** - Access to 100+ models through a single API
 - **Any OpenAI-compatible API** - Support for custom endpoints

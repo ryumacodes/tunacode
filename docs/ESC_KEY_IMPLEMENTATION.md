@@ -56,16 +56,16 @@ def _escape(event):
 
     current_time = time.time()
     session = state_manager.session
-    
+
     # Reset counter if too much time has passed (3 seconds timeout)
     if session.last_esc_time and (current_time - session.last_esc_time) > 3.0:
         session.esc_press_count = 0
-    
+
     session.esc_press_count += 1
     session.last_esc_time = current_time
-    
+
     logger.debug(f"ESC key pressed: count={session.esc_press_count}, time={current_time}")
-    
+
     if session.esc_press_count == 1:
         # First ESC press - show warning message
         from ..ui.output import warning
@@ -75,10 +75,10 @@ def _escape(event):
         # Second ESC press - cancel operation
         session.esc_press_count = 0  # Reset counter
         logger.debug("Second ESC press - initiating cancellation")
-        
+
         # Mark the session as being cancelled to prevent new operations
         session.operation_cancelled = True
-        
+
         current_task = session.current_task
         if current_task and not current_task.done():
             logger.debug(f"Cancelling current task: {current_task}")
@@ -89,7 +89,7 @@ def _escape(event):
                 logger.debug(f"Failed to cancel task: {e}")
         else:
             logger.debug(f"No active task to cancel: current_task={current_task}")
-        
+
         # Force exit the current input by raising KeyboardInterrupt
         # This will be caught by the prompt manager and converted to UserAbortError
         logger.debug("Raising KeyboardInterrupt to abort current operation")
@@ -112,7 +112,7 @@ def _escape(event):
 ```python
 async def process_request(text: str, state_manager: StateManager, output: bool = True):
     """Process input using the agent, handling cancellation safely."""
-    
+
     # Check for cancellation before starting (only if explicitly set to True)
     operation_cancelled = getattr(state_manager.session, 'operation_cancelled', False)
     if operation_cancelled is True:

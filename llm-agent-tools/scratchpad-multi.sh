@@ -55,7 +55,7 @@ Usage: $0 [--agent <name>] {start|step|revise|branch|append|status|finish|handof
 
 Multi-Agent Commands:
   --agent <name>                 Use agent-specific scratchpad (default: "default")
-  
+
 Standard Commands:
   start  <task-title>            Create/overwrite scratchpad with header
   step   <text>|-               Add next sequential step (or read STDIN)
@@ -91,8 +91,8 @@ _line() {
   fi
 }
 
-ensure_file() { 
-  [[ -f "$SCRATCH" ]] || { 
+ensure_file() {
+  [[ -f "$SCRATCH" ]] || {
     echo "ERROR: No active scratchpad for agent '$AGENT_NAME'; run '$0 --agent $AGENT_NAME start' first." >&2
     exit 1
   }
@@ -102,9 +102,9 @@ ensure_file() {
 with_lock() {
   local lock_file="$1"
   shift
-  
+
   mkdir -p "$(dirname "$lock_file")"
-  
+
   # Try to acquire lock with timeout
   if command -v flock >/dev/null 2>&1; then
     flock -w "$LOCK_TIMEOUT" "$lock_file" "$@"
@@ -138,14 +138,14 @@ case "$cmd" in
     [[ $# -ge 1 ]] || usage
     task="$*"
     init_dirs
-    
+
     with_lock "$LOCK_FILE" bash -c "cat > '$SCRATCH' <<EOF
 # $task
 _Started: $(date '+%Y-%m-%d %H:%M:%S')_
 _Agent: $AGENT_NAME
 
 EOF"
-    
+
     echo "Agent '$AGENT_NAME' started task: $task"
     ;;
 
@@ -218,7 +218,7 @@ EOF"
     title="${1:-$(get_current_task)}"
     safe_title="${title// /_}"
     out="${AGENT_NAME}_${safe_title}_${ts}_scratchpad.md"
-    
+
     with_lock "$LOCK_FILE" mv "$SCRATCH" "$SHARED_DIR/done_tasks/$out"
     echo "Agent '$AGENT_NAME' archived task to: $SHARED_DIR/done_tasks/$out"
     ;;
@@ -230,11 +230,11 @@ EOF"
     to_agent="$1"
     shift
     message="$*"
-    
+
     # Create handoff record
     handoff_file="$SHARED_DIR/handoffs/${AGENT_NAME}_to_${to_agent}_$(date +%s).md"
     mkdir -p "$SHARED_DIR/handoffs"
-    
+
     with_lock "$LOCK_FILE" bash -c "
       echo '# Handoff from $AGENT_NAME to $to_agent' > '$handoff_file'
       echo '_Time: $(date '+%Y-%m-%d %H:%M:%S')_' >> '$handoff_file'
@@ -244,15 +244,15 @@ EOF"
       echo '' >> '$handoff_file'
       echo '## Current Scratchpad' >> '$handoff_file'
       cat '$SCRATCH' >> '$handoff_file'
-      
+
       # Copy scratchpad to target agent
       mkdir -p '$BANK_DIR/agents/$to_agent'
       cp '$SCRATCH' '$BANK_DIR/agents/$to_agent/scratchpad.md'
-      
+
       # Archive current agent's scratchpad
       mv '$SCRATCH' '${SCRATCH}.handed_off_$(date +%s)'
     "
-    
+
     echo "Task handed off from '$AGENT_NAME' to '$to_agent'"
     echo "Handoff record: $handoff_file"
     ;;
@@ -261,7 +261,7 @@ EOF"
   agents)
     echo "Active Agents:"
     echo ""
-    
+
     if [[ -d "$BANK_DIR/agents" ]]; then
       for agent_dir in "$BANK_DIR/agents"/*; do
         if [[ -d "$agent_dir" ]]; then
@@ -277,7 +277,7 @@ EOF"
     else
       echo "(No agents found)"
     fi
-    
+
     # Show recent handoffs
     if [[ -d "$SHARED_DIR/handoffs" ]] && [[ -n "$(ls -A "$SHARED_DIR/handoffs" 2>/dev/null)" ]]; then
       echo ""

@@ -1,7 +1,7 @@
 # Scratchpad: standardize_ui_formatting_patterns
 
-**Type**: task  
-**Created**: 2025-07-23 20:43:28  
+**Type**: task
+**Created**: 2025-07-23 20:43:28
 **Agent**: unknown
 
 ## Context

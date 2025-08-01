@@ -213,7 +213,7 @@ result = await run_command("ls -la")
        @property
        def tool_name(self) -> str:
            return "MyTool"
-       
+
        async def _execute(self, **kwargs) -> ToolResult:
            # Your implementation here
            return "Success message"
@@ -270,7 +270,7 @@ result = await run_command("ls -la")
 **Output Format**:
 ```
 Found 3 matches for pattern: TODO
-Strategy: python | Candidates: 25 files | 
+Strategy: python | Candidates: 25 files |
 ============================================================
 
 📁 /path/to/file.py:42

@@ -24,7 +24,7 @@
 
 ## Done
 - [x] ReadFileTool characterization tests
-- [x] WriteFileTool characterization tests  
+- [x] WriteFileTool characterization tests
 - [x] UpdateFileTool characterization tests
 - [x] BashTool characterization tests
 - [x] GrepTool tests (fast_glob, legacy_compat, timeout)

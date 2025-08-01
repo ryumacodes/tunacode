@@ -1,5 +1,5 @@
 # Pre-Publication Audit and Critical Fixes
-**Date:** 2025-05-27  
+**Date:** 2025-05-27
 **Issue:** Comprehensive audit before public release revealed multiple critical bugs
 
 ## Problem Description
@@ -92,7 +92,7 @@ Before future releases:
 
 ## Files Modified
 - `src/tunacode/cli/commands.py` - Command system fixes
-- `src/tunacode/ui/completers.py` - Autocomplete fixes  
+- `src/tunacode/ui/completers.py` - Autocomplete fixes
 - `src/tunacode/cli/main.py` - CLI parameter cleanup
 - `pyproject.toml` - Entry point correction
 

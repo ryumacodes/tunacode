@@ -64,7 +64,7 @@ async def test_agent_loads_tunacode_md_into_system_prompt():
 - Run tests: `make test`
 - Lint: `make lint`
 
-## Code Style  
+## Code Style
 - Use type hints for all functions
 - Follow guard clause pattern
 """

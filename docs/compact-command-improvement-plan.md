@@ -94,7 +94,7 @@ The actual implementation for Phase 1 is now in `/home/tuna/tunacode/src/tunacod
 async def execute(self, args: List[str], context: CommandContext) -> None:
     # Count current messages
     original_count = len(context.state_manager.session.messages)
-    
+
     # Generate summary with output captured
     summary_prompt = (
         "Summarize the conversation so far in a concise paragraph, "
@@ -106,7 +106,7 @@ async def execute(self, args: List[str], context: CommandContext) -> None:
         context.state_manager,
         output=False,  # We handle the output ourselves
     )
-    
+
     # Extract summary text from result
     summary_text = ""
     if (
@@ -119,18 +119,18 @@ async def execute(self, args: List[str], context: CommandContext) -> None:
     else:
         # Fallback logic for different message formats
         ...
-    
+
     # Display summary in a formatted panel
     from tunacode.ui import panels
     await panels.panel("Conversation Summary", summary_text, border_style="cyan")
-    
+
     # Show statistics
     await ui.info(f"Current message count: {original_count}")
     await ui.info("After compaction: 3 (summary + last 2 messages)")
-    
+
     # Truncate the conversation history
     context.state_manager.session.messages = context.state_manager.session.messages[-2:]
-    
+
     await ui.success("Context history has been summarized and truncated.")
 ```
 

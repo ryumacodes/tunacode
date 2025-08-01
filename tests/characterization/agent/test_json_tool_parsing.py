@@ -7,7 +7,10 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from tunacode.core.agents.main import extract_and_execute_tool_calls, parse_json_tool_calls
+from tunacode.core.agents.main import (
+    extract_and_execute_tool_calls,
+    parse_json_tool_calls,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -187,7 +190,7 @@ class TestJsonToolParsing:
         # Arrange
         text = """
         Inline: {"tool": "bash", "args": {"command": "pwd"}}
-        
+
         Code block:
         ```json
         {"tool": "list_dir", "args": {"directory": "."}}

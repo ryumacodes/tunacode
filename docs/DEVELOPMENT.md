@@ -93,7 +93,7 @@ pytest tests/test_import.py -v
 
 The `[dev]` extras include:
 - `pytest` - Testing framework
-- `pytest-asyncio` - Async test support  
+- `pytest-asyncio` - Async test support
 - `pytest-cov` - Coverage reporting
 - `ruff` - Fast Python linter and formatter (replaces black, isort, flake8)
 - `pre-commit` - Git hook framework

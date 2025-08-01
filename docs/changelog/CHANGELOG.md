@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Token usage and cost tracking system (PR #45) - @MclPio
-- Enhanced todo management with timestamp IDs and validation (PR #50) 
+- Enhanced todo management with timestamp IDs and validation (PR #50)
 - Todo management functionality (PR #49) - @Lftobs
 - Context window management with tiktoken-based token counting (PR #47) - @prudentbird
 
@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Contributors
 Special thanks to all contributors for this release:
 - @MclPio - Token usage and cost tracking implementation
-- @Lftobs - Todo management functionality 
+- @Lftobs - Todo management functionality
 - @prudentbird - Context window management with tiktoken integration
 
 ## [0.0.37] - 2025-06-27
@@ -180,7 +180,7 @@ Special thanks to all contributors for this release:
   - Tests confirm multiple threads are used and operations run concurrently
   - Zero breaking changes - just 4 lines of code modified
   - Benefits: 3x faster file reads, non-blocking I/O, better responsiveness
-  
+
   ![Parallel Execution Performance](../assets/parrelel_work_3x.png)
 
 - Refactored command structure to use declarative class-level metadata

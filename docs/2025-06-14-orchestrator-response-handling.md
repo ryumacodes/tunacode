@@ -91,7 +91,7 @@ The orchestrator follows this pattern:
    if getattr(state_manager.session, "architect_mode", False):
        orchestrator = OrchestratorAgent(state_manager)
        results = await orchestrator.run(text, state_manager.session.current_model)
-       
+
        # Process all results
        for res in results:
            if hasattr(res, "result") and res.result and hasattr(res.result, "output"):
@@ -110,7 +110,7 @@ The orchestrator's fallback includes:
    - `normal`: Basic task count and output status
    - `detailed`: Full task-by-task breakdown with descriptions
 
-4. **Next Steps**: 
+4. **Next Steps**:
    - "Review the task execution above for any errors"
    - "Try running individual tasks separately for more detailed output"
 

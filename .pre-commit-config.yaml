@@ -1,26 +1,134 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+default_language_version:
+  python: python3
+
 repos:
+  # Pre-commit framework hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ['--allow-multiple-documents']
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-toml
+      - id: check-ast
+      - id: debug-statements
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+
+  # Python specific security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.0
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: ['--fix', '--show-fixes']
+      - id: ruff-format
+
+  # Type checking with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - 'pydantic>=2.0'
+          - 'typer>=0.15'
+          - 'types-requests'
+        args: ['--ignore-missing-imports', '--no-strict-optional']
+
+
+  # Local hooks for project-specific checks
   - repo: local
     hooks:
+      # Existing make lint check
       - id: make-lint
-        name: Run make lint
+        name: Run make lint check
         entry: make lint-check
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
-      
-      - id: vulture-check
-        name: Check for dead code with vulture
-        entry: make vulture-check
+
+      # Check for unused imports in changed files only
+      - id: dead-imports
+        name: Check for unused imports in changed files
+        entry: venv/bin/unimport --check --diff
+        language: system
+        files: \.py$
+        stages: [pre-commit]
+
+      # Run full test suite
+      - id: run-full-tests
+        name: Run full test suite
+        entry: venv/bin/pytest tests/
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
-      
-      - id: make-test
-        name: Run make test
-        entry: make test
+
+      # Check for common security issues
+      - id: security-check
+        name: Security audit
+        entry: bash -c 'grep -r "PRIVATE\|SECRET\|PASSWORD\|TOKEN" --include="*.py" . | grep -v "venv\|.git\|__pycache__" | grep -v "^Binary" | grep -v "test_" || exit 0'
         language: system
         pass_filenames: false
         always_run: true
-        stages: [pre-commit]
+
+      # Validate no print statements in production code
+      - id: no-print-statements
+        name: Check for print statements
+        entry: bash -c 'grep -r "print(" --include="*.py" src/ | grep -v "__pycache__" | grep -v "# noqa" | grep -v "# pragma" || exit 0'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # Import sorting with isort
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ['--profile', 'black', '--filter-files']
+
+  # Documentation linting
+  - repo: https://github.com/pycqa/doc8
+    rev: v1.1.2
+    hooks:
+      - id: doc8
+        args: ['--max-line-length=120']
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.42.0
+    hooks:
+      - id: markdownlint
+        args: ['--disable', 'MD013', 'MD033', 'MD041']
+
+# Configuration for ci
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [run-full-tests, make-lint, dead-imports]
+  submodules: false

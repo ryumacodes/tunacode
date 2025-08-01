@@ -75,13 +75,13 @@ async def stop(self):
     if self.live:
         # Get the console before stopping the live display
         from .output import console
-        
+
         # Stop the live display
         self.live.stop()
-        
+
         # Clean up any extra spacing left by Live
         console.print("", end="")  # Reset the current line
-        
+
         self.live = None
 ```
 
@@ -128,13 +128,13 @@ async def stop(self):
     if self.live:
         # Get the console before stopping the live display
         from .output import console
-        
+
         # Stop the live display
         self.live.stop()
-        
+
         # Clean up any extra spacing left by Live
         console.print("", end="")  # Reset the current line
-        
+
         self.live = None
 ```
 

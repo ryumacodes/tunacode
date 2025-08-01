@@ -1,9 +1,9 @@
 # Streaming Panel Extra Line Issue - Logging System Root Cause
 
-**Date**: 2025-07-31  
-**Issue**: Extra blank line appearing after streaming content completion  
-**Root Cause**: Unified logging system's RichHandler adding newlines  
-**Solution**: Disable console logging by removing "ui" handler  
+**Date**: 2025-07-31
+**Issue**: Extra blank line appearing after streaming content completion
+**Root Cause**: Unified logging system's RichHandler adding newlines
+**Solution**: Disable console logging by removing "ui" handler
 
 ## Problem Description
 
@@ -17,7 +17,7 @@ The issue was initially thought to be caused by Rich's Live display system not p
 
 The actual cause was the unified logging system introduced in the recent update:
 
-1. The `RichHandler` in `/src/tunacode/core/logging/handlers.py` uses `console.print(Text(output))` 
+1. The `RichHandler` in `/src/tunacode/core/logging/handlers.py` uses `console.print(Text(output))`
 2. Rich's `console.print()` adds a newline by default
 3. Log messages like `[INFO] [SUCCESS] Ready to assist` were being printed with extra newlines
 4. This created spacing issues after the streaming panel stopped

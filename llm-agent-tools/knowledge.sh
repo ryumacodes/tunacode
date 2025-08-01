@@ -96,7 +96,7 @@ store_knowledge() {
   local value="$2"
   local kb_file="$3"
   local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  
+
   jq --arg k "$key" \
      --arg v "$value" \
      --arg t "$timestamp" \
@@ -116,7 +116,7 @@ update_knowledge() {
   local value="$2"
   local kb_file="$3"
   local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  
+
   jq --arg k "$key" \
      --arg v "$value" \
      --arg t "$timestamp" \
@@ -136,7 +136,7 @@ case "$cmd" in
     key="$1"
     shift
     value="$*"
-    
+
     # Check if key exists
     if jq -e --arg k "$key" 'has($k)' "$PRIVATE_KB" >/dev/null 2>&1; then
       update_knowledge "$key" "$value" "$PRIVATE_KB"
@@ -151,7 +151,7 @@ case "$cmd" in
   get)
     [[ $# -eq 1 ]] || usage
     key="$1"
-    
+
     # Try private first, then shared
     value=$(jq -r --arg k "$key" '.[$k].value // empty' "$PRIVATE_KB" 2>/dev/null)
     if [[ -z "$value" ]]; then
@@ -171,21 +171,21 @@ case "$cmd" in
   search)
     [[ $# -eq 1 ]] || usage
     pattern="$1"
-    
+
     echo "=== Private Knowledge (Agent: $AGENT_NAME) ==="
     jq -r --arg p "$pattern" '
-      to_entries | 
-      map(select(.key | test($p))) | 
-      .[] | 
+      to_entries |
+      map(select(.key | test($p))) |
+      .[] |
       "\(.key): \(.value.value)"
     ' "$PRIVATE_KB" 2>/dev/null || echo "(none found)"
-    
+
     echo ""
     echo "=== Shared Knowledge ==="
     jq -r --arg p "$pattern" '
-      to_entries | 
-      map(select(.key | test($p))) | 
-      .[] | 
+      to_entries |
+      map(select(.key | test($p))) |
+      .[] |
       "\(.key): \(.value.value) [by \(.value.agent)]"
     ' "$SHARED_KB" 2>/dev/null || echo "(none found)"
     ;;
@@ -195,17 +195,17 @@ case "$cmd" in
     if [[ "${1:-}" == "--shared" ]]; then
       echo "=== Shared Knowledge Base ==="
       jq -r '
-        to_entries | 
-        sort_by(.key) | 
-        .[] | 
+        to_entries |
+        sort_by(.key) |
+        .[] |
         "• \(.key): \(.value.value)\n  Tags: \(.value.tags | join(", "))\n  By: \(.value.agent) on \(.value.updated)"
       ' "$SHARED_KB" 2>/dev/null || echo "(empty)"
     else
       echo "=== Private Knowledge (Agent: $AGENT_NAME) ==="
       jq -r '
-        to_entries | 
-        sort_by(.key) | 
-        .[] | 
+        to_entries |
+        sort_by(.key) |
+        .[] |
         "• \(.key): \(.value.value)\n  Tags: \(.value.tags | join(", "))\n  Updated: \(.value.updated)"
       ' "$PRIVATE_KB" 2>/dev/null || echo "(empty)"
     fi
@@ -217,20 +217,20 @@ case "$cmd" in
     key="$1"
     shift
     tags=("$@")
-    
+
     # Check if key exists
     if ! jq -e --arg k "$key" 'has($k)' "$PRIVATE_KB" >/dev/null 2>&1; then
       echo "Key not found: $key" >&2
       exit 1
     fi
-    
+
     # Add tags
     for tag in "${tags[@]}"; do
       jq --arg k "$key" --arg t "$tag" '
         .[$k].tags = (.[$k].tags + [$t] | unique)
       ' "$PRIVATE_KB" > "$PRIVATE_KB.tmp" && mv "$PRIVATE_KB.tmp" "$PRIVATE_KB"
     done
-    
+
     echo "Tagged '$key' with: ${tags[*]}"
     ;;
 
@@ -238,14 +238,14 @@ case "$cmd" in
   share)
     [[ $# -eq 1 ]] || usage
     key="$1"
-    
+
     # Get entry from private
     entry=$(jq --arg k "$key" '.[$k] // empty' "$PRIVATE_KB")
     if [[ -z "$entry" || "$entry" == "null" ]]; then
       echo "Key not found in private knowledge: $key" >&2
       exit 1
     fi
-    
+
     # Copy to shared
     jq --arg k "$key" --argjson e "$entry" '.[$k] = $e' "$SHARED_KB" > "$SHARED_KB.tmp" && mv "$SHARED_KB.tmp" "$SHARED_KB"
     echo "Shared to common knowledge pool: $key"
@@ -254,30 +254,30 @@ case "$cmd" in
   # ───── sync ────────────────────────────────────────────────
   sync)
     echo "Syncing relevant shared knowledge..."
-    
+
     # Get all tags from private knowledge
     private_tags=$(jq -r '[.[].tags[]] | unique | .[]' "$PRIVATE_KB" 2>/dev/null)
-    
+
     if [[ -z "$private_tags" ]]; then
       echo "No tags found in private knowledge. Tag your entries to enable smart sync."
       exit 0
     fi
-    
+
     # Find shared entries with matching tags
     count=0
     while read -r tag; do
       entries=$(jq -r --arg t "$tag" '
-        to_entries | 
-        map(select(.value.tags | contains([$t]))) | 
+        to_entries |
+        map(select(.value.tags | contains([$t]))) |
         .[].key
       ' "$SHARED_KB" 2>/dev/null)
-      
+
       for key in $entries; do
         # Skip if already in private
         if jq -e --arg k "$key" 'has($k)' "$PRIVATE_KB" >/dev/null 2>&1; then
           continue
         fi
-        
+
         # Copy from shared to private
         entry=$(jq --arg k "$key" '.[$k]' "$SHARED_KB")
         jq --arg k "$key" --argjson e "$entry" '.[$k] = $e' "$PRIVATE_KB" > "$PRIVATE_KB.tmp" && mv "$PRIVATE_KB.tmp" "$PRIVATE_KB"
@@ -285,14 +285,14 @@ case "$cmd" in
         ((count++))
       done
     done <<< "$private_tags"
-    
+
     echo "Synced $count entries from shared knowledge"
     ;;
 
   # ───── export ──────────────────────────────────────────────
   export)
     output="${1:-knowledge_export_$(date +%Y%m%d_%H%M%S).md}"
-    
+
     {
       echo "# Knowledge Export"
       echo "_Agent: $AGENT_NAME_"
@@ -300,33 +300,33 @@ case "$cmd" in
       echo ""
       echo "## Private Knowledge"
       echo ""
-      
+
       jq -r '
-        to_entries | 
-        sort_by(.key) | 
-        .[] | 
+        to_entries |
+        sort_by(.key) |
+        .[] |
         "### \(.key)\n\n**Value:** \(.value.value)\n\n**Tags:** \(.value.tags | join(", "))\n\n**Updated:** \(.value.updated)\n\n---\n"
       ' "$PRIVATE_KB" 2>/dev/null || echo "(none)"
-      
+
       echo ""
       echo "## Relevant Shared Knowledge"
       echo ""
-      
+
       # Export shared entries that match private tags
       private_tags=$(jq -r '[.[].tags[]] | unique' "$PRIVATE_KB" 2>/dev/null)
       if [[ "$private_tags" != "[]" && "$private_tags" != "null" ]]; then
         jq -r --argjson tags "$private_tags" '
-          to_entries | 
+          to_entries |
           map(select(.value.tags as $vtags | $tags | any(. as $t | $vtags | contains([$t])))) |
-          sort_by(.key) | 
-          .[] | 
+          sort_by(.key) |
+          .[] |
           "### \(.key)\n\n**Value:** \(.value.value)\n\n**Tags:** \(.value.tags | join(", "))\n\n**By:** \(.value.agent)\n\n**Updated:** \(.value.updated)\n\n---\n"
         ' "$SHARED_KB" 2>/dev/null || echo "(none)"
       else
         echo "(no matching shared knowledge)"
       fi
     } > "$output"
-    
+
     echo "Exported to: $output"
     ;;
 
@@ -334,9 +334,9 @@ case "$cmd" in
   import)
     [[ $# -eq 1 ]] || usage
     import_file="$1"
-    
+
     [[ -f "$import_file" ]] || { echo "File not found: $import_file" >&2; exit 1; }
-    
+
     # Check if it's JSON
     if jq empty "$import_file" 2>/dev/null; then
       # Merge JSON data

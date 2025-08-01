@@ -12,7 +12,13 @@ from .debug import (
 )
 from .development import BranchCommand, InitCommand
 from .model import ModelCommand
-from .system import ClearCommand, HelpCommand, RefreshConfigCommand, StreamingCommand, UpdateCommand
+from .system import (
+    ClearCommand,
+    HelpCommand,
+    RefreshConfigCommand,
+    StreamingCommand,
+    UpdateCommand,
+)
 from .todo import TodoCommand
 
 __all__ = [

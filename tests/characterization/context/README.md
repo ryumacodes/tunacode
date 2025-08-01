@@ -4,7 +4,7 @@ This directory contains characterization tests for TUNACODE.md context loading a
 
 ## Test Files
 
-- `test_context_acceptance.py` - High-level acceptance tests for context injection (currently skipped due to pydantic_ai stubbing): Edit fixed? need to open a issue but I AM COOKED time wise 
+- `test_context_acceptance.py` - High-level acceptance tests for context injection (currently skipped due to pydantic_ai stubbing): Edit fixed? need to open a issue but I AM COOKED time wise
 - `test_context_integration.py` - Integration tests verifying context loading and agent creation
 - `test_context_loading.py` - Unit tests for context loading edge cases and behaviors
 

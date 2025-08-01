@@ -75,7 +75,7 @@ api_call() {
   local model="${1}"
   local messages="${2}"
   local api_key=$(get_api_key)
-  
+
   local response=$(curl -s -X POST "$API_URL" \
     -H "Authorization: Bearer $api_key" \
     -H "Content-Type: application/json" \
@@ -83,14 +83,14 @@ api_call() {
       \"model\": \"$model\",
       \"messages\": $messages
     }")
-  
+
   # Check for errors
   local error=$(echo "$response" | jq -r '.error // empty')
   if [[ -n "$error" ]]; then
     echo "ERROR: API Error: $error" >&2
     return 1
   fi
-  
+
   # Extract content
   echo "$response" | jq -r '.choices[0].message.content // empty'
 }
@@ -99,7 +99,7 @@ save_to_history() {
   local query="$1"
   local response="$2"
   local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  
+
   jq --arg q "$query" --arg r "$response" --arg t "$timestamp" \
     '. += [{"timestamp": $t, "query": $q, "response": $r}]' \
     "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
@@ -117,12 +117,12 @@ case "$cmd" in
     [[ $# -ge 1 ]] || usage
     prompt="$*"
     model="${RESEARCHER_MODEL:-$DEFAULT_MODEL}"
-    
+
     echo "Asking $model..." >&2
-    
+
     messages='[{"role": "user", "content": "'"$prompt"'"}]'
     response=$(api_call "$model" "$messages")
-    
+
     if [[ -n "$response" ]]; then
       echo "$response"
       save_to_history "$prompt" "$response"
@@ -134,11 +134,11 @@ case "$cmd" in
     [[ $# -ge 1 ]] || usage
     topic="$*"
     model="${RESEARCHER_MODEL:-$DEFAULT_MODEL}"
-    
+
     echo "Researching: $topic" >&2
     echo "Using model: $model" >&2
     echo "" >&2
-    
+
     # Craft a research-focused prompt
     prompt="Please conduct thorough online research about: $topic
 
@@ -150,14 +150,14 @@ Focus on:
 5. Expert opinions or analysis
 
 Provide a comprehensive summary with sources when possible."
-    
+
     messages='[{"role": "user", "content": "'"$prompt"'"}]'
     response=$(api_call "$model" "$messages")
-    
+
     if [[ -n "$response" ]]; then
       echo "$response"
       save_to_history "Research: $topic" "$response"
-      
+
       # Save research to file
       research_file="$CONFIG_DIR/research_$(date +%Y%m%d_%H%M%S).md"
       {
@@ -167,7 +167,7 @@ Provide a comprehensive summary with sources when possible."
         echo ""
         echo "$response"
       } > "$research_file"
-      
+
       echo "" >&2
       echo "Research saved to: $research_file" >&2
     fi
@@ -180,9 +180,9 @@ Provide a comprehensive summary with sources when possible."
     shift
     prompt="$*"
     model="${RESEARCHER_MODEL:-openai/gpt-4o}"  # Use vision-capable model
-    
+
     echo "Analyzing image..." >&2
-    
+
     # Build multimodal message
     messages='[
       {
@@ -201,9 +201,9 @@ Provide a comprehensive summary with sources when possible."
         ]
       }
     ]'
-    
+
     response=$(api_call "$model" "$messages")
-    
+
     if [[ -n "$response" ]]; then
       echo "$response"
       save_to_history "Image analysis: $prompt" "$response"
@@ -215,29 +215,29 @@ Provide a comprehensive summary with sources when possible."
     model="${RESEARCHER_MODEL:-$DEFAULT_MODEL}"
     echo "Chat mode (model: $model). Type 'exit' to quit." >&2
     echo "" >&2
-    
+
     conversation='[]'
-    
+
     while true; do
       echo -n "You: "
       read -r input
-      
+
       [[ "$input" == "exit" ]] && break
       [[ -z "$input" ]] && continue
-      
+
       # Add user message to conversation
       conversation=$(echo "$conversation" | jq --arg msg "$input" '. += [{"role": "user", "content": $msg}]')
-      
+
       # Get response
       echo -n "AI: "
       response=$(api_call "$model" "$conversation")
       echo "$response"
       echo ""
-      
+
       # Add assistant message to conversation
       conversation=$(echo "$conversation" | jq --arg msg "$response" '. += [{"role": "assistant", "content": $msg}]')
     done
-    
+
     echo "Chat ended." >&2
     ;;
 
@@ -262,16 +262,16 @@ Provide a comprehensive summary with sources when possible."
   set-key)
     [[ $# -eq 1 ]] || usage
     api_key="$1"
-    
+
     # Validate key format (basic check)
     if [[ ! "$api_key" =~ ^sk- ]]; then
       echo "Warning: API key should start with 'sk-'" >&2
     fi
-    
+
     # Save to config
     jq --arg key "$api_key" '.api_key = $key' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && \
       mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-    
+
     echo "API key saved to $CONFIG_FILE" >&2
     ;;
 

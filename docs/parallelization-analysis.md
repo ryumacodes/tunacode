@@ -25,8 +25,8 @@ async with agent.iter(message, message_history=mh) as agent_run:
 
 ### 1. Tool-Level Parallelization ⭐ (RECOMMENDED)
 
-**Difficulty**: Easy  
-**Risk**: Low  
+**Difficulty**: Easy
+**Risk**: Low
 **Impact**: High
 
 Parallelize operations **within** individual tools while maintaining the single-agent architecture.
@@ -37,7 +37,7 @@ async def _execute(self, query: str) -> str:
     # Run multiple search strategies concurrently within one tool
     tasks = [
         self._ripgrep_search(query),
-        self._ast_search(query), 
+        self._ast_search(query),
         self._semantic_search(query),
         self._file_content_search(query)
     ]
@@ -60,8 +60,8 @@ async def _execute(self, query: str) -> str:
 
 ### 2. Background Processing ⚡ (PRACTICAL)
 
-**Difficulty**: Medium  
-**Risk**: Low  
+**Difficulty**: Medium
+**Risk**: Low
 **Impact**: Medium
 
 Pre-compute expensive operations in background tasks.
@@ -72,19 +72,19 @@ class SearchTool(BaseTool):
     def __init__(self):
         self._index_task = None
         self._cached_index = None
-        
+
     async def _execute(self, query: str):
         # Start background indexing if not running
         if not self._index_task and not self._cached_index:
             self._index_task = asyncio.create_task(self._build_code_index())
-        
+
         # Use cached index or wait for completion
         if self._cached_index:
             index = self._cached_index
         else:
             index = await self._index_task
             self._cached_index = index
-            
+
         return self._search(index, query)
 ```
 
@@ -96,8 +96,8 @@ class SearchTool(BaseTool):
 
 ### 3. Agent-Level Parallelization ⚠️ (NOT RECOMMENDED)
 
-**Difficulty**: Hard  
-**Risk**: High  
+**Difficulty**: Hard
+**Risk**: High
 **Impact**: Uncertain
 
 Multiple agents processing different requests simultaneously.
@@ -132,7 +132,7 @@ state_manager.session.total_cost += cost     # Data corruption risk
 async def parallel_agents():
     agent1_task = process_request("task 1", state_manager)
     agent2_task = process_request("task 2", state_manager)  # Same state!
-    
+
     # Both modify state_manager.session.messages simultaneously
     results = await asyncio.gather(agent1_task, agent2_task)  # 💥
 ```
@@ -147,7 +147,7 @@ Create a powerful search tool that internally parallelizes operations:
 class CodeSearchTool(BaseTool):
     async def _execute(self, query: str, search_types: list = None) -> str:
         search_types = search_types or ["content", "files", "symbols", "imports"]
-        
+
         # Parallel search strategies
         search_tasks = []
         if "content" in search_types:
@@ -158,10 +158,10 @@ class CodeSearchTool(BaseTool):
             search_tasks.append(self._symbol_search(query))
         if "imports" in search_types:
             search_tasks.append(self._import_search(query))
-            
+
         # Execute all searches concurrently
         results = await asyncio.gather(*search_tasks, return_exceptions=True)
-        
+
         # Merge and rank results
         return self._format_search_results(results, query)
 ```

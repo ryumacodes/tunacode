@@ -1,7 +1,7 @@
 # File Context Visibility Update
 
-**Date**: 2025-06-14  
-**Author**: TunaCode Development Team  
+**Date**: 2025-06-14
+**Author**: TunaCode Development Team
 **Type**: Enhancement
 
 ## Summary

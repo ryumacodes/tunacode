@@ -29,19 +29,19 @@ class TestAsyncFileOperations:
         """Verify multiple file reads execute concurrently"""
         # GIVEN: 3 files that each take 100ms to read
         read_delays = []
-        
+
         async def mock_read_with_delay(filepath):
             read_delays.append(filepath)
             await asyncio.sleep(0.1)  # Simulate 100ms read
             return f"content of {filepath}"
-        
+
         # WHEN: Reading 3 files in parallel
         start_time = asyncio.get_event_loop().time()
         results = await read_files_parallel([
             "file1.txt", "file2.txt", "file3.txt"
         ])
         elapsed = asyncio.get_event_loop().time() - start_time
-        
+
         # THEN: Total time should be ~100ms, not 300ms
         assert elapsed < 0.15  # Allow some overhead
         assert len(results) == 3
@@ -90,14 +90,14 @@ class TestThreadPoolManager:
         """Verify shared pool uses fewer resources than multiple pools"""
         # GIVEN: A shared thread pool manager
         manager = ThreadPoolManager(max_workers=5)
-        
+
         # WHEN: Executing 10 concurrent operations
         tasks = [
             manager.run_io_task(lambda: expensive_io_operation(i))
             for i in range(10)
         ]
         results = await asyncio.gather(*tasks)
-        
+
         # THEN: Only 5 threads should be active at peak
         assert manager.peak_thread_count <= 5
         assert len(results) == 10
@@ -117,7 +117,7 @@ class TestThreadPoolManager:
        def __init__(self, io_workers=10, cpu_workers=4):
            self.io_pool = ThreadPoolExecutor(max_workers=io_workers)
            self.cpu_pool = ThreadPoolExecutor(max_workers=cpu_workers)
-       
+
        async def run_io_task(self, func, *args):
            loop = asyncio.get_event_loop()
            return await loop.run_in_executor(self.io_pool, func, *args)
@@ -147,22 +147,22 @@ class TestSmartCache:
     async def test_cache_hit_performance(self):
         """Verify cached reads are 100x faster"""
         cache = SmartCache(max_size=100)
-        
+
         # GIVEN: A file read that takes 100ms
         @cache.cached
         async def read_slow_file(filepath):
             await asyncio.sleep(0.1)
             return f"content of {filepath}"
-        
+
         # WHEN: Reading the same file twice
         start1 = asyncio.get_event_loop().time()
         result1 = await read_slow_file("test.txt")
         time1 = asyncio.get_event_loop().time() - start1
-        
+
         start2 = asyncio.get_event_loop().time()
         result2 = await read_slow_file("test.txt")
         time2 = asyncio.get_event_loop().time() - start2
-        
+
         # THEN: Second read should be nearly instant
         assert time1 > 0.09  # First read takes ~100ms
         assert time2 < 0.001  # Cached read < 1ms
@@ -184,11 +184,11 @@ class TestSmartCache:
            self._cache = {}
            self._access_times = {}
            self._file_mtimes = {}
-           
+
        async def get_or_compute(self, key, compute_func):
            if self._is_valid_cache_entry(key):
                return self._cache[key]
-           
+
            value = await compute_func()
            self._store(key, value)
            return value
@@ -218,11 +218,11 @@ class TestEnhancedExecutor:
     async def test_semaphore_prevents_overload(self):
         """Verify semaphore limits concurrent operations"""
         executor = EnhancedParallelExecutor(max_concurrent=3)
-        
+
         # GIVEN: 10 tasks submitted simultaneously
         active_count = 0
         max_active = 0
-        
+
         async def tracked_task(task_id):
             nonlocal active_count, max_active
             active_count += 1
@@ -230,11 +230,11 @@ class TestEnhancedExecutor:
             await asyncio.sleep(0.1)
             active_count -= 1
             return task_id
-        
+
         # WHEN: Executing all tasks
         tasks = [executor.execute(tracked_task, i) for i in range(10)]
         results = await asyncio.gather(*tasks)
-        
+
         # THEN: Never more than 3 active at once
         assert max_active <= 3
         assert len(results) == 10
@@ -254,7 +254,7 @@ class TestEnhancedExecutor:
        def __init__(self, max_concurrent=4):
            self._semaphore = asyncio.Semaphore(max_concurrent)
            self._queue = PriorityQueue()
-           
+
        async def execute(self, func, *args, priority=1):
            async with self._semaphore:
                return await func(*args)
@@ -284,17 +284,17 @@ class TestPerformanceMonitor:
     async def test_metrics_collection(self):
         """Verify accurate performance metrics"""
         monitor = PerformanceMonitor()
-        
+
         # GIVEN: Monitored operations
         @monitor.track
         async def slow_operation():
             await asyncio.sleep(0.1)
             return "done"
-        
+
         # WHEN: Executing operations
         for _ in range(5):
             await slow_operation()
-        
+
         # THEN: Metrics should be accurate
         stats = monitor.get_stats("slow_operation")
         assert stats.count == 5
@@ -356,16 +356,16 @@ class TestE2EPerformance:
             ("grep", "TODO", "src/"),
             ("list_dir", "tests/"),
         ]
-        
+
         # WHEN: Executing with optimized system
         start = time.perf_counter()
         results = await execute_parallel_optimized(workload)
         duration = time.perf_counter() - start
-        
+
         # THEN: Should be 5-10x faster than baseline
         baseline_duration = await execute_sequential(workload)
         speedup = baseline_duration / duration
-        
+
         assert speedup >= 5.0
         assert duration < 0.2  # All 4 operations < 200ms
         assert len(results) == 4

@@ -8,7 +8,18 @@ used throughout the TunaCode codebase.
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional, Protocol, Tuple, Union
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Protocol,
+    Tuple,
+    Union,
+)
 
 # Try to import pydantic-ai types if available
 try:

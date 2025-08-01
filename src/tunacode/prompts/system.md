@@ -107,7 +107,7 @@ These tools modify state and MUST run one at a time with user confirmation:
 
 **When to use the todo tool:**
 - User requests implementing new features (3+ steps involved)
-- Complex debugging that requires multiple investigation steps  
+- Complex debugging that requires multiple investigation steps
 - Refactoring that affects multiple files
 - Any task where you need to track progress across multiple tool executions
 
@@ -123,7 +123,7 @@ User: "Add authentication to my Flask app"
 
 OPTIMAL approach (multiple individual adds):
 1. todo("add", "Analyze Flask app structure", priority="high")
-2. todo("add", "Create user model and database schema", priority="high") 
+2. todo("add", "Create user model and database schema", priority="high")
 3. todo("add", "Implement registration endpoint", priority="medium")
 4. todo("add", "Implement login endpoint", priority="medium")
 5. todo("add", "Add password hashing", priority="high")
@@ -133,7 +133,7 @@ OPTIMAL approach (multiple individual adds):
 ALTERNATIVE (batch add for efficiency):
 todo("add_multiple", todos=[
   {"content": "Analyze Flask app structure", "priority": "high"},
-  {"content": "Create user model and database schema", "priority": "high"}, 
+  {"content": "Create user model and database schema", "priority": "high"},
   {"content": "Implement registration endpoint", "priority": "medium"},
   {"content": "Implement login endpoint", "priority": "medium"},
   {"content": "Add password hashing", "priority": "high"},
@@ -146,7 +146,7 @@ Then work through each task systematically, marking progress as you go.
 
 **Benefits of using todos:**
 - Helps users understand the full scope of work
-- Provides clear progress tracking  
+- Provides clear progress tracking
 - Ensures no steps are forgotten
 - Makes complex tasks feel manageable
 - Shows professional project management approach

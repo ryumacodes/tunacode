@@ -89,7 +89,7 @@ provider:model-name
 
 **Popular OpenRouter Models:**
 - `openrouter:openai/gpt-4o` (OpenAI GPT-4o via OpenRouter)
-- `openrouter:anthropic/claude-3.5-sonnet` (Claude via OpenRouter)  
+- `openrouter:anthropic/claude-3.5-sonnet` (Claude via OpenRouter)
 - `openrouter:mistralai/devstral-large` (Mistral's coding model)
 - `openrouter:meta-llama/llama-3.3-70b-instruct` (Llama 3.3)
 
@@ -176,7 +176,7 @@ Learn more about available MCP servers at [modelcontextprotocol.io](https://mode
 # OpenAI
 tunacode --model "openai:gpt-4o" --key "sk-your-openai-key"
 
-# Anthropic Claude  
+# Anthropic Claude
 tunacode --model "anthropic:claude-3.5-sonnet" --key "sk-ant-your-anthropic-key"
 
 # OpenRouter

@@ -1,5 +1,5 @@
 # Command Autocomplete Fix
-**Date:** 2025-05-26  
+**Date:** 2025-05-26
 **Issue:** Slash command autocomplete not working when typing `/`
 
 ## Problem Description

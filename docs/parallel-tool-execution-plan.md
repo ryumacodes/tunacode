@@ -10,7 +10,7 @@ The parallel execution feature is now implemented and working when multiple read
 
 **Problem Discovered**: The code was collecting all tools from a node but still executing them sequentially in a loop.
 
-**Solution Implemented**: 
+**Solution Implemented**:
 1. Modified `_process_node()` to detect when ALL tools in a node are read-only
 2. When all tools are read-only AND there are multiple tools, execute them in parallel using `execute_tools_parallel()`
 3. Updated buffering callback to not execute read-only tools individually when buffering
@@ -174,14 +174,14 @@ All tests pass:
 ```python
 class ToolBuffer:
     """Buffer for collecting read-only tool calls to execute in parallel."""
-    
+
     def __init__(self):
         self.read_only_tasks: List[Tuple[Any, Any]] = []
-    
+
     def add(self, part: Any, node: Any) -> None:
         """Add a read-only tool call to the buffer."""
         self.read_only_tasks.append((part, node))
-    
+
     def flush(self) -> List[Tuple[Any, Any]]:
         """Return buffered tasks and clear the buffer."""
         tasks = self.read_only_tasks
@@ -199,20 +199,20 @@ async def create_buffering_callback(
     """Create a callback wrapper that buffers read-only tools for parallel execution."""
     async def buffering_callback(part, node):
         tool_name = getattr(part, 'tool_name', None)
-        
+
         if tool_name in READ_ONLY_TOOLS:
             # Buffer read-only tools
             buffer.add(part, node)
             return
-        
+
         # Non-read-only tool encountered - flush buffer first
         if buffer.has_tasks():
             buffered_tasks = buffer.flush()
             await execute_tools_parallel(buffered_tasks, original_callback)
-        
+
         # Execute the non-read-only tool
         return await original_callback(part, node)
-    
+
     return buffering_callback
 ```
 

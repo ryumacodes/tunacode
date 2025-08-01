@@ -4,7 +4,7 @@
 
 1. **Command Injection**: The current implementation uses `subprocess.run(command, shell=True)` which is vulnerable to command injection attacks.
    - Example: User input like `ls; rm -rf /` would execute both commands
-   
+
 2. **No Input Sanitization**: Commands are executed directly without any validation or sanitization.
 
 3. **Environment Variable Access**: Commands have full access to environment variables which may contain sensitive information.
