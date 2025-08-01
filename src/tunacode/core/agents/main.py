@@ -485,16 +485,6 @@ async def _process_node(
                         # Continue processing other parts instead of failing completely
                         continue
 
-    # Final flush: disabled temporarily while fixing the parallel execution design
-    # The buffer is not being used in the current implementation
-    # if tool_callback and buffer.has_tasks():
-    #     buffered_tasks = buffer.flush()
-    #     if state_manager.session.show_thoughts:
-    #         await ui.muted(
-    #             f"Final flush: Executing {len(buffered_tasks)} remaining read-only tools in parallel"
-    #         )
-    #     await execute_tools_parallel(buffered_tasks, tool_callback)
-
 
 def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
     if model not in state_manager.session.agents:
