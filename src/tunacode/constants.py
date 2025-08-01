@@ -9,6 +9,7 @@ Centralizes all magic strings, UI text, error messages, and application constant
 APP_NAME = "TunaCode"
 APP_VERSION = "0.0.48"
 
+
 # File patterns
 GUIDE_FILE_PATTERN = "{name}.md"
 GUIDE_FILE_NAME = "TUNACODE.md"
@@ -157,3 +158,8 @@ MAX_TODOS_PER_SESSION = 100
 
 # Maximum length for todo content
 MAX_TODO_CONTENT_LENGTH = 500
+
+# JSON parsing retry configuration
+JSON_PARSE_MAX_RETRIES = 10
+JSON_PARSE_BASE_DELAY = 0.1  # Initial delay in seconds
+JSON_PARSE_MAX_DELAY = 5.0  # Maximum delay in seconds
