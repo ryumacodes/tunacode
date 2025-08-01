@@ -25,6 +25,12 @@ die(){ printf "%b\n" "${RED}ERROR:${NC} $*" >&2; exit 1; }
 for cmd in python3 git; do command -v $cmd >/dev/null || die "$cmd missing"; done
 [[ -f ~/.pypirc ]] || die "~/.pypirc missing (should contain real‑PyPI token)"
 
+# ── ensure on master branch -------------------------------------------------
+current_branch=$(git branch --show-current)
+if [[ "$current_branch" != "master" ]]; then
+    die "You must be on the master branch to publish. Current branch: $current_branch"
+fi
+
 # ── ensure clean working directory ------------------------------------------
 if [[ -n $(git status --porcelain) ]]; then
     die "Working directory is not clean. Commit or stash changes before publishing."

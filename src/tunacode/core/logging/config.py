@@ -1,14 +1,33 @@
 import logging
 import logging.config
-import os
-
-import yaml
 
 from tunacode.utils import user_configuration
 
-DEFAULT_CONFIG_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config", "logging.yaml"
-)
+# Default logging configuration when none is provided
+DEFAULT_LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "[%(levelname)s] %(message)s"},
+        "detailed": {"format": "[%(asctime)s] [%(levelname)s] [%(name)s:%(lineno)d] - %(message)s"},
+    },
+    "handlers": {
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "DEBUG",
+            "formatter": "detailed",
+            "filename": "tunacode.log",
+            "maxBytes": 10485760,  # 10MB
+            "backupCount": 5,
+        }
+    },
+    "root": {"level": "DEBUG", "handlers": ["file"]},
+    "loggers": {
+        "tunacode.ui": {"level": "INFO", "propagate": False},
+        "tunacode.tools": {"level": "DEBUG"},
+        "tunacode.core.agents": {"level": "DEBUG"},
+    },
+}
 
 
 class LogConfig:
@@ -43,15 +62,9 @@ class LogConfig:
                 print(f"Failed to configure custom logging: {e}")
                 logging.basicConfig(level=logging.INFO)
         else:
-            # Use default configuration from YAML file
-            path = config_path or DEFAULT_CONFIG_PATH
-            if not os.path.exists(path):
-                raise FileNotFoundError(f"Logging config file not found: {path}")
-            with open(path, "r") as f:
-                config = yaml.safe_load(f)
-            logging_config = config.get("logging", config)
+            # Use default configuration
             try:
-                logging.config.dictConfig(logging_config)
+                logging.config.dictConfig(DEFAULT_LOGGING_CONFIG)
             except Exception as e:
-                print(f"Failed to configure logging: {e}")
+                print(f"Failed to configure default logging: {e}")
                 logging.basicConfig(level=logging.INFO)
