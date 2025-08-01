@@ -49,6 +49,10 @@ SessionId = str
 DeviceId = str
 InputSessions = Dict[str, Any]
 
+# Logging configuration types
+LoggingConfig = Dict[str, Any]
+LoggingEnabled = bool
+
 # =============================================================================
 # Configuration Types
 # =============================================================================

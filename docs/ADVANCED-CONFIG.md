@@ -199,6 +199,64 @@ Edit `~/.config/tunacode.json`:
 }
 ```
 
+## Logging Configuration
+
+By default, TunaCode has logging disabled for better performance and privacy. You can enable and configure logging through your configuration file.
+
+### Enable Basic Logging
+
+```json
+{
+  "default_model": "anthropic:claude-3.5-sonnet",
+  "logging_enabled": true
+}
+```
+
+### Custom Logging Configuration
+
+When logging is enabled, you can customize the logging behavior:
+
+```json
+{
+  "default_model": "anthropic:claude-3.5-sonnet",
+  "logging_enabled": true,
+  "logging": {
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+      "simple": {
+        "format": "[%(levelname)s] %(message)s"
+      },
+      "detailed": {
+        "format": "[%(asctime)s] [%(levelname)s] [%(name)s:%(lineno)d] - %(message)s"
+      }
+    },
+    "handlers": {
+      "file": {
+        "class": "logging.handlers.RotatingFileHandler",
+        "level": "DEBUG",
+        "formatter": "detailed",
+        "filename": "tunacode.log",
+        "maxBytes": 10485760,
+        "backupCount": 3
+      }
+    },
+    "root": {
+      "level": "DEBUG",
+      "handlers": ["file"]
+    }
+  }
+}
+```
+
+### Logging Options
+
+- **`logging_enabled`**: Boolean flag to enable/disable all logging (default: `false`)
+- **`logging`**: Custom logging configuration dictionary following Python's logging.config format
+  - **`formatters`**: Define custom log message formats
+  - **`handlers`**: Configure where logs are written (files, console, etc.)
+  - **`loggers`**: Set logging levels for specific modules
+
 ## Advanced Settings
 
 ### Complete Configuration Example
@@ -206,6 +264,7 @@ Edit `~/.config/tunacode.json`:
 ```json
 {
   "default_model": "anthropic:claude-3.5-sonnet",
+  "logging_enabled": false,
   "env": {
     "ANTHROPIC_API_KEY": "sk-ant-api-key",
     "OPENAI_API_KEY": "sk-openai-key",

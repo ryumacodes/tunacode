@@ -3,16 +3,14 @@
 import os
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
-from tunacode.core.agents.main import get_or_create_agent
-from tunacode.core.state import StateManager
-
 
 @pytest.mark.asyncio
-async def test_tunacode_loading_message_displayed(caplog):
-    """Test that TUNACODE.md loading message is displayed when found."""
+async def test_tunacode_loading_message_displayed():
+    """Test that TUNACODE.md loading message is logged when found."""
     # Create a temporary directory with TUNACODE.md
     with tempfile.TemporaryDirectory() as tmpdir:
         tunacode_path = Path(tmpdir) / "TUNACODE.md"
@@ -37,23 +35,28 @@ This file provides guidance to AI assistants.
         try:
             os.chdir(tmpdir)
 
-            # Create state manager with thoughts enabled
-            state_manager = StateManager()
-            state_manager.session.show_thoughts = True
+            # Mock the logger to capture calls
+            with patch("tunacode.core.agents.main.logger") as mock_logger:
+                from tunacode.core.agents.main import get_or_create_agent
+                from tunacode.core.state import StateManager
 
-            # Create agent (this should log the message)
-            get_or_create_agent("openai:gpt-4", state_manager)
+                # Create state manager with thoughts enabled
+                state_manager = StateManager()
+                state_manager.session.show_thoughts = True
 
-            # Check the log messages
-            assert "📄 TUNACODE.md located: Loading context..." in caplog.text
+                # Create agent (this should log the message)
+                get_or_create_agent("openai:gpt-4", state_manager)
+
+                # Check that the logger was called with the expected message
+                mock_logger.info.assert_called_with("📄 TUNACODE.md located: Loading context...")
 
         finally:
             os.chdir(original_cwd)
 
 
 @pytest.mark.asyncio
-async def test_tunacode_not_found_message(caplog):
-    """Test that TUNACODE.md not found message is displayed when file doesn't exist."""
+async def test_tunacode_not_found_message():
+    """Test that TUNACODE.md not found message is logged when file doesn't exist."""
     # Create a temporary directory WITHOUT TUNACODE.md
     with tempfile.TemporaryDirectory() as tmpdir:
         # Change to temp directory
@@ -61,14 +64,21 @@ async def test_tunacode_not_found_message(caplog):
         try:
             os.chdir(tmpdir)
 
-            # Create state manager
-            state_manager = StateManager()
+            # Mock the logger to capture calls
+            with patch("tunacode.core.agents.main.logger") as mock_logger:
+                from tunacode.core.agents.main import get_or_create_agent
+                from tunacode.core.state import StateManager
 
-            # Create agent (should log not found message)
-            get_or_create_agent("openai:gpt-4", state_manager)
+                # Create state manager
+                state_manager = StateManager()
 
-            # Check the log messages
-            assert "📄 TUNACODE.md not found: Using default context" in caplog.text
+                # Create agent (should log not found message)
+                get_or_create_agent("openai:gpt-4", state_manager)
+
+                # Check that the logger was called with the expected message
+                mock_logger.info.assert_called_with(
+                    "📄 TUNACODE.md not found: Using default context"
+                )
 
         finally:
             os.chdir(original_cwd)
