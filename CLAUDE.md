@@ -137,7 +137,6 @@ Modular setup with validation steps:
 - Output formatting via `rich` library
 - Tool confirmations show diffs for file operations
 - Spinner during agent processing
-- Optional Textual UI bridge (`cli/textual_app.py`, `cli/textual_bridge.py`)
 
 ## Testing
 
@@ -234,6 +233,14 @@ Location: `TUNACODE.md` in project root
 - File operations require explicit confirmation (unless in yolo mode)
 - Encourages git branches for experiments: `/branch <name>`
 - Git safety checks during setup
+
+### Environment Variables
+
+- `TUNACODE_MAX_PARALLEL` - Maximum number of read-only tools to execute in parallel (defaults to CPU count)
+- `ANTHROPIC_API_KEY` - API key for Anthropic models
+- `OPENAI_API_KEY` - API key for OpenAI models
+- `GOOGLE_API_KEY` - API key for Google models
+- Other provider API keys as needed
 
 Follow this code styling
 
