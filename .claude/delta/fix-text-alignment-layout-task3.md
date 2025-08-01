@@ -1,7 +1,7 @@
 # Fix Text Alignment and Layout (TaskMaster Task #3)
 
-**Date**: 2025-07-23  
-**Task**: Fix text alignment issues in the safety branch warning dialog  
+**Date**: 2025-07-23
+**Task**: Fix text alignment issues in the safety branch warning dialog
 **Status**: Completed
 
 ## Problem Summary

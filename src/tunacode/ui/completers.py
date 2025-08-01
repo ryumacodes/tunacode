@@ -3,7 +3,12 @@
 import os
 from typing import TYPE_CHECKING, Iterable, Optional
 
-from prompt_toolkit.completion import CompleteEvent, Completer, Completion, merge_completers
+from prompt_toolkit.completion import (
+    CompleteEvent,
+    Completer,
+    Completion,
+    merge_completers,
+)
 from prompt_toolkit.document import Document
 
 if TYPE_CHECKING:

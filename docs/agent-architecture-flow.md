@@ -98,7 +98,7 @@ for i in range(max_iterations):
 4. **Parallel Execution Decision**
    ```python
    all_read_only = all(part.tool_name in READ_ONLY_TOOLS for part in tool_parts)
-   
+
    if all_read_only and len(tool_parts) > 1:
        # Execute in parallel batch
        await execute_tools_parallel(tool_parts, tool_callback)
@@ -151,10 +151,10 @@ for i in range(max_iterations):
 class ToolBuffer:
     def __init__(self):
         self.read_only_tasks: List[Tuple[Any, Any]] = []
-    
+
     def add(self, part, node):
         # Buffer read-only tools
-    
+
     def flush(self):
         # Return and clear buffered tasks
 ```

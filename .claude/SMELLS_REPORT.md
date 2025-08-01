@@ -111,7 +111,7 @@ Analysis of 219 Python files (32,163 lines of code) revealed several areas for i
 
 - All functions with CC < 15
 - No files > 500 lines
-- All functions < 50 lines  
+- All functions < 50 lines
 - Maximum 4 parameters per function
 - Test coverage > 80% for high-churn files
 

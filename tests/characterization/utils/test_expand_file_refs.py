@@ -3,11 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tunacode.constants import (
-    MAX_FILE_SIZE,
-    MAX_FILES_IN_DIR,
-    MAX_TOTAL_DIR_SIZE,
-)
+from tunacode.constants import MAX_FILE_SIZE, MAX_FILES_IN_DIR, MAX_TOTAL_DIR_SIZE
 from tunacode.utils.text_utils import expand_file_refs
 
 

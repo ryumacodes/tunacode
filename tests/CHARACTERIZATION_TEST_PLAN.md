@@ -180,10 +180,10 @@ This document outlines the remaining characterization tests needed to capture th
        """Capture behavior when [scenario]."""
        # Arrange
        setup_test_data()
-       
+
        # Act
        result = await function_under_test()
-       
+
        # Assert - Golden master
        assert result == expected_current_behavior
    ```

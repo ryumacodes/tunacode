@@ -46,6 +46,10 @@ dev = [
     "pytest-asyncio",
     "textual-dev",
     "pre-commit",
+    "vulture>=2.7",
+    "unimport>=1.0.0",
+    "autoflake>=2.0.0",
+    "dead>=1.5.0",
 ]
 
 [project.urls]
@@ -87,13 +91,13 @@ exclude = ["venv/", "build/", "dist/", ".git/", "__pycache__/", "*.egg-info/"]
 ignore_names = [
     # TYPE_CHECKING imports
     "ReadStream",
-    "WriteStream", 
+    "WriteStream",
     "StateManager",
     "ModelRequest",
     "CommandRegistry",
     # Pytest fixtures
     "caplog",
-    "temp_workspace", 
+    "temp_workspace",
     "setup_test_environment",
     "excinfo",
     # Common patterns

@@ -71,7 +71,7 @@ check_jq() {
 detect_file_type() {
   local file="$1"
   local base=$(basename "$file")
-  
+
   case "$base" in
     *test*|*spec*) echo "test" ;;
     *interface*|*types*|*.d.ts) echo "interface" ;;
@@ -85,14 +85,14 @@ detect_file_type() {
 extract_deps() {
   local file="$1"
   local deps=""
-  
+
   # Common import patterns
   if [[ -f "$file" ]]; then
     # JavaScript/TypeScript imports
     deps=$(grep -E "^import .* from ['\"]|require\(['\"]" "$file" 2>/dev/null | \
            sed -E "s/.*from ['\"]([^'\"]+)['\"].*/\1/g; s/.*require\(['\"]([^'\"]+)['\"].*/\1/g" | \
            grep -v "^[./]" | sort -u | tr '\n' ' ' || true)
-    
+
     # Python imports
     if [[ -z "$deps" ]]; then
       deps=$(grep -E "^import |^from .* import" "$file" 2>/dev/null | \
@@ -100,7 +100,7 @@ extract_deps() {
              sort -u | tr '\n' ' ' || true)
     fi
   fi
-  
+
   echo "$deps"
 }
 
@@ -112,7 +112,7 @@ case "$cmd" in
   init)
     check_jq
     init_dirs
-    
+
     cat > "$CODEMAP_DIR/README.md" <<'EOF'
 # Codemap - Lightweight Code Intelligence
 
@@ -130,7 +130,7 @@ This directory contains high-impact, low-overhead code intelligence for LLM agen
 2. **Fewer hallucinations**: Cheatsheets prevent wrong API usage
 3. **Learn from history**: Debug logs prevent repeating old mistakes
 EOF
-    
+
     echo "Codemap initialized in $CODEMAP_DIR/"
     ;;
 
@@ -138,36 +138,36 @@ EOF
   map)
     check_jq
     init_dirs
-    
+
     echo "Scanning codebase for modules..."
-    
+
     # Find all code files
     files=$(find . -type f \( \
       -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" \
       -o -name "*.py" -o -name "*.go" -o -name "*.java" -o -name "*.rb" \
       \) -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/$BANK_DIR/*" | sort)
-    
+
     count=0
     for file in $files; do
       # Skip if already labeled
       if jq -e --arg f "$file" 'has($f)' "$METADATA_FILE" >/dev/null 2>&1; then
         continue
       fi
-      
+
       # Auto-detect type and deps
       type=$(detect_file_type "$file")
       deps=$(extract_deps "$file")
-      
+
       # Add to metadata
       jq --arg f "$file" \
          --arg t "$type" \
          --arg d "$deps" \
          '.[$f] = {"type": $t, "deps": ($d | split(" ") | map(select(. != ""))), "description": ""}' \
          "$METADATA_FILE" > "$METADATA_FILE.tmp" && mv "$METADATA_FILE.tmp" "$METADATA_FILE"
-      
+
       ((count++))
     done
-    
+
     echo "Mapped $count new files. Total: $(jq 'length' "$METADATA_FILE")"
     echo "Run '$0 summary' to see overview"
     ;;
@@ -177,25 +177,25 @@ EOF
     [[ $# -ge 3 ]] || usage
     check_jq
     init_dirs
-    
+
     file="$1"
     type="$2"
     shift 2
     desc="$*"
-    
+
     # Validate type
     case "$type" in
       impl|interface|test|config|entry) ;;
       *) echo "ERROR: Type must be: impl, interface, test, config, or entry" >&2; exit 1 ;;
     esac
-    
+
     # Update metadata
     jq --arg f "$file" \
        --arg t "$type" \
        --arg d "$desc" \
        '.[$f] = (.[$f] // {}) | .type = $t | .description = $d' \
        "$METADATA_FILE" > "$METADATA_FILE.tmp" && mv "$METADATA_FILE.tmp" "$METADATA_FILE"
-    
+
     echo "Labeled $file as $type: $desc"
     ;;
 
@@ -204,17 +204,17 @@ EOF
     [[ $# -ge 2 ]] || usage
     check_jq
     init_dirs
-    
+
     file="$1"
     shift
     deps=("$@")
-    
+
     # Update dependencies
     jq --arg f "$file" \
        --argjson d "$(printf '%s\n' "${deps[@]}" | jq -R . | jq -s .)" \
        '.[$f] = (.[$f] // {}) | .deps = $d' \
        "$METADATA_FILE" > "$METADATA_FILE.tmp" && mv "$METADATA_FILE.tmp" "$METADATA_FILE"
-    
+
     echo "Updated dependencies for $file"
     ;;
 
@@ -222,10 +222,10 @@ EOF
   cheat)
     [[ $# -ge 1 ]] || usage
     init_dirs
-    
+
     component="$1"
     cheatsheet="$CHEATSHEET_DIR/${component}.md"
-    
+
     if [[ $# -ge 2 ]]; then
       # Content provided
       shift
@@ -260,21 +260,21 @@ EOF
   debug)
     [[ $# -ge 2 ]] || usage
     init_dirs
-    
+
     bug="$1"
     shift
     fix="$*"
-    
+
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     debug_file="$DEBUG_DIR/debug_$(date +%Y%m).md"
-    
+
     # Append to monthly debug log
     {
       echo "## [$timestamp] $bug"
       echo "**Fix:** $fix"
       echo ""
     } >> "$debug_file"
-    
+
     echo "Logged debug entry to $debug_file"
     ;;
 
@@ -282,17 +282,17 @@ EOF
   search)
     [[ $# -ge 1 ]] || usage
     init_dirs
-    
+
     term="$*"
-    
+
     echo "=== Module Metadata ==="
     jq -r --arg t "$term" '
-      to_entries | 
+      to_entries |
       map(select(.key | test($t, "i")) + select(.value.description | test($t, "i"))) |
-      .[] | 
+      .[] |
       "\(.key) [\(.value.type)]: \(.value.description)"
     ' "$METADATA_FILE" 2>/dev/null || echo "(no matches)"
-    
+
     echo ""
     echo "=== Cheatsheets ==="
     grep -l -i "$term" "$CHEATSHEET_DIR"/*.md 2>/dev/null | while read -r file; do
@@ -300,7 +300,7 @@ EOF
       grep -i -n -C1 "$term" "$file" | head -5
       echo "..."
     done || echo "(no matches)"
-    
+
     echo ""
     echo "=== Debug History ==="
     grep -i -n "$term" "$DEBUG_DIR"/*.md 2>/dev/null | head -10 || echo "(no matches)"
@@ -310,22 +310,22 @@ EOF
   summary)
     check_jq
     init_dirs
-    
+
     echo "=== Codemap Summary ==="
     echo ""
-    
+
     # File type breakdown
     echo "File Types:"
     jq -r '[.[].type] | group_by(.) | map({type: .[0], count: length}) | .[] | "  \(.type): \(.count)"' "$METADATA_FILE"
-    
+
     echo ""
     echo "Entry Points:"
     jq -r 'to_entries | map(select(.value.type == "entry")) | .[] | "  \(.key): \(.value.description)"' "$METADATA_FILE"
-    
+
     echo ""
     echo "Interfaces:"
     jq -r 'to_entries | map(select(.value.type == "interface")) | .[] | "  \(.key): \(.value.description)"' "$METADATA_FILE" | head -10
-    
+
     # Cheatsheets
     if [[ -d "$CHEATSHEET_DIR" ]] && [[ -n "$(ls -A "$CHEATSHEET_DIR" 2>/dev/null)" ]]; then
       echo ""
@@ -334,12 +334,12 @@ EOF
         echo "  - $(basename "$file" .md)"
       done
     fi
-    
+
     # Debug entries
     debug_count=$(find "$DEBUG_DIR" -name "*.md" -exec grep -c "^## " {} + 2>/dev/null | awk '{s+=$1} END {print s}' || echo 0)
     echo ""
     echo "Debug History: $debug_count entries"
-    
+
     # Most complex modules (by dependency count)
     echo ""
     echo "Most Complex Modules (by dependencies):"

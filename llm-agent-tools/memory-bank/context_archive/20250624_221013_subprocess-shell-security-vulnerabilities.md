@@ -474,4 +474,3 @@ async def repl(state_manager: StateManager):
 ```
 Security vulnerability analysis of subprocess.run with shell=True usage
 ```
-

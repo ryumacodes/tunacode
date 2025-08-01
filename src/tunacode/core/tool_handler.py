@@ -4,7 +4,12 @@ Tool handling business logic, separated from UI concerns.
 
 from tunacode.constants import READ_ONLY_TOOLS
 from tunacode.core.state import StateManager
-from tunacode.types import ToolArgs, ToolConfirmationRequest, ToolConfirmationResponse, ToolName
+from tunacode.types import (
+    ToolArgs,
+    ToolConfirmationRequest,
+    ToolConfirmationResponse,
+    ToolName,
+)
 
 
 class ToolHandler:

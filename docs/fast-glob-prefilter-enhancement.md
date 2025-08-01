@@ -69,29 +69,29 @@ import fnmatch, os, re, asyncio
 MAX_GLOB = 5_000        # Hard cap - protects memory & tokens
 GLOB_BATCH = 500        # Streaming batch size
 EXCLUDE_DIRS = {        # Common directories to skip
-    'node_modules', '.git', '__pycache__', 
+    'node_modules', '.git', '__pycache__',
     '.venv', 'venv', 'dist', 'build'
 }
 
 def fast_glob(root: Path, include: str, exclude: str = None) -> list[Path]:
     """
     Lightning-fast filename filtering using os.scandir.
-    
+
     Args:
         root: Directory to search
         include: Include pattern (e.g., "*.py", "*.{js,ts}")
         exclude: Exclude pattern (optional)
-    
+
     Returns:
         List of matching file paths (bounded by MAX_GLOB)
     """
     matches, stack = [], [root]
     include_rx = re.compile(fnmatch.translate(include), re.IGNORECASE)
     exclude_rx = re.compile(fnmatch.translate(exclude), re.IGNORECASE) if exclude else None
-    
+
     while stack and len(matches) < MAX_GLOB:
         current_dir = stack.pop()
-        
+
         try:
             with os.scandir(current_dir) as entries:
                 for entry in entries:
@@ -99,16 +99,16 @@ def fast_glob(root: Path, include: str, exclude: str = None) -> list[Path]:
                     if entry.is_dir(follow_symlinks=False):
                         if entry.name not in EXCLUDE_DIRS:
                             stack.append(Path(entry.path))
-                    
+
                     # Check file matches
                     elif entry.is_file(follow_symlinks=False):
                         if include_rx.match(entry.name):
                             if not exclude_rx or not exclude_rx.match(entry.name):
                                 matches.append(Path(entry.path))
-                                
+
         except (PermissionError, OSError):
             continue  # Skip inaccessible directories
-            
+
     return matches[:MAX_GLOB]
 ```
 
@@ -128,16 +128,16 @@ async def _execute_with_prefilter(
     """
     # 1️⃣ Fast-glob prefilter
     candidates = await asyncio.get_event_loop().run_in_executor(
-        self._executor, 
-        fast_glob, 
-        Path(directory), 
+        self._executor,
+        fast_glob,
+        Path(directory),
         include_files,
         exclude_files
     )
-    
+
     if not candidates:
         return f"No files found matching pattern: {include_files}"
-    
+
     # 2️⃣ Smart strategy selection based on candidate count
     if search_type == "smart":
         if len(candidates) <= 50:
@@ -145,21 +145,21 @@ async def _execute_with_prefilter(
             search_type = "python"
         elif len(candidates) <= 1000:
             # Medium set - Ripgrep optimal
-            search_type = "ripgrep" 
+            search_type = "ripgrep"
         else:
             # Large set - Hybrid for best coverage
             search_type = "hybrid"
-    
+
     # 3️⃣ Execute chosen strategy with candidate list
     config = self._create_search_config(**kwargs)
-    
+
     if search_type == "ripgrep":
         results = await self._ripgrep_search_filtered(pattern, candidates, config)
     elif search_type == "python":
         results = await self._python_search_filtered(pattern, candidates, config)
     elif search_type == "hybrid":
         results = await self._hybrid_search_filtered(pattern, candidates, config)
-    
+
     return self._format_results(results, pattern, config)
 ```
 
@@ -168,9 +168,9 @@ async def _execute_with_prefilter(
 #### Ripgrep with File List
 ```python
 async def _ripgrep_search_filtered(
-    self, 
-    pattern: str, 
-    candidates: list[Path], 
+    self,
+    pattern: str,
+    candidates: list[Path],
     config: SearchConfig
 ) -> list[SearchResult]:
     """
@@ -178,17 +178,17 @@ async def _ripgrep_search_filtered(
     """
     def run_ripgrep_filtered():
         cmd = ["rg", "--json"]
-        
+
         # Add configuration flags
         if not config.case_sensitive:
             cmd.append("--ignore-case")
         if config.context_lines > 0:
             cmd.extend(["--context", str(config.context_lines)])
-        
+
         # Add pattern and explicit file list
         cmd.append(pattern)
         cmd.extend(str(f) for f in candidates)
-        
+
         try:
             result = subprocess.run(
                 cmd,
@@ -199,20 +199,20 @@ async def _ripgrep_search_filtered(
             return result.stdout if result.returncode == 0 else None
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return None
-    
+
     output = await asyncio.get_event_loop().run_in_executor(
         self._executor, run_ripgrep_filtered
     )
-    
+
     return self._parse_ripgrep_output(output) if output else []
 ```
 
 #### Python Strategy with Candidates
 ```python
 async def _python_search_filtered(
-    self, 
-    pattern: str, 
-    candidates: list[Path], 
+    self,
+    pattern: str,
+    candidates: list[Path],
     config: SearchConfig
 ) -> list[SearchResult]:
     """
@@ -224,22 +224,22 @@ async def _python_search_filtered(
         regex_pattern = re.compile(pattern, flags)
     else:
         regex_pattern = None
-    
+
     # Create parallel search tasks for candidates only
     search_tasks = []
     for file_path in candidates:
         task = self._search_file(file_path, pattern, regex_pattern, config)
         search_tasks.append(task)
-    
+
     # Execute in parallel
     all_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-    
+
     # Flatten and rank results
     results = []
     for file_results in all_results:
         if isinstance(file_results, list):
             results.extend(file_results)
-    
+
     results.sort(key=lambda r: r.relevance_score, reverse=True)
     return results[:config.max_results]
 ```
@@ -264,7 +264,7 @@ async def _python_search_filtered(
 ```python
 # Automatic optimization based on candidate count
 candidates = 45 files    → Python strategy (low startup cost)
-candidates = 500 files   → Ripgrep strategy (optimized for medium sets)  
+candidates = 500 files   → Ripgrep strategy (optimized for medium sets)
 candidates = 2000 files  → Hybrid strategy (best coverage)
 ```
 
@@ -275,7 +275,7 @@ candidates = 2000 files  → Hybrid strategy (best coverage)
 # Multiple extensions
 grep("import", ".", include="*.{py,js,ts}")
 
-# Recursive patterns  
+# Recursive patterns
 grep("test", ".", include="**/test_*.py")
 
 # Exclude patterns
@@ -298,7 +298,7 @@ grep("component", "src/**/*.{tsx,jsx}")
 ```python
 MAX_GLOB = 5_000  # Hard limit prevents:
                   # - Memory exhaustion
-                  # - Token overflow  
+                  # - Token overflow
                   # - Excessive processing time
                   # - UI responsiveness issues
 ```
@@ -328,7 +328,7 @@ MAX_GLOB = 5_000  # Hard limit prevents:
 - [ ] Adapt ripgrep and python strategies
 - [ ] Basic testing and validation
 
-### Phase 2: Smart Routing (Week 2)  
+### Phase 2: Smart Routing (Week 2)
 - [ ] Add candidate count-based strategy selection
 - [ ] Implement performance thresholds
 - [ ] Add configuration options

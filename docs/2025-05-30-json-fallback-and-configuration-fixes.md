@@ -1,7 +1,7 @@
 # JSON Tool Parsing Fallback and Configuration Fixes
 
-**Date**: 2025-05-30  
-**Status**: Completed  
+**Date**: 2025-05-30
+**Status**: Completed
 **Priority**: High (Critical reliability improvements)
 
 ## Overview
@@ -16,7 +16,7 @@ This session focused on implementing robust JSON tool parsing fallback functiona
 **Impact**: Users unable to use TunaCode with certain models or during API provider issues.
 
 ### 2. Tool Schema Validation Errors
-**Symptom**: 
+**Symptom**:
 ```
 ╭─ Error ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │  'filepath'                                                                                                                                                                              │
@@ -104,8 +104,8 @@ except Exception as e:
                     if hasattr(part, 'content') and isinstance(part.content, str):
                         try:
                             await extract_and_execute_tool_calls(
-                                part.content, 
-                                tool_callback_with_state, 
+                                part.content,
+                                tool_callback_with_state,
                                 state_manager
                             )
                             await ui.warning("🔧 Recovered using JSON tool parsing")
@@ -122,7 +122,7 @@ The pydantic-ai Tool class wrapper expected parameter names that matched the int
 #### Solution: Standardized Parameter Names
 **Files Updated**:
 - `/src/tunacode/tools/write_file.py`
-- `/src/tunacode/tools/read_file.py` 
+- `/src/tunacode/tools/read_file.py`
 - `/src/tunacode/tools/update_file.py`
 
 **Changes**:
@@ -132,7 +132,7 @@ async def write_file(path: str, content: str) -> str:
 async def read_file(path: str) -> str:
 async def update_file(path: str, target: str, patch: str) -> str:
 
-# After  
+# After
 async def write_file(filepath: str, content: str) -> str:
 async def read_file(filepath: str) -> str:
 async def update_file(filepath: str, target: str, patch: str) -> str:
@@ -165,10 +165,10 @@ max_iterations = state_manager.session.user_config.get("settings", {}).get("max_
 ```python
 class RefreshConfigCommand(SimpleCommand):
     """Refresh configuration from defaults."""
-    
+
     async def execute(self, args: List[str], context: CommandContext) -> None:
         from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
-        
+
         # Update current session config with latest defaults
         for key, value in DEFAULT_USER_CONFIG.items():
             if key not in context.state_manager.session.user_config:
@@ -178,7 +178,7 @@ class RefreshConfigCommand(SimpleCommand):
                 for subkey, subvalue in value.items():
                     if subkey not in context.state_manager.session.user_config[key]:
                         context.state_manager.session.user_config[key][subkey] = subvalue
-        
+
         # Show updated max_iterations
         max_iterations = context.state_manager.session.user_config.get("settings", {}).get("max_iterations", 20)
         await ui.success(f"Configuration refreshed - max iterations: {max_iterations}")
@@ -248,7 +248,7 @@ Then: {"tool": "write_file", "args": {"filepath": "output.txt", "content": "resu
 **Test Coverage**:
 - ✅ Simple JSON tool call parsing
 - ✅ Multiple tool calls in one text
-- ✅ Code block parsing  
+- ✅ Code block parsing
 - ✅ Invalid JSON handling
 - ✅ Complex nested arguments
 - ✅ Combined format parsing
@@ -301,7 +301,7 @@ graph TD
 - ❌ Configuration updates required restart
 - ❌ No recovery mechanisms for API provider issues
 
-### After Implementation  
+### After Implementation
 - ✅ Automatic JSON parsing fallback for tool calling failures
 - ✅ Consistent parameter naming across all tools
 - ✅ Runtime configuration refresh capability
@@ -334,7 +334,7 @@ graph TD
 ❯ /parsetools
 ✓ JSON tool parsing completed
 
-❯ /refresh  
+❯ /refresh
 ✓ Configuration refreshed - max iterations: 20
 
 ❯ /iterations 25

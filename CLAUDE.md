@@ -16,7 +16,7 @@ When the directory "llm-agent-tools" exists, you MUST use this tooling flow and 
 
 🚀 Available Tools:
 1. scratchpad-multi.sh - Task tracking with multi-agent support (use --agent <name> for agent-specific work)
-2. knowledge.sh - Knowledge base with private/shared storage (use --agent <name> for agent-specific work) 
+2. knowledge.sh - Knowledge base with private/shared storage (use --agent <name> for agent-specific work)
 3. codemap.sh - Lightweight code intelligence for instant roadmaps
 4. context.sh - Context gathering for debugging issues
 5. researcher.sh - Online research and multimodal analysis via OpenRouter API

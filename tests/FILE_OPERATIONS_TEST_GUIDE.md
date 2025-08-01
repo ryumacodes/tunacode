@@ -24,7 +24,7 @@ tests/
 - **Advanced**: Regex patterns, case sensitivity, unicode content
 - **Performance**: Large-scale searches, 3-second deadline compliance
 
-#### Read Tests  
+#### Read Tests
 - **Basic**: Simple reads, line numbers, partial reads (offset/limit)
 - **Advanced**: Large files, various encodings, binary detection
 - **Error Handling**: Missing files, permission errors, invalid paths
@@ -48,10 +48,10 @@ async def test_operation_scenario(self, temp_workspace):
     """Clear description of what is being tested."""
     # Arrange - Set up test data
     await write_file("test.txt", "Initial content")
-    
+
     # Act - Perform the operation
     result = await grep("content", return_format="list")
-    
+
     # Assert - Verify results
     assert len(result) == 1
     assert "test.txt" in result[0]
@@ -101,15 +101,15 @@ async def test_complete_workflow(self):
     """Test realistic usage: search → read → update."""
     # Create files with issues
     await write_file("app.py", "# TODO: fix bug\nprint('hello')")
-    
+
     # Find files with TODOs
     todo_files = await grep("TODO:", include_files="*.py", return_format="list")
-    
+
     # Fix each TODO
     for file in todo_files:
         content = await read_file(file)
         await update_file(file, "# TODO: fix bug", "# Bug fixed")
-    
+
     # Verify fix
     remaining = await grep("TODO:", include_files="*.py", return_format="list")
     assert len(remaining) == 0
@@ -177,7 +177,7 @@ async def test_large_scale():
     # Create realistic number of files
     for i in range(100):
         await write_file(f"file_{i}.py", "content")
-    
+
     # Ensure search is still fast
     start = time.time()
     results = await grep("content", return_format="list")
@@ -234,11 +234,11 @@ async def test_with_debugging(self, temp_workspace):
     # Create test file
     await write_file("test.txt", "content")
     print(f"Created file in: {temp_workspace}")
-    
+
     # Search
     results = await grep("content", return_format="list")
     print(f"Search results: {results}")
-    
+
     assert len(results) == 1
 ```
 

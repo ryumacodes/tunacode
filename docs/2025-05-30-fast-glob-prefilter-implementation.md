@@ -1,5 +1,5 @@
 # Fast-Glob Prefilter Implementation Session
-**Date:** 2025-05-30  
+**Date:** 2025-05-30
 **Session Goal:** Implement fast-glob prefilter enhancement for parallel grep tool
 
 ## Overview
@@ -12,7 +12,7 @@ This session focused on implementing a major performance enhancement to TunaCode
 The existing parallel grep tool, while functionally robust with multiple search strategies (ripgrep, python, hybrid), suffered from performance issues on large repositories:
 
 - **Excessive I/O**: Tool would search ALL files then filter by pattern post-search
-- **Poor Scaling**: Performance degraded significantly on repositories with 10k+ files  
+- **Poor Scaling**: Performance degraded significantly on repositories with 10k+ files
 - **Wasted Processing**: Ripgrep and Python strategies processing irrelevant files
 - **Token Bloat**: Large result sets consuming unnecessary LLM context
 
@@ -20,7 +20,7 @@ The existing parallel grep tool, while functionally robust with multiple search 
 ```
 50k file repository search:
 ├── File Discovery: ~500ms (finds 50,000 files)
-├── Pattern Filtering: ~200ms (filters to 500 relevant)  
+├── Pattern Filtering: ~200ms (filters to 500 relevant)
 ├── Content Search: ~1,500ms (searches 50,000 files)
 └── Total: ~2,200ms
 ```
@@ -33,7 +33,7 @@ The existing parallel grep tool, while functionally robust with multiple search 
 
 **Key Components**:
 - `fast_glob()` function using `os.scandir()` for filesystem traversal
-- `fnmatch` pattern filtering with regex compilation  
+- `fnmatch` pattern filtering with regex compilation
 - Bounded results (`MAX_GLOB = 5,000`) to prevent memory exhaustion
 - Smart directory exclusion (`node_modules`, `.git`, `__pycache__`, etc.)
 
@@ -85,22 +85,22 @@ if search_type == "smart":
 def fast_glob(root: Path, include: str, exclude: str = None) -> List[Path]:
     """Lightning-fast filename filtering using os.scandir."""
     matches, stack = [], [root]
-    
+
     # Handle multiple extensions like "*.{py,js,ts}"
     if '{' in include and '}' in include:
         # Convert to multiple patterns
         base, ext_part = include.split('{', 1)
         extensions = ext_part.split('}', 1)[0].split(',')
-        include_regexes = [re.compile(fnmatch.translate(base + ext.strip()), re.IGNORECASE) 
+        include_regexes = [re.compile(fnmatch.translate(base + ext.strip()), re.IGNORECASE)
                           for ext in extensions]
     else:
         include_regexes = [re.compile(fnmatch.translate(include), re.IGNORECASE)]
-    
+
     while stack and len(matches) < MAX_GLOB:
         # Fast directory traversal with os.scandir()
         # Pattern matching with compiled regexes
         # Directory exclusion logic
-    
+
     return matches[:MAX_GLOB]
 ```
 
@@ -109,7 +109,7 @@ def fast_glob(root: Path, include: str, exclude: str = None) -> List[Path]:
 Created new filtered versions of existing search strategies:
 
 1. **`_ripgrep_search_filtered()`**: Passes explicit file list to ripgrep
-2. **`_python_search_filtered()`**: Parallel search on pre-filtered candidates  
+2. **`_python_search_filtered()`**: Parallel search on pre-filtered candidates
 3. **`_hybrid_search_filtered()`**: Races both strategies with same candidate list
 
 ### Critical Bug Fix
@@ -151,21 +151,21 @@ match = SimpleMatch(pos, pos + len(search_pattern))
 ```
 === Performance Test Results ===
 1. Focused search (8 candidate files): 16ms
-2. Documentation search (4 candidate files): 8ms  
+2. Documentation search (4 candidate files): 8ms
 3. Multiple extensions pattern: 5,279ms (5000 files - hit limit)
 4. Regex search on filtered set: 14.5ms
 ```
 
 ### Strategy Selection in Action
 - **8 files** → Python strategy (low startup cost)
-- **4 files** → Python strategy  
+- **4 files** → Python strategy
 - **5000 files** → Hybrid strategy (best coverage)
 
 ## Advanced Features Implemented
 
 ### 1. Multiple Extension Support
 ```python
-# Pattern: "*.{py,js,ts}" 
+# Pattern: "*.{py,js,ts}"
 # Expands to: ["*.py", "*.js", "*.ts"]
 # All handled efficiently in single traversal
 ```
@@ -173,7 +173,7 @@ match = SimpleMatch(pos, pos + len(search_pattern))
 ### 2. Smart Directory Exclusion
 ```python
 EXCLUDE_DIRS = {
-    'node_modules', '.git', '__pycache__', 
+    'node_modules', '.git', '__pycache__',
     '.venv', 'venv', 'dist', 'build', '.pytest_cache',
     '.mypy_cache', '.tox', 'target'
 }
@@ -183,7 +183,7 @@ EXCLUDE_DIRS = {
 ```python
 MAX_GLOB = 5_000  # Prevents:
                   # - Memory exhaustion
-                  # - Token overflow  
+                  # - Token overflow
                   # - UI responsiveness issues
 ```
 
@@ -197,7 +197,7 @@ Strategy: python | Candidates: 8 files | =======================================
 
 ### 1. **Backwards Compatibility**
 - All existing `grep()` calls work unchanged
-- New parameters are optional  
+- New parameters are optional
 - Default behavior improved automatically
 
 ### 2. **Tool-Level Optimization**
@@ -233,7 +233,7 @@ tools=[
 # Basic enhanced search
 await grep("TODO", ".", include_files="*.py", max_results=20)
 
-# Multiple extensions with smart routing  
+# Multiple extensions with smart routing
 await grep("function", "src/", include_files="*.{js,ts}", search_type="smart")
 
 # Regex with prefiltering
@@ -254,14 +254,14 @@ await grep("class.*Tool", ".", include_files="*.py", use_regex=True)
 - **`docs/parallel-grep-architecture.md`**: Visual flow charts and architecture diagrams
 - **`docs/spelling-fixes.md`**: Minor spelling corrections
 
-### Project Files  
+### Project Files
 - **`README.md`**: Updated to reflect 6 core tools (bash, grep, read_file, write_file, update_file, run_command)
 
 ## Testing & Validation
 
 ### Test Coverage
 1. **Basic functionality**: Pattern matching with various file types
-2. **Performance validation**: Timing tests on different repository sizes  
+2. **Performance validation**: Timing tests on different repository sizes
 3. **Advanced features**: Multiple extensions, regex patterns, exclude patterns
 4. **Error handling**: Permission errors, missing directories, malformed patterns
 5. **Strategy selection**: Automatic optimization based on candidate counts
@@ -269,7 +269,7 @@ await grep("class.*Tool", ".", include_files="*.py", use_regex=True)
 ### Edge Cases Handled
 - Empty result sets with informative messages
 - File permission errors with graceful continuation
-- Pattern compilation errors with clear error messages  
+- Pattern compilation errors with clear error messages
 - Large repository bounds with MAX_GLOB protection
 - Missing ripgrep fallback to Python strategy
 
@@ -299,7 +299,7 @@ await grep("class.*Tool", ".", include_files="*.py", use_regex=True)
 
 ### Planned Improvements
 1. **Incremental Globbing**: Stream results as found for huge repositories
-2. **Pattern Caching**: Cache glob results for repeated searches  
+2. **Pattern Caching**: Cache glob results for repeated searches
 3. **Git Integration**: Respect .gitignore patterns automatically
 4. **Semantic Filtering**: AST-aware file filtering for code intelligence
 
@@ -314,7 +314,7 @@ await grep("class.*Tool", ".", include_files="*.py", use_regex=True)
 The fast-glob prefilter enhancement represents a fundamental performance transformation of TunaCode's search capabilities. By implementing intelligent filesystem-level filtering before content search, we achieved:
 
 - **73-84% performance improvements** on large repositories
-- **Maintained architectural simplicity** with tool-level optimization  
+- **Maintained architectural simplicity** with tool-level optimization
 - **Enhanced user experience** with automatic strategy selection
 - **Better resource utilization** with bounded result sets
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # TunaCode CLI Installer
-# 
+#
 # One-line install:
 # curl -sSL https://raw.githubusercontent.com/alchemiststudiosDOTai/tunacode/master/scripts/install_linux.sh | bash
-# 
+#
 # Or with wget:
 # wget -qO- https://raw.githubusercontent.com/alchemiststudiosDOTai/tunacode/master/scripts/install_linux.sh | bash
 

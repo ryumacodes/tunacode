@@ -153,7 +153,7 @@ pip install --no-cache-dir "pydantic-ai[logfire]==0.2.6"
    ```bash
    # For Anthropic
    tunacode --model "anthropic:claude-3.5-sonnet" --key "sk-ant-..."
-   
+
    # For OpenAI
    tunacode --model "openai:gpt-4" --key "sk-..."
    ```

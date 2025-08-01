@@ -6,14 +6,14 @@ All Phase 1 and Phase 2 performance improvements have been successfully implemen
 ## Phase 1: Quick Wins (VERIFIED ✓)
 
 ### 1. Deferred Update Checking ✓
-**File:** `src/tunacode/cli/main.py`  
-**Implementation:** Lines 43, 55-57  
+**File:** `src/tunacode/cli/main.py`
+**Implementation:** Lines 43, 55-57
 - Update checking now runs in background thread using `asyncio.to_thread(check_for_updates)`
 - REPL loads immediately without blocking on network I/O
 - Update notification shown after UI is ready
 
 ### 2. Lazy Import of Heavy Dependencies ✓
-**Files:** 
+**Files:**
 - `src/tunacode/core/agents/main.py` (Lines 14-17, 126)
 - `src/tunacode/tools/__init__.py` (Lines 5-9)
 
@@ -23,8 +23,8 @@ All Phase 1 and Phase 2 performance improvements have been successfully implemen
 - Heavy imports deferred until actual agent construction
 
 ### 3. Optimized Banner Display ✓
-**File:** `src/tunacode/ui/output.py`  
-**Implementation:** Lines 73-78  
+**File:** `src/tunacode/ui/output.py`
+**Implementation:** Lines 73-78
 - Banner display is now synchronous (no async/await)
 - Eliminates event loop overhead at startup
 - Direct console print for immediate display
@@ -32,14 +32,14 @@ All Phase 1 and Phase 2 performance improvements have been successfully implemen
 ## Phase 2: Structural Improvements (VERIFIED ✓)
 
 ### 1. Import Caching Utility ✓
-**File:** `src/tunacode/utils/import_cache.py`  
+**File:** `src/tunacode/utils/import_cache.py`
 **Implementation:** Complete module with `lazy_import()` function
 - Caches imported modules to avoid repeated import overhead
 - Ready for use by other modules needing lazy imports
 
 ### 2. Parallelized Setup Steps ✓
-**File:** `src/tunacode/core/setup/coordinator.py`  
-**Implementation:** Line 39  
+**File:** `src/tunacode/core/setup/coordinator.py`
+**Implementation:** Line 39
 - Uses `asyncio.gather()` to run all setup steps in parallel
 - Validation still sequential for safety
 - Significant speedup for multi-step initialization

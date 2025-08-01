@@ -46,10 +46,10 @@ uv.lock
 Thumbs.db
 
 # Project files
-SIDEKICK.md
 .python-version
 REFACTOR*
 .aider*
+todo.md
 
 # Agent workflow temporary files
 .current_scratchpad_file
@@ -85,5 +85,5 @@ node_modules/
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
 documentation/

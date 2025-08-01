@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TunaCode Development Environment Setup - Enhanced Version
-# 
+#
 # This script sets up a clean development environment for TunaCode
 # with robust dependency verification and error handling
 #
@@ -38,7 +38,7 @@ log() {
 check_python_import() {
     local package="$1"
     local import_name="${2:-$1}"
-    
+
     if "$VENV_DIR/bin/python" -c "import $import_name" 2>/dev/null; then
         return 0
     else
@@ -49,7 +49,7 @@ check_python_import() {
 # Function to verify critical dependencies
 verify_dependencies() {
     log "${BLUE}Verifying critical dependencies...${NC}"
-    
+
     local failed=false
     local critical_deps=(
         "pydantic_ai:pydantic_ai"
@@ -61,7 +61,7 @@ verify_dependencies() {
         "pytest:pytest"
         "pytest_asyncio:pytest_asyncio"
     )
-    
+
     for dep_spec in "${critical_deps[@]}"; do
         IFS=':' read -r package import_name <<< "$dep_spec"
         if check_python_import "$package" "$import_name"; then
@@ -71,7 +71,7 @@ verify_dependencies() {
             failed=true
         fi
     done
-    
+
     if [ "$failed" = true ]; then
         return 1
     fi
@@ -83,10 +83,10 @@ install_with_retry() {
     local package="$1"
     local max_attempts=3
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         log "${BLUE}Installing $package (attempt $attempt/$max_attempts)...${NC}"
-        
+
         if pip install "$package" 2>&1 | tee -a "$LOG_FILE"; then
             log "${GREEN}✓${NC} Successfully installed $package"
             return 0
@@ -99,7 +99,7 @@ install_with_retry() {
             fi
         fi
     done
-    
+
     log "${RED}✗${NC} Failed to install $package after $max_attempts attempts"
     return 1
 }
@@ -216,15 +216,15 @@ if ! verify_dependencies; then
     log "${RED}Dependency verification failed!${NC}"
     log "Some packages could not be imported. Check the log for details."
     log "${YELLOW}Attempting to diagnose the issue...${NC}"
-    
+
     # Show installed packages
     log "\nInstalled packages:"
     pip list | tee -a "$LOG_FILE"
-    
+
     # Try to get more info about pydantic-ai
     log "\nPydantic-AI installation details:"
     pip show pydantic-ai | tee -a "$LOG_FILE" || log "Could not get pydantic-ai info"
-    
+
     cleanup_on_failure
 fi
 

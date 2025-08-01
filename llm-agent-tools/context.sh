@@ -108,17 +108,17 @@ case "$cmd" in
   # -------------------- finish --------------------
   finish)
     [[ -f "$CONTEXT_FILE" ]] || { echo "No active context file to finish." >&2; exit 1; }
-    
+
     issue_title="${1:-$(head -n 1 "$CONTEXT_FILE" | sed 's/# Context for: //')}"
     # Sanitize title for filename
     safe_title=$(echo "$issue_title" | sed 's/[^a-zA-Z0-9]/-/g' | tr -s '-' | tr '[:upper:]' '[:lower:]')
     timestamp=$(date +%Y%m%d_%H%M%S)
     archive_dir="$BANK_DIR/context_archive"
     archive_file="$archive_dir/${timestamp}_${safe_title}.md"
-    
+
     mkdir -p "$archive_dir"
     mv "$CONTEXT_FILE" "$archive_file"
-    
+
     echo "Context archived to: $archive_file"
     ;;
 

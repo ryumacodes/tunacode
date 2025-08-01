@@ -31,7 +31,7 @@ Pick your favorite model:
 # Option A: OpenAI
 tunacode --model "openai:gpt-4.1" --key "sk-..."
 
-# Option B: Anthropic  
+# Option B: Anthropic
 tunacode --model "anthropic:claude-4-sonnet-20250522" --key "sk-ant-..."
 
 # Option C: Google
@@ -69,7 +69,7 @@ tunacode
 - **Best context**: `anthropic/claude-4-sonnet-20250522`
 
 ### Q: Is my code safe?
-**A:** 
+**A:**
 - ✅ Everything stays local until you approve
 - ✅ Shows diffs before file changes
 - ✅ No automatic git commits
@@ -78,7 +78,7 @@ tunacode
 ### Q: Can it work with my project?
 **A:** Yes! Create a `TUNACODE.md` file in your project root with:
 - Coding conventions
-- Architecture decisions  
+- Architecture decisions
 - Project-specific context
 
 The AI will automatically load and follow these guidelines.

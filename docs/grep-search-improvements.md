@@ -9,7 +9,7 @@ This document outlines the recent improvements made to the grep search tool, foc
 The grep tool now uses a lightning-fast filename filtering system before searching file contents:
 
 - **Technology**: Uses `os.scandir()` for directory traversal (3-10x faster than `os.walk()`)
-- **Pattern Support**: Handles complex patterns like `*.{py,js,ts}` 
+- **Pattern Support**: Handles complex patterns like `*.{py,js,ts}`
 - **Performance**: Can scan thousands of files in milliseconds
 - **Memory Protection**: Hard cap at 5,000 files to prevent memory issues
 
@@ -63,7 +63,7 @@ if process.returncode == 0 or output_lines:
 
 ### Search Performance (from tests)
 - Small searches (50 files): <25ms
-- Medium searches (650 files): <50ms  
+- Medium searches (650 files): <50ms
 - Large file search (10k lines): <2s
 - Regex searches: <3s for complex patterns
 

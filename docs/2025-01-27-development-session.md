@@ -87,6 +87,6 @@ This session involved significant cleanup and feature additions to the TunaCode 
 
 ## Git History Markers
 - Telemetry removal: `dee757d`
-- Init command addition: `bfec983` 
+- Init command addition: `bfec983`
 - Command cancellation attempt: `cd026f9` to `37aff54`
 - Final revert to simplicity: `53046a4`

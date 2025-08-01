@@ -250,7 +250,7 @@ $(./scratchpad.sh | grep -A5 'Implementation Plan' | grep '\[x\]')"
 
 if these dirs dont exist create them
 
-you MUST title the document a clear title and dated with a DATE 
+you MUST title the document a clear title and dated with a DATE
 ```
 
 ## Error Handling

@@ -235,7 +235,7 @@ tests/test_characterization_agent_main.py
 │   ├── test_get_or_create_agent_cached()
 │   ├── test_get_or_create_agent_system_prompt_fallback()
 │   ├── test_get_or_create_agent_default_prompt()
-│   ├── # Tool Message Patching Tests  
+│   ├── # Tool Message Patching Tests
 │   ├── test_patch_tool_messages_no_orphans()
 │   ├── test_patch_tool_messages_with_orphans()
 │   ├── test_patch_tool_messages_with_retry_prompts()

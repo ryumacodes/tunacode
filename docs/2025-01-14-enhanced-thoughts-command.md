@@ -1,6 +1,6 @@
 # Enhanced /thoughts Command Implementation
 
-**Date**: 2025-01-14  
+**Date**: 2025-01-14
 **Title**: Comprehensive LLM Process Visibility Enhancement
 
 ## Overview
@@ -76,7 +76,7 @@ TOKENS: ~125
 ITERATION: 1/20
 TOOLS USED: read_file: 1
 
-TOOL: write_file  
+TOOL: write_file
 ARGS: {
   "file_path": "/home/user/output.txt",
   "content": "Analysis complete..."

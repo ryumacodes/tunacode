@@ -155,7 +155,7 @@ class TestExtractAndExecuteToolCalls:
         """Test handling both inline and code block tool calls."""
         text = """
         Inline: {"tool": "list_dir", "args": {"path": "/home"}}
-        
+
         Code block:
         ```json
         {"tool": "grep", "args": {"pattern": "test", "path": "/src"}}

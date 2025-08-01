@@ -48,7 +48,7 @@ Intelligently commits and pushes your code changes. If commit hooks fail, automa
 - If tests fail: Identify failing tests and provide fixes
 - If formatting fails: Run formatters and stage changes
 - If push fails: Check for conflicts and resolve
-- If a unique issue prevents you from pushing STOP and ask user for next steps after providing a summary 
+- If a unique issue prevents you from pushing STOP and ask user for next steps after providing a summary
 
 ## Your task
 Commit message (optional): $ARGUMENTS
