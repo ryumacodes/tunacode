@@ -3,7 +3,7 @@ Characterization tests for TunaCode UI async UI updates.
 Covers: async output functions and async-safe UI flows.
 """
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -24,7 +24,9 @@ async def test_async_print_calls_console_print():
 
 
 @pytest.mark.asyncio
-async def test_async_info_formats_and_prints(caplog):
-    # info() now goes through ui_logger, let's test that
-    await output_mod.info("Test info")
-    assert "Test info" in caplog.text
+async def test_async_info_formats_and_prints():
+    # info() now goes through ui_logger, let's test that it's called
+    with patch("tunacode.ui.output.ui_logger") as mock_logger:
+        mock_logger.info = AsyncMock()
+        await output_mod.info("Test info")
+        mock_logger.info.assert_called_once_with("Test info")
