@@ -19,6 +19,7 @@ class Template:
     prompt: str
     allowed_tools: List[str]
     parameters: Dict[str, str] = field(default_factory=dict)
+    shortcut: Optional[str] = None
 
 
 class TemplateLoader:
@@ -73,6 +74,7 @@ class TemplateLoader:
                 prompt=data["prompt"],
                 allowed_tools=data["allowed_tools"],
                 parameters=data.get("parameters", {}),
+                shortcut=data.get("shortcut"),
             )
 
         except (json.JSONDecodeError, ValueError) as e:
@@ -135,6 +137,10 @@ class TemplateLoader:
                 "parameters": template.parameters,
             }
 
+            # Only include shortcut if it's set
+            if template.shortcut:
+                data["shortcut"] = template.shortcut
+
             # Write to disk
             with open(template_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
@@ -182,3 +188,23 @@ class TemplateLoader:
             return self.template_dir / parts[0] / f"{parts[1]}.json"
         else:
             return self.template_dir / f"{name}.json"
+
+    def get_templates_with_shortcuts(self) -> Dict[str, Template]:
+        """Get all templates that have shortcuts defined.
+
+        Returns:
+            Dictionary mapping shortcut to Template instance
+        """
+        shortcuts = {}
+
+        try:
+            for template_name in self.list_templates():
+                template = self.load_template(template_name)
+                if template and template.shortcut:
+                    shortcuts[template.shortcut] = template
+
+            return shortcuts
+
+        except Exception as e:
+            print(f"Error loading template shortcuts: {str(e)}")
+            return {}

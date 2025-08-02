@@ -67,7 +67,10 @@ class TemplateCommand(SimpleCommand):
             template = loader.load_template(name)
             if template:
                 tools_count = len(template.allowed_tools) if template.allowed_tools else 0
-                await ui.muted(f"  • {name}: {template.description} ({tools_count} tools)")
+                shortcut_info = f" ({template.shortcut})" if template.shortcut else ""
+                await ui.muted(
+                    f"  • {name}{shortcut_info}: {template.description} ({tools_count} tools)"
+                )
 
     async def _load_template(self, name: str, context: CommandContext) -> None:
         """Load and activate a template."""
@@ -89,6 +92,9 @@ class TemplateCommand(SimpleCommand):
         await ui.success(f"Loaded template: {template.name}")
         await ui.muted(f"Description: {template.description}")
 
+        if template.shortcut:
+            await ui.muted(f"Shortcut: {template.shortcut}")
+
         if template.allowed_tools:
             await ui.info(f"Allowed tools ({len(template.allowed_tools)}):")
             tools_str = ", ".join(template.allowed_tools)
@@ -108,12 +114,11 @@ class TemplateCommand(SimpleCommand):
         await ui.muted("")
         await ui.muted("Example template format:")
         await ui.muted("{")
-        await ui.muted('  "name": "web-dev",')
-        await ui.muted('  "description": "Web development tasks",')
-        await ui.muted('  "prompt": "",')
-        await ui.muted(
-            '  "allowed_tools": ["read_file", "write_file", "update_file", "grep", "list_dir"]'
-        )
+        await ui.muted('  "name": "debug",')
+        await ui.muted('  "description": "Debugging and analysis",')
+        await ui.muted('  "shortcut": "/debug",')
+        await ui.muted('  "prompt": "Debug the following issue: {argument}",')
+        await ui.muted('  "allowed_tools": ["read_file", "grep", "list_dir", "run_command"]')
         await ui.muted("}")
 
         # TODO: Implement interactive creation when proper input handling is available
