@@ -10,7 +10,7 @@ import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from pydantic_ai import Agent
 
@@ -132,88 +132,6 @@ async def execute_tools_parallel(
     else:
         tasks = [execute_with_error_handling(part, node) for part, node in tool_calls]
         return await asyncio.gather(*tasks, return_exceptions=return_exceptions)
-
-
-def batch_read_only_tools(tool_calls: List[Any]) -> Iterator[List[Any]]:
-    """
-    Batch tool calls so read-only tools can be executed in parallel.
-
-    Yields batches where:
-    - Read-only tools are grouped together
-    - Write/execute tools are in their own batch (single item)
-    - Order within each batch is preserved
-
-    Args:
-        tool_calls: List of tool call objects with 'tool' attribute
-
-    Yields:
-        Batches of tool calls
-    """
-    if not tool_calls:
-        return
-
-    current_batch = []
-
-    for tool_call in tool_calls:
-        tool_name = tool_call.tool_name if hasattr(tool_call, "tool_name") else None
-
-        if tool_name in READ_ONLY_TOOLS:
-            # Add to current batch
-            current_batch.append(tool_call)
-        else:
-            # Yield any pending read-only batch
-            if current_batch:
-                yield current_batch
-                current_batch = []
-
-            # Yield write/execute tool as single-item batch
-            yield [tool_call]
-
-    # Yield any remaining read-only tools
-    if current_batch:
-        yield current_batch
-
-
-async def create_buffering_callback(
-    original_callback: ToolCallback, buffer: ToolBuffer, state_manager: StateManager
-) -> ToolCallback:
-    """
-    Create a callback wrapper that buffers read-only tools for parallel execution.
-
-    Args:
-        original_callback: The original tool callback
-        buffer: ToolBuffer instance to store read-only tools
-        state_manager: StateManager for UI access
-
-    Returns:
-        A wrapped callback function
-    """
-
-    async def buffering_callback(part, node):
-        tool_name = getattr(part, "tool_name", None)
-
-        if tool_name in READ_ONLY_TOOLS:
-            # Buffer read-only tools
-            buffer.add(part, node)
-            # Don't execute yet - will be executed in parallel batch
-            return None
-
-        # Non-read-only tool encountered - flush buffer first
-        if buffer.has_tasks():
-            buffered_tasks = buffer.flush()
-
-            # Execute buffered read-only tools in parallel
-            if state_manager.session.show_thoughts:
-                from tunacode.ui import console as ui
-
-                await ui.muted(f"Executing {len(buffered_tasks)} read-only tools in parallel")
-
-            await execute_tools_parallel(buffered_tasks, original_callback)
-
-        # Execute the non-read-only tool
-        return await original_callback(part, node)
-
-    return buffering_callback
 
 
 async def _process_node(
@@ -395,10 +313,10 @@ async def _process_node(
             all_read_only = all(part.tool_name in READ_ONLY_TOOLS for part in tool_parts)
 
             # TODO: Currently only batches if ALL tools are read-only. Should be updated to use
-            # batch_read_only_tools() function to group consecutive read-only tools and execute
+            # batch_read_only_tools() function from utils to group consecutive read-only tools and execute
             # them in parallel even when mixed with write/execute tools. For example:
             # [read, read, write, read] should execute as: [read||read], [write], [read]
-            # instead of all sequential. The batch_read_only_tools() function exists but is unused.
+            # instead of all sequential.
             if all_read_only and len(tool_parts) > 1 and buffering_callback:
                 # Execute read-only tools in parallel!
                 import time

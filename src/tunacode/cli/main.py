@@ -12,6 +12,7 @@ import typer
 from tunacode.cli.repl import repl
 from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.state import StateManager
+from tunacode.core.tool_handler import ToolHandler
 from tunacode.exceptions import UserAbortError
 from tunacode.setup import setup
 from tunacode.ui import console as ui
@@ -60,6 +61,11 @@ def main(
 
         try:
             await setup(run_setup, state_manager, cli_config)
+
+            # Initialize ToolHandler after setup
+            tool_handler = ToolHandler(state_manager)
+            state_manager.set_tool_handler(tool_handler)
+
             await repl(state_manager)
         except (KeyboardInterrupt, UserAbortError):
             update_task.cancel()

@@ -69,17 +69,3 @@ async def get_code_style() -> str:
 async def get_claude_files() -> List[str]:
     """Return a list of additional TUNACODE.md files in the repo."""
     return ripgrep("TUNACODE.md", ".")
-
-
-async def get_context() -> Dict[str, object]:
-    """Gather repository context."""
-    git = await get_git_status()
-    directory = await get_directory_structure()
-    style = await get_code_style()
-    claude_files = await get_claude_files()
-    return {
-        "git": git,
-        "directory": directory,
-        "codeStyle": style,
-        "claudeFiles": claude_files,
-    }

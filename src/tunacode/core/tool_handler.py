@@ -2,8 +2,11 @@
 Tool handling business logic, separated from UI concerns.
 """
 
+from typing import Optional
+
 from tunacode.constants import READ_ONLY_TOOLS
 from tunacode.core.state import StateManager
+from tunacode.templates.loader import Template
 from tunacode.types import (
     ToolArgs,
     ToolConfirmationRequest,
@@ -17,6 +20,16 @@ class ToolHandler:
 
     def __init__(self, state_manager: StateManager):
         self.state = state_manager
+        self.active_template: Optional[Template] = None
+
+    def set_active_template(self, template: Optional[Template]) -> None:
+        """
+        Set the currently active template.
+
+        Args:
+            template: The template to activate, or None to clear the active template.
+        """
+        self.active_template = template
 
     def should_confirm(self, tool_name: ToolName) -> bool:
         """
@@ -31,6 +44,11 @@ class ToolHandler:
         # Skip confirmation for read-only tools
         if is_read_only_tool(tool_name):
             return False
+
+        # Check if tool is allowed by active template
+        if self.active_template and self.active_template.allowed_tools:
+            if tool_name in self.active_template.allowed_tools:
+                return False
 
         return not (self.state.session.yolo or tool_name in self.state.session.tool_ignore)
 
