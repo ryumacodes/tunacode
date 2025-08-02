@@ -272,17 +272,21 @@ class ConfigSetup(BaseSetup):
             self.state_manager.session.user_config = DEFAULT_USER_CONFIG.copy()
 
         # Apply CLI overrides
-        if self.cli_config.get("key"):
+        if self.cli_config and self.cli_config.get("key"):
             # Ensure env dict exists
             if "env" not in self.state_manager.session.user_config:
                 self.state_manager.session.user_config["env"] = {}
 
             # Determine which API key to set based on the model or baseurl
-            if self.cli_config.get("baseurl") and "openrouter" in self.cli_config["baseurl"]:
+            if (
+                self.cli_config
+                and self.cli_config.get("baseurl")
+                and "openrouter" in self.cli_config["baseurl"]
+            ):
                 self.state_manager.session.user_config["env"]["OPENROUTER_API_KEY"] = (
                     self.cli_config["key"]
                 )
-            elif self.cli_config.get("model"):
+            elif self.cli_config and self.cli_config.get("model"):
                 if "claude" in self.cli_config["model"] or "anthropic" in self.cli_config["model"]:
                     self.state_manager.session.user_config["env"]["ANTHROPIC_API_KEY"] = (
                         self.cli_config["key"]
@@ -301,12 +305,12 @@ class ConfigSetup(BaseSetup):
                         self.cli_config["key"]
                     )
 
-        if self.cli_config.get("baseurl"):
+        if self.cli_config and self.cli_config.get("baseurl"):
             self.state_manager.session.user_config["env"]["OPENAI_BASE_URL"] = self.cli_config[
                 "baseurl"
             ]
 
-        if self.cli_config.get("model"):
+        if self.cli_config and self.cli_config.get("model"):
             model = self.cli_config["model"]
             # Require provider prefix
             if ":" not in model:
@@ -318,7 +322,7 @@ class ConfigSetup(BaseSetup):
 
             self.state_manager.session.user_config["default_model"] = model
 
-        if self.cli_config.get("custom_context_window"):
+        if self.cli_config and self.cli_config.get("custom_context_window"):
             self.state_manager.session.user_config["context_window_size"] = self.cli_config[
                 "custom_context_window"
             ]

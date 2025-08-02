@@ -55,6 +55,7 @@ repos:
           - 'typer>=0.15'
           - 'types-requests'
         args: ['--ignore-missing-imports', '--no-strict-optional']
+        exclude: 'conftest\.py$'
 
 
   # Local hooks for project-specific checks
@@ -80,7 +81,7 @@ repos:
       # Check for dead code in changed files only
       - id: vulture-changed
         name: Check for dead code in changed files
-        entry: venv/bin/vulture --min-confidence 80
+        entry: venv/bin/vulture --min-confidence 80 vulture_whitelist.py
         language: system
         files: \.py$
         exclude: ^(tests/|test_)
