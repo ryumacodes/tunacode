@@ -44,7 +44,7 @@ def create_key_bindings(state_manager: StateManager = None) -> KeyBindings:
         if session.last_esc_time and (current_time - session.last_esc_time) > 3.0:
             session.esc_press_count = 0
 
-        session.esc_press_count += 1
+        session.esc_press_count = (session.esc_press_count or 0) + 1
         session.last_esc_time = current_time
 
         logger.debug(f"ESC key pressed: count={session.esc_press_count}, time={current_time}")

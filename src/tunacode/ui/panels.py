@@ -122,7 +122,11 @@ class StreamingAgentPanel:
 
     async def update(self, content_chunk: str):
         """Update the streaming display with new content."""
-        self.content += content_chunk
+        # Defensive: some providers may yield None chunks intermittently
+        if content_chunk is None:
+            content_chunk = ""
+        # Ensure type safety for concatenation
+        self.content = (self.content or "") + str(content_chunk)
         if self.live:
             self.live.update(self._create_panel())
 

@@ -183,7 +183,7 @@ async def _handle_command(command: str, state_manager: StateManager) -> CommandR
 
 async def _attempt_tool_recovery(e: Exception, state_manager: StateManager) -> bool:
     """
-    Attempt to recover from tool calling failures using guard clauses.
+    Attempt to recover from tool calling failures by parsing raw JSON from the last message.
 
     Returns:
         bool: True if recovery was successful, False otherwise
@@ -200,26 +200,55 @@ async def _attempt_tool_recovery(e: Exception, state_manager: StateManager) -> b
     if not hasattr(last_msg, "parts"):
         return False
 
+    recovery_attempted = False
     for part in last_msg.parts:
-        if not hasattr(part, "content") or not isinstance(part.content, str):
+        content_to_parse = getattr(part, "content", None)
+        if not isinstance(content_to_parse, str) or not content_to_parse.strip():
             continue
+
+        recovery_attempted = True
+        logger.debug(
+            "Attempting JSON tool recovery on content",
+            extra={
+                "content_preview": content_to_parse[:200],
+                "original_error": str(e),
+            },
+        )
+        await ui.muted(
+            f"⚠️ Model response error. Attempting to recover by parsing tools from text: {str(e)[:100]}..."
+        )
 
         try:
             from tunacode.core.agents.main import extract_and_execute_tool_calls
 
-            def tool_callback_with_state(part, _node):
-                return _tool_handler(part, state_manager)
+            def tool_callback_with_state(tool_part, _node):
+                return _tool_handler(tool_part, state_manager)
 
-            await extract_and_execute_tool_calls(
-                part.content, tool_callback_with_state, state_manager
+            # This function now returns the number of tools found
+            tools_found = await extract_and_execute_tool_calls(
+                content_to_parse, tool_callback_with_state, state_manager
             )
 
-            await ui.warning(f" {MSG_JSON_RECOVERY}")
-            return True
+            if tools_found > 0:
+                await ui.warning(f" {MSG_JSON_RECOVERY} ({tools_found} tools executed)")
+                logger.info(
+                    "Successfully recovered from JSON tool parsing error.",
+                    extra={"tools_executed": tools_found},
+                )
+                return True
+            else:
+                logger.debug("Recovery attempted, but no tools were found in content.")
 
-        except Exception as e:
-            logger.debug(f"Failed to check triple quotes: {e}")
-            continue
+        except Exception as recovery_exc:
+            logger.error(
+                "Exception during JSON tool recovery attempt",
+                exc_info=True,
+                extra={"recovery_exception": str(recovery_exc)},
+            )
+            continue  # Try next part if available
+
+    if recovery_attempted:
+        await ui.error("JSON tool recovery failed. No tools could be executed.")
 
     return False
 
@@ -259,6 +288,12 @@ async def _display_agent_output(res, enable_streaming: bool) -> None:
 
 async def process_request(text: str, state_manager: StateManager, output: bool = True):
     """Process input using the agent, handling cancellation safely."""
+    import uuid
+
+    # Generate a unique ID for this request for correlated logging
+    request_id = str(uuid.uuid4())
+    logger.debug("Processing new request", extra={"request_id": request_id, "input_text": text[:100]})
+    state_manager.session.request_id = request_id
 
     # Check for cancellation before starting (only if explicitly set to True)
     operation_cancelled = getattr(state_manager.session, "operation_cancelled", False)

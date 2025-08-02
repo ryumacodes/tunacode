@@ -18,7 +18,7 @@ from tunacode.core.logging.logger import get_logger
 
 # Import streaming types with fallback for older versions
 try:
-    from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
+    from pydantic_ai.messages import PartDeltaEvent, SystemPromptPart, TextPartDelta
 
     STREAMING_AVAILABLE = True
 except ImportError:
@@ -118,7 +118,7 @@ def get_model_messages():
     import importlib
 
     messages = importlib.import_module("pydantic_ai.messages")
-    return messages.ModelRequest, messages.ToolReturnPart
+    return messages.ModelRequest, messages.ToolReturnPart, messages.SystemPromptPart
 
 
 async def execute_tools_parallel(
@@ -168,11 +168,17 @@ async def _process_node(
     usage_tracker: Optional[UsageTrackerProtocol] = None,
     response_state: Optional[ResponseState] = None,
 ):
+    """Process a single node from the agent response.
+    
+    Returns:
+        bool: True if an empty response was detected, False otherwise
+    """
     from tunacode.ui import console as ui
     from tunacode.utils.token_counter import estimate_tokens
 
     # Use the original callback directly - parallel execution will be handled differently
     buffering_callback = tool_callback
+    empty_response_detected = False
 
     if hasattr(node, "request"):
         state_manager.session.messages.append(node.request)
@@ -215,6 +221,7 @@ async def _process_node(
                 for part in node.model_response.parts
             ):
                 # Empty response with no tools - keep going
+                empty_response_detected = True
                 if state_manager.session.show_thoughts:
                     await ui.muted("⚠️ EMPTY RESPONSE - CONTINUING")
 
@@ -454,6 +461,8 @@ async def _process_node(
                             await ui.error(str(e))
                         # Continue processing other parts instead of failing completely
                         continue
+    
+    return empty_response_detected
 
 
 def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
@@ -572,7 +581,7 @@ def patch_tool_messages(
     for tool_call_id, tool_name in list(tool_calls.items()):
         if tool_call_id not in tool_returns and tool_call_id not in retry_prompts:
             # Import ModelRequest and ToolReturnPart lazily
-            ModelRequest, ToolReturnPart = get_model_messages()
+            ModelRequest, ToolReturnPart, _ = get_model_messages()
             messages.append(
                 ModelRequest(
                     parts=[
@@ -591,13 +600,16 @@ def patch_tool_messages(
 
 async def parse_json_tool_calls(
     text: str, tool_callback: Optional[ToolCallback], state_manager: StateManager
-):
+) -> int:
     """
     Parse JSON tool calls from text when structured tool calling fails.
     Fallback for when API providers don't support proper tool calling.
+    
+    Returns:
+        int: Number of tools successfully executed
     """
     if not tool_callback:
-        return
+        return 0
 
     # Pattern for JSON tool calls: {"tool": "tool_name", "args": {...}}
     # Find potential JSON objects and parse them
@@ -625,6 +637,7 @@ async def parse_json_tool_calls(
                 start_pos = -1
 
     matches = potential_jsons
+    tools_executed = 0
 
     for tool_name, args in matches:
         try:
@@ -643,6 +656,7 @@ async def parse_json_tool_calls(
             mock_node = MockNode()
 
             await tool_callback(mock_call, mock_node)
+            tools_executed += 1
 
             if state_manager.session.show_thoughts:
                 from tunacode.ui import console as ui
@@ -654,20 +668,27 @@ async def parse_json_tool_calls(
                 from tunacode.ui import console as ui
 
                 await ui.error(f"Error executing fallback tool {tool_name}: {str(e)}")
+    
+    return tools_executed
 
 
 async def extract_and_execute_tool_calls(
     text: str, tool_callback: Optional[ToolCallback], state_manager: StateManager
-):
+) -> int:
     """
     Extract tool calls from text content and execute them.
     Supports multiple formats for maximum compatibility.
+
+    Returns:
+        int: The number of tool calls found and executed.
     """
     if not tool_callback:
-        return
+        return 0
+
+    tools_executed = 0
 
     # Format 1: {"tool": "name", "args": {...}}
-    await parse_json_tool_calls(text, tool_callback, state_manager)
+    tools_executed += await parse_json_tool_calls(text, tool_callback, state_manager)
 
     # Format 2: Tool calls in code blocks
     code_block_pattern = r'```json\s*(\{(?:[^{}]|"[^"]*"|(?:\{[^}]*\}))*"tool"(?:[^{}]|"[^"]*"|(?:\{[^}]*\}))*\})\s*```'
@@ -691,6 +712,7 @@ async def extract_and_execute_tool_calls(
                 mock_node = MockNode()
 
                 await tool_callback(mock_call, mock_node)
+                tools_executed += 1
 
                 if state_manager.session.show_thoughts:
                     from tunacode.ui import console as ui
@@ -703,6 +725,8 @@ async def extract_and_execute_tool_calls(
 
                 await ui.error(f"Error parsing code block tool call: {str(e)}")
 
+    return tools_executed
+
 
 async def process_request(
     model: ModelName,
@@ -714,6 +738,8 @@ async def process_request(
     try:
         agent = get_or_create_agent(model, state_manager)
         mh = state_manager.session.messages.copy()
+        request_id = getattr(state_manager.session, "request_id", "N/A")
+
         # Get max iterations from config (default: 40)
         max_iterations = state_manager.session.user_config.get("settings", {}).get(
             "max_iterations", 40
@@ -751,7 +777,8 @@ async def process_request(
 
             await ui.muted("\n" + "=" * 60)
             await ui.muted("📤 SENDING TO API:")
-            await ui.muted(f"Message: {message}")
+            await ui.muted(f"Request ID: {request_id}")
+            await ui.muted(f"Message: {message[:120]}")
             await ui.muted(f"Model: {model}")
             await ui.muted(f"Message History Length: {len(mh)}")
             await ui.muted("=" * 60)
@@ -772,7 +799,7 @@ async def process_request(
                                 if event.delta.content_delta:
                                     await streaming_callback(event.delta.content_delta)
 
-                await _process_node(
+                empty_response = await _process_node(
                     node,
                     tool_callback,
                     state_manager,
@@ -781,6 +808,57 @@ async def process_request(
                     usage_tracker,
                     response_state,
                 )
+                
+                # Handle empty response by injecting a retry message
+                if empty_response:
+                    # Track consecutive empty responses
+                    if not hasattr(state_manager.session, 'consecutive_empty_responses'):
+                        state_manager.session.consecutive_empty_responses = 0
+                    state_manager.session.consecutive_empty_responses += 1
+                    
+                    if state_manager.session.consecutive_empty_responses >= 3:
+                        if state_manager.session.show_thoughts:
+                            from tunacode.ui import console as ui
+                            await ui.error("Multiple consecutive empty responses detected. Breaking to avoid infinite loop.")
+                        break
+                    
+                    # Check if this empty response came after self-evaluation
+                    is_after_self_eval = False
+                    if len(state_manager.session.messages) > 0:
+                        last_msg = state_manager.session.messages[-1]
+                        if hasattr(last_msg, 'parts') and len(last_msg.parts) > 0:
+                            part = last_msg.parts[0]
+                            if hasattr(part, 'content') and 'Reflect on your progress' in str(part.content):
+                                is_after_self_eval = True
+                    
+                    # Inject a properly formatted user message to prompt the model to try again
+                    model_request_cls, tool_return_part_cls, system_prompt_part_cls = get_model_messages()
+                    
+                    if is_after_self_eval:
+                        retry_content = "Please respond to the self-evaluation prompt. Have you completed the user's task? If yes, respond with 'TUNACODE_TASK_COMPLETE' followed by a summary. If not, continue working on the task."
+                    else:
+                        retry_content = "Your previous response was empty. Please provide a substantive response with either text content or tool calls to complete the task."
+                    
+                    # Create a proper user message using the model's message format
+                    from pydantic_ai.messages import UserPromptPart
+                    user_prompt_part = UserPromptPart(
+                        content=retry_content,
+                        part_kind="user-prompt",
+                    )
+                    retry_message = model_request_cls(
+                        parts=[user_prompt_part],
+                        kind="request",
+                    )
+                    state_manager.session.messages.append(retry_message)
+                    
+                    if state_manager.session.show_thoughts:
+                        from tunacode.ui import console as ui
+                        await ui.warning(f"Injecting retry message (attempt {state_manager.session.consecutive_empty_responses}/3)")
+                else:
+                    # Reset counter on successful response
+                    if hasattr(state_manager.session, 'consecutive_empty_responses'):
+                        state_manager.session.consecutive_empty_responses = 0
+                
                 if hasattr(node, "result") and node.result and hasattr(node.result, "output"):
                     if node.result.output:
                         response_state.has_user_response = True
@@ -791,7 +869,7 @@ async def process_request(
                 if state_manager.session.show_thoughts:
                     from tunacode.ui import console as ui
 
-                    await ui.muted(f"\nITERATION: {i}/{max_iterations}")
+                    await ui.muted(f"\nITERATION: {i}/{max_iterations} (Request ID: {request_id})")
 
                     # Show summary of tools used so far
                     if state_manager.session.tool_calls:
@@ -804,6 +882,25 @@ async def process_request(
                             [f"{name}: {count}" for name, count in tool_summary.items()]
                         )
                         await ui.muted(f"TOOLS USED: {summary_str}")
+
+                # Self-evaluation: Check if we should ask the agent to evaluate its progress
+                if i > 1 and not response_state.task_completed:  # Don't check on first iteration
+                    # After each turn, add a system message prompting the agent to evaluate if it's done
+                    # Import ModelRequest, ToolReturnPart, and SystemPromptPart lazily
+                    model_request_cls, tool_return_part_cls, system_prompt_part_cls = get_model_messages()
+                    system_prompt_part = system_prompt_part_cls(
+                        content="Reflect on your progress: Have you completed the user's task? If so, respond with 'TUNACODE_TASK_COMPLETE' followed by a summary of what was accomplished. If not, continue working on the task.",
+                        part_kind="system-prompt",
+                    )
+                    system_message = model_request_cls(
+                        parts=[system_prompt_part],
+                        kind="request",
+                    )
+                    state_manager.session.messages.append(system_message)
+                    
+                    if state_manager.session.show_thoughts:
+                        from tunacode.ui import console as ui
+                        await ui.muted("\n🔄 SELF-EVALUATION: Prompting agent to assess task completion")
 
                 # Check if task is explicitly completed
                 if response_state.task_completed:
