@@ -36,7 +36,7 @@ def get_agent_tool():
 
 def get_model_messages():
     messages = importlib.import_module("pydantic_ai.messages")
-    return messages.ModelRequest, messages.ToolReturnPart
+    return messages.ModelRequest, messages.ToolReturnPart, messages.SystemPromptPart
 
 
 async def execute_tools_parallel(
@@ -335,7 +335,7 @@ def patch_tool_messages(
     for tool_call_id, tool_name in list(tool_calls.items()):
         if tool_call_id not in tool_returns and tool_call_id not in retry_prompts:
             # Import ModelRequest and ToolReturnPart lazily
-            model_request_cls, tool_return_part_cls = get_model_messages()
+            model_request_cls, tool_return_part_cls, _ = get_model_messages()
             messages.append(
                 model_request_cls(
                     parts=[

@@ -26,11 +26,29 @@ class RichHandler(logging.Handler):
         super().__init__(level)
         self.console = Console()
 
+    def _safe_str(self, value):
+        """Coerce any value to a safe string representation."""
+        try:
+            if value is None:
+                return ""
+            return str(value)
+        except Exception:
+            return ""
+
     def emit(self, record):
         try:
+            # Defensive normalization of record fields to avoid None propagation
+            record.levelname = self._safe_str(getattr(record, "levelname", "INFO")) or "INFO"
             icon = self.level_icons.get(record.levelname, "")
             timestamp = self.formatTime(record)
+
+            # Ensure message formatting never returns None
             msg = self.format(record)
+            if msg is None:
+                msg = ""
+
+            msg = self._safe_str(msg)
+
             if icon:
                 output = f"[{timestamp}] {icon} {msg}"
             else:
@@ -41,9 +59,9 @@ class RichHandler(logging.Handler):
             if just_finished_streaming:
                 _streaming_context["just_finished"] = False  # Reset after use
                 # Don't add extra newline when transitioning from streaming
-                self.console.print(Text(output), end="\n")
+                self.console.print(Text(self._safe_str(output)), end="\n")
             else:
-                self.console.print(Text(output))
+                self.console.print(Text(self._safe_str(output)))
         except Exception:
             self.handleError(record)
 
@@ -61,15 +79,29 @@ class StructuredFileHandler(logging.FileHandler):
     Handler that outputs logs as structured JSON lines.
     """
 
+    def _coerce_json_safe(self, value):
+        """Ensure values are JSON-serializable and not None."""
+        if value is None:
+            return ""
+        try:
+            json.dumps(value)
+            return value
+        except Exception:
+            try:
+                return str(value)
+            except Exception:
+                return ""
+
     def emit(self, record):
         try:
+            # Normalize fields to avoid None values in JSON
             log_entry = {
                 "timestamp": self.formatTime(record),
-                "level": record.levelname,
-                "name": record.name,
-                "line": record.lineno,
-                "message": record.getMessage(),
-                "extra_data": getattr(record, "extra", {}),
+                "level": self._coerce_json_safe(getattr(record, "levelname", "")),
+                "name": self._coerce_json_safe(getattr(record, "name", "")),
+                "line": int(getattr(record, "lineno", 0) or 0),
+                "message": self._coerce_json_safe(record.getMessage() if hasattr(record, "getMessage") else ""),
+                "extra_data": self._coerce_json_safe(getattr(record, "extra", {})),
             }
             self.stream.write(json.dumps(log_entry) + "\n")
             self.flush()

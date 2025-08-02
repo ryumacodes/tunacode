@@ -123,7 +123,7 @@ class StateManager:
     def push_recursive_context(self, context: dict[str, Any]) -> None:
         """Push a new context onto the recursive execution stack."""
         self._session.recursive_context_stack.append(context)
-        self._session.current_recursion_depth += 1
+        self._session.current_recursion_depth = (self._session.current_recursion_depth or 0) + 1
 
     def pop_recursive_context(self) -> Optional[dict[str, Any]]:
         """Pop the current context from the recursive execution stack."""

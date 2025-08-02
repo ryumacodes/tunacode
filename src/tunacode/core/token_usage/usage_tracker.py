@@ -46,7 +46,10 @@ class UsageTracker(UsageTrackerProtocol):
 
         except Exception as e:
             if self.state_manager.session.show_thoughts:
+                import traceback
                 await ui.error(f"Error during cost calculation: {e}")
+                # Log the full traceback for debugging
+                await ui.debug(f"Traceback: {traceback.format_exc()}")
 
     def _calculate_cost(self, parsed_data: dict) -> float:
         """Calculates the cost for the given parsed data."""
@@ -81,15 +84,29 @@ class UsageTracker(UsageTrackerProtocol):
         if session.session_total_usage is None:
             session.session_total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "cost": 0.0}
 
+        # Normalize values defensively to avoid None propagation
+        try:
+            prompt_tokens = int(prompt_tokens or 0)
+        except (TypeError, ValueError):
+            prompt_tokens = 0
+        try:
+            completion_tokens = int(completion_tokens or 0)
+        except (TypeError, ValueError):
+            completion_tokens = 0
+        try:
+            cost = float(cost or 0.0)
+        except (TypeError, ValueError):
+            cost = 0.0
+
         # Update last call usage
         session.last_call_usage["prompt_tokens"] = prompt_tokens
         session.last_call_usage["completion_tokens"] = completion_tokens
         session.last_call_usage["cost"] = cost
 
-        # Accumulate session totals
-        session.session_total_usage["prompt_tokens"] += prompt_tokens
-        session.session_total_usage["completion_tokens"] += completion_tokens
-        session.session_total_usage["cost"] += cost
+        # Accumulate session totals with normalization
+        session.session_total_usage["prompt_tokens"] = int(session.session_total_usage.get("prompt_tokens", 0) or 0) + prompt_tokens
+        session.session_total_usage["completion_tokens"] = int(session.session_total_usage.get("completion_tokens", 0) or 0) + completion_tokens
+        session.session_total_usage["cost"] = float(session.session_total_usage.get("cost", 0.0) or 0.0) + cost
 
     async def _display_summary(self):
         """Formats and prints the usage summary to the console."""
@@ -106,9 +123,15 @@ class UsageTracker(UsageTrackerProtocol):
         last_cost = session.last_call_usage["cost"]
         session_cost = session.session_total_usage["cost"]
 
+        # Ensure tokens are not None before arithmetic operations
+        prompt_safe = prompt if prompt is not None else 0
+        completion_safe = completion if completion is not None else 0
+        last_cost_safe = last_cost if last_cost is not None else 0.0
+        session_cost_safe = session_cost if session_cost is not None else 0.0
+
         usage_summary = (
-            f"[ Tokens: {prompt + completion:,} (P: {prompt:,}, C: {completion:,}) | "
-            f"Cost: ${last_cost:.4f} | "
-            f"Session Total: ${session_cost:.4f} ]"
+            f"[ Tokens: {prompt_safe + completion_safe:,} (P: {prompt_safe:,}, C: {completion_safe:,}) | "
+            f"Cost: ${last_cost_safe:.4f} | "
+            f"Session Total: ${session_cost_safe:.4f} ]"
         )
         await ui.muted(usage_summary)
