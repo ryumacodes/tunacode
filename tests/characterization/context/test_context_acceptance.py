@@ -7,7 +7,12 @@ from unittest import mock
 
 import pytest
 
-from tunacode.context import get_context
+from tunacode.context import (
+    get_claude_files,
+    get_code_style,
+    get_directory_structure,
+    get_git_status,
+)
 from tunacode.core.agents.main import get_or_create_agent
 from tunacode.core.state import StateManager
 
@@ -36,20 +41,21 @@ async def test_agent_includes_tunacode_md_context_in_system_prompt():
             mock_exists.return_value = True
             mock_read.return_value = tunacode_content
 
-            # When: We get the full context
-            context = await get_context()
+            # When: We get the context components individually
+            style = await get_code_style()
+            git = await get_git_status()
+            directory = await get_directory_structure()
+            claude_files = await get_claude_files()
 
             # Then: Code style should contain TUNACODE.md content
-            assert "codeStyle" in context
-            style = context["codeStyle"]
             assert "Run tests: `make test`" in style
             assert "Use type hints for all functions" in style
             assert "Prefer guard clauses over nested conditionals" in style
 
             # And: Should have all context types
-            assert "git" in context
-            assert "directory" in context
-            assert "claudeFiles" in context
+            assert git is not None
+            assert directory is not None
+            assert claude_files is not None
 
 
 @pytest.mark.asyncio

@@ -96,7 +96,12 @@ async def _tool_handler(part, state_manager: StateManager):
         logger.debug("Tool execution cancelled")
         raise CancelledError("Operation was cancelled")
 
-    tool_handler = ToolHandler(state_manager)
+    # Get or create tool handler
+    if state_manager.tool_handler is None:
+        tool_handler = ToolHandler(state_manager)
+        state_manager.set_tool_handler(tool_handler)
+    else:
+        tool_handler = state_manager.tool_handler
 
     if tool_handler.should_confirm(part.tool_name):
         await ui.info(f"Tool({part.tool_name})")

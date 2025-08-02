@@ -26,6 +26,7 @@ from .implementations.system import (
     StreamingCommand,
     UpdateCommand,
 )
+from .implementations.template import TemplateCommand
 from .implementations.todo import TodoCommand
 
 
@@ -120,6 +121,7 @@ class CommandRegistry:
             CompactCommand,
             ModelCommand,
             InitCommand,
+            TemplateCommand,
             TodoCommand,
         ]
 

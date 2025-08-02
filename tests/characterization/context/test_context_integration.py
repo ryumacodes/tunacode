@@ -6,7 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from tunacode.context import get_code_style, get_context
+from tunacode.context import (
+    get_claude_files,
+    get_code_style,
+    get_directory_structure,
+    get_git_status,
+)
 from tunacode.core.agents.main import get_or_create_agent
 from tunacode.core.state import StateManager
 
@@ -42,10 +47,15 @@ async def test_context_loading_reads_tunacode_md():
             assert "Use type hints" in style
             assert "Guard clauses preferred" in style
 
-            # Also verify get_context works
-            context = await get_context()
-            assert "codeStyle" in context
-            assert context["codeStyle"] == style
+            # Also verify other context functions work
+            git = await get_git_status()
+            directory = await get_directory_structure()
+            claude_files = await get_claude_files()
+
+            # All should return valid results
+            assert git is not None
+            assert directory is not None
+            assert claude_files is not None
 
         finally:
             os.chdir(original_cwd)

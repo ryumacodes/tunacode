@@ -6,7 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from tunacode.context import get_code_style, get_context
+from tunacode.context import (
+    get_claude_files,
+    get_code_style,
+    get_directory_structure,
+    get_git_status,
+)
 from tunacode.core.agents.main import get_or_create_agent
 from tunacode.core.state import StateManager
 
@@ -66,8 +71,8 @@ async def test_get_code_style_handles_empty_file():
 
 
 @pytest.mark.asyncio
-async def test_get_context_returns_all_context_types():
-    """Test that get_context returns git, directory, style, and files info."""
+async def test_context_functions_return_all_types():
+    """Test that context functions return git, directory, style, and files info."""
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create TUNACODE.md
         tunacode_path = Path(tmpdir) / "TUNACODE.md"
@@ -81,16 +86,20 @@ async def test_get_context_returns_all_context_types():
         try:
             os.chdir(tmpdir)
 
-            context = await get_context()
+            # Get all context components
+            git = await get_git_status()
+            directory = await get_directory_structure()
+            style = await get_code_style()
+            claude_files = await get_claude_files()
 
             # Should have all context types
-            assert "git" in context
-            assert "directory" in context
-            assert "codeStyle" in context
-            assert "claudeFiles" in context
+            assert git is not None
+            assert directory is not None
+            assert style is not None
+            assert claude_files is not None
 
             # Code style should contain our content
-            assert "Test context" in context["codeStyle"]
+            assert "Test context" in style
 
         finally:
             os.chdir(original_cwd)

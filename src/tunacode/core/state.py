@@ -6,7 +6,7 @@ Handles user preferences, conversation history, and runtime state.
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from tunacode.types import (
     DeviceId,
@@ -20,6 +20,9 @@ from tunacode.types import (
 )
 from tunacode.utils.message_utils import get_message_content
 from tunacode.utils.token_counter import estimate_tokens
+
+if TYPE_CHECKING:
+    from tunacode.core.tool_handler import ToolHandler
 
 
 @dataclass
@@ -91,10 +94,18 @@ class SessionState:
 class StateManager:
     def __init__(self):
         self._session = SessionState()
+        self._tool_handler: Optional["ToolHandler"] = None
 
     @property
     def session(self) -> SessionState:
         return self._session
+
+    @property
+    def tool_handler(self) -> Optional["ToolHandler"]:
+        return self._tool_handler
+
+    def set_tool_handler(self, handler: "ToolHandler") -> None:
+        self._tool_handler = handler
 
     def add_todo(self, todo: TodoItem) -> None:
         self._session.todos.append(todo)
