@@ -207,7 +207,7 @@ async def _attempt_tool_recovery(e: Exception, state_manager: StateManager) -> b
         try:
             from tunacode.core.agents.main import extract_and_execute_tool_calls
 
-            def tool_callback_with_state(part, node):
+            def tool_callback_with_state(part, _node):
                 return _tool_handler(part, state_manager)
 
             await extract_and_execute_tool_calls(
@@ -279,7 +279,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
 
         start_idx = len(state_manager.session.messages)
 
-        def tool_callback_with_state(part, node):
+        def tool_callback_with_state(part, _node):
             return _tool_handler(part, state_manager)
 
         try:
@@ -444,7 +444,13 @@ async def repl(state_manager: StateManager):
                 action = await _handle_command(line, state_manager)
                 if action == "restart":
                     break
-                continue
+                elif isinstance(action, str) and action:
+                    # If the command returned a string (e.g., from template shortcut),
+                    # process it as a prompt
+                    line = action
+                    # Fall through to process as normal text
+                else:
+                    continue
 
             if line.startswith("!"):
                 command = line[1:].strip()
