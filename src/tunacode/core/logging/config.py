@@ -32,7 +32,7 @@ DEFAULT_LOGGING_CONFIG = {
 
 class LogConfig:
     @staticmethod
-    def load(config_path=None):
+    def load(_config_path=None):
         """
         Load logging configuration based on user preferences.
         If logging is disabled (default), use minimal configuration.

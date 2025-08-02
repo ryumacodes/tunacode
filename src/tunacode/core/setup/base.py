@@ -22,12 +22,12 @@ class BaseSetup(ABC):
         pass
 
     @abstractmethod
-    async def should_run(self, force_setup: bool = False) -> bool:
+    async def should_run(self, _force_setup: bool = False) -> bool:
         """Determine if this setup step should run."""
         pass
 
     @abstractmethod
-    async def execute(self, force_setup: bool = False) -> None:
+    async def execute(self, _force_setup: bool = False) -> None:
         """Execute the setup step."""
         pass
 

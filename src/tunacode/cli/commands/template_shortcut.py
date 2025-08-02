@@ -1,6 +1,6 @@
 """Template shortcut command base class for dynamic template-based commands."""
 
-from typing import Optional
+from typing import List, Optional
 
 from ...templates.loader import Template
 from ...types import CommandArgs, CommandContext
@@ -28,7 +28,7 @@ class TemplateShortcutCommand(Command):
         return self._name
 
     @property
-    def aliases(self) -> list[str]:
+    def aliases(self) -> List[str]:
         """Alternative names for the command."""
         return self._aliases
 

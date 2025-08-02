@@ -12,7 +12,7 @@ The template shortcut system has been implemented but has several issues that ne
 
 ### 2. Application Restart Loop
 - **Problem**: The application enters a restart loop when executing template shortcuts
-- **Symptoms**: 
+- **Symptoms**:
   - TunaCode banner appears multiple times
   - Safety branch prompt appears repeatedly
   - The shortcut command seems to trigger a full application restart
@@ -52,12 +52,3 @@ The template shortcut system has been implemented but has several issues that ne
 3. **Fix JSON Generation**: Investigate the agent's tool call generation
 4. **Test Integration**: Comprehensive testing of the shortcut system
 5. **Documentation**: Update documentation once issues are resolved
-
-## Rollback Instructions
-
-If needed, this commit can be reverted to remove the template shortcut system:
-```bash
-git revert HEAD
-```
-
-The original template system (without shortcuts) will continue to work.

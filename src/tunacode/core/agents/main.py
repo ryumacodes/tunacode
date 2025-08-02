@@ -10,7 +10,7 @@ import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from pydantic_ai import Agent
 
@@ -58,6 +58,31 @@ from tunacode.types import (
 
 # Configure logging
 logger = get_logger(__name__)
+
+
+def check_task_completion(content: str) -> Tuple[bool, str]:
+    """
+    Check if the content indicates task completion.
+
+    Args:
+        content: The text content to check
+
+    Returns:
+        Tuple of (is_complete, cleaned_content)
+        - is_complete: True if task completion marker found
+        - cleaned_content: Content with marker removed
+    """
+    if not content:
+        return False, content
+
+    lines = content.strip().split("\n")
+    if lines and lines[0].strip() == "TUNACODE_TASK_COMPLETE":
+        # Task is complete, return cleaned content
+        cleaned_lines = lines[1:] if len(lines) > 1 else []
+        cleaned_content = "\n".join(cleaned_lines).strip()
+        return True, cleaned_content
+
+    return False, content
 
 
 class ToolBuffer:
@@ -139,8 +164,9 @@ async def _process_node(
     tool_callback: Optional[ToolCallback],
     state_manager: StateManager,
     tool_buffer: Optional[ToolBuffer] = None,
-    streaming_callback: Optional[callable] = None,
+    streaming_callback: Optional[Callable[[str], None]] = None,
     usage_tracker: Optional[UsageTrackerProtocol] = None,
+    response_state: Optional[ResponseState] = None,
 ):
     from tunacode.ui import console as ui
     from tunacode.utils.token_counter import estimate_tokens
@@ -162,6 +188,35 @@ async def _process_node(
 
         if usage_tracker:
             await usage_tracker.track_and_display(node.model_response)
+
+        # Check for task completion marker in response content
+        if response_state:
+            has_non_empty_content = False
+            for part in node.model_response.parts:
+                if hasattr(part, "content") and isinstance(part.content, str):
+                    # Check if we have any non-empty content
+                    if part.content.strip():
+                        has_non_empty_content = True
+
+                    is_complete, cleaned_content = check_task_completion(part.content)
+                    if is_complete:
+                        response_state.task_completed = True
+                        response_state.has_user_response = True
+                        # Update the part content to remove the marker
+                        part.content = cleaned_content
+                        if state_manager.session.show_thoughts:
+                            await ui.muted("✅ TASK COMPLETION DETECTED")
+                        break
+
+            # If we only got empty content and no tool calls, we should NOT consider this a valid response
+            # This prevents the agent from stopping when it gets empty responses
+            if not has_non_empty_content and not any(
+                hasattr(part, "part_kind") and part.part_kind == "tool-call"
+                for part in node.model_response.parts
+            ):
+                # Empty response with no tools - keep going
+                if state_manager.session.show_thoughts:
+                    await ui.muted("⚠️ EMPTY RESPONSE - CONTINUING")
 
         # Stream content to callback if provided
         # Use this as fallback when true token streaming is not available
@@ -654,7 +709,7 @@ async def process_request(
     message: str,
     state_manager: StateManager,
     tool_callback: Optional[ToolCallback] = None,
-    streaming_callback: Optional[callable] = None,
+    streaming_callback: Optional[Callable[[str], None]] = None,
 ) -> AgentRun:
     try:
         agent = get_or_create_agent(model, state_manager)
@@ -724,6 +779,7 @@ async def process_request(
                     tool_buffer,
                     streaming_callback,
                     usage_tracker,
+                    response_state,
                 )
                 if hasattr(node, "result") and node.result and hasattr(node.result, "output"):
                     if node.result.output:
@@ -739,7 +795,7 @@ async def process_request(
 
                     # Show summary of tools used so far
                     if state_manager.session.tool_calls:
-                        tool_summary = {}
+                        tool_summary: dict[str, int] = {}
                         for tc in state_manager.session.tool_calls:
                             tool_name = tc.get("tool", "unknown")
                             tool_summary[tool_name] = tool_summary.get(tool_name, 0) + 1
@@ -748,6 +804,14 @@ async def process_request(
                             [f"{name}: {count}" for name, count in tool_summary.items()]
                         )
                         await ui.muted(f"TOOLS USED: {summary_str}")
+
+                # Check if task is explicitly completed
+                if response_state.task_completed:
+                    if state_manager.session.show_thoughts:
+                        from tunacode.ui import console as ui
+
+                        await ui.success("Task completed successfully")
+                    break
 
                 if i >= max_iterations:
                     if state_manager.session.show_thoughts:
@@ -799,7 +863,13 @@ async def process_request(
                 )
 
             # If we need to add a fallback response, create a wrapper
-            if not response_state.has_user_response and i >= max_iterations and fallback_enabled:
+            # Don't add fallback if task was explicitly completed
+            if (
+                not response_state.has_user_response
+                and not response_state.task_completed
+                and i >= max_iterations
+                and fallback_enabled
+            ):
                 patch_tool_messages("Task incomplete", state_manager=state_manager)
                 response_state.has_final_synthesis = True
 
@@ -840,7 +910,7 @@ async def process_request(
                 if verbosity in ["normal", "detailed"]:
                     # Add what was attempted
                     if tool_calls_summary:
-                        tool_counts = {}
+                        tool_counts: dict[str, int] = {}
                         for tool in tool_calls_summary:
                             tool_counts[tool] = tool_counts.get(tool, 0) + 1
 

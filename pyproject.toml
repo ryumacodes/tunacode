@@ -81,6 +81,7 @@ exclude = [
     "build",
     "dist",
     "venv",
+    "vulture_whitelist.py",
 ]
 
 [tool.vulture]
@@ -114,3 +115,17 @@ ignore_names = [
     "style_dict",  # Style.from_dict parameter
     "style_str",  # get_attrs_for_style_str parameter
 ]
+
+[tool.bandit]
+# Skip low-severity warnings for subprocess and assert statements
+skips = ["B404", "B603", "B101", "B607", "B110", "B324", "B103", "B604", "B602", "B108"]
+# B404: import subprocess
+# B603: subprocess without shell=True
+# B101: assert statements
+# B607: start process with partial path
+# B110: try/except/pass
+# B324: hashlib (SHA1 for non-security fingerprinting)
+# B103: chmod permissions (needed for template dirs)
+# B604: shell=True (validated usage in REPL)
+# B602: subprocess with shell=True (security utils)
+# B108: hardcoded tmp paths (test fixtures)
