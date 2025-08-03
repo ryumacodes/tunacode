@@ -20,7 +20,7 @@ ITERATION: 2/40
 ⚠️ EMPTY RESPONSE - CONTINUING
 ```
 
-**Root Cause**: 
+**Root Cause**:
 - The retry mechanism injects a plain string instead of a properly formatted message object
 - The agent doesn't see the retry message in the correct format
 
@@ -121,13 +121,13 @@ usage_summary = (
 - Defaults via `.get()` usage for parsed data
 - Initialization of usage dicts when None
 
-### 3. Detect and Handle "Intention Without Action" 
+### 3. Detect and Handle "Intention Without Action"
 **Approach**: Add detection after response processing
 
 **Detection Pattern**:
 ```python
 intention_phrases = [
-    "Let me", "I'll", "I will", "I'm going to", 
+    "Let me", "I'll", "I will", "I'm going to",
     "I need to", "I should", "I want to"
 ]
 # Check if response contains intention but no tool calls
