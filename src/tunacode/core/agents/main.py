@@ -18,7 +18,7 @@ from tunacode.core.logging.logger import get_logger
 
 # Import streaming types with fallback for older versions
 try:
-    from pydantic_ai.messages import PartDeltaEvent, SystemPromptPart, TextPartDelta
+    from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
 
     STREAMING_AVAILABLE = True
 except ImportError:
@@ -115,9 +115,49 @@ def get_agent_tool():
 
 
 def get_model_messages():
+    """
+    Safely retrieve message-related classes from pydantic_ai.
+
+    The test-suite provides a stub `pydantic_ai.messages` module which, at the
+    moment, is missing `SystemPromptPart`. Rather than letting an
+    `AttributeError` propagate we create a very small stand-in so that the rest
+    of the runtime code keeps working.
+    """
     import importlib
 
     messages = importlib.import_module("pydantic_ai.messages")
+
+    # Provide minimal fallbacks for missing classes when running under the stubbed test module
+    # SystemPromptPart
+    if not hasattr(messages, "SystemPromptPart"):
+
+        class SystemPromptPart:  # type: ignore
+            def __init__(self, content: str = "", role: str = "system", part_kind: str = ""):
+                self.content = content
+                self.role = role
+                self.part_kind = part_kind
+
+            def __repr__(self) -> str:  # pragma: no cover
+                return f"SystemPromptPart(content={self.content!r})"
+
+        SystemPromptPart.__module__ = messages.__name__
+        setattr(messages, "SystemPromptPart", SystemPromptPart)
+
+    # UserPromptPart
+    if not hasattr(messages, "UserPromptPart"):
+
+        class UserPromptPart:  # type: ignore
+            def __init__(self, content: str = "", role: str = "user", part_kind: str = ""):
+                self.content = content
+                self.role = role
+                self.part_kind = part_kind
+
+            def __repr__(self) -> str:  # pragma: no cover
+                return f"UserPromptPart(content={self.content!r})"
+
+        UserPromptPart.__module__ = messages.__name__
+        setattr(messages, "UserPromptPart", UserPromptPart)
+
     return messages.ModelRequest, messages.ToolReturnPart, messages.SystemPromptPart
 
 
@@ -169,9 +209,10 @@ async def _process_node(
     response_state: Optional[ResponseState] = None,
 ):
     """Process a single node from the agent response.
-    
+
     Returns:
-        bool: True if an empty response was detected, False otherwise
+        tuple: (is_empty: bool, reason: Optional[str]) - True if empty/problematic response detected,
+               with reason being one of: "empty", "truncated", "intention_without_action"
     """
     from tunacode.ui import console as ui
     from tunacode.utils.token_counter import estimate_tokens
@@ -179,6 +220,10 @@ async def _process_node(
     # Use the original callback directly - parallel execution will be handled differently
     buffering_callback = tool_callback
     empty_response_detected = False
+    has_non_empty_content = False
+    appears_truncated = False
+    has_intention = False
+    has_tool_calls = False
 
     if hasattr(node, "request"):
         state_manager.session.messages.append(node.request)
@@ -198,21 +243,111 @@ async def _process_node(
         # Check for task completion marker in response content
         if response_state:
             has_non_empty_content = False
+            appears_truncated = False
+            all_content_parts = []
+            
+            # First, check if there are any tool calls in this response
+            has_queued_tools = any(
+                hasattr(part, "part_kind") and part.part_kind == "tool-call"
+                for part in node.model_response.parts
+            )
+            
             for part in node.model_response.parts:
                 if hasattr(part, "content") and isinstance(part.content, str):
                     # Check if we have any non-empty content
                     if part.content.strip():
                         has_non_empty_content = True
+                        all_content_parts.append(part.content)
 
                     is_complete, cleaned_content = check_task_completion(part.content)
                     if is_complete:
-                        response_state.task_completed = True
-                        response_state.has_user_response = True
-                        # Update the part content to remove the marker
-                        part.content = cleaned_content
-                        if state_manager.session.show_thoughts:
-                            await ui.muted("✅ TASK COMPLETION DETECTED")
+                        # Validate completion - check for premature completion
+                        if has_queued_tools:
+                            # Agent is trying to complete with pending tools!
+                            if state_manager.session.show_thoughts:
+                                await ui.warning("⚠️ PREMATURE COMPLETION DETECTED - Agent queued tools but marked complete")
+                                await ui.muted("   Overriding completion to allow tool execution")
+                            # Don't mark as complete - let the tools run first
+                            # Update the content to remove the marker but don't set task_completed
+                            part.content = cleaned_content
+                            # Log this as an issue
+                            logger.warning(
+                                f"Agent attempted premature completion with {sum(1 for p in node.model_response.parts if getattr(p, 'part_kind', '') == 'tool-call')} pending tools"
+                            )
+                        else:
+                            # Check if content suggests pending actions
+                            combined_text = " ".join(all_content_parts).lower()
+                            pending_phrases = [
+                                "let me", "i'll check", "i will", "going to", "about to", 
+                                "need to check", "let's check", "i should", "need to find",
+                                "let me see", "i'll look", "let me search", "let me find"
+                            ]
+                            has_pending_intention = any(phrase in combined_text for phrase in pending_phrases)
+                            
+                            # Also check for action verbs at end of content suggesting incomplete action
+                            action_endings = ["checking", "searching", "looking", "finding", "reading", "analyzing"]
+                            ends_with_action = any(combined_text.rstrip().endswith(ending) for ending in action_endings)
+                            
+                            if (has_pending_intention or ends_with_action) and state_manager.session.iteration_count <= 1:
+                                # Too early to complete with pending intentions
+                                if state_manager.session.show_thoughts:
+                                    await ui.warning("⚠️ SUSPICIOUS COMPLETION - Stated intentions but completing early")
+                                    found_phrases = [p for p in pending_phrases if p in combined_text]
+                                    await ui.muted(f"   Iteration {state_manager.session.iteration_count} with pending: {found_phrases}")
+                                    if ends_with_action:
+                                        await ui.muted(f"   Content ends with action verb: '{combined_text.split()[-1] if combined_text.split() else ''}'")
+                                # Still allow it but log warning
+                                logger.warning(f"Task completion with pending intentions detected: {found_phrases}")
+                            
+                            # Normal completion
+                            response_state.task_completed = True
+                            response_state.has_user_response = True
+                            # Update the part content to remove the marker
+                            part.content = cleaned_content
+                            if state_manager.session.show_thoughts:
+                                await ui.muted("✅ TASK COMPLETION DETECTED")
                         break
+
+            # Check for truncation patterns
+            if all_content_parts:
+                combined_content = " ".join(all_content_parts).strip()
+                
+                # Truncation indicators:
+                # 1. Ends with "..." or "…" (but not part of a complete sentence)
+                # 2. Ends mid-word (no punctuation, space, or complete word)
+                # 3. Contains incomplete markdown/code blocks
+                # 4. Ends with incomplete parentheses/brackets
+                
+                # Check for ellipsis at end suggesting truncation
+                if combined_content.endswith(("...", "…")) and not combined_content.endswith(("....", "….")):
+                    appears_truncated = True
+                    
+                # Check for mid-word truncation (ends with letters but no punctuation)
+                elif combined_content and combined_content[-1].isalpha():
+                    # Look for incomplete words by checking if last "word" seems cut off
+                    words = combined_content.split()
+                    if words:
+                        last_word = words[-1]
+                        # Common complete word endings vs likely truncations
+                        complete_endings = ("ing", "ed", "ly", "er", "est", "tion", "ment", "ness", "ity", "ous", "ive", "able", "ible")
+                        incomplete_patterns = ("referen", "inte", "proces", "analy", "deve", "imple", "execu")
+                        
+                        if any(last_word.lower().endswith(pattern) for pattern in incomplete_patterns):
+                            appears_truncated = True
+                        elif len(last_word) > 2 and not any(last_word.lower().endswith(end) for end in complete_endings):
+                            # Likely truncated if doesn't end with common suffix
+                            appears_truncated = True
+                
+                # Check for unclosed markdown code blocks
+                code_block_count = combined_content.count("```")
+                if code_block_count % 2 != 0:
+                    appears_truncated = True
+                    
+                # Check for unclosed brackets/parentheses (more opens than closes)
+                open_brackets = combined_content.count("[") + combined_content.count("(") + combined_content.count("{")
+                close_brackets = combined_content.count("]") + combined_content.count(")") + combined_content.count("}")
+                if open_brackets > close_brackets:
+                    appears_truncated = True
 
             # If we only got empty content and no tool calls, we should NOT consider this a valid response
             # This prevents the agent from stopping when it gets empty responses
@@ -224,6 +359,17 @@ async def _process_node(
                 empty_response_detected = True
                 if state_manager.session.show_thoughts:
                     await ui.muted("⚠️ EMPTY RESPONSE - CONTINUING")
+            
+            # Check if response appears truncated
+            elif appears_truncated and not any(
+                hasattr(part, "part_kind") and part.part_kind == "tool-call"
+                for part in node.model_response.parts
+            ):
+                # Truncated response detected
+                empty_response_detected = True
+                if state_manager.session.show_thoughts:
+                    await ui.muted("⚠️ TRUNCATED RESPONSE DETECTED - CONTINUING")
+                    await ui.muted(f"   Last content: ...{combined_content[-100:]}")
 
         # Stream content to callback if provided
         # Use this as fallback when true token streaming is not available
@@ -461,8 +607,46 @@ async def _process_node(
                             await ui.error(str(e))
                         # Continue processing other parts instead of failing completely
                         continue
-    
-    return empty_response_detected
+
+    # Check for intention without action pattern
+    # This catches when the agent says it will do something but doesn't execute tools
+    if not empty_response_detected and has_non_empty_content and not has_tool_calls:
+        # Common intention phrases that suggest the agent should be taking action
+        intention_phrases = [
+            "let me", "i'll", "i will", "i'm going to", "i need to", "i should",
+            "i want to", "going to", "need to", "let's", "i can", "i would",
+            "allow me to", "i shall", "about to", "plan to", "intend to"
+        ]
+        
+        # Check if any content contains intention phrases
+        has_intention = False
+        for part in node.model_response.parts:
+            if hasattr(part, "content") and isinstance(part.content, str):
+                content_lower = part.content.lower()
+                if any(phrase in content_lower for phrase in intention_phrases):
+                    # Also check for action verbs that suggest tool usage
+                    action_verbs = ["read", "check", "search", "find", "look", "create", "write", 
+                                   "update", "modify", "run", "execute", "analyze", "examine", "scan"]
+                    if any(verb in content_lower for verb in action_verbs):
+                        has_intention = True
+                        break
+        
+        if has_intention:
+            # Agent stated intention but didn't execute tools
+            empty_response_detected = True
+            if state_manager.session.show_thoughts:
+                await ui.muted("⚠️ INTENTION WITHOUT ACTION DETECTED - FORCING TOOL EXECUTION")
+
+    # Return a tuple with (is_empty, reason) for better retry handling
+    if empty_response_detected:
+        # Determine the specific reason for empty response
+        if appears_truncated:
+            return True, "truncated"
+        elif has_intention:
+            return True, "intention_without_action"
+        else:
+            return True, "empty"
+    return False, None
 
 
 def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
@@ -604,7 +788,7 @@ async def parse_json_tool_calls(
     """
     Parse JSON tool calls from text when structured tool calling fails.
     Fallback for when API providers don't support proper tool calling.
-    
+
     Returns:
         int: Number of tools successfully executed
     """
@@ -668,7 +852,7 @@ async def parse_json_tool_calls(
                 from tunacode.ui import console as ui
 
                 await ui.error(f"Error executing fallback tool {tool_name}: {str(e)}")
-    
+
     return tools_executed
 
 
@@ -728,6 +912,26 @@ async def extract_and_execute_tool_calls(
     return tools_executed
 
 
+async def check_query_satisfaction(
+    original_query: str,
+    actions_taken: List[dict],
+    current_response: str,
+    iteration: int,
+    agent: PydanticAgent,
+    state_manager: StateManager,
+) -> Tuple[bool, str]:
+    """
+    DEPRECATED: This function previously made recursive agent calls which caused empty responses.
+    Now we rely on the agent's own TUNACODE_TASK_COMPLETE signal instead.
+    
+    This function always returns (False, "Agent should decide completion") to maintain compatibility
+    while we transition to the new completion mechanism.
+    """
+    # No longer perform recursive agent calls
+    # The agent should use TUNACODE_TASK_COMPLETE to signal completion
+    return False, "Agent should decide when to use TUNACODE_TASK_COMPLETE"
+
+
 async def process_request(
     model: ModelName,
     message: str,
@@ -759,6 +963,10 @@ async def process_request(
 
         # Reset iteration tracking for this request
         state_manager.session.iteration_count = 0
+        
+        # Track unproductive iterations (no tool usage)
+        unproductive_iterations = 0
+        last_productive_iteration = 0
 
         # Create a request-level buffer for batching read-only tools across nodes
         tool_buffer = ToolBuffer()
@@ -786,7 +994,11 @@ async def process_request(
         async with agent.iter(message, message_history=mh) as agent_run:
             i = 0
             async for node in agent_run:
-                state_manager.session.current_iteration = i + 1
+                # Increment iteration counter at the very beginning so that it
+                # is always updated, even if we break out of the loop early
+                i += 1
+                state_manager.session.current_iteration = i
+                state_manager.session.iteration_count = i
 
                 # Handle token-level streaming for model request nodes
                 if streaming_callback and STREAMING_AVAILABLE and Agent.is_model_request_node(node):
@@ -799,7 +1011,7 @@ async def process_request(
                                 if event.delta.content_delta:
                                     await streaming_callback(event.delta.content_delta)
 
-                empty_response = await _process_node(
+                empty_response, empty_reason = await _process_node(
                     node,
                     tool_callback,
                     state_manager,
@@ -808,62 +1020,145 @@ async def process_request(
                     usage_tracker,
                     response_state,
                 )
-                
-                # Handle empty response by injecting a retry message
+
+                # Handle empty response by asking user for help instead of giving up
                 if empty_response:
                     # Track consecutive empty responses
-                    if not hasattr(state_manager.session, 'consecutive_empty_responses'):
+                    if not hasattr(state_manager.session, "consecutive_empty_responses"):
                         state_manager.session.consecutive_empty_responses = 0
                     state_manager.session.consecutive_empty_responses += 1
-                    
-                    if state_manager.session.consecutive_empty_responses >= 3:
+
+                    # IMMEDIATE AGGRESSIVE INTERVENTION on ANY empty response
+                    if state_manager.session.consecutive_empty_responses >= 1:
+                        # Get context about what was happening
+                        last_tools_used = []
+                        if state_manager.session.tool_calls:
+                            for tc in state_manager.session.tool_calls[-3:]:
+                                tool_name = tc.get("tool", "unknown")
+                                tool_args = tc.get("args", {})
+                                tool_desc = tool_name
+                                if tool_name in ["grep", "glob"] and isinstance(tool_args, dict):
+                                    pattern = tool_args.get("pattern", "")
+                                    tool_desc = f"{tool_name}('{pattern}')"
+                                elif tool_name == "read_file" and isinstance(tool_args, dict):
+                                    path = tool_args.get("file_path", tool_args.get("filepath", ""))
+                                    tool_desc = f"{tool_name}('{path}')"
+                                last_tools_used.append(tool_desc)
+                        
+                        tools_context = f"Recent tools: {', '.join(last_tools_used)}" if last_tools_used else "No tools used yet"
+                        
+                        # AGGRESSIVE prompt - YOU FAILED, TRY HARDER
+                        force_action_content = f"""FAILURE DETECTED: You returned {'an ' + empty_reason if empty_reason != 'empty' else 'an empty'} response.
+
+This is UNACCEPTABLE. You FAILED to produce output.
+
+Task: {message[:200]}...
+{tools_context}
+Current iteration: {i}
+
+TRY AGAIN RIGHT NOW:
+
+1. If your search returned no results → Try a DIFFERENT search pattern
+2. If you found what you need → Use TUNACODE_TASK_COMPLETE
+3. If you're stuck → EXPLAIN SPECIFICALLY what's blocking you
+4. If you need to explore → Use list_dir or broader searches
+
+YOU MUST PRODUCE REAL OUTPUT IN THIS RESPONSE. NO EXCUSES.
+EXECUTE A TOOL OR PROVIDE SUBSTANTIAL CONTENT.
+DO NOT RETURN ANOTHER EMPTY RESPONSE."""
+
+                        from pydantic_ai.messages import UserPromptPart
+                        model_request_cls = get_model_messages()[0]
+                        
+                        user_prompt_part = UserPromptPart(
+                            content=force_action_content,
+                            part_kind="user-prompt",
+                        )
+                        force_message = model_request_cls(
+                            parts=[user_prompt_part],
+                            kind="request",
+                        )
+                        state_manager.session.messages.append(force_message)
+                        
                         if state_manager.session.show_thoughts:
                             from tunacode.ui import console as ui
-                            await ui.error("Multiple consecutive empty responses detected. Breaking to avoid infinite loop.")
-                        break
-                    
-                    # Check if this empty response came after self-evaluation
-                    is_after_self_eval = False
-                    if len(state_manager.session.messages) > 0:
-                        last_msg = state_manager.session.messages[-1]
-                        if hasattr(last_msg, 'parts') and len(last_msg.parts) > 0:
-                            part = last_msg.parts[0]
-                            if hasattr(part, 'content') and 'Reflect on your progress' in str(part.content):
-                                is_after_self_eval = True
-                    
-                    # Inject a properly formatted user message to prompt the model to try again
-                    model_request_cls, tool_return_part_cls, system_prompt_part_cls = get_model_messages()
-                    
-                    if is_after_self_eval:
-                        retry_content = "Please respond to the self-evaluation prompt. Have you completed the user's task? If yes, respond with 'TUNACODE_TASK_COMPLETE' followed by a summary. If not, continue working on the task."
-                    else:
-                        retry_content = "Your previous response was empty. Please provide a substantive response with either text content or tool calls to complete the task."
-                    
-                    # Create a proper user message using the model's message format
-                    from pydantic_ai.messages import UserPromptPart
-                    user_prompt_part = UserPromptPart(
-                        content=retry_content,
-                        part_kind="user-prompt",
-                    )
-                    retry_message = model_request_cls(
-                        parts=[user_prompt_part],
-                        kind="request",
-                    )
-                    state_manager.session.messages.append(retry_message)
-                    
-                    if state_manager.session.show_thoughts:
-                        from tunacode.ui import console as ui
-                        await ui.warning(f"Injecting retry message (attempt {state_manager.session.consecutive_empty_responses}/3)")
+                            await ui.warning(
+                                f"\n⚠️ EMPTY RESPONSE FAILURE - AGGRESSIVE RETRY TRIGGERED"
+                            )
+                            await ui.muted(f"   Reason: {empty_reason}")
+                            await ui.muted(f"   Recent tools: {tools_context}")
+                            await ui.muted("   Injecting 'YOU FAILED TRY HARDER' prompt")
+                        
+                        # Reset counter after aggressive intervention
+                        state_manager.session.consecutive_empty_responses = 0
                 else:
                     # Reset counter on successful response
-                    if hasattr(state_manager.session, 'consecutive_empty_responses'):
+                    if hasattr(state_manager.session, "consecutive_empty_responses"):
                         state_manager.session.consecutive_empty_responses = 0
-                
+
                 if hasattr(node, "result") and node.result and hasattr(node.result, "output"):
                     if node.result.output:
                         response_state.has_user_response = True
-                i += 1
-                state_manager.session.iteration_count = i
+
+                # Track productivity - check if any tools were used in this iteration
+                iteration_had_tools = False
+                if hasattr(node, "model_response"):
+                    for part in node.model_response.parts:
+                        if hasattr(part, "part_kind") and part.part_kind == "tool-call":
+                            iteration_had_tools = True
+                            break
+                
+                if iteration_had_tools:
+                    # Reset unproductive counter
+                    unproductive_iterations = 0
+                    last_productive_iteration = i
+                else:
+                    # Increment unproductive counter
+                    unproductive_iterations += 1
+                    
+                # After 3 unproductive iterations, force action
+                if unproductive_iterations >= 3 and not response_state.task_completed:
+                    no_progress_content = f"""ALERT: No tools executed for {unproductive_iterations} iterations.
+                    
+Last productive iteration: {last_productive_iteration}
+Current iteration: {i}/{max_iterations}
+Task: {message[:200]}...
+
+You're describing actions but not executing them. You MUST:
+
+1. If task is COMPLETE: Start response with TUNACODE_TASK_COMPLETE
+2. If task needs work: Execute a tool RIGHT NOW (grep, read_file, bash, etc.)
+3. If stuck: Explain the specific blocker
+
+NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
+
+                    from pydantic_ai.messages import UserPromptPart
+                    model_request_cls = get_model_messages()[0]
+                    
+                    user_prompt_part = UserPromptPart(
+                        content=no_progress_content,
+                        part_kind="user-prompt",
+                    )
+                    progress_message = model_request_cls(
+                        parts=[user_prompt_part],
+                        kind="request",
+                    )
+                    state_manager.session.messages.append(progress_message)
+                    
+                    if state_manager.session.show_thoughts:
+                        from tunacode.ui import console as ui
+                        await ui.warning(f"⚠️ NO PROGRESS: {unproductive_iterations} iterations without tool usage")
+                    
+                    # Reset counter after intervention
+                    unproductive_iterations = 0
+
+                # REMOVED: Recursive satisfaction check that caused empty responses
+                # The agent now decides completion using TUNACODE_TASK_COMPLETE marker
+                # This eliminates recursive agent calls and gives control back to the agent
+                
+                # Store original query for reference
+                if not hasattr(state_manager.session, "original_query"):
+                    state_manager.session.original_query = message
 
                 # Display iteration progress if thoughts are enabled
                 if state_manager.session.show_thoughts:
@@ -883,24 +1178,56 @@ async def process_request(
                         )
                         await ui.muted(f"TOOLS USED: {summary_str}")
 
-                # Self-evaluation: Check if we should ask the agent to evaluate its progress
-                if i > 1 and not response_state.task_completed:  # Don't check on first iteration
-                    # After each turn, add a system message prompting the agent to evaluate if it's done
-                    # Import ModelRequest, ToolReturnPart, and SystemPromptPart lazily
-                    model_request_cls, tool_return_part_cls, system_prompt_part_cls = get_model_messages()
-                    system_prompt_part = system_prompt_part_cls(
-                        content="Reflect on your progress: Have you completed the user's task? If so, respond with 'TUNACODE_TASK_COMPLETE' followed by a summary of what was accomplished. If not, continue working on the task.",
-                        part_kind="system-prompt",
+                # User clarification: Ask user for guidance when explicitly awaiting
+                if response_state.awaiting_user_guidance:
+                    # Build a progress summary
+                    tool_summary = {}
+                    if state_manager.session.tool_calls:
+                        for tc in state_manager.session.tool_calls:
+                            tool_name = tc.get("tool", "unknown")
+                            tool_summary[tool_name] = tool_summary.get(tool_name, 0) + 1
+
+                    tools_used_str = (
+                        ", ".join([f"{name}: {count}" for name, count in tool_summary.items()])
+                        if tool_summary
+                        else "No tools used yet"
                     )
-                    system_message = model_request_cls(
-                        parts=[system_prompt_part],
+
+                    # Create user message asking for clarification
+                    from pydantic_ai.messages import UserPromptPart
+
+                    model_request_cls = get_model_messages()[0]
+
+                    clarification_content = f"""I need clarification to continue.
+
+Original request: {getattr(state_manager.session, "original_query", "your request")}
+
+Progress so far:
+- Iterations: {i}
+- Tools used: {tools_used_str}
+
+If the task is complete, I should respond with TUNACODE_TASK_COMPLETE.
+Otherwise, please provide specific guidance on what to do next."""
+
+                    user_prompt_part = UserPromptPart(
+                        content=clarification_content,
+                        part_kind="user-prompt",
+                    )
+                    clarification_message = model_request_cls(
+                        parts=[user_prompt_part],
                         kind="request",
                     )
-                    state_manager.session.messages.append(system_message)
-                    
+                    state_manager.session.messages.append(clarification_message)
+
                     if state_manager.session.show_thoughts:
                         from tunacode.ui import console as ui
-                        await ui.muted("\n🔄 SELF-EVALUATION: Prompting agent to assess task completion")
+
+                        await ui.muted(
+                            "\n🤔 SEEKING CLARIFICATION: Asking user for guidance on task progress"
+                        )
+
+                    # Mark that we've asked for user guidance
+                    response_state.awaiting_user_guidance = True
 
                 # Check if task is explicitly completed
                 if response_state.task_completed:
@@ -910,12 +1237,59 @@ async def process_request(
                         await ui.success("Task completed successfully")
                     break
 
-                if i >= max_iterations:
+                if i >= max_iterations and not response_state.task_completed:
+                    # Instead of breaking, ask user if they want to continue
+                    # Build progress summary
+                    tool_summary = {}
+                    if state_manager.session.tool_calls:
+                        for tc in state_manager.session.tool_calls:
+                            tool_name = tc.get("tool", "unknown")
+                            tool_summary[tool_name] = tool_summary.get(tool_name, 0) + 1
+
+                    tools_str = (
+                        ", ".join([f"{name}: {count}" for name, count in tool_summary.items()])
+                        if tool_summary
+                        else "No tools used"
+                    )
+
+                    extend_content = f"""I've reached the iteration limit ({max_iterations}).
+
+Progress summary:
+- Tools used: {tools_str}
+- Iterations completed: {i}
+
+The task appears incomplete. Would you like me to:
+1. Continue working (I can extend the limit)
+2. Summarize what I've done and stop
+3. Try a different approach
+
+Please let me know how to proceed."""
+
+                    # Create user message
+                    from pydantic_ai.messages import UserPromptPart
+
+                    model_request_cls = get_model_messages()[0]
+
+                    user_prompt_part = UserPromptPart(
+                        content=extend_content,
+                        part_kind="user-prompt",
+                    )
+                    extend_message = model_request_cls(
+                        parts=[user_prompt_part],
+                        kind="request",
+                    )
+                    state_manager.session.messages.append(extend_message)
+
                     if state_manager.session.show_thoughts:
                         from tunacode.ui import console as ui
 
-                        await ui.warning(f"Reached maximum iterations ({max_iterations})")
-                    break
+                        await ui.muted(
+                            f"\n📊 ITERATION LIMIT: Asking user for guidance at {max_iterations} iterations"
+                        )
+
+                    # Extend the limit temporarily to allow processing the response
+                    max_iterations += 5  # Give 5 more iterations to process user guidance
+                    response_state.awaiting_user_guidance = True
 
             # Final flush: execute any remaining buffered read-only tools
             if tool_callback and tool_buffer.has_tasks():
