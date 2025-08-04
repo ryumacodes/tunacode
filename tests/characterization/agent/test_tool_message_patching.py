@@ -71,7 +71,7 @@ class TestToolMessagePatching:
         mock_system_prompt_part = MagicMock()
 
         with patch(
-            "tunacode.core.agents.agent_components.get_model_messages",
+            "tunacode.core.agents.agent_components.message_handler.get_model_messages",
             return_value=(mock_model_request, mock_tool_return_part, mock_system_prompt_part),
         ):
             # Act
@@ -184,7 +184,7 @@ class TestToolMessagePatching:
         mock_system_prompt_part = MagicMock()
 
         with patch(
-            "tunacode.core.agents.agent_components.get_model_messages",
+            "tunacode.core.agents.agent_components.message_handler.get_model_messages",
             return_value=(mock_model_request, mock_tool_return_part, mock_system_prompt_part),
         ):
             # Act

@@ -249,13 +249,6 @@ class TestProcessRequest:
         self.state_manager.session.show_thoughts = True
         message = "Test with thoughts"
 
-        # Add some tool calls for summary
-        self.state_manager.session.tool_calls = [
-            {"tool": "read_file", "args": {}, "iteration": 1},
-            {"tool": "bash", "args": {}, "iteration": 1},
-            {"tool": "read_file", "args": {}, "iteration": 2},
-        ]
-
         nodes = [MockNode(), MockNode()]
 
         mock_agent = MagicMock()
@@ -267,12 +260,29 @@ class TestProcessRequest:
 
         mock_agent.iter = mock_iter
 
+        # Create a side effect for _process_node that adds tool calls
+        async def mock_process_node(*args, **kwargs):
+            # Extract state_manager from args (it's the 3rd argument)
+            state_manager = args[2] if len(args) > 2 else kwargs.get('state_manager')
+            
+            # Simulate tool calls being added during processing
+            if state_manager.session.current_iteration == 1:
+                state_manager.session.tool_calls.extend([
+                    {"tool": "read_file", "args": {}, "iteration": 1},
+                    {"tool": "bash", "args": {}, "iteration": 1},
+                ])
+            elif state_manager.session.current_iteration == 2:
+                state_manager.session.tool_calls.append(
+                    {"tool": "read_file", "args": {}, "iteration": 2}
+                )
+            return (False, None)
+
         with patch("tunacode.core.agents.main.get_or_create_agent", return_value=mock_agent):
             with patch(
                 "tunacode.core.agents.main._process_node", new_callable=AsyncMock
             ) as mock_process:
-                # Configure mock to return expected tuple
-                mock_process.return_value = (False, None)
+                # Configure mock to use our side effect
+                mock_process.side_effect = mock_process_node
                 with patch("tunacode.ui.console.muted", new_callable=AsyncMock) as mock_muted:
                     with patch(
                         "tunacode.core.agents.agent_components.parse_json_tool_calls",
