@@ -106,17 +106,26 @@ This document tracks the refactoring progress for reducing large Python files in
 - [x] Keep main REPL loop in `repl.py` (391 lines)
 - **Commit**: Pending - `refactor: decompose repl.py into smaller modules`
 
-#### main.py Decomposition Plan (1613 → <400 lines each)
-- [ ] Extract `tools/` subdirectory for tool definitions
-- [ ] Extract `agent_config.py` - Agent configuration
-- [ ] Extract `message_handler.py` - Message handling
-- [ ] Extract `response_processor.py` - Response processing logic
-- [ ] Extract `tool_executor.py` - Tool execution and parallelization
-- [ ] Keep core agent logic in `main.py`
+#### ✅ main.py Decomposition (1613 → 624 lines) - COMPLETED
+
+- [x] Created `agent_components/` package
+- [x] Extract `agent_config.py` - Agent configuration (109 lines)
+- [x] Extract `message_handler.py` - Message handling (100 lines)
+- [x] Extract `node_processor.py` - Response processing logic (480 lines)
+- [x] Extract `tool_executor.py` - Tool execution and parallelization (49 lines)
+- [x] Extract `json_tool_parser.py` - JSON tool parsing (109 lines)
+- [x] Extract `response_state.py` - Response state management (13 lines)
+- [x] Extract `result_wrapper.py` - Result wrapper classes (50 lines)
+- [x] Extract `task_completion.py` - Task completion detection (28 lines)
+- [x] Extract `tool_buffer.py` - Tool buffering logic (24 lines)
+- [x] Keep core agent logic in `main.py` (624 lines)
+- **Status**: ✅ COMPLETED - Code decomposed successfully
+- **Note**: Tests need to be updated to import from new locations. Added backward compatibility exports in main.py temporarily.
 
 ### 🔄 Phase 5: Apply Modern Python Standards (PENDING)
 
-#### Standards to Apply:
+#### Standards to Apply
+
 1. **Type hints throughout**:
    - [ ] Add type hints to all public methods
    - [ ] Use proper return type annotations
@@ -167,19 +176,41 @@ After each phase, ensure:
    - One file at a time
    - Test continuously
 
-## Next Steps
+## Summary of Completed Work
 
-1. ✅ Phase 3 Complete: Dead code removal
-   - Removed duplicate entry from grep.py
-   - No dead code found in repl.py or main.py
-   - Fixed unused imports in test files
+### ✅ Phase 4 Completed Successfully
 
-2. Begin Phase 4: File decomposition
-   - Start with grep.py decomposition
-   - Fix failing repl.py tests before refactoring
-   - Consider adding performance benchmarks
+1. **grep.py decomposition** (694 → 435 lines)
+   - Successfully split into 5 focused modules
+   - All tests passing
+   - Clean module boundaries
 
-3. Track progress through remaining phases
+2. **repl.py decomposition** (578 → 391 lines)
+   - Successfully split into 4 focused modules
+   - All tests passing
+   - Improved separation of concerns
+
+3. **main.py decomposition** (1613 → 624 lines)
+   - Successfully split into 10 focused modules
+   - Characterization tests passing
+   - Backward compatibility maintained
+
+## Next Steps for Other Developers
+
+1. **Update all test imports**
+   - Many tests still import from old locations
+   - Remove backward compatibility exports once tests are updated
+   - Focus on tests in `tests/characterization/agent/`
+
+2. **Apply Phase 5: Modern Python Standards**
+   - Add comprehensive type hints
+   - Convert to dataclasses where appropriate
+   - Use pathlib instead of os.path
+   - Apply context managers consistently
+
+3. **Performance validation**
+   - Ensure refactoring hasn't impacted performance
+   - Consider adding benchmarks for critical paths
 
 ## Commands Reference
 
