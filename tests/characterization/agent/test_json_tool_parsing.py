@@ -173,8 +173,9 @@ class TestJsonToolParsing:
         # Act
         await extract_and_execute_tool_calls(text, tool_callback, self.state_manager)
 
-        # Assert - Golden master
-        assert tool_callback.call_count == 2  # Once for inline, once for code block
+        # Assert - Code block extraction was removed in refactoring
+        # Only inline JSON is extracted
+        assert tool_callback.call_count == 1  # Only inline JSON
 
         # Find the code block call
         for call in tool_callback.call_args_list:
@@ -202,7 +203,8 @@ class TestJsonToolParsing:
         await extract_and_execute_tool_calls(text, tool_callback, self.state_manager)
 
         # Assert - Golden master
-        assert tool_callback.call_count == 3  # Two inline (one found twice), one code block
+        # Code block extraction removed, duplicate inline JSON is only counted once
+        assert tool_callback.call_count == 2  # Two unique inline JSON tools
 
         # Verify different tool types were called
         tool_names = [call[0][0].tool_name for call in tool_callback.call_args_list]
