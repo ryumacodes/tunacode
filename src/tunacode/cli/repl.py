@@ -174,6 +174,7 @@ async def _handle_command(command: str, state_manager: StateManager) -> CommandR
         return await _command_registry.execute(command, context)
     except ValidationError as e:
         await ui.error(str(e))
+        return None
 
 
 # ============================================================================

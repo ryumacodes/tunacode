@@ -40,7 +40,7 @@ class CompactCommand(SimpleCommand):
         result = await process_request(
             summary_prompt,
             context.state_manager,
-            output=False,  # We'll handle the output ourselves
+            False,  # We'll handle the output ourselves
         )
 
         # Extract summary text from result

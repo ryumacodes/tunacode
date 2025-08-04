@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from collections import defaultdict
-from typing import Awaitable, Callable, Dict, List
+from typing import Any, Callable, Coroutine, Dict, List
 
 
 class BackgroundTaskManager:
@@ -15,9 +15,9 @@ class BackgroundTaskManager:
         self.tasks: Dict[str, asyncio.Task] = {}
         self.listeners: Dict[str, List[Callable[[asyncio.Task], None]]] = defaultdict(list)
 
-    def spawn(self, coro: Awaitable, *, name: str | None = None) -> str:
+    def spawn(self, coro: Coroutine[Any, Any, Any], *, name: str | None = None) -> str:
         task_id = name or uuid.uuid4().hex[:8]
-        task = asyncio.create_task(coro, name=task_id)
+        task: asyncio.Task = asyncio.create_task(coro, name=task_id)
         self.tasks[task_id] = task
         task.add_done_callback(self._notify)
         return task_id

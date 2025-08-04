@@ -84,7 +84,8 @@ def fast_glob(root: Path, include: str, exclude: str = None) -> List[Path]:
     Returns:
         List of matching file paths (bounded by MAX_GLOB)
     """
-    matches, stack = [], [root]
+    matches: list[Path] = []
+    stack = [root]
 
     # Handle multiple extensions in include pattern like "*.{py,js,ts}"
     if "{" in include and "}" in include:
@@ -150,7 +151,7 @@ class ParallelGrep(BaseTool):
         context_lines: int = 2,
         search_type: str = "smart",  # smart, ripgrep, python, hybrid
         return_format: str = "string",  # "string" (default) or "list" (legacy)
-    ) -> str:
+    ) -> Union[str, List[str]]:
         """
         Execute parallel grep search with fast-glob prefiltering and multiple strategies.
 

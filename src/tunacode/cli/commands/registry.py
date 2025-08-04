@@ -130,7 +130,7 @@ class CommandRegistry:
 
         # Register all discovered commands
         for command_class in command_classes:
-            self.register_command_class(command_class)
+            self.register_command_class(command_class)  # type: ignore[arg-type]
 
         self._discovered = True
 
