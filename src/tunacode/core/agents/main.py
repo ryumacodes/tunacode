@@ -159,7 +159,8 @@ async def process_request(
 
     try:
         # Get message history from session messages
-        message_history = state_manager.session.messages
+        # Create a copy of the message history to avoid modifying the original
+        message_history = list(state_manager.session.messages)
 
         async with agent.iter(message, message_history=message_history) as agent_run:
             # Process nodes iteratively
