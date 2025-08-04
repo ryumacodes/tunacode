@@ -30,7 +30,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 
 class StartupTimer:
@@ -39,7 +39,7 @@ class StartupTimer:
     def __init__(self, iterations: int = 5, command: Optional[str] = None):
         self.iterations = iterations
         self.command = command or "--version"
-        self.results = []
+        self.results: list[Dict[str, Any]] = []
 
     def measure_startup_time(self) -> Dict:
         """Measure startup time over multiple iterations."""

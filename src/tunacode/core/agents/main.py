@@ -10,7 +10,7 @@ import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, List, Optional, Tuple
 
 from pydantic_ai import Agent
 
@@ -204,7 +204,7 @@ async def _process_node(
     tool_callback: Optional[ToolCallback],
     state_manager: StateManager,
     tool_buffer: Optional[ToolBuffer] = None,
-    streaming_callback: Optional[Callable[[str], None]] = None,
+    streaming_callback: Optional[Callable[[str], Awaitable[None]]] = None,
     usage_tracker: Optional[UsageTrackerProtocol] = None,
     response_state: Optional[ResponseState] = None,
 ):
@@ -450,7 +450,8 @@ async def _process_node(
                     content = part.content.strip()
                     if content and not content.startswith('{"thought"'):
                         # Stream non-JSON content (actual response content)
-                        await streaming_callback(content)
+                        if streaming_callback:
+                            await streaming_callback(content)
 
         # Enhanced display when thoughts are enabled
         if state_manager.session.show_thoughts:
@@ -1013,9 +1014,9 @@ async def extract_and_execute_tool_calls(
 
 async def check_query_satisfaction(
     original_query: str,
-    actions_taken: List[dict],
-    current_response: str,
-    iteration: int,
+    _actions_taken: List[dict],
+    _current_response: str,
+    _iteration: int,
     agent: PydanticAgent,
     state_manager: StateManager,
 ) -> Tuple[bool, str]:
@@ -1036,7 +1037,7 @@ async def process_request(
     message: str,
     state_manager: StateManager,
     tool_callback: Optional[ToolCallback] = None,
-    streaming_callback: Optional[Callable[[str], None]] = None,
+    streaming_callback: Optional[Callable[[str], Awaitable[None]]] = None,
 ) -> AgentRun:
     try:
         agent = get_or_create_agent(model, state_manager)
@@ -1107,7 +1108,7 @@ async def process_request(
                                 event.delta, TextPartDelta
                             ):
                                 # Stream individual token deltas
-                                if event.delta.content_delta:
+                                if event.delta.content_delta and streaming_callback:
                                     await streaming_callback(event.delta.content_delta)
 
                 empty_response, empty_reason = await _process_node(

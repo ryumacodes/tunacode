@@ -71,7 +71,8 @@ class ToolUI:
 
         # Show file content on write_file
         elif tool_name == TOOL_WRITE_FILE:
-            return self._create_code_block(args["filepath"], args["content"])
+            markdown_obj = self._create_code_block(args["filepath"], args["content"])
+            return str(markdown_obj)
 
         # Default to showing key and value on new line
         content = ""

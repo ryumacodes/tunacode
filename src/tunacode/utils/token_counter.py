@@ -2,13 +2,13 @@
 
 import logging
 from functools import lru_cache
-from typing import Optional
+from typing import Any, Optional
 
 # Get logger for this module
 logger = logging.getLogger(__name__)
 
 # Cache for tokenizer encodings
-_encoding_cache = {}
+_encoding_cache: dict[str, Any] = {}
 
 
 @lru_cache(maxsize=8)

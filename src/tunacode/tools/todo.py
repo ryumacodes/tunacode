@@ -65,10 +65,14 @@ class TodoTool(BaseTool):
             ModelRetry: When invalid parameters are provided
         """
         if action == "add":
+            if isinstance(content, list):
+                raise ModelRetry("Use 'add_multiple' action for adding multiple todos")
             return await self._add_todo(content, priority)
         elif action == "add_multiple":
             return await self._add_multiple_todos(content, todos, priority)
         elif action == "update":
+            if isinstance(content, list):
+                raise ModelRetry("Cannot update with list content")
             return await self._update_todo(todo_id, status, priority, content)
         elif action == "complete":
             return await self._complete_todo(todo_id)

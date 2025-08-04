@@ -72,6 +72,7 @@ If there are Cursor rules (in .cursor/rules/ or .cursorrules) or Copilot rules (
 make sure to include them."""
 
         # Call the agent to analyze and create/update the file
-        await context.process_request(prompt, context.state_manager)
+        if context.process_request:
+            await context.process_request(prompt, context.state_manager)
 
         return None
