@@ -263,14 +263,16 @@ class TestProcessRequest:
         # Create a side effect for _process_node that adds tool calls
         async def mock_process_node(*args, **kwargs):
             # Extract state_manager from args (it's the 3rd argument)
-            state_manager = args[2] if len(args) > 2 else kwargs.get('state_manager')
-            
+            state_manager = args[2] if len(args) > 2 else kwargs.get("state_manager")
+
             # Simulate tool calls being added during processing
             if state_manager.session.current_iteration == 1:
-                state_manager.session.tool_calls.extend([
-                    {"tool": "read_file", "args": {}, "iteration": 1},
-                    {"tool": "bash", "args": {}, "iteration": 1},
-                ])
+                state_manager.session.tool_calls.extend(
+                    [
+                        {"tool": "read_file", "args": {}, "iteration": 1},
+                        {"tool": "bash", "args": {}, "iteration": 1},
+                    ]
+                )
             elif state_manager.session.current_iteration == 2:
                 state_manager.session.tool_calls.append(
                     {"tool": "read_file", "args": {}, "iteration": 2}
