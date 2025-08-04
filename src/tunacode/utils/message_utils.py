@@ -1,7 +1,9 @@
 """Utilities for processing message history."""
 
+from typing import Any
 
-def get_message_content(message: any) -> str:
+
+def get_message_content(message: Any) -> str:
     """Extracts the content from a message object of any type."""
     if isinstance(message, str):
         return message
