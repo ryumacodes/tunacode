@@ -68,7 +68,6 @@ EXCLUDE_DIRS = {  # Common directories to skip
     ".mypy_cache",
     ".tox",
     "target",
-    "node_modules",
 }
 
 
