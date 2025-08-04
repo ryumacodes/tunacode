@@ -1170,9 +1170,14 @@ YOU MUST PRODUCE REAL OUTPUT IN THIS RESPONSE. NO EXCUSES.
 EXECUTE A TOOL OR PROVIDE SUBSTANTIAL CONTENT.
 DO NOT RETURN ANOTHER EMPTY RESPONSE."""
 
-                        from pydantic_ai.messages import UserPromptPart
-
                         model_request_cls = get_model_messages()[0]
+                        # Get UserPromptPart from the messages module
+                        import importlib
+
+                        messages = importlib.import_module("pydantic_ai.messages")
+                        UserPromptPart = getattr(
+                            messages, "UserPromptPart", messages.UserPromptPart
+                        )
 
                         user_prompt_part = UserPromptPart(
                             content=force_action_content,
@@ -1237,9 +1242,12 @@ You're describing actions but not executing them. You MUST:
 
 NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
 
-                    from pydantic_ai.messages import UserPromptPart
-
                     model_request_cls = get_model_messages()[0]
+                    # Get UserPromptPart from the messages module
+                    import importlib
+
+                    messages = importlib.import_module("pydantic_ai.messages")
+                    UserPromptPart = getattr(messages, "UserPromptPart", messages.UserPromptPart)
 
                     user_prompt_part = UserPromptPart(
                         content=no_progress_content,
@@ -1303,9 +1311,12 @@ NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
                     )
 
                     # Create user message asking for clarification
-                    from pydantic_ai.messages import UserPromptPart
-
                     model_request_cls = get_model_messages()[0]
+                    # Get UserPromptPart from the messages module
+                    import importlib
+
+                    messages = importlib.import_module("pydantic_ai.messages")
+                    UserPromptPart = getattr(messages, "UserPromptPart", messages.UserPromptPart)
 
                     clarification_content = f"""I need clarification to continue.
 
@@ -1375,9 +1386,12 @@ The task appears incomplete. Would you like me to:
 Please let me know how to proceed."""
 
                     # Create user message
-                    from pydantic_ai.messages import UserPromptPart
-
                     model_request_cls = get_model_messages()[0]
+                    # Get UserPromptPart from the messages module
+                    import importlib
+
+                    messages = importlib.import_module("pydantic_ai.messages")
+                    UserPromptPart = getattr(messages, "UserPromptPart", messages.UserPromptPart)
 
                     user_prompt_part = UserPromptPart(
                         content=extend_content,
