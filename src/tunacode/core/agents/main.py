@@ -13,6 +13,7 @@ from .agent_components import (
     parse_json_tool_calls,
     patch_tool_messages,
 )
+from tunacode.services.mcp import get_mcp_servers
 
 __all__ = [
     "ToolBuffer",
@@ -21,6 +22,7 @@ __all__ = [
     "get_model_messages",
     "parse_json_tool_calls",
     "patch_tool_messages",
+    "get_mcp_servers",
     "check_query_satisfaction",
     "process_request",
     "get_or_create_agent",

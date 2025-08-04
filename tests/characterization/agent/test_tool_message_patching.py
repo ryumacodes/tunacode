@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from tunacode.core.agents.main import patch_tool_messages
+from tunacode.core.agents.agent_components import patch_tool_messages
 
 # No async tests in this file, so no pytestmark needed
 
@@ -71,7 +71,7 @@ class TestToolMessagePatching:
         mock_system_prompt_part = MagicMock()
 
         with patch(
-            "tunacode.core.agents.main.get_model_messages",
+            "tunacode.core.agents.agent_components.get_model_messages",
             return_value=(mock_model_request, mock_tool_return_part, mock_system_prompt_part),
         ):
             # Act
@@ -184,7 +184,7 @@ class TestToolMessagePatching:
         mock_system_prompt_part = MagicMock()
 
         with patch(
-            "tunacode.core.agents.main.get_model_messages",
+            "tunacode.core.agents.agent_components.get_model_messages",
             return_value=(mock_model_request, mock_tool_return_part, mock_system_prompt_part),
         ):
             # Act

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from tunacode.core.agents.main import _process_node
+from tunacode.core.agents.agent_components import _process_node
 
 pytestmark = pytest.mark.asyncio
 
