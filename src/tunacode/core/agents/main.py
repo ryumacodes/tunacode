@@ -36,9 +36,12 @@ __all__ = [
     "get_agent_tool",
 ]
 
-from typing import Awaitable, Callable, Optional
+from typing import TYPE_CHECKING, Awaitable, Callable, Optional
 
 from pydantic_ai import Agent
+
+if TYPE_CHECKING:
+    from pydantic_ai import Tool
 
 from tunacode.core.logging.logger import get_logger
 
@@ -78,7 +81,7 @@ from tunacode.types import (
 logger = get_logger(__name__)
 
 
-def get_agent_tool():
+def get_agent_tool() -> tuple[type[Agent], type["Tool"]]:
     """Lazy import for Agent and Tool to avoid circular imports."""
     from pydantic_ai import Agent, Tool
 
