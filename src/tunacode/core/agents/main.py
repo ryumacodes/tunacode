@@ -245,13 +245,13 @@ async def _process_node(
             has_non_empty_content = False
             appears_truncated = False
             all_content_parts = []
-            
+
             # First, check if there are any tool calls in this response
             has_queued_tools = any(
                 hasattr(part, "part_kind") and part.part_kind == "tool-call"
                 for part in node.model_response.parts
             )
-            
+
             for part in node.model_response.parts:
                 if hasattr(part, "content") and isinstance(part.content, str):
                     # Check if we have any non-empty content
@@ -265,7 +265,9 @@ async def _process_node(
                         if has_queued_tools:
                             # Agent is trying to complete with pending tools!
                             if state_manager.session.show_thoughts:
-                                await ui.warning("⚠️ PREMATURE COMPLETION DETECTED - Agent queued tools but marked complete")
+                                await ui.warning(
+                                    "⚠️ PREMATURE COMPLETION DETECTED - Agent queued tools but marked complete"
+                                )
                                 await ui.muted("   Overriding completion to allow tool execution")
                             # Don't mark as complete - let the tools run first
                             # Update the content to remove the marker but don't set task_completed
@@ -278,27 +280,60 @@ async def _process_node(
                             # Check if content suggests pending actions
                             combined_text = " ".join(all_content_parts).lower()
                             pending_phrases = [
-                                "let me", "i'll check", "i will", "going to", "about to", 
-                                "need to check", "let's check", "i should", "need to find",
-                                "let me see", "i'll look", "let me search", "let me find"
+                                "let me",
+                                "i'll check",
+                                "i will",
+                                "going to",
+                                "about to",
+                                "need to check",
+                                "let's check",
+                                "i should",
+                                "need to find",
+                                "let me see",
+                                "i'll look",
+                                "let me search",
+                                "let me find",
                             ]
-                            has_pending_intention = any(phrase in combined_text for phrase in pending_phrases)
-                            
+                            has_pending_intention = any(
+                                phrase in combined_text for phrase in pending_phrases
+                            )
+
                             # Also check for action verbs at end of content suggesting incomplete action
-                            action_endings = ["checking", "searching", "looking", "finding", "reading", "analyzing"]
-                            ends_with_action = any(combined_text.rstrip().endswith(ending) for ending in action_endings)
-                            
-                            if (has_pending_intention or ends_with_action) and state_manager.session.iteration_count <= 1:
+                            action_endings = [
+                                "checking",
+                                "searching",
+                                "looking",
+                                "finding",
+                                "reading",
+                                "analyzing",
+                            ]
+                            ends_with_action = any(
+                                combined_text.rstrip().endswith(ending) for ending in action_endings
+                            )
+
+                            if (
+                                has_pending_intention or ends_with_action
+                            ) and state_manager.session.iteration_count <= 1:
                                 # Too early to complete with pending intentions
                                 if state_manager.session.show_thoughts:
-                                    await ui.warning("⚠️ SUSPICIOUS COMPLETION - Stated intentions but completing early")
-                                    found_phrases = [p for p in pending_phrases if p in combined_text]
-                                    await ui.muted(f"   Iteration {state_manager.session.iteration_count} with pending: {found_phrases}")
+                                    await ui.warning(
+                                        "⚠️ SUSPICIOUS COMPLETION - Stated intentions but completing early"
+                                    )
+                                    found_phrases = [
+                                        p for p in pending_phrases if p in combined_text
+                                    ]
+                                    await ui.muted(
+                                        f"   Iteration {state_manager.session.iteration_count} with pending: {found_phrases}"
+                                    )
                                     if ends_with_action:
-                                        await ui.muted(f"   Content ends with action verb: '{combined_text.split()[-1] if combined_text.split() else ''}'")
+                                        await ui.muted(
+                                            f"   Content ends with action verb: '{combined_text.split()[-1] if combined_text.split() else ''}'"
+                                        )
                                 # Still allow it but log warning
-                                logger.warning(f"Task completion with pending intentions detected: {found_phrases}")
-                            
+                                logger.warning(
+                                    f"Task completion with pending intentions detected: {found_phrases}"
+                                )
+
                             # Normal completion
                             response_state.task_completed = True
                             response_state.has_user_response = True
@@ -311,17 +346,19 @@ async def _process_node(
             # Check for truncation patterns
             if all_content_parts:
                 combined_content = " ".join(all_content_parts).strip()
-                
+
                 # Truncation indicators:
                 # 1. Ends with "..." or "…" (but not part of a complete sentence)
                 # 2. Ends mid-word (no punctuation, space, or complete word)
                 # 3. Contains incomplete markdown/code blocks
                 # 4. Ends with incomplete parentheses/brackets
-                
+
                 # Check for ellipsis at end suggesting truncation
-                if combined_content.endswith(("...", "…")) and not combined_content.endswith(("....", "….")):
+                if combined_content.endswith(("...", "…")) and not combined_content.endswith(
+                    ("....", "….")
+                ):
                     appears_truncated = True
-                    
+
                 # Check for mid-word truncation (ends with letters but no punctuation)
                 elif combined_content and combined_content[-1].isalpha():
                     # Look for incomplete words by checking if last "word" seems cut off
@@ -329,23 +366,57 @@ async def _process_node(
                     if words:
                         last_word = words[-1]
                         # Common complete word endings vs likely truncations
-                        complete_endings = ("ing", "ed", "ly", "er", "est", "tion", "ment", "ness", "ity", "ous", "ive", "able", "ible")
-                        incomplete_patterns = ("referen", "inte", "proces", "analy", "deve", "imple", "execu")
-                        
-                        if any(last_word.lower().endswith(pattern) for pattern in incomplete_patterns):
+                        complete_endings = (
+                            "ing",
+                            "ed",
+                            "ly",
+                            "er",
+                            "est",
+                            "tion",
+                            "ment",
+                            "ness",
+                            "ity",
+                            "ous",
+                            "ive",
+                            "able",
+                            "ible",
+                        )
+                        incomplete_patterns = (
+                            "referen",
+                            "inte",
+                            "proces",
+                            "analy",
+                            "deve",
+                            "imple",
+                            "execu",
+                        )
+
+                        if any(
+                            last_word.lower().endswith(pattern) for pattern in incomplete_patterns
+                        ):
                             appears_truncated = True
-                        elif len(last_word) > 2 and not any(last_word.lower().endswith(end) for end in complete_endings):
+                        elif len(last_word) > 2 and not any(
+                            last_word.lower().endswith(end) for end in complete_endings
+                        ):
                             # Likely truncated if doesn't end with common suffix
                             appears_truncated = True
-                
+
                 # Check for unclosed markdown code blocks
                 code_block_count = combined_content.count("```")
                 if code_block_count % 2 != 0:
                     appears_truncated = True
-                    
+
                 # Check for unclosed brackets/parentheses (more opens than closes)
-                open_brackets = combined_content.count("[") + combined_content.count("(") + combined_content.count("{")
-                close_brackets = combined_content.count("]") + combined_content.count(")") + combined_content.count("}")
+                open_brackets = (
+                    combined_content.count("[")
+                    + combined_content.count("(")
+                    + combined_content.count("{")
+                )
+                close_brackets = (
+                    combined_content.count("]")
+                    + combined_content.count(")")
+                    + combined_content.count("}")
+                )
                 if open_brackets > close_brackets:
                     appears_truncated = True
 
@@ -359,7 +430,7 @@ async def _process_node(
                 empty_response_detected = True
                 if state_manager.session.show_thoughts:
                     await ui.muted("⚠️ EMPTY RESPONSE - CONTINUING")
-            
+
             # Check if response appears truncated
             elif appears_truncated and not any(
                 hasattr(part, "part_kind") and part.part_kind == "tool-call"
@@ -613,11 +684,25 @@ async def _process_node(
     if not empty_response_detected and has_non_empty_content and not has_tool_calls:
         # Common intention phrases that suggest the agent should be taking action
         intention_phrases = [
-            "let me", "i'll", "i will", "i'm going to", "i need to", "i should",
-            "i want to", "going to", "need to", "let's", "i can", "i would",
-            "allow me to", "i shall", "about to", "plan to", "intend to"
+            "let me",
+            "i'll",
+            "i will",
+            "i'm going to",
+            "i need to",
+            "i should",
+            "i want to",
+            "going to",
+            "need to",
+            "let's",
+            "i can",
+            "i would",
+            "allow me to",
+            "i shall",
+            "about to",
+            "plan to",
+            "intend to",
         ]
-        
+
         # Check if any content contains intention phrases
         has_intention = False
         for part in node.model_response.parts:
@@ -625,12 +710,26 @@ async def _process_node(
                 content_lower = part.content.lower()
                 if any(phrase in content_lower for phrase in intention_phrases):
                     # Also check for action verbs that suggest tool usage
-                    action_verbs = ["read", "check", "search", "find", "look", "create", "write", 
-                                   "update", "modify", "run", "execute", "analyze", "examine", "scan"]
+                    action_verbs = [
+                        "read",
+                        "check",
+                        "search",
+                        "find",
+                        "look",
+                        "create",
+                        "write",
+                        "update",
+                        "modify",
+                        "run",
+                        "execute",
+                        "analyze",
+                        "examine",
+                        "scan",
+                    ]
                     if any(verb in content_lower for verb in action_verbs):
                         has_intention = True
                         break
-        
+
         if has_intention:
             # Agent stated intention but didn't execute tools
             empty_response_detected = True
@@ -923,7 +1022,7 @@ async def check_query_satisfaction(
     """
     DEPRECATED: This function previously made recursive agent calls which caused empty responses.
     Now we rely on the agent's own TUNACODE_TASK_COMPLETE signal instead.
-    
+
     This function always returns (False, "Agent should decide completion") to maintain compatibility
     while we transition to the new completion mechanism.
     """
@@ -963,7 +1062,7 @@ async def process_request(
 
         # Reset iteration tracking for this request
         state_manager.session.iteration_count = 0
-        
+
         # Track unproductive iterations (no tool usage)
         unproductive_iterations = 0
         last_productive_iteration = 0
@@ -1044,11 +1143,15 @@ async def process_request(
                                     path = tool_args.get("file_path", tool_args.get("filepath", ""))
                                     tool_desc = f"{tool_name}('{path}')"
                                 last_tools_used.append(tool_desc)
-                        
-                        tools_context = f"Recent tools: {', '.join(last_tools_used)}" if last_tools_used else "No tools used yet"
-                        
+
+                        tools_context = (
+                            f"Recent tools: {', '.join(last_tools_used)}"
+                            if last_tools_used
+                            else "No tools used yet"
+                        )
+
                         # AGGRESSIVE prompt - YOU FAILED, TRY HARDER
-                        force_action_content = f"""FAILURE DETECTED: You returned {'an ' + empty_reason if empty_reason != 'empty' else 'an empty'} response.
+                        force_action_content = f"""FAILURE DETECTED: You returned {"an " + empty_reason if empty_reason != "empty" else "an empty"} response.
 
 This is UNACCEPTABLE. You FAILED to produce output.
 
@@ -1068,8 +1171,9 @@ EXECUTE A TOOL OR PROVIDE SUBSTANTIAL CONTENT.
 DO NOT RETURN ANOTHER EMPTY RESPONSE."""
 
                         from pydantic_ai.messages import UserPromptPart
+
                         model_request_cls = get_model_messages()[0]
-                        
+
                         user_prompt_part = UserPromptPart(
                             content=force_action_content,
                             part_kind="user-prompt",
@@ -1079,16 +1183,17 @@ DO NOT RETURN ANOTHER EMPTY RESPONSE."""
                             kind="request",
                         )
                         state_manager.session.messages.append(force_message)
-                        
+
                         if state_manager.session.show_thoughts:
                             from tunacode.ui import console as ui
+
                             await ui.warning(
-                                f"\n⚠️ EMPTY RESPONSE FAILURE - AGGRESSIVE RETRY TRIGGERED"
+                                "\n⚠️ EMPTY RESPONSE FAILURE - AGGRESSIVE RETRY TRIGGERED"
                             )
                             await ui.muted(f"   Reason: {empty_reason}")
                             await ui.muted(f"   Recent tools: {tools_context}")
                             await ui.muted("   Injecting 'YOU FAILED TRY HARDER' prompt")
-                        
+
                         # Reset counter after aggressive intervention
                         state_manager.session.consecutive_empty_responses = 0
                 else:
@@ -1107,7 +1212,7 @@ DO NOT RETURN ANOTHER EMPTY RESPONSE."""
                         if hasattr(part, "part_kind") and part.part_kind == "tool-call":
                             iteration_had_tools = True
                             break
-                
+
                 if iteration_had_tools:
                     # Reset unproductive counter
                     unproductive_iterations = 0
@@ -1115,11 +1220,11 @@ DO NOT RETURN ANOTHER EMPTY RESPONSE."""
                 else:
                     # Increment unproductive counter
                     unproductive_iterations += 1
-                    
+
                 # After 3 unproductive iterations, force action
                 if unproductive_iterations >= 3 and not response_state.task_completed:
                     no_progress_content = f"""ALERT: No tools executed for {unproductive_iterations} iterations.
-                    
+
 Last productive iteration: {last_productive_iteration}
 Current iteration: {i}/{max_iterations}
 Task: {message[:200]}...
@@ -1133,8 +1238,9 @@ You're describing actions but not executing them. You MUST:
 NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
 
                     from pydantic_ai.messages import UserPromptPart
+
                     model_request_cls = get_model_messages()[0]
-                    
+
                     user_prompt_part = UserPromptPart(
                         content=no_progress_content,
                         part_kind="user-prompt",
@@ -1144,18 +1250,21 @@ NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
                         kind="request",
                     )
                     state_manager.session.messages.append(progress_message)
-                    
+
                     if state_manager.session.show_thoughts:
                         from tunacode.ui import console as ui
-                        await ui.warning(f"⚠️ NO PROGRESS: {unproductive_iterations} iterations without tool usage")
-                    
+
+                        await ui.warning(
+                            f"⚠️ NO PROGRESS: {unproductive_iterations} iterations without tool usage"
+                        )
+
                     # Reset counter after intervention
                     unproductive_iterations = 0
 
                 # REMOVED: Recursive satisfaction check that caused empty responses
                 # The agent now decides completion using TUNACODE_TASK_COMPLETE marker
                 # This eliminates recursive agent calls and gives control back to the agent
-                
+
                 # Store original query for reference
                 if not hasattr(state_manager.session, "original_query"):
                     state_manager.session.original_query = message

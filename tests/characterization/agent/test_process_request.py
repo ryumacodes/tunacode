@@ -51,6 +51,8 @@ class TestProcessRequest:
         self.state_manager.session.files_in_context = set()
         self.state_manager.session.iteration_count = 0
         self.state_manager.session.current_iteration = 0
+        # Ensure token counter attributes return integers for += operations
+        self.state_manager.session.consecutive_empty_responses = 0
 
     def create_mock_agent_run(self, nodes):
         """Create a mock agent run that properly implements async iteration."""
@@ -99,15 +101,16 @@ class TestProcessRequest:
             with patch(
                 "tunacode.core.agents.main._process_node", new_callable=AsyncMock
             ) as mock_process:
-                # Act
-                result = await process_request("openai:gpt-4", message, self.state_manager)
+                with patch("tunacode.core.agents.main.parse_json_tool_calls", return_value=0):
+                    # Act
+                    result = await process_request("openai:gpt-4", message, self.state_manager)
 
-                # Assert - Golden master
-                assert hasattr(result, "response_state")
-                assert result.response_state.has_user_response
-                assert not result.response_state.has_final_synthesis
-                assert self.state_manager.session.iteration_count == 2
-                assert mock_process.call_count == 2
+                    # Assert - Golden master
+                    assert hasattr(result, "response_state")
+                    assert result.response_state.has_user_response
+                    assert not result.response_state.has_final_synthesis
+                    assert self.state_manager.session.iteration_count == 2
+                    assert mock_process.call_count == 2
 
     async def test_process_request_max_iterations_reached(self):
         """Capture behavior when max iterations is reached."""
@@ -131,17 +134,18 @@ class TestProcessRequest:
         with patch("tunacode.core.agents.main.get_or_create_agent", return_value=mock_agent):
             with patch("tunacode.core.agents.main._process_node", new_callable=AsyncMock):
                 with patch("tunacode.core.agents.main.patch_tool_messages") as mock_patch:
-                    # Act
-                    result = await process_request("openai:gpt-4", message, self.state_manager)
+                    with patch("tunacode.core.agents.main.parse_json_tool_calls", return_value=0):
+                        # Act
+                        result = await process_request("openai:gpt-4", message, self.state_manager)
 
-                    # Assert - Golden master
-                    assert self.state_manager.session.iteration_count == 3
-                    assert hasattr(result, "result")
-                    assert "maximum iterations" in result.result.output
-                    assert result.response_state.has_final_synthesis
-                    mock_patch.assert_called_with(
-                        "Task incomplete", state_manager=self.state_manager
-                    )
+                        # Assert - Golden master
+                        assert self.state_manager.session.iteration_count == 3
+                        assert hasattr(result, "result")
+                        assert "maximum iterations" in result.result.output
+                        assert result.response_state.has_final_synthesis
+                        mock_patch.assert_called_with(
+                            "Task incomplete", state_manager=self.state_manager
+                        )
 
     async def test_process_request_fallback_response_detailed(self):
         """Capture behavior of detailed fallback response generation."""
@@ -180,20 +184,21 @@ class TestProcessRequest:
 
         with patch("tunacode.core.agents.main.get_or_create_agent", return_value=mock_agent):
             with patch("tunacode.core.agents.main._process_node", new_callable=AsyncMock):
-                # Act
-                result = await process_request(
-                    "openai:gpt-4", message, self.state_manager, AsyncMock()
-                )
+                with patch("tunacode.core.agents.main.parse_json_tool_calls", return_value=0):
+                    # Act
+                    result = await process_request(
+                        "openai:gpt-4", message, self.state_manager, AsyncMock()
+                    )
 
-                # Assert - Golden master
-                output = result.result.output
-                assert "Reached maximum iterations" in output
-                assert "Completed 2 iterations (limit: 2)" in output
-                assert "Files modified (1):" in output
-                assert "/tmp/test1.txt" in output
-                assert "Commands executed (1):" in output
-                assert "echo 'test command'" in output
-                assert "try breaking it into smaller steps" in output
+                    # Assert - Golden master
+                    output = result.result.output
+                    assert "Reached maximum iterations" in output
+                    assert "Completed 2 iterations (limit: 2)" in output
+                    assert "Files modified (1):" in output
+                    assert "/tmp/test1.txt" in output
+                    assert "Commands executed (1):" in output
+                    assert "echo 'test command'" in output
+                    assert "try breaking it into smaller steps" in output
 
     async def test_process_request_fallback_disabled(self):
         """Capture behavior when fallback response is disabled."""
@@ -216,14 +221,15 @@ class TestProcessRequest:
 
         with patch("tunacode.core.agents.main.get_or_create_agent", return_value=mock_agent):
             with patch("tunacode.core.agents.main._process_node", new_callable=AsyncMock):
-                # Act
-                result = await process_request("openai:gpt-4", message, self.state_manager)
+                with patch("tunacode.core.agents.main.parse_json_tool_calls", return_value=0):
+                    # Act
+                    result = await process_request("openai:gpt-4", message, self.state_manager)
 
-                # Assert - Golden master
-                assert self.state_manager.session.iteration_count == 2
-                assert not hasattr(result.result, "output")  # No fallback response
-                assert hasattr(result, "response_state")
-                assert not result.response_state.has_final_synthesis
+                    # Assert - Golden master
+                    assert self.state_manager.session.iteration_count == 2
+                    assert not hasattr(result.result, "output")  # No fallback response
+                    assert hasattr(result, "response_state")
+                    assert not result.response_state.has_final_synthesis
 
     async def test_process_request_with_thoughts_enabled(self):
         """Capture behavior with thoughts display enabled."""
@@ -252,20 +258,23 @@ class TestProcessRequest:
         with patch("tunacode.core.agents.main.get_or_create_agent", return_value=mock_agent):
             with patch("tunacode.core.agents.main._process_node", new_callable=AsyncMock):
                 with patch("tunacode.ui.console.muted", new_callable=AsyncMock) as mock_muted:
-                    # Act
-                    await process_request("openai:gpt-4", message, self.state_manager, AsyncMock())
+                    with patch("tunacode.core.agents.main.parse_json_tool_calls", return_value=0):
+                        # Act
+                        await process_request(
+                            "openai:gpt-4", message, self.state_manager, AsyncMock()
+                        )
 
-                    # Assert - Golden master
-                    calls = [
-                        str(call[0][0]) if call[0] else "" for call in mock_muted.call_args_list
-                    ]
+                        # Assert - Golden master
+                        calls = [
+                            str(call[0][0]) if call[0] else "" for call in mock_muted.call_args_list
+                        ]
 
-                    # Should show iteration progress (default is now 40)
-                    assert any("ITERATION: 1/40" in call for call in calls)
-                    assert any("ITERATION: 2/40" in call for call in calls)
+                        # Should show iteration progress (default is now 40)
+                        assert any("ITERATION: 1/40" in call for call in calls)
+                        assert any("ITERATION: 2/40" in call for call in calls)
 
-                    # Should show tool summary
-                    assert any("TOOLS USED: read_file: 2, bash: 1" in call for call in calls)
+                        # Should show tool summary
+                        assert any("TOOLS USED: read_file: 2, bash: 1" in call for call in calls)
 
     async def test_process_request_iteration_tracking(self):
         """Capture behavior of iteration tracking."""
@@ -293,12 +302,13 @@ class TestProcessRequest:
 
         with patch("tunacode.core.agents.main.get_or_create_agent", return_value=mock_agent):
             with patch("tunacode.core.agents.main._process_node", side_effect=track_iterations):
-                # Act
-                await process_request("openai:gpt-4", message, self.state_manager)
+                with patch("tunacode.core.agents.main.parse_json_tool_calls", return_value=0):
+                    # Act
+                    await process_request("openai:gpt-4", message, self.state_manager)
 
-                # Assert - Golden master
-                assert self.state_manager.session.iteration_count == 3
-                assert iteration_values == [1, 2, 3]  # 1-indexed
+                    # Assert - Golden master
+                    assert self.state_manager.session.iteration_count == 3
+                    assert iteration_values == [1, 2, 3]  # 1-indexed
 
     async def test_process_request_message_history_copy(self):
         """Capture behavior of message history copying."""
@@ -320,12 +330,15 @@ class TestProcessRequest:
         mock_agent.iter = mock_iter
 
         with patch("tunacode.core.agents.main.get_or_create_agent", return_value=mock_agent):
-            # Act
-            await process_request("openai:gpt-4", message, self.state_manager)
+            with patch("tunacode.core.agents.main.parse_json_tool_calls", return_value=0):
+                # Act
+                await process_request("openai:gpt-4", message, self.state_manager)
 
-            # Assert - Golden master
-            assert captured_history == original_messages
-            assert captured_history is not self.state_manager.session.messages  # Different object
+                # Assert - Golden master
+                assert captured_history == original_messages
+                assert (
+                    captured_history is not self.state_manager.session.messages
+                )  # Different object
 
     async def test_process_request_wrapper_attributes(self):
         """Capture behavior of result wrapper classes."""
@@ -345,12 +358,13 @@ class TestProcessRequest:
 
         with patch("tunacode.core.agents.main.get_or_create_agent", return_value=mock_agent):
             with patch("tunacode.core.agents.main._process_node", new_callable=AsyncMock):
-                # Act
-                result = await process_request("openai:gpt-4", message, self.state_manager)
+                with patch("tunacode.core.agents.main.parse_json_tool_calls", return_value=0):
+                    # Act
+                    result = await process_request("openai:gpt-4", message, self.state_manager)
 
-                # Assert - Golden master
-                # Wrapper should preserve original attributes
-                assert hasattr(result, "response_state")
-                assert hasattr(result, "custom_attribute")
-                assert result.custom_attribute == "test_value"
-                assert result.result.output == "Done"
+                    # Assert - Golden master
+                    # Wrapper should preserve original attributes
+                    assert hasattr(result, "response_state")
+                    assert hasattr(result, "custom_attribute")
+                    assert result.custom_attribute == "test_value"
+                    assert result.result.output == "Done"

@@ -100,7 +100,9 @@ class StructuredFileHandler(logging.FileHandler):
                 "level": self._coerce_json_safe(getattr(record, "levelname", "")),
                 "name": self._coerce_json_safe(getattr(record, "name", "")),
                 "line": int(getattr(record, "lineno", 0) or 0),
-                "message": self._coerce_json_safe(record.getMessage() if hasattr(record, "getMessage") else ""),
+                "message": self._coerce_json_safe(
+                    record.getMessage() if hasattr(record, "getMessage") else ""
+                ),
                 "extra_data": self._coerce_json_safe(getattr(record, "extra", {})),
             }
             self.stream.write(json.dumps(log_entry) + "\n")
