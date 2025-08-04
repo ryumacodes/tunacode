@@ -206,14 +206,50 @@ After each phase, ensure:
    - Characterization tests passing
    - Backward compatibility maintained
 
-## ⚠️ IMPORTANT: Test Import Updates Required
+## ⚠️ CRITICAL: Test Import Fixes Required (35 Tests Failing)
 
-### The Issue
-After decomposing main.py into agent_components modules, approximately 35 tests are failing because they import functions from the old location. This is a **simple fix** - just update the import paths.
+### Quick Summary
+- **35 tests are failing** due to moved imports after refactoring
+- **2 tests already fixed** as examples
+- **Simple mechanical fix** - just update import paths
+- **Backward compatibility added** temporarily to prevent total breakage
 
-### What Changed
-Functions were moved from:
+### What Was Fixed ✅
+1. `tests/characterization/test_characterization_main.py` - FULLY FIXED
+2. `tests/characterization/agent/test_json_tool_parsing.py` - PARTIALLY FIXED
+
+### What Still Needs Fixing ❌
+
+#### Test Files Requiring Import Updates:
+1. **`tests/characterization/agent/test_agent_creation.py`** (5 failures)
+   - Update imports for: `get_or_create_agent`
+   - Update mock patches for: `get_agent_tool`, `TodoTool`
+
+2. **`tests/characterization/agent/test_process_node.py`** (6 failures)  
+   - Update imports for: `_process_node`
+   - Update mock patches for tool functions
+
+3. **`tests/characterization/agent/test_process_request.py`** (8 failures)
+   - Update imports for: `process_request`, `get_or_create_agent`
+   - Update mock patches
+
+4. **`tests/characterization/agent/test_tool_message_patching.py`** (2 failures)
+   - Update imports for: `patch_tool_messages`, `get_model_messages`
+
+5. **`tests/characterization/context/test_tunacode_logging.py`** (2 failures)
+   - Update imports for: `get_or_create_agent`
+
+6. **`tests/characterization/repl/test_error_handling.py`** (9 failures)
+   - Update imports for: `process_request`, `patch_tool_messages`
+
+7. **`tests/characterization/test_characterization_repl.py`** (1 failure)
+   - Update imports for: tool recovery functions
+
+### Exact Changes Needed
+
+#### 1. Direct Import Changes
 ```python
+# OLD (causes ImportError)
 from tunacode.core.agents.main import (
     ToolBuffer,
     check_task_completion,
@@ -222,11 +258,12 @@ from tunacode.core.agents.main import (
     get_model_messages,
     parse_json_tool_calls,
     patch_tool_messages,
+    get_or_create_agent,
+    _process_node,
+    process_request,
 )
-```
 
-To:
-```python
+# NEW (correct imports)
 from tunacode.core.agents.agent_components import (
     ToolBuffer,
     check_task_completion,
@@ -235,33 +272,51 @@ from tunacode.core.agents.agent_components import (
     get_model_messages,
     parse_json_tool_calls,
     patch_tool_messages,
+    get_or_create_agent,
+    _process_node,
 )
+# Note: process_request stays in main
+from tunacode.core.agents.main import process_request
 ```
 
-### Affected Test Files
+#### 2. Mock Patch Updates
+```python
+# OLD patches (will fail to find the target)
+@patch("tunacode.core.agents.main.get_agent_tool")
+@patch("tunacode.core.agents.main.TodoTool")
+@patch("tunacode.core.agents.main.get_model_messages")
 
-- `tests/characterization/agent/test_agent_creation.py`
-- `tests/characterization/agent/test_json_tool_parsing.py` (partially fixed)
-- `tests/characterization/agent/test_process_node.py`
-- `tests/characterization/agent/test_process_request.py`
-- `tests/characterization/agent/test_tool_message_patching.py`
-- `tests/characterization/context/test_tunacode_logging.py`
-- `tests/characterization/repl/test_error_handling.py`
-- `tests/characterization/test_characterization_repl.py`
+# NEW patches (correct paths)
+@patch("tunacode.core.agents.agent_components.agent_config.get_agent_tool")
+@patch("tunacode.core.agents.agent_components.agent_config.TodoTool")
+@patch("tunacode.core.agents.agent_components.message_handler.get_model_messages")
+```
 
-### Additional Import Updates Needed
+### How to Fix
 
-Some tests also need to update references to `get_or_create_agent`:
-- Change: `from tunacode.core.agents.main import get_or_create_agent`
-- To: `from tunacode.core.agents.agent_components import get_or_create_agent`
+1. **Run tests to see failures**: `pytest tests/characterization/agent/ -v`
+2. **For each failing test file**:
+   - Open the file
+   - Find imports from `tunacode.core.agents.main`
+   - Update to import from `tunacode.core.agents.agent_components`
+   - Update any `@patch` decorators to use new paths
+3. **Run tests again** to verify fixes
+4. **Remove backward compatibility** exports from main.py once all tests pass
 
-Also update mocked paths in tests:
-- Change: `patch("tunacode.core.agents.main.get_agent_tool")`
-- To: `patch("tunacode.core.agents.agent_components.agent_config.get_agent_tool")`
-
-### Temporary Solution
-
-I've added backward compatibility re-exports in main.py to keep tests running, but these should be removed once all tests are updated. The exports are at the top of main.py and clearly marked as "Re-export for backward compatibility".
+### Temporary Workaround
+The following has been added to the top of `main.py` to prevent total test breakage:
+```python
+# Re-export for backward compatibility
+from .agent_components import (
+    ToolBuffer,
+    check_task_completion,
+    extract_and_execute_tool_calls,
+    get_model_messages,
+    parse_json_tool_calls,
+    patch_tool_messages,
+)
+```
+**This should be removed once all tests are fixed!**
 
 ## Other Next Steps
 
