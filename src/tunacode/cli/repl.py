@@ -162,8 +162,8 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                     await streaming_panel.update(content)
 
                 res = await agent.process_request(
-                    state_manager.session.current_model,
                     text,
+                    state_manager.session.current_model,
                     state_manager,
                     tool_callback=tool_callback_with_state,
                     streaming_callback=streaming_callback,
@@ -175,8 +175,8 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         else:
             # Use normal agent processing
             res = await agent.process_request(
-                state_manager.session.current_model,
                 text,
+                state_manager.session.current_model,
                 state_manager,
                 tool_callback=tool_callback_with_state,
             )

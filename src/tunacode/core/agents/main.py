@@ -45,12 +45,9 @@ from .agent_components import (
     AgentRunWrapper,
     ResponseState,
     SimpleResult,
-    ToolBuffer,
     _process_node,
     execute_tools_parallel,
-    get_model_messages,
     get_or_create_agent,
-    patch_tool_messages,
 )
 
 # Import streaming types with fallback for older versions
@@ -157,9 +154,10 @@ async def process_request(
     try:
         Agent, _ = get_agent_tool()
 
-        async with Agent.run(agent, message) as agent_run:
+        async with agent.iter(message) as agent_run:
             # Process nodes iteratively
-            for i, node in enumerate(agent_run.stream, start=1):
+            i = 1
+            async for node in agent_run:
                 state_manager.session.current_iteration = i
                 state_manager.session.iteration_count = i
 
@@ -477,6 +475,9 @@ Please let me know how to proceed."""
                     # Extend the limit temporarily to allow processing the response
                     max_iterations += 5  # Give 5 more iterations to process user guidance
                     response_state.awaiting_user_guidance = True
+
+                # Increment iteration counter
+                i += 1
 
             # Final flush: execute any remaining buffered read-only tools
             if tool_callback and tool_buffer.has_tasks():
