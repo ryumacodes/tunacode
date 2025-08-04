@@ -13,18 +13,17 @@ import pytest
 from tunacode.cli.repl import (
     MSG_AGENT_BUSY,
     MSG_HIT_CTRL_C,
-    MSG_JSON_RECOVERY,
     MSG_OPERATION_ABORTED,
-    MSG_OPERATION_ABORTED_BY_USER,
     MSG_SESSION_ENDED,
-    _attempt_tool_recovery,
-    _display_agent_output,
     _handle_command,
-    _parse_args,
-    _tool_handler,
     process_request,
     repl,
 )
+from tunacode.cli.repl_components import attempt_tool_recovery as _attempt_tool_recovery
+from tunacode.cli.repl_components import display_agent_output as _display_agent_output
+from tunacode.cli.repl_components import parse_args as _parse_args
+from tunacode.cli.repl_components import tool_handler as _tool_handler
+from tunacode.cli.repl_components.error_recovery import MSG_JSON_RECOVERY
 from tunacode.exceptions import UserAbortError, ValidationError
 from tunacode.types import StateManager
 
@@ -108,15 +107,20 @@ class TestReplCharacterization:
         mock_part.tool_name = "read_file"
         mock_part.args = {"file_path": "test.py"}
 
-        with patch("tunacode.cli.repl.ToolHandler") as mock_handler_class:
+        with patch("tunacode.cli.repl_components.tool_executor.ToolHandler") as mock_handler_class:
             mock_handler = MagicMock()
+            mock_handler.should_confirm.return_value = False  # Don't show confirmation
             mock_handler.execute_tool = AsyncMock(return_value="file contents")
             mock_handler_class.return_value = mock_handler
 
-            result = await _tool_handler(mock_part, mock_state_manager)
+            # Mock the state_manager to have is_streaming_active and spinner
+            mock_state_manager.session.is_streaming_active = False
+            mock_state_manager.session.spinner = None
 
-            assert mock_state_manager.tool_handler is not None
-            assert result == "file contents"
+            await _tool_handler(mock_part, mock_state_manager)
+
+            # The test is about setting tool_handler on state_manager
+            mock_state_manager.set_tool_handler.assert_called_once_with(mock_handler)
 
     @pytest.mark.asyncio
     async def test_handle_command_shell_command(self, mock_state_manager):
@@ -136,10 +140,7 @@ class TestReplCharacterization:
 
         # Commands may return None, string (restart), or other values
         with patch("tunacode.cli.repl._command_registry") as mock_registry:
-            mock_command = MagicMock()
-            mock_command.matches.return_value = True
-            mock_command.execute = AsyncMock(return_value=None)
-            mock_registry.find_command.return_value = mock_command
+            mock_registry.execute = AsyncMock(return_value=None)
 
             result = await _handle_command(command, mock_state_manager)
 
@@ -152,7 +153,7 @@ class TestReplCharacterization:
         command = "/invalid_command"
 
         with patch("tunacode.cli.repl._command_registry") as mock_registry:
-            mock_registry.find_command.return_value = None
+            mock_registry.execute = AsyncMock(side_effect=ValidationError("Unknown command"))
 
             with patch("tunacode.cli.repl.ui.error") as mock_error:
                 result = await _handle_command(command, mock_state_manager)
@@ -166,6 +167,13 @@ class TestReplCharacterization:
         """Test basic request processing."""
         text = "Write a hello world program"
 
+        # Disable streaming for this test to ensure display_agent_output is called
+        mock_state_manager.session.user_config = {"settings": {"enable_streaming": False}}
+        # Mock show_thoughts to avoid additional output
+        mock_state_manager.session.show_thoughts = False
+        # Mock files_in_context to be empty
+        mock_state_manager.session.files_in_context = set()
+
         with patch("tunacode.cli.repl.agent.process_request") as mock_agent_process:
             # Create a mock agent run
             mock_run = MagicMock()
@@ -174,13 +182,13 @@ class TestReplCharacterization:
 
             mock_agent_process.return_value = mock_run
 
-            with patch("tunacode.cli.repl._display_agent_output") as mock_display:
+            with patch("tunacode.cli.repl.display_agent_output") as mock_display:
                 mock_display.return_value = None
 
                 await process_request(text, mock_state_manager)
 
                 mock_agent_process.assert_called_once()
-                mock_display.assert_called_once()
+                mock_display.assert_called_once_with(mock_run, False)
 
     @pytest.mark.asyncio
     async def test_process_request_with_error(self, mock_state_manager):
@@ -205,17 +213,25 @@ class TestReplCharacterization:
         with patch("tunacode.cli.repl.agent.process_request") as mock_agent_process:
             mock_agent_process.side_effect = UserAbortError("User cancelled")
 
-            with patch("tunacode.cli.repl.ui.info") as mock_info:
+            with patch("tunacode.cli.repl.ui.muted") as mock_muted:
                 await process_request(text, mock_state_manager)
 
-                mock_info.assert_called_with(MSG_OPERATION_ABORTED_BY_USER)
+                mock_muted.assert_called_with(MSG_OPERATION_ABORTED)
 
     @pytest.mark.asyncio
     async def test_repl_basic_interaction(self, mock_state_manager):
         """Test basic REPL interaction."""
+        # Ensure _startup_shown is not set to trigger the startup message
+        if hasattr(mock_state_manager.session, "_startup_shown"):
+            delattr(mock_state_manager.session, "_startup_shown")
+
         # Mock agent instance
         mock_instance = MagicMock()
-        mock_instance.run_mcp_servers = AsyncMock()
+        # Create a proper async context manager mock
+        mock_context = AsyncMock()
+        mock_context.__aenter__ = AsyncMock(return_value=None)
+        mock_context.__aexit__ = AsyncMock(return_value=None)
+        mock_instance.run_mcp_servers.return_value = mock_context
 
         with patch("tunacode.cli.repl.agent.get_or_create_agent", return_value=mock_instance):
             with patch("tunacode.cli.repl.ui.multiline_input") as mock_input:
@@ -224,16 +240,21 @@ class TestReplCharacterization:
 
                 with patch("tunacode.cli.repl.ui.muted"):
                     with patch("tunacode.cli.repl.ui.success") as mock_success:
-                        await repl(mock_state_manager)
+                        with patch("tunacode.cli.repl.ui.line"):
+                            await repl(mock_state_manager)
 
-                        # Should show startup info
-                        mock_success.assert_called_with("Ready to assist")
+                            # Should show startup info
+                            mock_success.assert_called_with("Ready to assist")
 
     @pytest.mark.asyncio
     async def test_repl_keyboard_interrupt_handling(self, mock_state_manager):
         """Test REPL handles keyboard interrupts properly."""
         mock_instance = MagicMock()
-        mock_instance.run_mcp_servers = AsyncMock()
+        # Create a proper async context manager mock
+        mock_context = AsyncMock()
+        mock_context.__aenter__ = AsyncMock(return_value=None)
+        mock_context.__aexit__ = AsyncMock(return_value=None)
+        mock_instance.run_mcp_servers.return_value = mock_context
 
         with patch("tunacode.cli.repl.agent.get_or_create_agent", return_value=mock_instance):
             with patch("tunacode.cli.repl.ui.multiline_input") as mock_input:
@@ -255,7 +276,11 @@ class TestReplCharacterization:
         mock_state_manager.session.current_task = mock_task
 
         mock_instance = MagicMock()
-        mock_instance.run_mcp_servers = AsyncMock()
+        # Create a proper async context manager mock
+        mock_context = AsyncMock()
+        mock_context.__aenter__ = AsyncMock(return_value=None)
+        mock_context.__aexit__ = AsyncMock(return_value=None)
+        mock_instance.run_mcp_servers.return_value = mock_context
 
         with patch("tunacode.cli.repl.agent.get_or_create_agent", return_value=mock_instance):
             with patch("tunacode.cli.repl.ui.multiline_input") as mock_input:

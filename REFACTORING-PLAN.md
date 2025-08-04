@@ -5,7 +5,7 @@ This document tracks the refactoring progress for reducing large Python files in
 
 ### Target Files
 - ✅ `./src/tunacode/tools/grep.py` (694 lines)
-- ✅ `./src/tunacode/cli/repl.py` (578 lines)  
+- ✅ `./src/tunacode/cli/repl.py` (578 lines)
 - ✅ `./src/tunacode/core/agents/main.py` (1613 lines)
 
 ## Completed Work
@@ -97,11 +97,14 @@ This document tracks the refactoring progress for reducing large Python files in
 - [x] Keep search orchestration in `grep.py` (435 lines)
 - **Commit**: `32cb16a` - `refactor: decompose grep.py into smaller modules`
 
-#### repl.py Decomposition Plan (578 → <400 lines each)
-- [ ] Extract `command_parser.py` - Command parsing logic
-- [ ] Extract `input_handler.py` - Input handling
-- [ ] Extract `output_formatter.py` - Output formatting
-- [ ] Keep main REPL loop in `repl.py`
+#### ✅ repl.py Decomposition (578 → 391 lines) - COMPLETED
+- [x] Created `repl_components/` package
+- [x] Extract `command_parser.py` - Command parsing logic (35 lines)
+- [x] Extract `tool_executor.py` - Tool handling logic (85 lines)
+- [x] Extract `output_display.py` - Output formatting (34 lines)
+- [x] Extract `error_recovery.py` - Error recovery logic (89 lines)
+- [x] Keep main REPL loop in `repl.py` (391 lines)
+- **Commit**: Pending - `refactor: decompose repl.py into smaller modules`
 
 #### main.py Decomposition Plan (1613 → <400 lines each)
 - [ ] Extract `tools/` subdirectory for tool definitions
@@ -151,7 +154,7 @@ After each phase, ensure:
 
 ## Risk Mitigation
 
-1. **Rollback Strategy**: 
+1. **Rollback Strategy**:
    - Rollback point created at commit `7b4f31e`
    - Can revert with: `git reset --hard 7b4f31e`
 
@@ -207,4 +210,5 @@ pytest tests/characterization/ --cov=tunacode --cov-report=html
 - Modern Python idioms applied
 
 ---
-*Last Updated: Phase 3 Complete, grep.py Decomposition Complete - Ready to continue Phase 4 with repl.py*
+
+**Last Updated: Phase 4 Progress - grep.py and repl.py Decomposition Complete - Ready to continue with main.py**
