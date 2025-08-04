@@ -155,9 +155,10 @@ async def process_request(
     response_state = ResponseState()
 
     try:
-        Agent, _ = get_agent_tool()
+        # Get message history from session messages
+        message_history = state_manager.session.messages
 
-        async with agent.iter(message) as agent_run:
+        async with agent.iter(message, message_history=message_history) as agent_run:
             # Process nodes iteratively
             i = 1
             async for node in agent_run:
@@ -165,6 +166,7 @@ async def process_request(
                 state_manager.session.iteration_count = i
 
                 # Handle token-level streaming for model request nodes
+                Agent, _ = get_agent_tool()
                 if streaming_callback and STREAMING_AVAILABLE and Agent.is_model_request_node(node):
                     async with node.stream(agent_run.ctx) as request_stream:
                         async for event in request_stream:
@@ -240,9 +242,13 @@ DO NOT RETURN ANOTHER EMPTY RESPONSE."""
                         import importlib
 
                         messages = importlib.import_module("pydantic_ai.messages")
-                        UserPromptPart = getattr(
-                            messages, "UserPromptPart", messages.UserPromptPart
-                        )
+                        UserPromptPart = getattr(messages, "UserPromptPart", None)
+                        if UserPromptPart is None:
+                            # Fallback for test environment
+                            class UserPromptPart:
+                                def __init__(self, content, part_kind):
+                                    self.content = content
+                                    self.part_kind = part_kind
 
                         user_prompt_part = UserPromptPart(
                             content=force_action_content,
@@ -312,7 +318,13 @@ NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
                     import importlib
 
                     messages = importlib.import_module("pydantic_ai.messages")
-                    UserPromptPart = getattr(messages, "UserPromptPart", messages.UserPromptPart)
+                    UserPromptPart = getattr(messages, "UserPromptPart", None)
+                    if UserPromptPart is None:
+                        # Fallback for test environment
+                        class UserPromptPart:
+                            def __init__(self, content, part_kind):
+                                self.content = content
+                                self.part_kind = part_kind
 
                     user_prompt_part = UserPromptPart(
                         content=no_progress_content,
@@ -381,7 +393,13 @@ NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
                     import importlib
 
                     messages = importlib.import_module("pydantic_ai.messages")
-                    UserPromptPart = getattr(messages, "UserPromptPart", messages.UserPromptPart)
+                    UserPromptPart = getattr(messages, "UserPromptPart", None)
+                    if UserPromptPart is None:
+                        # Fallback for test environment
+                        class UserPromptPart:
+                            def __init__(self, content, part_kind):
+                                self.content = content
+                                self.part_kind = part_kind
 
                     clarification_content = f"""I need clarification to continue.
 
@@ -456,7 +474,13 @@ Please let me know how to proceed."""
                     import importlib
 
                     messages = importlib.import_module("pydantic_ai.messages")
-                    UserPromptPart = getattr(messages, "UserPromptPart", messages.UserPromptPart)
+                    UserPromptPart = getattr(messages, "UserPromptPart", None)
+                    if UserPromptPart is None:
+                        # Fallback for test environment
+                        class UserPromptPart:
+                            def __init__(self, content, part_kind):
+                                self.content = content
+                                self.part_kind = part_kind
 
                     user_prompt_part = UserPromptPart(
                         content=extend_content,
