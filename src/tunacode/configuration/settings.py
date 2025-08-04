@@ -11,17 +11,9 @@ from tunacode.constants import (
     APP_NAME,
     APP_VERSION,
     CONFIG_FILE_NAME,
-    TOOL_BASH,
-    TOOL_GLOB,
-    TOOL_GREP,
-    TOOL_LIST_DIR,
-    TOOL_READ_FILE,
-    TOOL_RUN_COMMAND,
-    TOOL_TODO,
-    TOOL_UPDATE_FILE,
-    TOOL_WRITE_FILE,
+    ToolName,
 )
-from tunacode.types import ConfigFile, ConfigPath, ToolName
+from tunacode.types import ConfigFile, ConfigPath
 
 
 class PathConfig:
@@ -37,13 +29,13 @@ class ApplicationSettings:
         self.guide_file = f"{self.name.upper()}.md"
         self.paths = PathConfig()
         self.internal_tools: list[ToolName] = [
-            TOOL_BASH,
-            TOOL_GLOB,
-            TOOL_GREP,
-            TOOL_LIST_DIR,
-            TOOL_READ_FILE,
-            TOOL_RUN_COMMAND,
-            TOOL_TODO,
-            TOOL_UPDATE_FILE,
-            TOOL_WRITE_FILE,
+            ToolName.BASH,
+            ToolName.GLOB,
+            ToolName.GREP,
+            ToolName.LIST_DIR,
+            ToolName.READ_FILE,
+            ToolName.RUN_COMMAND,
+            ToolName.TODO,
+            ToolName.UPDATE_FILE,
+            ToolName.WRITE_FILE,
         ]
