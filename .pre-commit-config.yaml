@@ -112,6 +112,14 @@ repos:
         pass_filenames: false
         always_run: true
 
+      # Check for files longer than 500 lines
+      - id: check-file-length
+        name: Check for files longer than 500 lines
+        entry: scripts/check-file-length.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+
   # Import sorting with isort
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
