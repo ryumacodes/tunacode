@@ -10,121 +10,22 @@ This tool provides sophisticated grep-like functionality with:
 """
 
 import asyncio
-import fnmatch
-import os
 import re
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Union
 
 from tunacode.exceptions import TooBroadPatternError, ToolExecutionError
 from tunacode.tools.base import BaseTool
-
-
-@dataclass
-class SearchResult:
-    """Represents a single search match with context."""
-
-    file_path: str
-    line_number: int
-    line_content: str
-    match_start: int
-    match_end: int
-    context_before: List[str]
-    context_after: List[str]
-    relevance_score: float = 0.0
-
-
-@dataclass
-class SearchConfig:
-    """Configuration for search operations."""
-
-    case_sensitive: bool = False
-    use_regex: bool = False
-    max_results: int = 50
-    context_lines: int = 2
-    include_patterns: List[str] = None
-    exclude_patterns: List[str] = None
-    max_file_size: int = 1024 * 1024  # 1MB
-    timeout_seconds: int = 30
-    first_match_deadline: float = 3.0  # Timeout for finding first match
-
-
-# Fast-Glob Prefilter Configuration
-MAX_GLOB = 5_000  # Hard cap - protects memory & tokens
-GLOB_BATCH = 500  # Streaming batch size
-EXCLUDE_DIRS = {  # Common directories to skip
-    "node_modules",
-    ".git",
-    "__pycache__",
-    ".venv",
-    "venv",
-    "dist",
-    "build",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".tox",
-    "target",
-}
-
-
-def fast_glob(root: Path, include: str, exclude: str = None) -> List[Path]:
-    """
-    Lightning-fast filename filtering using os.scandir.
-
-    Args:
-        root: Directory to search
-        include: Include pattern (e.g., "*.py", "*.{js,ts}")
-        exclude: Exclude pattern (optional)
-
-    Returns:
-        List of matching file paths (bounded by MAX_GLOB)
-    """
-    matches: list[Path] = []
-    stack = [root]
-
-    # Handle multiple extensions in include pattern like "*.{py,js,ts}"
-    if "{" in include and "}" in include:
-        # Convert *.{py,js,ts} to multiple patterns
-        base, ext_part = include.split("{", 1)
-        ext_part = ext_part.split("}", 1)[0]
-        extensions = ext_part.split(",")
-        include_patterns = [base + ext.strip() for ext in extensions]
-        include_regexes = [
-            re.compile(fnmatch.translate(pat), re.IGNORECASE) for pat in include_patterns
-        ]
-    else:
-        include_regexes = [re.compile(fnmatch.translate(include), re.IGNORECASE)]
-
-    exclude_rx = re.compile(fnmatch.translate(exclude), re.IGNORECASE) if exclude else None
-
-    while stack and len(matches) < MAX_GLOB:
-        current_dir = stack.pop()
-
-        try:
-            with os.scandir(current_dir) as entries:
-                for entry in entries:
-                    # Skip common irrelevant directories
-                    if entry.is_dir(follow_symlinks=False):
-                        if entry.name not in EXCLUDE_DIRS:
-                            stack.append(Path(entry.path))
-
-                    # Check file matches
-                    elif entry.is_file(follow_symlinks=False):
-                        # Check against any include pattern
-                        matches_include = any(regex.match(entry.name) for regex in include_regexes)
-
-                        if matches_include:
-                            if not exclude_rx or not exclude_rx.match(entry.name):
-                                matches.append(Path(entry.path))
-
-        except (PermissionError, OSError):
-            continue  # Skip inaccessible directories
-
-    return matches[:MAX_GLOB]
+from tunacode.tools.grep_components import (
+    FileFilter,
+    PatternMatcher,
+    SearchConfig,
+    SearchResult,
+)
+from tunacode.tools.grep_components.result_formatter import ResultFormatter
 
 
 class ParallelGrep(BaseTool):
@@ -133,6 +34,9 @@ class ParallelGrep(BaseTool):
     def __init__(self, ui_logger=None):
         super().__init__(ui_logger)
         self._executor = ThreadPoolExecutor(max_workers=8)
+        self._file_filter = FileFilter()
+        self._pattern_matcher = PatternMatcher()
+        self._result_formatter = ResultFormatter()
 
     @property
     def tool_name(self) -> str:
@@ -174,7 +78,11 @@ class ParallelGrep(BaseTool):
             exclude_pattern = exclude_files
 
             candidates = await asyncio.get_event_loop().run_in_executor(
-                self._executor, fast_glob, Path(directory), include_pattern, exclude_pattern
+                self._executor,
+                self._file_filter.fast_glob,
+                Path(directory),
+                include_pattern,
+                exclude_pattern,
             )
 
             if not candidates:
@@ -197,8 +105,12 @@ class ParallelGrep(BaseTool):
 
             # 3️⃣ Create search configuration
             # Note: include_patterns/exclude_patterns now only used for legacy compatibility
-            include_patterns = self._parse_patterns(include_files) if include_files else ["*"]
-            exclude_patterns = self._parse_patterns(exclude_files) if exclude_files else []
+            include_patterns = (
+                self._file_filter.parse_patterns(include_files) if include_files else ["*"]
+            )
+            exclude_patterns = (
+                self._file_filter.parse_patterns(exclude_files) if exclude_files else []
+            )
             config = SearchConfig(
                 case_sensitive=case_sensitive,
                 use_regex=use_regex,
@@ -220,8 +132,8 @@ class ParallelGrep(BaseTool):
                 raise ToolExecutionError(f"Unknown search type: {search_type}")
 
             # 5️⃣ Format and return results with strategy info
-            strategy_info = f"Strategy: {search_type} (was {original_search_type}), Files: {len(candidates)}/{MAX_GLOB}"
-            formatted_results = self._format_results(results, pattern, config)
+            strategy_info = f"Strategy: {search_type} (was {original_search_type}), Files: {len(candidates)}/{5000}"
+            formatted_results = self._result_formatter.format_results(results, pattern, config)
 
             if return_format == "list":
                 # Legacy: return list of file paths with at least one match
@@ -342,7 +254,7 @@ class ParallelGrep(BaseTool):
                 self._executor, run_ripgrep_filtered
             )
             if output:
-                parsed = self._parse_ripgrep_output(output)
+                parsed = self._pattern_matcher.parse_ripgrep_output(output)
                 return parsed
             return []
         except TooBroadPatternError:
@@ -471,171 +383,9 @@ class ParallelGrep(BaseTool):
         """Search a single file for the pattern."""
 
         def search_file_sync():
-            try:
-                with file_path.open("r", encoding="utf-8", errors="ignore") as f:
-                    lines = f.readlines()
-
-                results = []
-                for i, line in enumerate(lines):
-                    line = line.rstrip("\n\r")
-
-                    # Search for pattern
-                    if regex_pattern:
-                        matches = list(regex_pattern.finditer(line))
-                    else:
-                        # Simple string search
-                        search_line = line if config.case_sensitive else line.lower()
-                        search_pattern = pattern if config.case_sensitive else pattern.lower()
-
-                        matches = []
-                        start = 0
-                        while True:
-                            pos = search_line.find(search_pattern, start)
-                            if pos == -1:
-                                break
-
-                            # Create a simple match object
-                            class SimpleMatch:
-                                def __init__(self, start_pos, end_pos):
-                                    self._start = start_pos
-                                    self._end = end_pos
-
-                                def start(self):
-                                    return self._start
-
-                                def end(self):
-                                    return self._end
-
-                            match = SimpleMatch(pos, pos + len(search_pattern))
-                            matches.append(match)
-                            start = pos + 1
-
-                    # Create results for each match
-                    for match in matches:
-                        # Get context lines
-                        context_start = max(0, i - config.context_lines)
-                        context_end = min(len(lines), i + config.context_lines + 1)
-
-                        context_before = [lines[j].rstrip("\n\r") for j in range(context_start, i)]
-                        context_after = [lines[j].rstrip("\n\r") for j in range(i + 1, context_end)]
-
-                        # Calculate relevance score
-                        relevance = self._calculate_relevance(str(file_path), line, pattern, match)
-
-                        result = SearchResult(
-                            file_path=str(file_path),
-                            line_number=i + 1,
-                            line_content=line,
-                            match_start=match.start() if hasattr(match, "start") else match.start(),
-                            match_end=match.end() if hasattr(match, "end") else match.end(),
-                            context_before=context_before,
-                            context_after=context_after,
-                            relevance_score=relevance,
-                        )
-                        results.append(result)
-
-                return results
-
-            except Exception:
-                return []
+            return self._pattern_matcher.search_file(file_path, pattern, regex_pattern, config)
 
         return await asyncio.get_event_loop().run_in_executor(self._executor, search_file_sync)
-
-    def _calculate_relevance(self, file_path: str, line: str, pattern: str, match) -> float:
-        """Calculate relevance score for a search result."""
-        score = 0.0
-
-        # Base score
-        score += 1.0
-
-        # Boost for exact matches
-        if pattern.lower() in line.lower():
-            score += 0.5
-
-        # Boost for matches at word boundaries
-        if match.start() == 0 or not line[match.start() - 1].isalnum():
-            score += 0.3
-
-        # Boost for certain file types
-        if file_path.endswith((".py", ".js", ".ts", ".java", ".cpp", ".c")):
-            score += 0.2
-
-        # Boost for matches in comments or docstrings
-        stripped_line = line.strip()
-        if stripped_line.startswith(("#", "//", "/*", '"""', "'''")):
-            score += 0.1
-
-        return score
-
-    def _parse_ripgrep_output(self, output: str) -> List[SearchResult]:
-        """Parse ripgrep JSON output into SearchResult objects."""
-        import json
-
-        results = []
-        for line in output.strip().split("\n"):
-            if not line:
-                continue
-
-            try:
-                data = json.loads(line)
-                if data.get("type") != "match":
-                    continue
-
-                match_data = data["data"]
-                result = SearchResult(
-                    file_path=match_data["path"]["text"],
-                    line_number=match_data["line_number"],
-                    line_content=match_data["lines"]["text"].rstrip("\n\r"),
-                    match_start=match_data["submatches"][0]["start"],
-                    match_end=match_data["submatches"][0]["end"],
-                    context_before=[],  # Ripgrep context handling would go here
-                    context_after=[],
-                    relevance_score=1.0,
-                )
-                results.append(result)
-            except (json.JSONDecodeError, KeyError):
-                continue
-
-        return results
-
-    def _parse_patterns(self, patterns: str) -> List[str]:
-        """Parse comma-separated file patterns."""
-        return [p.strip() for p in patterns.split(",") if p.strip()]
-
-    def _format_results(
-        self, results: List[SearchResult], pattern: str, config: SearchConfig
-    ) -> str:
-        """Format search results for display."""
-        if not results:
-            return f"No matches found for pattern: {pattern}"
-
-        output = []
-        output.append(f"Found {len(results)} matches for pattern: {pattern}")
-        output.append("=" * 60)
-
-        for result in results:
-            # File header
-            output.append(f"\n📁 {result.file_path}:{result.line_number}")
-
-            # Context before
-            for i, context_line in enumerate(result.context_before):
-                line_num = result.line_number - len(result.context_before) + i
-                output.append(f"  {line_num:4d}│ {context_line}")
-
-            # Main match line with highlighting
-            line_content = result.line_content
-            before_match = line_content[: result.match_start]
-            match_text = line_content[result.match_start : result.match_end]
-            after_match = line_content[result.match_end :]
-
-            output.append(f"▶ {result.line_number:4d}│ {before_match}⟨{match_text}⟩{after_match}")
-
-            # Context after
-            for i, context_line in enumerate(result.context_after):
-                line_num = result.line_number + i + 1
-                output.append(f"  {line_num:4d}│ {context_line}")
-
-        return "\n".join(output)
 
 
 # Create tool instance for pydantic-ai

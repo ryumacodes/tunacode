@@ -10,7 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from tunacode.tools.grep import fast_glob, grep
+from tunacode.tools.grep import grep
+from tunacode.tools.grep_components.file_filter import FileFilter
 
 
 class TestGrepToolCharacterization:
@@ -188,12 +189,12 @@ End""")
     def test_fast_glob_functionality(self, temp_dir):
         """Test the fast_glob function directly."""
         # Test basic glob - fast_glob searches recursively by default
-        results = fast_glob(temp_dir, "*.py")
+        results = FileFilter.fast_glob(temp_dir, "*.py")
         assert len(results) == 1
         assert results[0].name == "test.py"
 
         # Test multiple extensions
-        results = fast_glob(temp_dir, "*.{py,js,txt}")
+        results = FileFilter.fast_glob(temp_dir, "*.{py,js,txt}")
         names = {r.name for r in results}
         # Should find all three file types
         assert len(results) >= 3
@@ -201,7 +202,7 @@ End""")
         assert "data.txt" in names
 
         # Test single extension
-        results = fast_glob(temp_dir, "*.js")
+        results = FileFilter.fast_glob(temp_dir, "*.js")
         js_files = [r for r in results if r.name.endswith(".js")]
         assert len(js_files) >= 1
         assert any("nested.js" in r.name for r in js_files)
