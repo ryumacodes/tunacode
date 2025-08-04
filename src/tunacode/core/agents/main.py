@@ -5,6 +5,8 @@ Handles agent creation, configuration, and request processing.
 """
 
 # Re-export for backward compatibility
+from tunacode.services.mcp import get_mcp_servers
+
 from .agent_components import (
     ToolBuffer,
     check_task_completion,
@@ -13,7 +15,6 @@ from .agent_components import (
     parse_json_tool_calls,
     patch_tool_messages,
 )
-from tunacode.services.mcp import get_mcp_servers
 
 __all__ = [
     "ToolBuffer",

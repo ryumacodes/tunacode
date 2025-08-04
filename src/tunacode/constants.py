@@ -31,8 +31,10 @@ COMMAND_OUTPUT_THRESHOLD = 3500  # Length threshold for truncation
 COMMAND_OUTPUT_START_INDEX = 2500  # Where to start showing content
 COMMAND_OUTPUT_END_SIZE = 1000  # How much to show from the end
 
+
 class ToolName(str, Enum):
     """Enumeration of tool names."""
+
     READ_FILE = "read_file"
     WRITE_FILE = "write_file"
     UPDATE_FILE = "update_file"
@@ -157,8 +159,10 @@ MSG_UPDATE_INSTRUCTION = "Exit, and run: [bold]pip install --upgrade tunacode-cl
 MSG_VERSION_DISPLAY = "TunaCode CLI {version}"
 MSG_FILE_SIZE_LIMIT = " Please specify a smaller file or use other tools to process it."
 
+
 class TodoStatus(str, Enum):
     """Enumeration of todo statuses."""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -166,6 +170,7 @@ class TodoStatus(str, Enum):
 
 class TodoPriority(str, Enum):
     """Enumeration of todo priorities."""
+
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
