@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tunacode.core.agents.main import (
+from tunacode.core.agents.agent_components import (
     ToolBuffer,
     check_task_completion,
     execute_tools_parallel,
@@ -248,7 +248,7 @@ class TestMainAgentCharacterization:
         mock_state_manager.session.messages = [msg]
 
         # Mock the model message classes
-        with patch("tunacode.core.agents.main.get_model_messages") as mock_get_messages:
+        with patch("tunacode.core.agents.agent_components.get_model_messages") as mock_get_messages:
             mock_model_request = MagicMock()
             mock_tool_return = MagicMock()
             mock_get_messages.return_value = (mock_model_request, mock_tool_return, MagicMock())
@@ -264,7 +264,9 @@ class TestMainAgentCharacterization:
         """Test creating a new agent instance."""
         model_name = "test-model"
 
-        with patch("tunacode.core.agents.main.get_agent_tool") as mock_get_tool:
+        with patch(
+            "tunacode.core.agents.agent_components.agent_config.get_agent_tool"
+        ) as mock_get_tool:
             mock_agent_class = MagicMock()
             mock_tool_class = MagicMock()
             mock_get_tool.return_value = (mock_agent_class, mock_tool_class)
@@ -276,7 +278,9 @@ class TestMainAgentCharacterization:
                 # Mock TUNACODE.md loading
                 with patch("pathlib.Path.exists", return_value=False):
                     # Mock TodoTool
-                    with patch("tunacode.core.agents.main.TodoTool") as mock_todo:
+                    with patch(
+                        "tunacode.core.agents.agent_components.agent_config.TodoTool"
+                    ) as mock_todo:
                         mock_todo.return_value.get_current_todos_sync.return_value = (
                             "No todos found"
                         )

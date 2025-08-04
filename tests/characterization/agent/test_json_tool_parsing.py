@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from tunacode.core.agents.main import (
+from tunacode.core.agents.agent_components import (
     extract_and_execute_tool_calls,
     parse_json_tool_calls,
 )
