@@ -47,6 +47,7 @@ class UsageTracker(UsageTrackerProtocol):
         except Exception as e:
             if self.state_manager.session.show_thoughts:
                 import traceback
+
                 await ui.error(f"Error during cost calculation: {e}")
                 # Log the full traceback for debugging
                 await ui.debug(f"Traceback: {traceback.format_exc()}")
@@ -104,9 +105,15 @@ class UsageTracker(UsageTrackerProtocol):
         session.last_call_usage["cost"] = cost
 
         # Accumulate session totals with normalization
-        session.session_total_usage["prompt_tokens"] = int(session.session_total_usage.get("prompt_tokens", 0) or 0) + prompt_tokens
-        session.session_total_usage["completion_tokens"] = int(session.session_total_usage.get("completion_tokens", 0) or 0) + completion_tokens
-        session.session_total_usage["cost"] = float(session.session_total_usage.get("cost", 0.0) or 0.0) + cost
+        session.session_total_usage["prompt_tokens"] = (
+            int(session.session_total_usage.get("prompt_tokens", 0) or 0) + prompt_tokens
+        )
+        session.session_total_usage["completion_tokens"] = (
+            int(session.session_total_usage.get("completion_tokens", 0) or 0) + completion_tokens
+        )
+        session.session_total_usage["cost"] = (
+            float(session.session_total_usage.get("cost", 0.0) or 0.0) + cost
+        )
 
     async def _display_summary(self):
         """Formats and prints the usage summary to the console."""

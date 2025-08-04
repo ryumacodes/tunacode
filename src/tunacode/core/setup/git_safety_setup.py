@@ -126,10 +126,12 @@ class GitSafetySetup(BaseSetup):
                 # Save the updated configuration to disk
                 try:
                     from tunacode.utils.user_configuration import save_config
+
                     save_config(self.state_manager)
                 except Exception as e:
                     # Log the error but don't fail the setup process
                     import logging
+
                     logging.warning(f"Failed to save skip_git_safety preference: {e}")
                 return
 

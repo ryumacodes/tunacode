@@ -172,6 +172,7 @@ class ResponseState:
     has_user_response: bool = False
     has_final_synthesis: bool = False
     task_completed: bool = False
+    awaiting_user_guidance: bool = False
 
 
 @dataclass

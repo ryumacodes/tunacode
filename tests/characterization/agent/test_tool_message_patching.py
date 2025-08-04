@@ -68,10 +68,11 @@ class TestToolMessagePatching:
         # Mock the lazy imports
         mock_model_request = MagicMock()
         mock_tool_return_part = MagicMock()
+        mock_system_prompt_part = MagicMock()
 
         with patch(
             "tunacode.core.agents.main.get_model_messages",
-            return_value=(mock_model_request, mock_tool_return_part),
+            return_value=(mock_model_request, mock_tool_return_part, mock_system_prompt_part),
         ):
             # Act
             patch_tool_messages("Tool operation failed", self.state_manager)
@@ -180,10 +181,11 @@ class TestToolMessagePatching:
         # Mock the lazy imports
         mock_model_request = MagicMock()
         mock_tool_return_part = MagicMock()
+        mock_system_prompt_part = MagicMock()
 
         with patch(
             "tunacode.core.agents.main.get_model_messages",
-            return_value=(mock_model_request, mock_tool_return_part),
+            return_value=(mock_model_request, mock_tool_return_part, mock_system_prompt_part),
         ):
             # Act
             patch_tool_messages("Task incomplete", self.state_manager)
