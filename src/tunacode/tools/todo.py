@@ -13,6 +13,7 @@ from pydantic_ai.exceptions import ModelRetry
 from tunacode.constants import (
     MAX_TODO_CONTENT_LENGTH,
     MAX_TODOS_PER_SESSION,
+    TODO_PRIORITIES,
     TodoPriority,
     TodoStatus,
 )
@@ -235,7 +236,9 @@ class TodoTool(BaseTool):
         # Update priority if provided
         if priority:
             if priority not in [p.value for p in TodoPriority]:
-                raise ModelRetry(f"Invalid priority '{priority}'. Must be one of: {', '.join([p.value for p in TodoPriority])}")
+                raise ModelRetry(
+                    f"Invalid priority '{priority}'. Must be one of: {', '.join([p.value for p in TodoPriority])}"
+                )
             todo.priority = priority
             changes.append(f"priority to {priority}")
 
