@@ -59,7 +59,7 @@ scratchpad_*.md
 *.tmp
 
 # Memory bank and agent tools
-memory-bank/
+# memory-bank/  # Important project documentation - should be tracked
 llm-agent-tools/
 .researcher/
 
