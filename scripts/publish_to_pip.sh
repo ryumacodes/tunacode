@@ -57,16 +57,6 @@ fi
 
 log "All checks passed!"
 
-# ── cleanup -----------------------------------------------------------------
-# Only clean if we're building a new version
-if [[ -f "dist/tunacode_cli-${VERSION}-py3-none-any.whl" ]] && [[ -f "dist/tunacode_cli-${VERSION}.tar.gz" ]]; then
-    log "Distribution files for v$VERSION already exist, skipping build"
-    skip_build=true
-else
-    rm -rf dist build *.egg-info
-    skip_build=false
-fi
-
 # ── fetch latest PyPI version ----------------------------------------------
 remote=$($PYTHON - "$PKG" <<'PY'
 import json, sys, ssl, urllib.request, packaging.version as V
@@ -96,6 +86,16 @@ PY
 IFS=. read -r MAJ MIN PAT <<<"$base"
 VERSION="$MAJ.$MIN.$((PAT+1))"
 log "Next version    : $VERSION"
+
+# ── cleanup -----------------------------------------------------------------
+# Only clean if we're building a new version
+skip_build=false
+if [[ -f "dist/tunacode_cli-${VERSION}-py3-none-any.whl" ]] && [[ -f "dist/tunacode_cli-${VERSION}.tar.gz" ]]; then
+    log "Distribution files for v$VERSION already exist, skipping build"
+    skip_build=true
+else
+    rm -rf dist build *.egg-info
+fi
 
 # ── update pyproject.toml version -------------------------------------------
 current_pyproject_version=$(grep "^version = " pyproject.toml | cut -d'"' -f2)
