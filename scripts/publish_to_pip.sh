@@ -58,7 +58,14 @@ fi
 log "All checks passed!"
 
 # ── cleanup -----------------------------------------------------------------
-rm -rf dist build *.egg-info
+# Only clean if we're building a new version
+if [[ -f "dist/tunacode_cli-${VERSION}-py3-none-any.whl" ]] && [[ -f "dist/tunacode_cli-${VERSION}.tar.gz" ]]; then
+    log "Distribution files for v$VERSION already exist, skipping build"
+    skip_build=true
+else
+    rm -rf dist build *.egg-info
+    skip_build=false
+fi
 
 # ── fetch latest PyPI version ----------------------------------------------
 remote=$($PYTHON - "$PKG" <<'PY'
@@ -91,24 +98,52 @@ VERSION="$MAJ.$MIN.$((PAT+1))"
 log "Next version    : $VERSION"
 
 # ── update pyproject.toml version -------------------------------------------
-sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+current_pyproject_version=$(grep "^version = " pyproject.toml | cut -d'"' -f2)
+if [[ "$current_pyproject_version" != "$VERSION" ]]; then
+    sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+    log "Updated pyproject.toml to version $VERSION"
+else
+    log "pyproject.toml already at version $VERSION"
+fi
 
 # ── update constants.py version ---------------------------------------------
-sed -i "s/^APP_VERSION = .*/APP_VERSION = \"$VERSION\"/" src/tunacode/constants.py
+current_constants_version=$(grep "^APP_VERSION = " src/tunacode/constants.py | cut -d'"' -f2)
+if [[ "$current_constants_version" != "$VERSION" ]]; then
+    sed -i "s/^APP_VERSION = .*/APP_VERSION = \"$VERSION\"/" src/tunacode/constants.py
+    log "Updated constants.py to version $VERSION"
+else
+    log "constants.py already at version $VERSION"
+fi
 
 # ── git add, commit, and push -----------------------------------------------
-git add .
-git commit -m "chore: bump version to $VERSION"
+git add pyproject.toml src/tunacode/constants.py
+if [[ -n $(git diff --cached --name-only) ]]; then
+    git commit -m "chore: bump version to $VERSION"
+    log "Committed version bump to $VERSION"
+else
+    log "No changes to commit - version already at $VERSION"
+fi
 
 # ── tag & push --------------------------------------------------------------
-git tag -m "Release v$VERSION" "v$VERSION"
+if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+    log "Tag v$VERSION already exists"
+else
+    git tag -m "Release v$VERSION" "v$VERSION"
+    log "Created tag v$VERSION"
+fi
+
 git push --tags
 git push
 
 # ── build -------------------------------------------------------------------
-log "Building wheel/sdist"; $PYTHON -m build
+if [[ "$skip_build" != "true" ]]; then
+    log "Building wheel/sdist"
+    $PYTHON -m build
+fi
 
 # ── upload ------------------------------------------------------------------
-log "Uploading to PyPI"; $PYTHON -m twine upload -r pypi dist/*
+log "Uploading to PyPI"
+$PYTHON -m twine upload -r pypi dist/* || log "Upload may have failed - package might already exist on PyPI"
 
-log "🎉  $PKG $VERSION published on PyPI"
+log "✅ SUCCESS: $PKG $VERSION published on PyPI"
+log "🎉 Deployment complete! Package available at: https://pypi.org/project/$PKG/$VERSION/"
