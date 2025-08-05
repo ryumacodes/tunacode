@@ -2,6 +2,8 @@
 
 Main agent functionality and coordination for the TunaCode CLI.
 Handles agent creation, configuration, and request processing.
+
+CLAUDE_ANCHOR[main-agent-module]: Primary agent orchestration and lifecycle management
 """
 
 # Re-export for backward compatibility
@@ -156,6 +158,8 @@ async def process_request(
 ) -> AgentRun:
     """
     Process a single request to the agent.
+
+    CLAUDE_ANCHOR[process-request-entry]: Main entry point for all agent requests
 
     Args:
         message: The user's request

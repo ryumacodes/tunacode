@@ -1,4 +1,7 @@
-"""Command registry and factory for TunaCode CLI commands."""
+"""Command registry and factory for TunaCode CLI commands.
+
+CLAUDE_ANCHOR[command-registry]: Central command registration and execution
+"""
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Type

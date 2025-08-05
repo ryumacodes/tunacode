@@ -1,0 +1,68 @@
+version: 1
+generated: 2025-01-05
+components:
+  core:
+    path: src/tunacode/core/
+    description: Core agent and state management
+    key_files:
+      - agents/main.py
+      - state.py
+      - background/manager.py
+      - code_index.py
+    dependencies:
+      - pydantic-ai
+      - prompt_toolkit
+    risk_level: high
+    churn_score: 80
+
+  cli:
+    path: src/tunacode/cli/
+    description: Command-line interface and REPL
+    key_files:
+      - repl.py
+      - commands.py
+      - main.py
+    dependencies:
+      - prompt_toolkit
+      - rich
+    risk_level: medium
+    churn_score: 70
+
+  tools:
+    path: src/tunacode/tools/
+    description: Agent tools (file ops, grep, bash)
+    key_files:
+      - base.py
+      - file_tools.py
+      - grep.py
+      - bash.py
+    dependencies:
+      - pydantic
+      - asyncio
+    risk_level: medium
+    churn_score: 45
+
+  ui:
+    path: src/tunacode/ui/
+    description: Output formatting and panels
+    key_files:
+      - output.py
+      - panels.py
+      - confirmation.py
+    dependencies:
+      - rich
+      - prompt_toolkit
+    risk_level: low
+    churn_score: 35
+
+  services:
+    path: src/tunacode/services/
+    description: External integrations (MCP, models)
+    key_files:
+      - mcp.py
+      - cost_tracker.py
+    dependencies:
+      - httpx
+      - mcp
+    risk_level: medium
+    churn_score: 25

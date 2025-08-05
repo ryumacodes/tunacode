@@ -1,0 +1,6 @@
+id: qa-966c9cb-publish-idempotency
+anchors: []
+problem: "Publish script not idempotent, fails on partial completions"
+cause: "Script didn't handle cases where version was already bumped but publish failed"
+fix: "Commit 966c9cb - Made script check existing version before bumping"
+notes: "Script now detects partial completions and continues from last successful step"

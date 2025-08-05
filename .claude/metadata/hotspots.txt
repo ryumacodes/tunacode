@@ -1,0 +1,20 @@
+# High-Churn Files (Last 6 Months)
+# Format: <count> <file_path>
+# Generated: 2025-01-05
+
+60 src/tunacode/core/agents/main.py
+57 pyproject.toml
+52 src/tunacode/constants.py
+37 src/tunacode/cli/repl.py
+30 README.md
+20 src/tunacode/core/state.py
+19 src/tunacode/cli/commands.py
+17 src/tunacode/ui/output.py
+15 src/tunacode/types.py
+15 Makefile
+14 src/tunacode/cli/main.py
+14 scripts/publish_to_pip.sh
+13 src/tunacode/prompts/system.md
+12 src/tunacode/ui/panels.py
+12 src/tunacode/tools/grep.py
+12 src/tunacode/core/setup/config_setup.py

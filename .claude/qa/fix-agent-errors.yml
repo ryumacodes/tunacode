@@ -1,0 +1,6 @@
+id: qa-736a8e6-agent-refactor
+anchors: ["a1b2c3d4e5f6789012345678901234567890abcd", "b2c3d4e5f678901234567890123456789012bcde"]
+problem: "Critical agent errors after refactoring to pydantic-ai"
+cause: "Import structure changes and async/await patterns not properly migrated"
+fix: "Commit 736a8e6 - Fixed import paths and async handling"
+notes: "Major refactor to modern Python standards required updating all agent imports"

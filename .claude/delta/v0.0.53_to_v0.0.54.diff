@@ -1,0 +1,13 @@
+# Diff Summary: v0.0.53 to v0.0.54
+# Generated: 2025-01-05
+# Files changed: 3, +48 insertions, -13 deletions
+
+Key Changes:
+- pyproject.toml: Version bump to 0.0.54
+- scripts/publish_to_pip.sh: Major improvements for idempotency (57 lines changed)
+  - Added version check before bumping
+  - Improved error handling for partial completions
+  - Better cleanup and rollback logic
+- src/tunacode/constants.py: Version constant updated
+
+Primary focus: Publishing script robustness and reliability

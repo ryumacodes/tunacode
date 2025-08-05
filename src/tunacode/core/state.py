@@ -2,6 +2,8 @@
 
 State management system for session data in TunaCode CLI.
 Handles user preferences, conversation history, and runtime state.
+
+CLAUDE_ANCHOR[state-module]: Central state management and session tracking
 """
 
 import uuid
@@ -27,6 +29,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class SessionState:
+    """CLAUDE_ANCHOR[session-state]: Core session state container"""
+
     user_config: UserConfig = field(default_factory=dict)
     agents: dict[str, Any] = field(
         default_factory=dict
@@ -92,6 +96,8 @@ class SessionState:
 
 
 class StateManager:
+    """CLAUDE_ANCHOR[state-manager]: Main state manager singleton"""
+
     def __init__(self):
         self._session = SessionState()
         self._tool_handler: Optional["ToolHandler"] = None
