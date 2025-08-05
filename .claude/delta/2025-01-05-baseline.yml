@@ -1,0 +1,27 @@
+version: 1
+date: 2025-01-05
+scope: baseline
+apis:
+  - component: core
+    public_symbols:
+      - a1b2c3d4e5f6789012345678901234567890abcd  # TunaCodeAgent
+      - b2c3d4e5f678901234567890123456789012bcde  # create_agent
+      - d4e5f678901234567890123456789012345def01  # StateManager
+  - component: cli
+    public_symbols:
+      - c3d4e5f67890123456789012345678901234cdef  # REPL
+      - f67890123456789012345678901234567f012345  # CommandRegistry
+  - component: tools
+    public_symbols:
+      - e5f6789012345678901234567890123456ef0123  # GrepTool
+risks:
+  - area: core/agents/main.py
+    notes: "High churn (60 changes) - primary agent logic, frequent refactoring"
+  - area: cli/repl.py
+    notes: "Medium churn (37 changes) - REPL stability critical for UX"
+  - area: tools/grep.py
+    notes: "3-second deadline pattern may timeout on large repos"
+migration_notes:
+  - "v0.0.54: Major refactoring of agent system to pydantic-ai"
+  - "v0.0.53: Parallel tool execution for read-only operations"
+  - "v0.0.52: MCP integration for external tools"

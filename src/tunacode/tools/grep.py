@@ -7,6 +7,8 @@ This tool provides sophisticated grep-like functionality with:
 - Smart result ranking and deduplication
 - Context-aware output formatting
 - Timeout handling for overly broad patterns (3 second deadline for first match)
+
+CLAUDE_ANCHOR[grep-module]: Fast parallel file search with 3-second deadline
 """
 
 import asyncio
@@ -29,7 +31,10 @@ from tunacode.tools.grep_components.result_formatter import ResultFormatter
 
 
 class ParallelGrep(BaseTool):
-    """Advanced parallel grep tool with multiple search strategies."""
+    """Advanced parallel grep tool with multiple search strategies.
+
+    CLAUDE_ANCHOR[parallel-grep-class]: Main grep implementation with timeout handling
+    """
 
     def __init__(self, ui_logger=None):
         super().__init__(ui_logger)

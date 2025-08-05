@@ -3,6 +3,8 @@ Module: tunacode.cli.repl
 
 Interactive REPL (Read-Eval-Print Loop) implementation for TunaCode.
 Handles user input, command processing, and agent interaction in an interactive shell.
+
+CLAUDE_ANCHOR[repl-module]: Core REPL loop and user interaction handling
 """
 
 # ============================================================================
@@ -94,7 +96,10 @@ async def _handle_command(command: str, state_manager: StateManager) -> CommandR
 
 
 async def process_request(text: str, state_manager: StateManager, output: bool = True):
-    """Process input using the agent, handling cancellation safely."""
+    """Process input using the agent, handling cancellation safely.
+
+    CLAUDE_ANCHOR[process-request-repl]: REPL's main request processor with error handling
+    """
     import uuid
 
     # Generate a unique ID for this request for correlated logging

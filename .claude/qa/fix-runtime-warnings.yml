@@ -1,0 +1,6 @@
+id: qa-76-runtime-warnings
+anchors: ["c3d4e5f67890123456789012345678901234cdef"]
+problem: "RuntimeWarning: coroutine was never awaited in REPL tests"
+cause: "Async coroutines created but not properly awaited in test teardown"
+fix: "PR #76 - Added proper await handling in test fixtures"
+notes: "Tests were creating coroutines without awaiting, causing warnings"

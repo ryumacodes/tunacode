@@ -7,6 +7,8 @@ This package provides a modular command system with:
 
 The main public API provides backward compatibility with the original
 commands.py module while enabling better organization and maintainability.
+
+CLAUDE_ANCHOR[commands-module]: Command registry and dispatch system
 """
 
 # Import base classes and infrastructure
