@@ -103,12 +103,12 @@ async def test_repl_initialization_no_thoughts_no_startup_messages(monkeypatch):
             await repl_mod.repl(state_manager)
 
     # Check that startup UI was NOT called since show_thoughts is False and not first run
-    assert not any(
-        "Model:" in str(call) for call in muted.await_args_list
-    ), "Startup model message should not be shown when show_thoughts is False"
-    assert not any(
-        "Ready to assist" in str(call) for call in success.await_args_list
-    ), "Startup success message should not be shown when show_thoughts is False"
+    assert not any("Model:" in str(call) for call in muted.await_args_list), (
+        "Startup model message should not be shown when show_thoughts is False"
+    )
+    assert not any("Ready to assist" in str(call) for call in success.await_args_list), (
+        "Startup success message should not be shown when show_thoughts is False"
+    )
 
     get_agent.assert_called_once_with("gpt-test", state_manager)
     info.assert_awaited_with("Session ended. Happy coding!")
