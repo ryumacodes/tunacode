@@ -23,9 +23,9 @@ class TestCoreAgentsTypeHints:
         """Test that get_agent_tool has proper return type annotation"""
         # This function should return a tuple of (Agent, Tool) types
         sig = inspect.signature(agents_main.get_agent_tool)
-        assert sig.return_annotation != inspect.Signature.empty, (
-            "get_agent_tool should have return type annotation"
-        )
+        assert (
+            sig.return_annotation != inspect.Signature.empty
+        ), "get_agent_tool should have return type annotation"
 
     def test_check_query_satisfaction_fully_typed(self):
         """Test that check_query_satisfaction has all parameters and return typed"""
@@ -33,14 +33,14 @@ class TestCoreAgentsTypeHints:
 
         # Check all parameters have type annotations
         for param_name, param in sig.parameters.items():
-            assert param.annotation != inspect.Parameter.empty, (
-                f"Parameter '{param_name}' in check_query_satisfaction should have type annotation"
-            )
+            assert (
+                param.annotation != inspect.Parameter.empty
+            ), f"Parameter '{param_name}' in check_query_satisfaction should have type annotation"
 
         # Check return type
-        assert sig.return_annotation != inspect.Signature.empty, (
-            "check_query_satisfaction should have return type annotation"
-        )
+        assert (
+            sig.return_annotation != inspect.Signature.empty
+        ), "check_query_satisfaction should have return type annotation"
 
     def test_process_request_fully_typed(self):
         """Test that process_request has all parameters and return typed"""
@@ -48,14 +48,14 @@ class TestCoreAgentsTypeHints:
 
         # Check all parameters have type annotations
         for param_name, param in sig.parameters.items():
-            assert param.annotation != inspect.Parameter.empty, (
-                f"Parameter '{param_name}' in process_request should have type annotation"
-            )
+            assert (
+                param.annotation != inspect.Parameter.empty
+            ), f"Parameter '{param_name}' in process_request should have type annotation"
 
         # Check return type
-        assert sig.return_annotation != inspect.Signature.empty, (
-            "process_request should have return type annotation"
-        )
+        assert (
+            sig.return_annotation != inspect.Signature.empty
+        ), "process_request should have return type annotation"
 
 
 class TestToolsTypeHints:
@@ -66,39 +66,39 @@ class TestToolsTypeHints:
         sig = inspect.signature(bash)
 
         for param_name, param in sig.parameters.items():
-            assert param.annotation != inspect.Parameter.empty, (
-                f"Parameter '{param_name}' in bash tool should have type annotation"
-            )
+            assert (
+                param.annotation != inspect.Parameter.empty
+            ), f"Parameter '{param_name}' in bash tool should have type annotation"
 
-        assert sig.return_annotation != inspect.Signature.empty, (
-            "bash tool should have return type annotation"
-        )
+        assert (
+            sig.return_annotation != inspect.Signature.empty
+        ), "bash tool should have return type annotation"
 
     def test_grep_tool_fully_typed(self):
         """Test that grep tool function has proper type annotations"""
         sig = inspect.signature(grep)
 
         for param_name, param in sig.parameters.items():
-            assert param.annotation != inspect.Parameter.empty, (
-                f"Parameter '{param_name}' in grep tool should have type annotation"
-            )
+            assert (
+                param.annotation != inspect.Parameter.empty
+            ), f"Parameter '{param_name}' in grep tool should have type annotation"
 
-        assert sig.return_annotation != inspect.Signature.empty, (
-            "grep tool should have return type annotation"
-        )
+        assert (
+            sig.return_annotation != inspect.Signature.empty
+        ), "grep tool should have return type annotation"
 
     def test_read_file_tool_fully_typed(self):
         """Test that read_file tool function has proper type annotations"""
         sig = inspect.signature(read_file)
 
         for param_name, param in sig.parameters.items():
-            assert param.annotation != inspect.Parameter.empty, (
-                f"Parameter '{param_name}' in read_file tool should have type annotation"
-            )
+            assert (
+                param.annotation != inspect.Parameter.empty
+            ), f"Parameter '{param_name}' in read_file tool should have type annotation"
 
-        assert sig.return_annotation != inspect.Signature.empty, (
-            "read_file tool should have return type annotation"
-        )
+        assert (
+            sig.return_annotation != inspect.Signature.empty
+        ), "read_file tool should have return type annotation"
 
 
 class TestUITypeHints:
@@ -111,13 +111,13 @@ class TestUITypeHints:
         for param_name, param in sig.parameters.items():
             if param_name == "self":
                 continue
-            assert param.annotation != inspect.Parameter.empty, (
-                f"Parameter '{param_name}' in ToolUI.show_confirmation should have type annotation"
-            )
+            assert (
+                param.annotation != inspect.Parameter.empty
+            ), f"Parameter '{param_name}' in ToolUI.show_confirmation should have type annotation"
 
-        assert sig.return_annotation != inspect.Signature.empty, (
-            "ToolUI.show_confirmation should have return type annotation"
-        )
+        assert (
+            sig.return_annotation != inspect.Signature.empty
+        ), "ToolUI.show_confirmation should have return type annotation"
 
     def test_tool_ui_log_mcp_fully_typed(self):
         """Test that ToolUI.log_mcp has proper type annotations"""
@@ -126,9 +126,9 @@ class TestUITypeHints:
         for param_name, param in sig.parameters.items():
             if param_name == "self":
                 continue
-            assert param.annotation != inspect.Parameter.empty, (
-                f"Parameter '{param_name}' in ToolUI.log_mcp should have type annotation"
-            )
+            assert (
+                param.annotation != inspect.Parameter.empty
+            ), f"Parameter '{param_name}' in ToolUI.log_mcp should have type annotation"
 
 
 class TestConfigurationTypeHints:
@@ -155,9 +155,9 @@ class TestConfigurationTypeHints:
 
         # Check that internal_tools has type annotation
         source = inspect.getsource(ApplicationSettings)
-        assert "list[ToolName]" in source, (
-            "internal_tools should have list[ToolName] type annotation"
-        )
+        assert (
+            "list[ToolName]" in source
+        ), "internal_tools should have list[ToolName] type annotation"
 
     def test_defaults_constants_have_type_annotations(self):
         """Test that module-level constants in defaults have type annotations"""
@@ -174,9 +174,9 @@ class TestConfigurationTypeHints:
         annotated_count = sum(1 for node in ast.walk(tree) if isinstance(node, ast.AnnAssign))
 
         # The defaults module has DEFAULT_USER_CONFIG which is already annotated
-        assert annotated_count >= 1, (
-            f"Expected at least 1 annotated constant in defaults module, found {annotated_count}"
-        )
+        assert (
+            annotated_count >= 1
+        ), f"Expected at least 1 annotated constant in defaults module, found {annotated_count}"
 
 
 class TestMypyCompliance:
