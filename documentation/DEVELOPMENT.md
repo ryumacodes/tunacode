@@ -122,35 +122,63 @@ def process_file(file_path: str, encoding: str = "utf-8") -> str:
 
 ### Test Structure
 
+TunaCode uses a comprehensive test suite with multiple categories:
+
 ```
 tests/
-├── test_agent_initialization.py
-├── test_architect_integration.py
-├── test_background_manager.py
-├── test_config_setup_async.py
-├── test_fast_glob_search.py
-├── test_file_reference_expansion.py
-├── test_json_tool_parsing.py
-├── test_orchestrator_file_references.py
-├── test_orchestrator_import.py
-├── test_orchestrator_planning_visibility.py
-├── test_react_thoughts.py
-└── test_update_command.py
+├── characterization/          # Characterization tests capturing existing behavior
+│   ├── agent/                # Agent system tests
+│   ├── background/           # Background task manager tests
+│   ├── code_index/           # Code indexing system tests
+│   ├── commands/             # Command system tests
+│   ├── repl/                 # REPL interaction tests
+│   ├── services/             # MCP and service tests
+│   ├── state/                # State management tests
+│   ├── ui/                   # User interface tests
+│   └── utils/                # Utility function tests
+├── integration/              # Integration tests
+├── unit/                     # Unit tests
+└── utility/                  # Test utilities
 ```
+
+Key test categories:
+- **Characterization Tests**: Capture existing behavior patterns for safety during refactoring
+- **Integration Tests**: Test system interactions and workflows
+- **Unit Tests**: Test individual components in isolation
+- **Async Tests**: Use `@pytest.mark.asyncio` for testing async functionality
 
 ### Writing Tests
 
-Example test:
+Example async tool test:
 ```python
 import pytest
-from tunacode.tools.read_file import ReadFileTool
+from tunacode.tools.read_file import read_file
 
 @pytest.mark.asyncio
 async def test_read_file_tool():
-    tool = ReadFileTool()
-    result = await tool.execute(file_path="/path/to/file.txt")
-    assert result.success
-    assert "content" in result.data
+    """Test read_file tool functionality."""
+    content = await read_file("/path/to/test/file.txt")
+    assert content is not None
+    assert isinstance(content, str)
+```
+
+Example parallel execution test:
+```python
+import pytest
+from tunacode.core.agents.agent_components import execute_tools_parallel
+
+@pytest.mark.asyncio
+async def test_parallel_tool_execution():
+    """Test parallel execution of read-only tools."""
+    async def mock_callback(part, node):
+        return f"result-{part}"
+
+    tool_calls = [("tool1", "node1"), ("tool2", "node2")]
+    results = await execute_tools_parallel(tool_calls, mock_callback)
+
+    assert len(results) == 2
+    assert results[0] == "result-tool1"
+    assert results[1] == "result-tool2"
 ```
 
 ### Running Specific Tests
@@ -164,6 +192,89 @@ pytest -k "test_read_file"
 
 # Run with markers
 pytest -m "slow"
+```
+
+## Architecture Components
+
+### Memory Anchors
+
+When adding significant code sections, use memory anchors for LLM optimization:
+
+```python
+"""Module for handling background tasks.
+
+CLAUDE_ANCHOR[background-manager]: Async task manager with lifecycle management
+"""
+
+class BackgroundTaskManager:
+    """CLAUDE_ANCHOR[task-manager-class]: Core background task coordination"""
+
+    def spawn(self, coro, *, name=None):
+        """CLAUDE_ANCHOR[task-spawn]: Task creation and tracking entry point"""
+        # Implementation here
+```
+
+Guidelines for memory anchors:
+- Place in docstrings or comments
+- Use descriptive, unique keys
+- Keep descriptions concise but meaningful
+- Update `.claude/anchors.json` when adding new anchors
+
+### Code Indexing System
+
+The code index provides fast file discovery:
+
+```python
+from tunacode.core.code_index import CodeIndex
+
+# Create and build index
+index = CodeIndex("/path/to/project")
+index.build_index()
+
+# Fast file lookups
+python_files = index.lookup("*.py", file_type="py")
+class_locations = index.lookup("MyClass")
+```
+
+Key features:
+- Symbol indexing (classes, functions, imports)
+- Directory caching for efficient traversal
+- Automatic exclusion of build/cache directories
+- Incremental refresh capabilities
+
+### Parallel Tool Execution
+
+Read-only tools execute in parallel automatically:
+
+```python
+# These tools will execute concurrently:
+await read_file("file1.py")
+await read_file("file2.py")
+await grep("pattern", "src/")
+await list_dir("tests/")
+
+# Write tools remain sequential for safety:
+await write_file("new.py", content)
+await update_file("existing.py", target, patch)
+```
+
+Configuration:
+- Set `TUNACODE_MAX_PARALLEL` environment variable
+- Default: CPU count
+- Tools are automatically batched by type
+
+### Background Task Management
+
+For long-running operations:
+
+```python
+from tunacode.core.background.manager import BG_MANAGER
+
+# Spawn background task
+task_id = BG_MANAGER.spawn(my_async_coroutine())
+
+# Tasks are automatically cleaned up
+await BG_MANAGER.shutdown()
 ```
 
 ## Project Structure
@@ -226,17 +337,28 @@ TunaCode is a fork of [sidekick-cli](https://github.com/geekforbrains/sidekick-c
 
 While TunaCode builds on the foundation of sidekick-cli, we've made several architectural changes for our workflow:
 
-- **JSON Tool Parsing Fallback**: Added fallback parsing for when API providers fail with structured tool calling
-- **Parallel Search Tools**: New `bash` and `grep` tools with parallel execution for codebase navigation
-- **Agent Orchestration**: Advanced orchestrator for complex multi-step tasks with planning transparency
-- **Background Processing**: Asynchronous task manager for long-running operations
-- **Read-Only Agent**: Safe exploration mode that prevents accidental modifications
-- **ReAct Reasoning**: Implemented ReAct (Reasoning + Acting) patterns with configurable iteration limits
-- **Dynamic Configuration**: Added `/refresh` command and modified configuration management
+**Performance & Execution**:
+- **Parallel Tool Execution**: Read-only tools execute concurrently for 3x performance improvement
+- **Code Indexing System**: Fast in-memory file discovery without timeout-prone grep searches
+- **Background Task Management**: Asynchronous task manager for long-running operations
+- **3-Second Search Deadline**: Prevents system hangs on overly broad search patterns
+
+**LLM Optimization**:
+- **Memory Anchor System**: In-file anchors for persistent code navigation across sessions
+- **JSON Tool Parsing Fallback**: Robust fallback when API providers fail with structured tool calling
+- **Enhanced Tool Suite**: Added `grep`, `glob`, `list_dir` tools with advanced features
+
+**Architecture & Safety**:
+- **MCP Integration**: Model Context Protocol support for external tools
+- **Enhanced Error Recovery**: Multiple fallback mechanisms and orphaned tool call recovery
 - **Safety Changes**: Removed automatic git commits and `/undo` command - requires explicit git usage
-- **Error Recovery**: Multiple fallback mechanisms and orphaned tool call recovery
-- **Tool System Rewrite**: Complete overhaul of internal tools with atomic operations and different confirmation UIs
+- **Tool System Rewrite**: Complete overhaul with atomic operations and improved confirmation UIs
+
+**Developer Experience**:
+- **ReAct Reasoning**: Transparent AI decision-making with configurable iteration limits
 - **Debug Commands**: Added `/parsetools`, `/thoughts`, `/iterations` for debugging
+- **Dynamic Configuration**: Added `/refresh` command and modified configuration management
+- **Comprehensive Testing**: Characterization tests for behavior capture during refactoring
 
 ## License
 

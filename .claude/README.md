@@ -13,8 +13,15 @@ These anchors provide:
 - **Persistent references** across code changes
 - **Semantic context** for important code sections
 - **Quick navigation** to critical implementation points
+- **LLM optimization** for improved code understanding and navigation
+- **Cross-session memory** to maintain context between different sessions
 
-The `anchors.json` file maps these in-file anchors with their locations and descriptions.
+The `anchors.json` file maps these in-file anchors with their locations and descriptions. Current anchors include:
+- `main-agent-module`: Core agent with parallel tool execution
+- `grep-module`: Fast parallel file search with 3-second deadline
+- `parallel-grep-class`: Main grep implementation with timeout handling
+- `state-manager`: Central application state management
+- `request-processor`: Main request handling pipeline
 
 ## Structure
 
@@ -30,11 +37,20 @@ The `anchors.json` file maps these in-file anchors with their locations and desc
 
 ## Key Files
 
-- `anchors.json` - Maps in-file CLAUDE_ANCHOR tags with locations
-- `metadata/components.yml` - Component dependency graph
-- `metadata/hotspots.txt` - High-churn files requiring attention
-- `delta/YYYY-MM-DD-baseline.yml` - Daily baseline snapshots
+- `anchors.json` - Maps in-file CLAUDE_ANCHOR tags with locations and descriptions
+- `MEMORY_ANCHOR_SPEC.md` - Specification for memory anchor format and usage
 - `NEXT_PR_RULES.md` - Maintenance guidelines for contributors
+- `settings.local.json` - Local Claude configuration settings
+- `agents/tech-docs-maintainer.md` - Documentation maintenance agent definition
+
+## Recent Updates
+
+This directory now includes:
+
+- **Memory Anchor Specification** - Formal specification for in-file anchor usage
+- **Agent Definitions** - Specialized agents for different development tasks
+- **Enhanced Documentation** - Improved structure for better LLM navigation
+- **Tool Integration** - Better integration with TunaCode's parallel tool execution system
 
 ## Usage
 

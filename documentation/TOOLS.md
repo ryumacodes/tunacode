@@ -30,6 +30,16 @@ Tools use structured error handling:
 - **`ToolExecutionError`**: Structured errors with tool context and original exception details
 - **File Operations**: Enhanced error context for file-related failures
 
+## Tool Execution Performance
+
+TunaCode automatically optimizes tool execution:
+
+- **Parallel Execution**: Read-only tools (`read_file`, `grep`, `list_dir`, `glob`) execute concurrently for 3x performance improvement
+- **Automatic Batching**: Consecutive read-only tools are grouped and executed in parallel
+- **Safety Preservation**: Write/execute tools remain sequential to prevent conflicts
+- **Environment Control**: Configure parallelism with `TUNACODE_MAX_PARALLEL` environment variable
+- **Enhanced Feedback**: Detailed batch execution information when `/thoughts on` is enabled
+
 ## Available Tools
 
 ### 1. Bash Tool (`bash`)
@@ -188,6 +198,131 @@ any errors here
 result = await run_command("ls -la")
 ```
 
+### 6. Grep Tool (`grep`)
+
+**Purpose**: Fast parallel content search across files with advanced filtering and timeout handling
+
+**Parameters**:
+- `pattern` (string, required): Search pattern (literal text or regex)
+- `directory` (string, optional): Directory to search (default: current directory)
+- `case_sensitive` (bool, optional): Whether search is case sensitive (default: false)
+- `use_regex` (bool, optional): Whether pattern is a regular expression (default: false)
+- `include_files` (string, optional): File patterns to include (e.g., "*.py", "*.{js,ts}")
+- `exclude_files` (string, optional): File patterns to exclude (e.g., "*.pyc", "node_modules/*")
+- `max_results` (int, optional): Maximum number of results to return (default: 50)
+- `context_lines` (int, optional): Number of context lines before/after matches (default: 2)
+- `search_type` (string, optional): Search strategy ("smart", "ripgrep", "python", "hybrid")
+
+**Features**:
+- **3-second deadline** for first match to prevent hanging on broad patterns
+- **Fast-glob prefiltering** to identify candidate files before content search
+- **Multiple search strategies** with automatic strategy selection
+- **Parallel file processing** for improved performance
+- **Smart result ranking** and deduplication
+- **Context-aware output formatting** with file paths and line numbers
+
+**Safety Features**:
+- Timeout handling prevents system hangs on overly broad patterns
+- File size limits prevent memory exhaustion
+- Automatic fallback between search strategies
+- Error recovery with helpful guidance messages
+
+**Example Usage**:
+```python
+# Basic text search
+await grep("TODO", directory="src")
+
+# Regex search in Python files
+await grep(r"def\s+\w+", use_regex=True, include_files="*.py")
+
+# Case-sensitive search with context
+await grep("API_KEY", case_sensitive=True, context_lines=3)
+```
+
+### 7. Glob Tool (`glob`)
+
+**Purpose**: Fast file pattern matching using glob patterns for efficient file discovery
+
+**Parameters**:
+- `pattern` (string, required): Glob pattern to match (e.g., "*.py", "**/*.{js,ts}")
+- `directory` (string, optional): Directory to search (default: current directory)
+- `recursive` (bool, optional): Whether to search recursively (default: true)
+- `include_hidden` (bool, optional): Whether to include hidden files/directories (default: false)
+- `exclude_dirs` (list, optional): Additional directories to exclude from search
+- `max_results` (int, optional): Maximum number of results to return (default: 5000)
+
+**Features**:
+- **Brace expansion** support for multiple extensions (e.g., "*.{py,js,ts}")
+- **Fast filesystem traversal** using os.scandir for optimal performance
+- **Smart directory exclusion** automatically skips common build/cache directories
+- **Grouped output** organizes results by directory for better readability
+- **Recursive pattern matching** with ** wildcard support
+
+**Safety Features**:
+- Result limits prevent overwhelming output
+- Permission error handling for inaccessible directories
+- Automatic exclusion of common non-source directories
+
+**Example Usage**:
+```python
+# Find all Python files
+await glob("*.py")
+
+# Find all JavaScript/TypeScript files recursively
+await glob("**/*.{js,ts,jsx,tsx}")
+
+# Find test files in src directory
+await glob("src/**/test_*.py")
+
+# Include hidden files
+await glob(".*", include_hidden=True)
+```
+
+### 8. List Directory Tool (`list_dir`)
+
+**Purpose**: Efficient directory listing without shell commands, with enhanced metadata
+
+**Parameters**:
+- `directory` (string, optional): Path to directory to list (default: current directory)
+- `max_entries` (int, optional): Maximum number of entries to return (default: 200)
+- `show_hidden` (bool, optional): Whether to include hidden files/directories (default: false)
+
+**Features**:
+- **No shell dependencies** - Uses os.scandir for direct filesystem access
+- **Rich metadata display** - Shows file types, permissions, and symlink indicators
+- **Sorted output** - Directories first, then files, both alphabetically
+- **Size limits** - Prevents overwhelming output with large directories
+- **Type indicators** - Visual symbols for directories (/), executable (*), symlinks (@)
+
+**Safety Features**:
+- Permission error handling with clear error messages
+- Directory existence validation before listing
+- Output truncation for very large directories
+
+**Output Format**:
+```
+Contents of '/path/to/directory':
+
+  subdirectory/          [DIR]
+  script.py*             [FILE]
+  config.json            [FILE]
+  symlink@               [FILE]
+
+Total: 4 entries (1 directories, 3 files)
+```
+
+**Example Usage**:
+```python
+# List current directory
+await list_dir()
+
+# List specific directory with hidden files
+await list_dir("/path/to/dir", show_hidden=True)
+
+# Limit output size
+await list_dir("large_directory", max_entries=100)
+```
+
 ## Tool Development Guidelines
 
 ### Creating New Tools
@@ -243,7 +378,38 @@ Tool behavior can be configured through:
 
 ## External Tools
 
-TunaCode also supports external tools through the Model Context Protocol (MCP):
-- MCP servers can be configured to provide additional tools
-- External tools integrate seamlessly with the built-in tool system
-- See MCP documentation for setup and configuration details
+TunaCode supports external tools through the Model Context Protocol (MCP):
+
+### MCP Integration Features
+- **Seamless Integration**: External MCP tools work alongside built-in tools
+- **Automatic Discovery**: MCP servers are loaded from user configuration
+- **Error Handling**: Robust error recovery for MCP server failures
+- **Silent Operation**: MCP server stderr output is automatically suppressed
+- **Flexible Configuration**: Support for custom command, args, and environment variables
+
+### MCP Configuration
+
+Configure MCP servers in `~/.config/tunacode.json`:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "mcp-server-filesystem",
+      "args": ["--base-dir", "/path/to/project"]
+    },
+    "git": {
+      "command": "mcp-server-git",
+      "args": []
+    }
+  }
+}
+```
+
+### Supported MCP Features
+- **Tool Discovery**: Automatic detection of available MCP tools
+- **Parameter Validation**: Schema-based parameter validation
+- **Error Recovery**: Graceful handling of MCP server disconnections
+- **Resource Access**: Support for MCP resource protocols
+
+For detailed MCP setup and configuration, see the MCP Integration documentation.

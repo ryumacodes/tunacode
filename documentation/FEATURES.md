@@ -16,21 +16,24 @@ TunaCode supports multiple AI providers, giving you flexibility in choosing your
 
 ### Developer Tools
 
-TunaCode includes 6 core tools designed for efficient coding:
+TunaCode includes 7 core tools designed for efficient coding:
 
 1. **bash** - Enhanced shell command execution with safety features
-2. **grep** - Fast parallel content search across files
-3. **read_file** - Read file contents with line numbers
-4. **write_file** - Create new files (fails if file exists)
-5. **update_file** - Modify existing files with precise replacements
-6. **run_command** - Basic command execution (simpler than bash)
+2. **grep** - Fast parallel content search across files with 3-second deadline
+3. **glob** - Fast file pattern matching using glob patterns
+4. **list_dir** - Efficient directory listing without shell commands
+5. **read_file** - Read file contents with line numbers
+6. **update_file** - Modify existing files with precise replacements
+7. **write_file** - Create new files (fails if file exists)
 
 Additional developer features:
 - Direct shell command execution with `!` prefix
 - MCP (Model Context Protocol) support for extensibility
 - File operation confirmations with diffs
-- Per-project context guides (TUNACODE.md)
+- Per-project context guides (CLAUDE.md)
 - JSON tool parsing fallback for API compatibility
+- Fast code indexing system for efficient file discovery
+- Memory anchor system for persistent code navigation
 
 ### Safety & Control
 
@@ -51,6 +54,54 @@ Built on modern foundations:
 - **Modular command system** - Easy to extend and customize
 - **Rich UI with syntax highlighting** - Beautiful terminal interface
 - **ReAct reasoning patterns** - Transparent AI decision-making
+
+## Performance Features
+
+### Parallel Tool Execution
+
+TunaCode automatically optimizes tool execution for better performance:
+
+- **Read-only tools execute in parallel** - `read_file`, `grep`, `list_dir`, and `glob` run concurrently
+- **3x performance improvement** - Significantly faster multi-file operations
+- **Automatic batching** - Consecutive read-only tools are batched together
+- **Safety preserved** - Write/execute tools remain sequential to prevent conflicts
+- **Configurable parallelism** - Control via `TUNACODE_MAX_PARALLEL` environment variable
+
+### Code Indexing System
+
+Fast in-memory code index for efficient repository navigation:
+
+- **Instant file lookups** - No more timeout-prone grep searches for file discovery
+- **Smart filtering** - Ignores common build/cache directories automatically
+- **Symbol indexing** - Tracks classes, functions, and imports in Python files
+- **Directory caching** - Efficient directory content lookups
+- **Incremental updates** - Refresh specific files or directories as needed
+
+### Search Optimizations
+
+- **Fast-glob prefiltering** - Grep tool uses glob patterns to filter candidates before content search
+- **3-second search deadline** - Prevents overly broad patterns from hanging the system
+- **Multiple search strategies** - Smart strategy selection based on file count and pattern complexity
+- **Result ranking** - Intelligent sorting and deduplication of search results
+
+### Memory Anchor System
+
+Persistent code navigation system optimized for LLM interactions:
+
+- **In-file anchors** - Use `CLAUDE_ANCHOR[key]: description` format in docstrings and comments
+- **Persistent references** - Navigate to code sections even after refactoring
+- **Semantic context** - Anchors provide meaningful descriptions of code functionality
+- **Cross-session memory** - Maintain understanding across different sessions
+- **Automatic mapping** - `.claude/anchors.json` tracks anchor locations
+- **LLM-optimized** - Designed specifically for AI code understanding and navigation
+
+Example anchor usage:
+```python
+"""Main agent implementation for TunaCode.
+
+CLAUDE_ANCHOR[main-agent-module]: Core agent with parallel tool execution
+"""
+```
 
 ## Reliability Features
 
