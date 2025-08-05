@@ -83,8 +83,6 @@ node_modules/
 *.sw?
 # OS specific
 
-documentation/
-
 # Task files
 # tasks.json
 # tasks/
