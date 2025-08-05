@@ -81,7 +81,7 @@ def expand_file_refs(text: str) -> Tuple[str, List[str]]:
 
     # Regex now includes trailing / and ** to capture directory intentions
     pattern = re.compile(r"@([\w./\-_*]+)")
-    expanded_files = []
+    expanded_files: list[str] = []
 
     def replacer(match: re.Match) -> str:
         path_spec = match.group(1)

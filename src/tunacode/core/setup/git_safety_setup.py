@@ -32,12 +32,12 @@ class GitSafetySetup(BaseSetup):
         """Return the name of this setup step."""
         return "Git Safety"
 
-    async def should_run(self, force: bool = False) -> bool:
+    async def should_run(self, _force: bool = False) -> bool:
         """Check if we should run git safety setup."""
         # Always run unless user has explicitly disabled it
         return not self.state_manager.session.user_config.get("skip_git_safety", False)
 
-    async def execute(self, force: bool = False) -> None:
+    async def execute(self, _force: bool = False) -> None:
         """Create a safety branch for TunaCode operations."""
         try:
             # Check if git is installed
@@ -123,6 +123,16 @@ class GitSafetySetup(BaseSetup):
                 )
                 # Save preference
                 self.state_manager.session.user_config["skip_git_safety"] = True
+                # Save the updated configuration to disk
+                try:
+                    from tunacode.utils.user_configuration import save_config
+
+                    save_config(self.state_manager)
+                except Exception as e:
+                    # Log the error but don't fail the setup process
+                    import logging
+
+                    logging.warning(f"Failed to save skip_git_safety preference: {e}")
                 return
 
             # Create and checkout the new branch
@@ -132,6 +142,7 @@ class GitSafetySetup(BaseSetup):
                     ["git", "show-ref", "--verify", f"refs/heads/{new_branch}"],
                     capture_output=True,
                     check=False,
+                    text=True,
                 )
 
                 if result.returncode == 0:

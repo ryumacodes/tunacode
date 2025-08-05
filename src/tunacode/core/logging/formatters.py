@@ -32,7 +32,7 @@ try:
 except ImportError:
     import json
 
-    class JSONFormatter(logging.Formatter):
+    class JSONFormatter(logging.Formatter):  # type: ignore[no-redef]
         """
         Fallback JSON formatter if pythonjsonlogger is not installed.
         """

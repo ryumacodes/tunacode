@@ -5,7 +5,7 @@ These tests capture the CURRENT behavior of get_or_create_agent().
 
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
-from tunacode.core.agents.main import get_or_create_agent
+from tunacode.core.agents.agent_components import get_or_create_agent
 
 # No async tests in this file, so no pytestmark needed
 
@@ -31,11 +31,14 @@ class TestAgentCreation:
         system_prompt = "You are a helpful AI assistant."
 
         with patch(
-            "tunacode.core.agents.main.get_agent_tool",
+            "tunacode.core.agents.agent_components.agent_config.get_agent_tool",
             return_value=(mock_agent_class, mock_tool_class),
         ):
             with patch("builtins.open", mock_open(read_data=system_prompt)):
-                with patch("tunacode.core.agents.main.get_mcp_servers", return_value=[]):
+                with patch(
+                    "tunacode.core.agents.agent_components.agent_config.get_mcp_servers",
+                    return_value=[],
+                ):
                     # Mock TUNACODE.md not existing to get predictable system prompt
                     with patch("pathlib.Path.exists", return_value=False):
                         # Act
@@ -84,11 +87,14 @@ class TestAgentCreation:
             return mock_open(read_data=fallback_prompt)()
 
         with patch(
-            "tunacode.core.agents.main.get_agent_tool",
+            "tunacode.core.agents.agent_components.agent_config.get_agent_tool",
             return_value=(mock_agent_class, mock_tool_class),
         ):
             with patch("builtins.open", side_effect=mock_open_side_effect):
-                with patch("tunacode.core.agents.main.get_mcp_servers", return_value=[]):
+                with patch(
+                    "tunacode.core.agents.agent_components.agent_config.get_mcp_servers",
+                    return_value=[],
+                ):
                     # Mock TUNACODE.md not existing
                     with patch("pathlib.Path.exists", return_value=False):
                         # Act
@@ -106,11 +112,14 @@ class TestAgentCreation:
         mock_tool_class = MagicMock()
 
         with patch(
-            "tunacode.core.agents.main.get_agent_tool",
+            "tunacode.core.agents.agent_components.agent_config.get_agent_tool",
             return_value=(mock_agent_class, mock_tool_class),
         ):
             with patch("builtins.open", side_effect=FileNotFoundError):
-                with patch("tunacode.core.agents.main.get_mcp_servers", return_value=[]):
+                with patch(
+                    "tunacode.core.agents.agent_components.agent_config.get_mcp_servers",
+                    return_value=[],
+                ):
                     # Mock TUNACODE.md not existing
                     with patch("pathlib.Path.exists", return_value=False):
                         # Act
@@ -132,11 +141,14 @@ class TestAgentCreation:
         mock_tool_class = MagicMock()
 
         with patch(
-            "tunacode.core.agents.main.get_agent_tool",
+            "tunacode.core.agents.agent_components.agent_config.get_agent_tool",
             return_value=(mock_agent_class, mock_tool_class),
         ):
             with patch("builtins.open", mock_open(read_data="prompt")):
-                with patch("tunacode.core.agents.main.get_mcp_servers", return_value=[]):
+                with patch(
+                    "tunacode.core.agents.agent_components.agent_config.get_mcp_servers",
+                    return_value=[],
+                ):
                     # Act
                     get_or_create_agent(model, self.state_manager)
 
@@ -160,12 +172,13 @@ class TestAgentCreation:
         mock_mcp_servers = [Mock(), Mock()]
 
         with patch(
-            "tunacode.core.agents.main.get_agent_tool",
+            "tunacode.core.agents.agent_components.agent_config.get_agent_tool",
             return_value=(mock_agent_class, mock_tool_class),
         ):
             with patch("builtins.open", mock_open(read_data="prompt")):
                 with patch(
-                    "tunacode.core.agents.main.get_mcp_servers", return_value=mock_mcp_servers
+                    "tunacode.core.agents.agent_components.agent_config.get_mcp_servers",
+                    return_value=mock_mcp_servers,
                 ):
                     # Act
                     get_or_create_agent(model, self.state_manager)

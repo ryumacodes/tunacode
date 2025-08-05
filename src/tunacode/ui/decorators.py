@@ -53,7 +53,7 @@ def create_sync_wrapper(async_func: F) -> F:
         )
 
     # Attach the sync version as an attribute
-    async_func.sync = sync_wrapper
+    setattr(async_func, "sync", sync_wrapper)
 
     # Return the original async function
-    return async_func
+    return async_func  # type: ignore[return-value]

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from tunacode.core.agents.main import patch_tool_messages
+from tunacode.core.agents.agent_components import patch_tool_messages
 
 # No async tests in this file, so no pytestmark needed
 
@@ -68,10 +68,11 @@ class TestToolMessagePatching:
         # Mock the lazy imports
         mock_model_request = MagicMock()
         mock_tool_return_part = MagicMock()
+        mock_system_prompt_part = MagicMock()
 
         with patch(
-            "tunacode.core.agents.main.get_model_messages",
-            return_value=(mock_model_request, mock_tool_return_part),
+            "tunacode.core.agents.agent_components.message_handler.get_model_messages",
+            return_value=(mock_model_request, mock_tool_return_part, mock_system_prompt_part),
         ):
             # Act
             patch_tool_messages("Tool operation failed", self.state_manager)
@@ -180,10 +181,11 @@ class TestToolMessagePatching:
         # Mock the lazy imports
         mock_model_request = MagicMock()
         mock_tool_return_part = MagicMock()
+        mock_system_prompt_part = MagicMock()
 
         with patch(
-            "tunacode.core.agents.main.get_model_messages",
-            return_value=(mock_model_request, mock_tool_return_part),
+            "tunacode.core.agents.agent_components.message_handler.get_model_messages",
+            return_value=(mock_model_request, mock_tool_return_part, mock_system_prompt_part),
         ):
             # Act
             patch_tool_messages("Task incomplete", self.state_manager)

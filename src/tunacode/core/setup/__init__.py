@@ -4,6 +4,7 @@ from .config_setup import ConfigSetup
 from .coordinator import SetupCoordinator
 from .environment_setup import EnvironmentSetup
 from .git_safety_setup import GitSafetySetup
+from .template_setup import TemplateSetup
 
 __all__ = [
     "BaseSetup",
@@ -12,4 +13,5 @@ __all__ = [
     "EnvironmentSetup",
     "GitSafetySetup",
     "AgentSetup",
+    "TemplateSetup",
 ]

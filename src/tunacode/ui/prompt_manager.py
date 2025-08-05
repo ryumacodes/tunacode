@@ -40,7 +40,7 @@ class PromptManager:
             state_manager: Optional state manager for session persistence
         """
         self.state_manager = state_manager
-        self._temp_sessions = {}  # For when no state manager is available
+        self._temp_sessions: dict[str, PromptSession] = {}  # For when no state manager is available
         self._style = self._create_style()
 
     def _create_style(self) -> Style:

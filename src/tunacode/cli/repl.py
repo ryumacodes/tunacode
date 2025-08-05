@@ -9,7 +9,6 @@ Handles user input, command processing, and agent interaction in an interactive 
 # IMPORTS AND DEPENDENCIES
 # ============================================================================
 
-import json
 import logging
 import os
 import subprocess
@@ -23,28 +22,23 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior
 from tunacode.constants import DEFAULT_CONTEXT_WINDOW
 from tunacode.core.agents import main as agent
 from tunacode.core.agents.main import patch_tool_messages
-from tunacode.core.tool_handler import ToolHandler
 from tunacode.exceptions import AgentError, UserAbortError, ValidationError
 from tunacode.ui import console as ui
 from tunacode.ui.output import get_context_window_display
-from tunacode.ui.tool_ui import ToolUI
 from tunacode.utils.security import CommandSecurityError, safe_subprocess_run
 
-from ..types import CommandContext, CommandResult, StateManager, ToolArgs
+from ..types import CommandContext, CommandResult, StateManager
 from .commands import CommandRegistry
 
 # ============================================================================
 # MODULE-LEVEL CONSTANTS AND CONFIGURATION
 # ============================================================================
-
-_tool_ui = ToolUI()
+from .repl_components import attempt_tool_recovery, display_agent_output, tool_handler
+from .repl_components.output_display import MSG_REQUEST_COMPLETED
 
 MSG_OPERATION_ABORTED = "Operation aborted."
-MSG_OPERATION_ABORTED_BY_USER = "Operation aborted by user."
 MSG_TOOL_INTERRUPTED = "Tool execution was interrupted"
 MSG_REQUEST_CANCELLED = "Request cancelled"
-MSG_REQUEST_COMPLETED = "Request completed"
-MSG_JSON_RECOVERY = "Recovered using JSON tool parsing"
 MSG_SESSION_ENDED = "Session ended. Happy coding!"
 MSG_AGENT_BUSY = "Agent is busy, press Ctrl+C to interrupt."
 MSG_HIT_CTRL_C = "Hit Ctrl+C again to exit"
@@ -54,92 +48,8 @@ DEFAULT_SHELL = "bash"
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# ============================================================================
-# UTILITY FUNCTIONS
-# ============================================================================
-
-
-def _parse_args(args) -> ToolArgs:
-    """
-    Parse tool arguments from a JSON string or dictionary.
-
-    Args:
-        args (str or dict): A JSON-formatted string or a dictionary containing tool arguments.
-
-    Returns:
-        dict: The parsed arguments.
-
-    Raises:
-        ValueError: If 'args' is not a string or dictionary, or if the string is not valid JSON.
-    """
-    if isinstance(args, str):
-        try:
-            return json.loads(args)
-        except json.JSONDecodeError:
-            raise ValidationError(f"Invalid JSON: {args}")
-    elif isinstance(args, dict):
-        return args
-    else:
-        raise ValidationError(f"Invalid args type: {type(args)}")
-
-
-# ============================================================================
-# TOOL EXECUTION AND CONFIRMATION HANDLERS
-# ============================================================================
-
-
-async def _tool_handler(part, state_manager: StateManager):
-    """Handle tool execution with separated business logic and UI."""
-    # Check for cancellation before tool execution (only if explicitly set to True)
-    operation_cancelled = getattr(state_manager.session, "operation_cancelled", False)
-    if operation_cancelled is True:
-        logger.debug("Tool execution cancelled")
-        raise CancelledError("Operation was cancelled")
-
-    tool_handler = ToolHandler(state_manager)
-
-    if tool_handler.should_confirm(part.tool_name):
-        await ui.info(f"Tool({part.tool_name})")
-
-    if not state_manager.session.is_streaming_active and state_manager.session.spinner:
-        state_manager.session.spinner.stop()
-
-    streaming_panel = None
-    if state_manager.session.is_streaming_active and hasattr(
-        state_manager.session, "streaming_panel"
-    ):
-        streaming_panel = state_manager.session.streaming_panel
-        if streaming_panel and tool_handler.should_confirm(part.tool_name):
-            await streaming_panel.stop()
-
-    try:
-        args = _parse_args(part.args)
-
-        def confirm_func():
-            if not tool_handler.should_confirm(part.tool_name):
-                return False
-            request = tool_handler.create_confirmation_request(part.tool_name, args)
-
-            response = _tool_ui.show_sync_confirmation(request)
-
-            if not tool_handler.process_confirmation(response, part.tool_name):
-                return True  # Abort
-            return False  # Continue
-
-        should_abort = await run_in_terminal(confirm_func)
-
-        if should_abort:
-            raise UserAbortError("User aborted.")
-
-    except UserAbortError:
-        patch_tool_messages(MSG_OPERATION_ABORTED_BY_USER, state_manager)
-        raise
-    finally:
-        if streaming_panel and tool_handler.should_confirm(part.tool_name):
-            await streaming_panel.start()
-
-        if not state_manager.session.is_streaming_active and state_manager.session.spinner:
-            state_manager.session.spinner.start()
+# The _parse_args function has been moved to repl_components.command_parser
+# The _tool_handler function has been moved to repl_components.tool_executor
 
 
 # ============================================================================
@@ -169,82 +79,13 @@ async def _handle_command(command: str, state_manager: StateManager) -> CommandR
         return await _command_registry.execute(command, context)
     except ValidationError as e:
         await ui.error(str(e))
+        return None
 
 
-# ============================================================================
-# ERROR RECOVERY
-# ============================================================================
+# The _attempt_tool_recovery function has been moved to repl_components.error_recovery
 
 
-async def _attempt_tool_recovery(e: Exception, state_manager: StateManager) -> bool:
-    """
-    Attempt to recover from tool calling failures using guard clauses.
-
-    Returns:
-        bool: True if recovery was successful, False otherwise
-    """
-    error_str = str(e).lower()
-    tool_keywords = ["tool", "function", "call", "schema"]
-    if not any(keyword in error_str for keyword in tool_keywords):
-        return False
-
-    if not state_manager.session.messages:
-        return False
-
-    last_msg = state_manager.session.messages[-1]
-    if not hasattr(last_msg, "parts"):
-        return False
-
-    for part in last_msg.parts:
-        if not hasattr(part, "content") or not isinstance(part.content, str):
-            continue
-
-        try:
-            from tunacode.core.agents.main import extract_and_execute_tool_calls
-
-            def tool_callback_with_state(part, node):
-                return _tool_handler(part, state_manager)
-
-            await extract_and_execute_tool_calls(
-                part.content, tool_callback_with_state, state_manager
-            )
-
-            await ui.warning(f" {MSG_JSON_RECOVERY}")
-            return True
-
-        except Exception as e:
-            logger.debug(f"Failed to check triple quotes: {e}")
-            continue
-
-    return False
-
-
-# ============================================================================
-# AGENT OUTPUT DISPLAY
-# ============================================================================
-
-
-async def _display_agent_output(res, enable_streaming: bool) -> None:
-    """Display agent output using guard clauses to flatten nested conditionals."""
-    if enable_streaming:
-        return
-
-    if not hasattr(res, "result") or res.result is None or not hasattr(res.result, "output"):
-        await ui.muted(MSG_REQUEST_COMPLETED)
-        return
-
-    output = res.result.output
-
-    if not isinstance(output, str):
-        return
-
-    if output.strip().startswith('{"thought"'):
-        return
-
-    if '"tool_uses"' in output:
-        return
-
-    await ui.agent(output)
+# The _display_agent_output function has been moved to repl_components.output_display
 
 
 # ============================================================================
@@ -254,6 +95,14 @@ async def _display_agent_output(res, enable_streaming: bool) -> None:
 
 async def process_request(text: str, state_manager: StateManager, output: bool = True):
     """Process input using the agent, handling cancellation safely."""
+    import uuid
+
+    # Generate a unique ID for this request for correlated logging
+    request_id = str(uuid.uuid4())
+    logger.debug(
+        "Processing new request", extra={"request_id": request_id, "input_text": text[:100]}
+    )
+    state_manager.session.request_id = request_id
 
     # Check for cancellation before starting (only if explicitly set to True)
     operation_cancelled = getattr(state_manager.session, "operation_cancelled", False)
@@ -274,8 +123,8 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
 
         start_idx = len(state_manager.session.messages)
 
-        def tool_callback_with_state(part, node):
-            return _tool_handler(part, state_manager)
+        def tool_callback_with_state(part, _node):
+            return tool_handler(part, state_manager)
 
         try:
             from tunacode.utils.text_utils import expand_file_refs
@@ -313,8 +162,8 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                     await streaming_panel.update(content)
 
                 res = await agent.process_request(
-                    state_manager.session.current_model,
                     text,
+                    state_manager.session.current_model,
                     state_manager,
                     tool_callback=tool_callback_with_state,
                     streaming_callback=streaming_callback,
@@ -326,8 +175,8 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         else:
             # Use normal agent processing
             res = await agent.process_request(
-                state_manager.session.current_model,
                 text,
+                state_manager.session.current_model,
                 state_manager,
                 tool_callback=tool_callback_with_state,
             )
@@ -351,7 +200,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                 await ui.muted(MSG_REQUEST_COMPLETED)
             else:
                 # Use the dedicated function for displaying agent output
-                await _display_agent_output(res, enable_streaming)
+                await display_agent_output(res, enable_streaming)
 
             # Always show files in context after agent response
             if state_manager.session.files_in_context:
@@ -369,7 +218,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         patch_tool_messages(error_message, state_manager)
     except Exception as e:
         # Try tool recovery for tool-related errors
-        if await _attempt_tool_recovery(e, state_manager):
+        if await attempt_tool_recovery(e, state_manager):
             return  # Successfully recovered
 
         agent_error = AgentError(f"Agent processing failed: {str(e)}")
@@ -439,7 +288,13 @@ async def repl(state_manager: StateManager):
                 action = await _handle_command(line, state_manager)
                 if action == "restart":
                     break
-                continue
+                elif isinstance(action, str) and action:
+                    # If the command returned a string (e.g., from template shortcut),
+                    # process it as a prompt
+                    line = action
+                    # Fall through to process as normal text
+                else:
+                    continue
 
             if line.startswith("!"):
                 command = line[1:].strip()

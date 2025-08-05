@@ -5,6 +5,8 @@ Global constants and configuration values for the TunaCode CLI application.
 Centralizes all magic strings, UI text, error messages, and application constants.
 """
 
+from enum import Enum
+
 # Application info
 APP_NAME = "TunaCode"
 APP_VERSION = "0.0.51"
@@ -29,21 +31,36 @@ COMMAND_OUTPUT_THRESHOLD = 3500  # Length threshold for truncation
 COMMAND_OUTPUT_START_INDEX = 2500  # Where to start showing content
 COMMAND_OUTPUT_END_SIZE = 1000  # How much to show from the end
 
-# Tool names
-TOOL_READ_FILE = "read_file"
-TOOL_WRITE_FILE = "write_file"
-TOOL_UPDATE_FILE = "update_file"
-TOOL_RUN_COMMAND = "run_command"
-TOOL_BASH = "bash"
-TOOL_GREP = "grep"
-TOOL_LIST_DIR = "list_dir"
-TOOL_GLOB = "glob"
-TOOL_TODO = "todo"
+
+class ToolName(str, Enum):
+    """Enumeration of tool names."""
+
+    READ_FILE = "read_file"
+    WRITE_FILE = "write_file"
+    UPDATE_FILE = "update_file"
+    RUN_COMMAND = "run_command"
+    BASH = "bash"
+    GREP = "grep"
+    LIST_DIR = "list_dir"
+    GLOB = "glob"
+    TODO = "todo"
+
+
+# Tool names (backward compatibility)
+TOOL_READ_FILE = ToolName.READ_FILE
+TOOL_WRITE_FILE = ToolName.WRITE_FILE
+TOOL_UPDATE_FILE = ToolName.UPDATE_FILE
+TOOL_RUN_COMMAND = ToolName.RUN_COMMAND
+TOOL_BASH = ToolName.BASH
+TOOL_GREP = ToolName.GREP
+TOOL_LIST_DIR = ToolName.LIST_DIR
+TOOL_GLOB = ToolName.GLOB
+TOOL_TODO = ToolName.TODO
 
 # Tool categorization
-READ_ONLY_TOOLS = [TOOL_READ_FILE, TOOL_GREP, TOOL_LIST_DIR, TOOL_GLOB]
-WRITE_TOOLS = [TOOL_WRITE_FILE, TOOL_UPDATE_FILE]
-EXECUTE_TOOLS = [TOOL_BASH, TOOL_RUN_COMMAND]
+READ_ONLY_TOOLS = [ToolName.READ_FILE, ToolName.GREP, ToolName.LIST_DIR, ToolName.GLOB]
+WRITE_TOOLS = [ToolName.WRITE_FILE, ToolName.UPDATE_FILE]
+EXECUTE_TOOLS = [ToolName.BASH, ToolName.RUN_COMMAND]
 
 # Commands
 CMD_HELP = "/help"
@@ -142,16 +159,33 @@ MSG_UPDATE_INSTRUCTION = "Exit, and run: [bold]pip install --upgrade tunacode-cl
 MSG_VERSION_DISPLAY = "TunaCode CLI {version}"
 MSG_FILE_SIZE_LIMIT = " Please specify a smaller file or use other tools to process it."
 
-# Todo-related constants
-TODO_STATUS_PENDING = "pending"
-TODO_STATUS_IN_PROGRESS = "in_progress"
-TODO_STATUS_COMPLETED = "completed"
-TODO_STATUSES = [TODO_STATUS_PENDING, TODO_STATUS_IN_PROGRESS, TODO_STATUS_COMPLETED]
 
-TODO_PRIORITY_HIGH = "high"
-TODO_PRIORITY_MEDIUM = "medium"
-TODO_PRIORITY_LOW = "low"
-TODO_PRIORITIES = [TODO_PRIORITY_HIGH, TODO_PRIORITY_MEDIUM, TODO_PRIORITY_LOW]
+class TodoStatus(str, Enum):
+    """Enumeration of todo statuses."""
+
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
+class TodoPriority(str, Enum):
+    """Enumeration of todo priorities."""
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+# Todo-related constants (backward compatibility)
+TODO_STATUS_PENDING = TodoStatus.PENDING
+TODO_STATUS_IN_PROGRESS = TodoStatus.IN_PROGRESS
+TODO_STATUS_COMPLETED = TodoStatus.COMPLETED
+TODO_STATUSES = [TodoStatus.PENDING, TodoStatus.IN_PROGRESS, TodoStatus.COMPLETED]
+
+TODO_PRIORITY_HIGH = TodoPriority.HIGH
+TODO_PRIORITY_MEDIUM = TodoPriority.MEDIUM
+TODO_PRIORITY_LOW = TodoPriority.LOW
+TODO_PRIORITIES = [TodoPriority.HIGH, TodoPriority.MEDIUM, TodoPriority.LOW]
 
 # Maximum number of todos allowed per session
 MAX_TODOS_PER_SESSION = 100

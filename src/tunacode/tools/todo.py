@@ -14,8 +14,8 @@ from tunacode.constants import (
     MAX_TODO_CONTENT_LENGTH,
     MAX_TODOS_PER_SESSION,
     TODO_PRIORITIES,
-    TODO_PRIORITY_MEDIUM,
-    TODO_STATUS_PENDING,
+    TodoPriority,
+    TodoStatus,
 )
 from tunacode.types import TodoItem, ToolResult, UILogger
 
@@ -65,10 +65,14 @@ class TodoTool(BaseTool):
             ModelRetry: When invalid parameters are provided
         """
         if action == "add":
+            if isinstance(content, list):
+                raise ModelRetry("Use 'add_multiple' action for adding multiple todos")
             return await self._add_todo(content, priority)
         elif action == "add_multiple":
             return await self._add_multiple_todos(content, todos, priority)
         elif action == "update":
+            if isinstance(content, list):
+                raise ModelRetry("Cannot update with list content")
             return await self._update_todo(todo_id, status, priority, content)
         elif action == "complete":
             return await self._complete_todo(todo_id)
@@ -102,16 +106,16 @@ class TodoTool(BaseTool):
         new_id = f"todo_{uuid.uuid4().hex[:8]}"
 
         # Default priority if not specified
-        todo_priority = priority or TODO_PRIORITY_MEDIUM
-        if todo_priority not in TODO_PRIORITIES:
+        todo_priority = priority or TodoPriority.MEDIUM
+        if todo_priority not in [p.value for p in TodoPriority]:
             raise ModelRetry(
-                f"Invalid priority '{todo_priority}'. Must be one of: {', '.join(TODO_PRIORITIES)}"
+                f"Invalid priority '{todo_priority}'. Must be one of: {', '.join([p.value for p in TodoPriority])}"
             )
 
         new_todo = TodoItem(
             id=new_id,
             content=content,
-            status=TODO_STATUS_PENDING,
+            status=TodoStatus.PENDING,
             priority=todo_priority,
             created_at=datetime.now(),
         )
@@ -136,7 +140,7 @@ class TodoTool(BaseTool):
                 if not isinstance(todo_data, dict) or "content" not in todo_data:
                     raise ModelRetry("Each todo must be a dict with 'content' field")
                 todo_content = todo_data["content"]
-                todo_priority = todo_data.get("priority", priority or TODO_PRIORITY_MEDIUM)
+                todo_priority = todo_data.get("priority", priority or TodoPriority.MEDIUM)
                 if todo_priority not in TODO_PRIORITIES:
                     raise ModelRetry(
                         f"Invalid priority '{todo_priority}'. Must be one of: {', '.join(TODO_PRIORITIES)}"
@@ -144,7 +148,7 @@ class TodoTool(BaseTool):
                 todos_to_add.append((todo_content, todo_priority))
         elif isinstance(content, list):
             # List of strings format: ["task1", "task2", ...]
-            default_priority = priority or TODO_PRIORITY_MEDIUM
+            default_priority = priority or TodoPriority.MEDIUM
             if default_priority not in TODO_PRIORITIES:
                 raise ModelRetry(
                     f"Invalid priority '{default_priority}'. Must be one of: {', '.join(TODO_PRIORITIES)}"
@@ -184,7 +188,7 @@ class TodoTool(BaseTool):
             new_todo = TodoItem(
                 id=new_id,
                 content=task_content,
-                status=TODO_STATUS_PENDING,
+                status=TodoStatus.PENDING,
                 priority=task_priority,
                 created_at=datetime.now(),
             )
@@ -220,19 +224,21 @@ class TodoTool(BaseTool):
 
         # Update status if provided
         if status:
-            if status not in ["pending", "in_progress", "completed"]:
+            if status not in [s.value for s in TodoStatus]:
                 raise ModelRetry(
-                    f"Invalid status '{status}'. Must be pending, in_progress, or completed"
+                    f"Invalid status '{status}'. Must be one of: {', '.join([s.value for s in TodoStatus])}"
                 )
             todo.status = status
-            if status == "completed" and not todo.completed_at:
+            if status == TodoStatus.COMPLETED.value and not todo.completed_at:
                 todo.completed_at = datetime.now()
             changes.append(f"status to {status}")
 
         # Update priority if provided
         if priority:
-            if priority not in ["high", "medium", "low"]:
-                raise ModelRetry(f"Invalid priority '{priority}'. Must be high, medium, or low")
+            if priority not in [p.value for p in TodoPriority]:
+                raise ModelRetry(
+                    f"Invalid priority '{priority}'. Must be one of: {', '.join([p.value for p in TodoPriority])}"
+                )
             todo.priority = priority
             changes.append(f"priority to {priority}")
 
@@ -257,7 +263,7 @@ class TodoTool(BaseTool):
         # Find and update the todo
         for todo in self.state_manager.session.todos:
             if todo.id == todo_id:
-                todo.status = "completed"
+                todo.status = TodoStatus.COMPLETED.value
                 todo.completed_at = datetime.now()
                 return f"Marked todo {todo_id} as completed: {todo.content}"
 
@@ -270,9 +276,9 @@ class TodoTool(BaseTool):
             return "No todos found"
 
         # Group by status for better organization
-        pending = [t for t in todos if t.status == "pending"]
-        in_progress = [t for t in todos if t.status == "in_progress"]
-        completed = [t for t in todos if t.status == "completed"]
+        pending = [t for t in todos if t.status == TodoStatus.PENDING.value]
+        in_progress = [t for t in todos if t.status == TodoStatus.IN_PROGRESS.value]
+        completed = [t for t in todos if t.status == TodoStatus.COMPLETED.value]
 
         lines = []
 
@@ -319,9 +325,9 @@ class TodoTool(BaseTool):
             return "No todos found"
 
         # Group by status for better organization
-        pending = [t for t in todos if t.status == "pending"]
-        in_progress = [t for t in todos if t.status == "in_progress"]
-        completed = [t for t in todos if t.status == "completed"]
+        pending = [t for t in todos if t.status == TodoStatus.PENDING.value]
+        in_progress = [t for t in todos if t.status == TodoStatus.IN_PROGRESS.value]
+        completed = [t for t in todos if t.status == TodoStatus.COMPLETED.value]
 
         lines = []
 

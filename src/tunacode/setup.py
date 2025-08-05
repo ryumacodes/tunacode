@@ -13,6 +13,7 @@ from tunacode.core.setup import (
     EnvironmentSetup,
     GitSafetySetup,
     SetupCoordinator,
+    TemplateSetup,
 )
 from tunacode.core.state import StateManager
 
@@ -34,6 +35,7 @@ async def setup(run_setup: bool, state_manager: StateManager, cli_config: dict =
         config_setup.cli_config = cli_config
     coordinator.register_step(config_setup)
     coordinator.register_step(EnvironmentSetup(state_manager))
+    coordinator.register_step(TemplateSetup(state_manager))
     coordinator.register_step(GitSafetySetup(state_manager))
 
     # Run all setup steps

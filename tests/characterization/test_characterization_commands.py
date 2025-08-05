@@ -198,6 +198,7 @@ class TestCommandBehaviors:
         """Test HelpCommand displays available commands."""
         registry = commands.CommandRegistry()
         registry.discover_commands()  # Changed from auto_discover to discover_commands
+
         cmd = commands.HelpCommand(registry)
         context = mock.Mock()
 

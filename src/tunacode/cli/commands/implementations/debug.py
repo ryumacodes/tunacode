@@ -169,7 +169,7 @@ class ParseToolsCommand(SimpleCommand):
                         # Create tool callback
                         from tunacode.cli.repl import _tool_handler
 
-                        def tool_callback_with_state(part, node):
+                        def tool_callback_with_state(part, _node):
                             return _tool_handler(part, context.state_manager)
 
                         try:

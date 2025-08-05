@@ -2,6 +2,8 @@
 Tool confirmation UI components, separated from business logic.
 """
 
+from typing import TYPE_CHECKING, Optional
+
 from rich.box import ROUNDED
 from rich.markdown import Markdown
 from rich.padding import Padding
@@ -15,6 +17,9 @@ from tunacode.ui import console as ui
 from tunacode.utils.diff_utils import render_file_diff
 from tunacode.utils.file_utils import DotDict
 from tunacode.utils.text_utils import ext_to_lang, key_to_title
+
+if TYPE_CHECKING:
+    from tunacode.core.state import StateManager
 
 
 class ToolUI:
@@ -71,7 +76,8 @@ class ToolUI:
 
         # Show file content on write_file
         elif tool_name == TOOL_WRITE_FILE:
-            return self._create_code_block(args["filepath"], args["content"])
+            markdown_obj = self._create_code_block(args["filepath"], args["content"])
+            return str(markdown_obj)
 
         # Default to showing key and value on new line
         content = ""
@@ -92,7 +98,7 @@ class ToolUI:
         return content.strip()
 
     async def show_confirmation(
-        self, request: ToolConfirmationRequest, state_manager=None
+        self, request: ToolConfirmationRequest, state_manager: Optional["StateManager"] = None
     ) -> ToolConfirmationResponse:
         """
         Show tool confirmation UI and get user response.

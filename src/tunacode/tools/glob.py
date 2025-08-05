@@ -182,6 +182,9 @@ class GlobTool(BaseTool):
         """
 
         def search_sync():
+            # Import re here to avoid issues at module level
+            import re
+
             matches = []
             stack = [root]
 
@@ -238,9 +241,6 @@ class GlobTool(BaseTool):
                     continue
 
             return matches[:max_results]
-
-        # Import re here to avoid issues at module level
-        import re
 
         # Run the synchronous search in the thread pool
         loop = asyncio.get_event_loop()
