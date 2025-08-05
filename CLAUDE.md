@@ -1,11 +1,11 @@
 # CLAUDE.md
 
-#Enviroment 
+#Enviroment
 
-Python3.10+ 
+Python3.10+
 venv must always be used
-follow modern python coding standards 
-commit frequently with well documented messages 
+follow modern python coding standards
+commit frequently with well documented messages
 
 ## Commands
 
@@ -174,4 +174,3 @@ Location: `~/.config/tunacode.json`
 - Grep tool uses fast-glob prefiltering with MAX_GLOB limit
 - 3-second deadline for first match in searches
 - Background task management for non-blocking operations
-

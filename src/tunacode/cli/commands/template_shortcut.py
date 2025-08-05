@@ -84,7 +84,9 @@ class TemplateShortcutCommand(Command):
 
             # Execute the prompt via process_request
             if context.process_request:
-                await context.process_request(prompt, context.state_manager)
+                await context.process_request(
+                    prompt, context.state_manager.session.current_model, context.state_manager
+                )
         else:
             await ui.muted("Template activated. No default prompt defined.")
 

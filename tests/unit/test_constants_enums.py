@@ -89,9 +89,9 @@ def test_todo_priority_enum_exists():
     expected_priorities = ["high", "medium", "low"]
 
     for priority in expected_priorities:
-        assert hasattr(TodoPriority, priority.upper()), (
-            f"TodoPriority should have {priority.upper()}"
-        )
+        assert hasattr(
+            TodoPriority, priority.upper()
+        ), f"TodoPriority should have {priority.upper()}"
         assert TodoPriority[priority.upper()].value == priority
 
 

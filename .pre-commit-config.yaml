@@ -134,12 +134,12 @@ repos:
       - id: doc8
         args: ['--max-line-length=120']
 
-  # Markdown linting
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.42.0
-    hooks:
-      - id: markdownlint
-        args: ['--disable', 'MD013', 'MD033', 'MD041']
+  # Markdown linting - temporarily disabled due to Node.js v23 compatibility issue
+  # - repo: https://github.com/igorshubovych/markdownlint-cli
+  #   rev: v0.42.0
+  #   hooks:
+  #     - id: markdownlint
+  #       args: ['--disable', 'MD013', 'MD033', 'MD041']
 
 # Configuration for ci
 ci:

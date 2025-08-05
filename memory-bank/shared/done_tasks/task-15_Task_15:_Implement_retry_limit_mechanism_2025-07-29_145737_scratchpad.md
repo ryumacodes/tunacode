@@ -40,7 +40,7 @@ _Agent: task-15
 [8] - When retry-prompt is detected, check if retry limit exceeded
 [8] - If exceeded, add error response and mark as handled
 [8] - This prevents infinite retry loops
-[8] 
+[8]
 [8] Now creating unit tests for the retry mechanism
 [9] Implementation completed successfully:
 [9] - Added retry_attempts tracking to SessionState with max_retries=2

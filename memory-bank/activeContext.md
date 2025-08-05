@@ -51,7 +51,7 @@ The TunaCode project is currently in the active phase of refactoring large Pytho
 
 ## Target Files for Refactoring
 - `./src/tunacode/tools/grep.py` (694 lines)
-- `./src/tunacode/cli/repl.py` (578 lines)  
+- `./src/tunacode/cli/repl.py` (578 lines)
 - `./src/tunacode/core/agents/main.py` (1613 lines)
 
 ## Success Metrics

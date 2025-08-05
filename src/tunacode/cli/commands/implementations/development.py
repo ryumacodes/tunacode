@@ -73,6 +73,8 @@ make sure to include them."""
 
         # Call the agent to analyze and create/update the file
         if context.process_request:
-            await context.process_request(prompt, context.state_manager)
+            await context.process_request(
+                prompt, context.state_manager.session.current_model, context.state_manager
+            )
 
         return None

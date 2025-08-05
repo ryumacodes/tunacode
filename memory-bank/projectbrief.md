@@ -23,7 +23,7 @@ TunaCode is a Python-based CLI tool that provides code analysis and manipulation
 ## Project Scope
 The refactoring initiative focuses on three primary target files:
 - `./src/tunacode/tools/grep.py` (694 lines)
-- `./src/tunacode/cli/repl.py` (578 lines)  
+- `./src/tunacode/cli/repl.py` (578 lines)
 - `./src/tunacode/core/agents/main.py` (1613 lines)
 
 Each file will be decomposed into smaller modules while maintaining behavioral compatibility.
