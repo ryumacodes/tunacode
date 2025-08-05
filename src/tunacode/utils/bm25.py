@@ -16,14 +16,14 @@ class BM25:
         self.k1 = k1
         self.b = b
         self.documents = [tokenize(doc) for doc in corpus]
-        self.doc_freqs = []
-        self.doc_lens = []
-        self.idf = {}
+        self.doc_freqs: list[dict] = []
+        self.doc_lens: list[int] = []
+        self.idf: dict[str, float] = {}
         self.avgdl = 0.0
         self._initialize()
 
     def _initialize(self) -> None:
-        df = Counter()
+        df: dict[str, int] = Counter()
         for doc in self.documents:
             freqs = Counter(doc)
             self.doc_freqs.append(freqs)

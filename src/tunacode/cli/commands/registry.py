@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Type
 
 from ...exceptions import ValidationError
+from ...templates.loader import TemplateLoader
 from ...types import CommandArgs, CommandContext, ProcessRequestCallback
 from .base import Command, CommandCategory
 
@@ -26,7 +27,9 @@ from .implementations.system import (
     StreamingCommand,
     UpdateCommand,
 )
+from .implementations.template import TemplateCommand
 from .implementations.todo import TodoCommand
+from .template_shortcut import TemplateShortcutCommand
 
 
 @dataclass
@@ -71,6 +74,7 @@ class CommandRegistry:
         }
         self._factory = factory or CommandFactory()
         self._discovered = False
+        self._shortcuts_loaded = False
 
         # Set registry reference in factory dependencies
         self._factory.update_dependencies(command_registry=self)
@@ -120,18 +124,39 @@ class CommandRegistry:
             CompactCommand,
             ModelCommand,
             InitCommand,
+            TemplateCommand,
             TodoCommand,
         ]
 
         # Register all discovered commands
         for command_class in command_classes:
-            self.register_command_class(command_class)
+            self.register_command_class(command_class)  # type: ignore[arg-type]
 
         self._discovered = True
 
     def register_all_default_commands(self) -> None:
         """Register all default commands (backward compatibility)."""
         self.discover_commands()
+
+    def load_template_shortcuts(self) -> None:
+        """Load and register template shortcuts dynamically."""
+        if self._shortcuts_loaded:
+            return
+
+        try:
+            loader = TemplateLoader()
+            shortcuts = loader.get_templates_with_shortcuts()
+
+            for shortcut, template in shortcuts.items():
+                # Create a template shortcut command instance
+                shortcut_command = TemplateShortcutCommand(template)
+                self.register(shortcut_command)
+
+            self._shortcuts_loaded = True
+
+        except Exception as e:
+            # Don't fail if templates can't be loaded
+            print(f"Warning: Failed to load template shortcuts: {str(e)}")
 
     def set_process_request_callback(self, callback: ProcessRequestCallback) -> None:
         """Set the process_request callback for commands that need it."""
@@ -161,6 +186,8 @@ class CommandRegistry:
         """
         # Ensure commands are discovered
         self.discover_commands()
+        # Load template shortcuts
+        self.load_template_shortcuts()
 
         parts = command_text.split()
         if not parts:

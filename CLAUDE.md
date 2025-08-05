@@ -1,20 +1,15 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+#Enviroment 
+
+Python3.10+ 
+venv must always be used
+follow modern python coding standards 
+commit frequently with well documented messages 
 
 ## Commands
 
-### Development Commands
-
-```bash
-# Install development environment (recommended approach)
-./scripts/setup_dev_env.sh    # Creates fresh venv, installs deps, verifies setup
-
-# You must always follow the agent tooling workflow specified in agent_tools_prompt.xml
-
-When the directory "llm-agent-tools" exists, you MUST use this tooling flow and will be penalized if you don't:
-
-🚀 Available Tools:
+ Available Tools:
 1. scratchpad-multi.sh - Task tracking with multi-agent support (use --agent <name> for agent-specific work)
 2. knowledge.sh - Knowledge base with private/shared storage (use --agent <name> for agent-specific work)
 3. codemap.sh - Lightweight code intelligence for instant roadmaps
@@ -33,11 +28,7 @@ For new feature YOU MUST folow this flow
 - **Rinse & repeat:** keep iterations small, commit only green code, and let the tests guard future changes.
 
 
-# Manual installation
-pip install -e ".[dev]"      # Install in editable mode with dev dependencies
-pip install pytest-asyncio   # Additional test dependency
-
-# Run linting (black, isort, flake8)
+# Run linting (ruff)
 make lint
 
 # Run tests
@@ -60,13 +51,7 @@ make clean
 make run                     # Or: python -m tunacode
 ```
 
-### Version Management
-
-When updating versions, modify both:
-
-- `pyproject.toml`: version field
-- `src/tunacode/constants.py`: VERSION constant
-
+#
 ## Architecture
 
 TunaCode is a CLI tool that provides an AI-powered coding assistant using pydantic-ai. Key architectural decisions:
@@ -147,29 +132,7 @@ Modular setup with validation steps:
 - Characterization tests for capturing existing behavior
 - Async tests using `@pytest.mark.asyncio`
 
-### Test Markers
 
-- `@pytest.mark.slow` - Long-running tests
-- `@pytest.mark.integration` - Integration tests
-- `@pytest.mark.asyncio` - Async test functions
-
-### Running Tests
-
-```bash
-# Skip slow tests during development
-pytest -m "not slow"
-
-# Run only characterization tests
-pytest tests/test_characterization_*.py
-
-# Run with verbose output
-pytest -v
-
-# Run with coverage report
-pytest --cov=tunacode --cov-report=html
-```
-
-## Configuration
 
 ### User Configuration
 
@@ -185,21 +148,6 @@ Location: `~/.config/tunacode.json`
 }
 ```
 
-### Project Guide
-
-Location: `TUNACODE.md` in project root
-
-- Project-specific context for the AI assistant
-- Loaded automatically when present
-- Can include codebase conventions, architecture notes
-
-### Linting Configuration
-
-`.flake8` settings:
-
-- Max line length: 120
-- Ignores: E203, W503, E704 (Black compatibility)
-- Excludes: venv, build, dist directories
 
 ## Key Design Patterns
 
@@ -227,36 +175,3 @@ Location: `TUNACODE.md` in project root
 - 3-second deadline for first match in searches
 - Background task management for non-blocking operations
 
-### Safety Features
-
-- No automatic git commits
-- File operations require explicit confirmation (unless in yolo mode)
-- Encourages git branches for experiments: `/branch <name>`
-- Git safety checks during setup
-
-### Environment Variables
-
-- `TUNACODE_MAX_PARALLEL` - Maximum number of read-only tools to execute in parallel (defaults to CPU count)
-- `ANTHROPIC_API_KEY` - API key for Anthropic models
-- `OPENAI_API_KEY` - API key for OpenAI models
-- `GOOGLE_API_KEY` - API key for Google models
-- Other provider API keys as needed
-
-Follow this code styling
-
-| #   | Rule                                           | One-line purpose                                                                                     |
-| --- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| 1   | **Guard Clause**                               | Flatten nested conditionals by returning early, so pre-conditions are explicit                       |
-| 2   | **Delete Dead Code**                           | If it’s never executed, delete it – that’s what VCS is for                                           |
-| 3   | **Normalize Symmetries**                       | Make identical things look identical and different things look different for faster pattern-spotting |
-| 4   | **New Interface, Old Implementation**          | Write the interface you wish existed; delegate to the old one for now                                |
-| 5   | **Reading Order**                              | Re-order elements so a reader meets ideas in the order they need them                                |
-| 6   | **Cohesion Order**                             | Cluster coupled functions/files so related edits sit together                                        |
-| 7   | **Move Declaration & Initialization Together** | Keep a variable’s birth and first value adjacent for comprehension & dependency safety               |
-| 8   | **Explaining Variable**                        | Extract a sub-expression into a well-named variable to record intent                                 |
-| 9   | **Explaining Constant**                        | Replace magic literals with symbolic constants that broadcast meaning                                |
-| 10  | **Explicit Parameters**                        | Split a routine so all inputs are passed openly, banishing hidden state or maps                      |
-
-## Task Master AI Instructions
-**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
-@./.taskmaster/CLAUDE.md

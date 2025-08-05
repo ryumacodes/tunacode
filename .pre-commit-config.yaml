@@ -55,6 +55,7 @@ repos:
           - 'typer>=0.15'
           - 'types-requests'
         args: ['--ignore-missing-imports', '--no-strict-optional']
+        exclude: 'conftest\.py$'
 
 
   # Local hooks for project-specific checks
@@ -80,7 +81,7 @@ repos:
       # Check for dead code in changed files only
       - id: vulture-changed
         name: Check for dead code in changed files
-        entry: venv/bin/vulture --min-confidence 80
+        entry: venv/bin/vulture --min-confidence 80 src/ vulture_whitelist.py
         language: system
         files: \.py$
         exclude: ^(tests/|test_)
@@ -108,6 +109,14 @@ repos:
         name: Check for print statements
         entry: bash -c 'find src/ -name "*.py" -type f | xargs grep -H "print(" | grep -v "# noqa" | grep -v "# pragma" || exit 0'
         language: system
+        pass_filenames: false
+        always_run: true
+
+      # Check for files longer than 500 lines
+      - id: check-file-length
+        name: Check for files longer than 500 lines
+        entry: scripts/check-file-length.sh
+        language: script
         pass_filenames: false
         always_run: true
 

@@ -259,7 +259,7 @@
         "description": "Write unit tests for TaskDecomposer complexity analysis and BudgetManager allocation strategies",
         "details": "Create tests/unit/test_task_decomposer.py with tests for:\n- analyze_and_decompose() with various task types\n- Complexity scoring logic\n- Subtask generation\n- Confidence calculations\n\nCreate tests/unit/test_budget_manager.py with tests for:\n- allocate_budget() with different strategies (equal, weighted, adaptive, priority)\n- consume_budget() and release_budget() operations\n- Budget summary calculations\n- Edge cases (zero budget, single task, many tasks)\n\nEnsure tests run with 'make test'",
         "testStrategy": "Use pytest with mocking for external dependencies. Test various allocation strategies and edge cases. Verify mathematical correctness of budget calculations.",
-        "status": "pending",
+        "status": "cancelled",
         "dependencies": [],
         "priority": "high",
         "subtasks": []
@@ -270,15 +270,99 @@
         "description": "Write unit tests for ResultAggregator result combination strategies and TaskHierarchy relationship tracking",
         "details": "Create tests/unit/test_result_aggregator.py with tests for:\n- aggregate_results() with different strategies (simple, structured, intelligent)\n- _simple_aggregation() text concatenation\n- _structured_aggregation() JSON/dict merging\n- _intelligent_aggregation() with mock agent responses\n- Error handling for failed subtasks\n\nCreate tests/unit/test_task_hierarchy.py with tests for:\n- add_task() and remove_task() operations\n- get_children() and get_ancestors() queries\n- detect_cycles() for circular dependencies\n- get_execution_order() topological sorting\n- Relationship validation\n\nUpdate Makefile to include new test files in 'make test' target",
         "testStrategy": "Use pytest with fixtures for common test data. Mock agent interactions for intelligent aggregation. Test graph algorithms for hierarchy management.",
-        "status": "pending",
+        "status": "cancelled",
         "dependencies": [],
         "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Create template directory structure at ~/.config/tunacode/templates/ and ensure it exists on initialization",
+        "description": "Establish a standardized template directory structure in the user's config directory and ensure it's created during TunaCode initialization process.",
+        "details": "Create a template system infrastructure by:\n1. Define template directory structure at ~/.config/tunacode/templates/ with subdirectories for different template types (e.g., project/, tool/, config/)\n2. Modify the setup coordinator in core/setup.py to include template directory creation as a setup step\n3. Add template directory validation to existing setup steps, ensuring proper permissions and accessibility\n4. Create base template files or placeholder structure to demonstrate the system\n5. Update StateManager to track template directory location and availability\n6. Ensure cross-platform compatibility for config directory paths (Windows, macOS, Linux)\n7. Add error handling for cases where directory creation fails due to permissions or disk space",
+        "testStrategy": "1. Unit tests for template directory creation logic with different OS environments\n2. Integration tests verifying setup coordinator properly creates template structure during initialization\n3. Test permission handling when directory creation fails\n4. Verify template directory is accessible and writable after creation\n5. Test cleanup and recreation scenarios\n6. Cross-platform path resolution testing for config directory locations\n7. End-to-end test ensuring templates are available after fresh TunaCode installation",
+        "status": "done",
+        "dependencies": [
+          4
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Create Template dataclass and TemplateLoader class in src/tunacode/templates/loader.py",
+        "description": "Implement a Template dataclass to represent template metadata and a TemplateLoader class with methods to load, list, and save JSON templates from the filesystem.",
+        "details": "Create src/tunacode/templates/loader.py with:\n1. Template dataclass using @dataclass decorator with fields: name (str), description (str), category (str), content (dict), created_at (datetime), tags (list[str])\n2. TemplateLoader class with methods:\n   - load_template(name: str) -> Template: Load template from JSON file in ~/.config/tunacode/templates/\n   - list_templates() -> list[Template]: Return all available templates with metadata\n   - save_template(template: Template) -> bool: Save template to JSON file with validation\n   - delete_template(name: str) -> bool: Remove template file safely\n   - get_template_path(name: str) -> Path: Helper to construct template file paths\n3. Add proper error handling for file I/O operations, JSON parsing errors, and invalid template data\n4. Include type hints and docstrings for all methods\n5. Use pathlib.Path for file operations and ensure cross-platform compatibility\n6. Implement template validation to ensure required fields are present",
+        "testStrategy": "1. Unit tests for Template dataclass validation and serialization/deserialization\n2. Unit tests for TemplateLoader methods with mocked filesystem operations\n3. Test load_template() with valid/invalid JSON files and missing files\n4. Test list_templates() with empty directory and multiple template files\n5. Test save_template() with valid templates and error conditions (permissions, disk space)\n6. Test delete_template() with existing/non-existing files\n7. Integration tests with actual template directory structure\n8. Test cross-platform path handling and file operations",
+        "status": "done",
+        "dependencies": [
+          11
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Add active_template property and template validation to ToolHandler",
+        "description": "Modify the ToolHandler class to track the currently active template and validate tool usage against the template's allowed_tools list in the should_confirm method.",
+        "details": "Update src/tunacode/core/tool_handler.py to:\n1. Add active_template property to ToolHandler class to store the currently active Template instance\n2. Add setter method set_active_template(template: Template) to update the active template\n3. Modify should_confirm() method to check if the current tool is in template.allowed_tools when an active template is set\n4. If tool is not in allowed_tools, either skip confirmation (for pre-approved tools in template) or enforce confirmation (for restricted tools)\n5. Add proper type hints and documentation for the new functionality\n6. Handle edge cases where active_template is None or template has no allowed_tools defined\n7. Ensure backward compatibility when no template is active",
+        "testStrategy": "1. Unit tests for set_active_template() method with valid Template objects and None values\n2. Test should_confirm() behavior with different template configurations:\n   - No active template (existing behavior preserved)\n   - Template with allowed_tools list containing the current tool\n   - Template with allowed_tools list not containing the current tool\n   - Template with empty or missing allowed_tools list\n3. Integration tests verifying tool confirmation flow with active templates\n4. Test type checking and error handling for invalid template objects",
+        "status": "done",
+        "dependencies": [
+          12
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Create TemplateCommand class with list, load, and create subcommands",
+        "description": "Implement a new TemplateCommand class in the CLI commands module to provide template management functionality through list, load, and create subcommands.",
+        "details": "Create src/tunacode/cli/commands/implementations/template.py with:\n1. TemplateCommand class extending BaseCommand with matches() method recognizing '/template' prefix\n2. execute() method parsing subcommands: list, load, create\n3. _list_templates() method using TemplateLoader.list_templates() to display available templates in formatted table\n4. _load_template(name: str) method to activate a template using TemplateLoader.load_template() and ToolHandler.set_active_template()\n5. _create_template() method with interactive prompts for template creation (name, description, category, allowed_tools selection)\n6. Register the command with @CommandRegistry.register decorator\n7. Add comprehensive error handling for invalid template names, file system errors, and malformed templates\n8. Include usage help text showing available subcommands and syntax",
+        "testStrategy": "1. Unit tests for TemplateCommand.matches() with various input patterns ('/template list', '/template load name', etc.)\n2. Test execute() method routing to correct subcommand handlers\n3. Mock TemplateLoader and ToolHandler dependencies to test _list_templates(), _load_template(), and _create_template() methods\n4. Test error handling for non-existent templates, invalid subcommands, and file system failures\n5. Integration tests verifying command registration and CLI interaction flow\n6. Test interactive template creation with various input scenarios",
+        "status": "done",
+        "dependencies": [
+          12,
+          13
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Create example JSON templates (web-dev.json, debug.json, refactor.json) in templates directory for common use cases",
+        "description": "Create three pre-configured JSON template files in the templates directory that demonstrate common development workflows with appropriate tool restrictions and metadata.",
+        "details": "Create three template files in ~/.config/tunacode/templates/:\n\n1. web-dev.json - Web development template with:\n   - allowed_tools: [\"read_file\", \"write_file\", \"update_file\", \"run_command\", \"list_dir\", \"grep\"]\n   - category: \"development\"\n   - description: \"Template for web development projects with frontend/backend tools\"\n   - tags: [\"web\", \"frontend\", \"backend\", \"javascript\", \"html\", \"css\"]\n   - content: {\"framework_preferences\": [\"react\", \"vue\", \"angular\"], \"build_tools\": [\"webpack\", \"vite\", \"parcel\"]}\n\n2. debug.json - Debugging template with:\n   - allowed_tools: [\"read_file\", \"grep\", \"list_dir\", \"run_command\"]\n   - category: \"debugging\"\n   - description: \"Template for debugging and investigation tasks with read-only focus\"\n   - tags: [\"debug\", \"investigation\", \"analysis\", \"troubleshooting\"]\n   - content: {\"log_patterns\": [\"ERROR\", \"WARN\", \"EXCEPTION\"], \"common_commands\": [\"ps aux\", \"netstat\", \"lsof\"]}\n\n3. refactor.json - Refactoring template with:\n   - allowed_tools: [\"read_file\", \"update_file\", \"grep\", \"list_dir\"]\n   - category: \"refactoring\"\n   - description: \"Template for code refactoring with controlled file modification\"\n   - tags: [\"refactor\", \"cleanup\", \"optimization\", \"restructure\"]\n   - content: {\"refactor_patterns\": [\"extract_method\", \"rename_variable\", \"move_class\"], \"safety_checks\": [\"run_tests\", \"lint_check\"]}\n\nEach template should include created_at timestamp and follow the Template dataclass structure defined in Task 12.",
+        "testStrategy": "1. Verify each template file is valid JSON and can be parsed without errors\n2. Test that each template conforms to the Template dataclass schema with all required fields (name, description, category, content, created_at, tags)\n3. Validate allowed_tools arrays contain only valid tool names from the TunaCode tool system\n4. Test TemplateLoader.load_template() can successfully load each template file\n5. Verify templates appear in TemplateLoader.list_templates() output with correct metadata\n6. Test template activation through ToolHandler.set_active_template() for each template\n7. Validate that tool confirmation behavior changes appropriately when each template is active",
+        "status": "done",
+        "dependencies": [
+          11,
+          12
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Add integration tests for template system: loading templates, auto-approval of tools, and command functionality",
+        "description": "Create comprehensive integration tests to verify the complete template system workflow including template loading, tool auto-approval behavior, and CLI command interactions.",
+        "details": "Create integration test file tests/test_template_integration.py with comprehensive test scenarios:\n1. Template loading integration - test TemplateLoader with real filesystem operations, verify templates are loaded correctly with all metadata\n2. Tool auto-approval workflow - test ToolHandler with active templates, verify tools in allowed_tools skip confirmations while restricted tools still require confirmation\n3. CLI command integration - test TemplateCommand with StateManager and ToolHandler, verify '/template list', '/template load', and '/template create' work end-to-end\n4. Template activation flow - test complete workflow from loading template via CLI command to tool execution with template restrictions\n5. Error handling scenarios - test behavior with invalid templates, missing files, and permission issues\n6. Template persistence - verify templates remain active across multiple tool executions and state changes\n7. Integration with existing yolo mode - ensure template auto-approval works correctly with and without yolo mode enabled",
+        "testStrategy": "1. Set up test fixtures with real template files in temporary directories to test actual filesystem operations\n2. Create integration test scenarios that exercise the full stack from CLI input through StateManager, TemplateCommand, TemplateLoader, and ToolHandler\n3. Test template loading and activation with real JSON files, verifying Template dataclass parsing and ToolHandler integration\n4. Verify tool confirmation behavior changes correctly when templates are active vs inactive\n5. Test CLI command parsing and execution with mock user input for all template subcommands\n6. Create scenarios testing error conditions like invalid JSON, missing templates, and permission failures\n7. Verify integration with existing permission system and yolo mode interactions\n8. Use pytest fixtures for test isolation and cleanup of temporary files and state",
+        "status": "pending",
+        "dependencies": [
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "priority": "medium",
         "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-07-22T21:24:36.985Z",
-      "updated": "2025-07-26T18:43:06.733Z",
+      "updated": "2025-08-02T18:28:08.614Z",
       "description": "Tasks for master context"
     }
   }

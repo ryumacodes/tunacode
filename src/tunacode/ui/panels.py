@@ -47,7 +47,7 @@ colors = DotDict(UI_COLORS)
 @create_sync_wrapper
 async def panel(
     title: str,
-    text: Union[str, Markdown, Pretty],
+    text: Union[str, Markdown, Pretty, Table],
     top: int = DEFAULT_PANEL_PADDING["top"],
     right: int = DEFAULT_PANEL_PADDING["right"],
     bottom: int = DEFAULT_PANEL_PADDING["bottom"],
@@ -57,6 +57,7 @@ async def panel(
 ) -> None:
     """Display a rich panel with modern styling."""
     border_style = border_style or kwargs.get("style") or colors.border
+
     panel_obj = Panel(
         Padding(text, (0, 1, 0, 1)),
         title=f"[bold]{title}[/bold]",
@@ -65,7 +66,10 @@ async def panel(
         padding=(0, 1),
         box=ROUNDED,  # Use ROUNDED box style
     )
-    await print(Padding(panel_obj, (top, right, bottom, left)), **kwargs)
+
+    final_padding = Padding(panel_obj, (top, right, bottom, left))
+
+    await print(final_padding, **kwargs)
 
 
 async def agent(text: str, bottom: int = 1) -> None:
@@ -83,7 +87,7 @@ class StreamingAgentPanel:
         self.content = ""
         self.live = None
 
-    def _create_panel(self) -> Panel:
+    def _create_panel(self) -> Padding:
         """Create a Rich panel with current content."""
         # Use the UI_THINKING_MESSAGE constant instead of hardcoded text
         from rich.text import Text
@@ -92,7 +96,7 @@ class StreamingAgentPanel:
 
         # Handle the default thinking message with Rich markup
         if not self.content:
-            content_renderable = Text.from_markup(UI_THINKING_MESSAGE)
+            content_renderable: Union[Text, Markdown] = Text.from_markup(UI_THINKING_MESSAGE)
         else:
             content_renderable = Markdown(self.content)
         panel_obj = Panel(
@@ -122,7 +126,11 @@ class StreamingAgentPanel:
 
     async def update(self, content_chunk: str):
         """Update the streaming display with new content."""
-        self.content += content_chunk
+        # Defensive: some providers may yield None chunks intermittently
+        if content_chunk is None:
+            content_chunk = ""
+        # Ensure type safety for concatenation
+        self.content = (self.content or "") + str(content_chunk)
         if self.live:
             self.live.update(self._create_panel())
 

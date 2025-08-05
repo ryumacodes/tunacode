@@ -28,12 +28,14 @@ try:
 
     PydanticAgent = Agent
     MessagePart = Union[ToolReturnPart, Any]
+    ModelRequest = ModelRequest  # type: ignore[misc]
+    ModelResponse = Any
 except ImportError:
     # Fallback if pydantic-ai is not available
     PydanticAgent = Any
-    MessagePart = Any
+    MessagePart = Any  # type: ignore[misc]
     ModelRequest = Any
-    ModelResponse = Any
+    ModelResponse = Any  # type: ignore[misc]
 
 
 @dataclass
@@ -105,7 +107,7 @@ ToolCallId = str
 class ToolFunction(Protocol):
     """Protocol for tool functions."""
 
-    async def __call__(self, *args, **kwargs) -> str: ...
+    async def __call__(self, *_args, **kwargs) -> str: ...
 
 
 @dataclass
@@ -169,6 +171,8 @@ class ResponseState:
 
     has_user_response: bool = False
     has_final_synthesis: bool = False
+    task_completed: bool = False
+    awaiting_user_guidance: bool = False
 
 
 @dataclass

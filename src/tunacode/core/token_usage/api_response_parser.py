@@ -35,9 +35,13 @@ class ApiResponseParser:
 
         # The pydantic-ai Usage object standardizes keys to 'request_tokens'
         # and 'response_tokens'. We access them as attributes.
+        # Ensure None values are converted to 0
+        prompt_tokens = getattr(usage, "request_tokens", 0)
+        completion_tokens = getattr(usage, "response_tokens", 0)
+
         parsed_data = {
-            "prompt_tokens": getattr(usage, "request_tokens", 0),
-            "completion_tokens": getattr(usage, "response_tokens", 0),
+            "prompt_tokens": prompt_tokens if prompt_tokens is not None else 0,
+            "completion_tokens": completion_tokens if completion_tokens is not None else 0,
             "model_name": actual_model_name,
         }
 

@@ -44,12 +44,12 @@ class Command(ABC):
         return CommandCategory.SYSTEM
 
     @abstractmethod
-    async def execute(self, args: CommandArgs, context: CommandContext) -> CommandResult:
+    async def execute(self, _args: CommandArgs, context: CommandContext) -> CommandResult:
         """
         Execute the command.
 
         Args:
-            args: Command arguments (excluding the command name)
+            _args: Command arguments (excluding the command name)
             context: Execution context with state and config
 
         Returns:

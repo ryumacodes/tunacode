@@ -35,8 +35,48 @@ def get_agent_tool():
 
 
 def get_model_messages():
+    """
+    Safely retrieve message-related classes from pydantic_ai.
+
+    If the running environment (e.g. our test stubs) does not define
+    SystemPromptPart we create a minimal placeholder so that the rest of the
+    code can continue to work without depending on the real implementation.
+    """
     messages = importlib.import_module("pydantic_ai.messages")
-    return messages.ModelRequest, messages.ToolReturnPart
+
+    # Create minimal fallbacks for missing message part classes
+    # SystemPromptPart
+    if not hasattr(messages, "SystemPromptPart"):
+
+        class SystemPromptPart:  # type: ignore
+            def __init__(self, content: str = "", role: str = "system", part_kind: str = ""):
+                self.content = content
+                self.role = role
+                self.part_kind = part_kind
+
+            def __repr__(self) -> str:  # pragma: no cover
+                return f"SystemPromptPart(content={self.content!r})"
+
+        SystemPromptPart.__module__ = messages.__name__
+        setattr(messages, "SystemPromptPart", SystemPromptPart)
+
+    # UserPromptPart
+    if not hasattr(messages, "UserPromptPart"):
+
+        class UserPromptPart:  # type: ignore
+            def __init__(self, content: str = "", role: str = "user", part_kind: str = ""):
+                self.content = content
+                self.role = role
+                self.part_kind = part_kind
+
+            def __repr__(self) -> str:  # pragma: no cover
+                return f"UserPromptPart(content={self.content!r})"
+
+        UserPromptPart.__module__ = messages.__name__
+        setattr(messages, "UserPromptPart", UserPromptPart)
+
+    # Finally, return the relevant classes so callers can use them directly
+    return messages.ModelRequest, messages.ToolReturnPart, messages.SystemPromptPart
 
 
 async def execute_tools_parallel(
@@ -335,7 +375,7 @@ def patch_tool_messages(
     for tool_call_id, tool_name in list(tool_calls.items()):
         if tool_call_id not in tool_returns and tool_call_id not in retry_prompts:
             # Import ModelRequest and ToolReturnPart lazily
-            model_request_cls, tool_return_part_cls = get_model_messages()
+            model_request_cls, tool_return_part_cls, _ = get_model_messages()
             messages.append(
                 model_request_cls(
                     parts=[
