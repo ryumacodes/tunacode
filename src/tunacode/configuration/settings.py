@@ -7,12 +7,7 @@ Handles configuration paths, model registries, and application metadata.
 
 from pathlib import Path
 
-from tunacode.constants import (
-    APP_NAME,
-    APP_VERSION,
-    CONFIG_FILE_NAME,
-    ToolName,
-)
+from tunacode.constants import APP_NAME, APP_VERSION, CONFIG_FILE_NAME, ToolName
 from tunacode.types import ConfigFile, ConfigPath
 
 

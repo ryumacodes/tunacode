@@ -14,7 +14,7 @@ _Agent: default
 [2] - Other runtime deps: typer, prompt_toolkit, pygments, rich, tiktoken
 [2] - Dev deps: pytest-asyncio (explicitly installed in script)
 [2] - Python requirement: >=3.10
-[2] 
+[2]
 [2] Current script issues:
 [2] 1. pip install -e .[dev] --quiet suppresses errors
 [2] 2. No verification that pydantic-ai actually installed successfully
@@ -33,10 +33,10 @@ _Agent: default
 [4] ✓ Import verification, logging, retry, and rollback all present
 [4] ✓ Most packages import successfully in current env
 [4] ⚠ tiktoken import failed (expected - not all packages installed in current env)
-[4] 
+[4]
 [4] Key improvements delivered:
 [4] 1. Explicit pydantic-ai[logfire]==0.2.6 installation with verification
-[4] 2. Import tests for all critical packages after installation  
+[4] 2. Import tests for all critical packages after installation
 [4] 3. Detailed logging to setup_dev_env.log
 [4] 4. Retry mechanism (3 attempts) for failed installations
 [4] 5. Rollback removes incomplete venv on failure

@@ -9,7 +9,7 @@ from enum import Enum
 
 # Application info
 APP_NAME = "TunaCode"
-APP_VERSION = "0.0.51"
+APP_VERSION = "0.0.53"
 
 
 # File patterns

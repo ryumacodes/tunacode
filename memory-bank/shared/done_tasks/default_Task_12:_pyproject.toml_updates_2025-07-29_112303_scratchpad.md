@@ -50,7 +50,7 @@ Key observations:
 ### Recommended Changes
 
 1. Add explicit upper bound to Python version (optional)
-2. Consider relaxing some version pins for flexibility  
+2. Consider relaxing some version pins for flexibility
 3. Verify all dependencies work with Python 3.13
 4. Document the logfire extra dependency
 ### Repository URL Update

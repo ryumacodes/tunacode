@@ -23,7 +23,7 @@
 - **Coverage.py**: Code coverage measurement
 
 ### Documentation
-- @documentation 
+- @documentation
 - documentation/README.md
 
 ## Development Setup
@@ -101,7 +101,7 @@ When using pydantic-ai Agent objects, be aware of these critical API differences
    async with agent.iter(message) as agent_run:
        async for node in agent_run:
            # process nodes
-   
+
    # INCORRECT - agent.run() returns a coroutine, not a context manager
    async with agent.run(message) as agent_run:  # This will fail!
    ```
@@ -111,7 +111,7 @@ When using pydantic-ai Agent objects, be aware of these critical API differences
    # CORRECT - iterate directly over agent_run
    async for node in agent_run:
        # process nodes
-   
+
    # INCORRECT - AgentRun has no .stream attribute
    for node in agent_run.stream:  # This will fail!
    ```
@@ -121,7 +121,7 @@ When using pydantic-ai Agent objects, be aware of these critical API differences
    # CORRECT
    async for node in agent_run:
        # process nodes
-   
+
    # INCORRECT - must use async for
    for node in agent_run:  # This will fail!
    ```

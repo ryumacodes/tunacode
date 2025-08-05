@@ -12,10 +12,10 @@ while IFS= read -r -d '' file; do
     if [ ! -f "$file" ]; then
         continue
     fi
-    
+
     # Get line count
     lines=$(wc -l < "$file" 2>/dev/null || echo 0)
-    
+
     # Check if file exceeds limit
     if [ "$lines" -gt "$MAX_LINES" ]; then
         echo "$file: $lines lines (exceeds $MAX_LINES line limit)"

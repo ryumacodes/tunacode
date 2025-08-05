@@ -17,7 +17,7 @@
   - All configuration files updated to use enums
 - ✅ Phase 2: Type Hints Enhancement - Added comprehensive type annotations:
   - Added return type to `get_agent_tool()` function
-  - Added type hints to `ToolUI.show_confirmation()` 
+  - Added type hints to `ToolUI.show_confirmation()`
   - Discovered tools already had comprehensive type annotations
   - Fixed import ordering issues
 
@@ -150,7 +150,7 @@
 
 - docs: Updated techContext.md to reflect Ruff usage instead of Black for code formatting and linting
 - feat: complete Phase 1 modern Python standards and fix critical import issues
-- checkpoint: create rollback point before fixing remaining 18 test failures  
+- checkpoint: create rollback point before fixing remaining 18 test failures
 - docs: document Phase 1 completion and remaining test failures
 - docs: mark Phase 2 Type Hints Enhancement as starting - rollback point
 - feat: complete Phase 2 Type Hints Enhancement

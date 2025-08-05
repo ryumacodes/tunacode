@@ -41,7 +41,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Optional
 from pydantic_ai import Agent
 
 if TYPE_CHECKING:
-    from pydantic_ai import Tool
+    from pydantic_ai import Tool  # noqa: F401
 
 from tunacode.core.logging.logger import get_logger
 
@@ -79,6 +79,46 @@ from tunacode.types import (
 
 # Configure logging
 logger = get_logger(__name__)
+
+# Cache for UserPromptPart class to avoid repeated imports
+_USER_PROMPT_PART_CLASS = None
+
+
+def _get_user_prompt_part_class():
+    """Get UserPromptPart class with caching and fallback for test environment.
+
+    This function follows DRY principle by centralizing the UserPromptPart
+    import logic and caching the result to avoid repeated imports.
+    """
+    global _USER_PROMPT_PART_CLASS
+
+    if _USER_PROMPT_PART_CLASS is not None:
+        return _USER_PROMPT_PART_CLASS
+
+    try:
+        import importlib
+
+        messages = importlib.import_module("pydantic_ai.messages")
+        _USER_PROMPT_PART_CLASS = getattr(messages, "UserPromptPart", None)
+
+        if _USER_PROMPT_PART_CLASS is None:
+            # Fallback for test environment
+            class UserPromptPartFallback:
+                def __init__(self, content, part_kind):
+                    self.content = content
+                    self.part_kind = part_kind
+
+            _USER_PROMPT_PART_CLASS = UserPromptPartFallback
+    except Exception:
+        # Fallback for test environment
+        class UserPromptPartFallback:
+            def __init__(self, content, part_kind):
+                self.content = content
+                self.part_kind = part_kind
+
+        _USER_PROMPT_PART_CLASS = UserPromptPartFallback
+
+    return _USER_PROMPT_PART_CLASS
 
 
 def get_agent_tool() -> tuple[type[Agent], type["Tool"]]:
@@ -242,18 +282,8 @@ EXECUTE A TOOL OR PROVIDE SUBSTANTIAL CONTENT.
 DO NOT RETURN ANOTHER EMPTY RESPONSE."""
 
                         model_request_cls = get_model_messages()[0]
-                        # Get UserPromptPart from the messages module
-                        import importlib
-
-                        messages = importlib.import_module("pydantic_ai.messages")
-                        UserPromptPart = getattr(messages, "UserPromptPart", None)
-                        if UserPromptPart is None:
-                            # Fallback for test environment
-                            class UserPromptPart:
-                                def __init__(self, content, part_kind):
-                                    self.content = content
-                                    self.part_kind = part_kind
-
+                        # Get UserPromptPart from the cached helper
+                        UserPromptPart = _get_user_prompt_part_class()
                         user_prompt_part = UserPromptPart(
                             content=force_action_content,
                             part_kind="user-prompt",
@@ -318,18 +348,8 @@ You're describing actions but not executing them. You MUST:
 NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
 
                     model_request_cls = get_model_messages()[0]
-                    # Get UserPromptPart from the messages module
-                    import importlib
-
-                    messages = importlib.import_module("pydantic_ai.messages")
-                    UserPromptPart = getattr(messages, "UserPromptPart", None)
-                    if UserPromptPart is None:
-                        # Fallback for test environment
-                        class UserPromptPart:
-                            def __init__(self, content, part_kind):
-                                self.content = content
-                                self.part_kind = part_kind
-
+                    # Get UserPromptPart from the cached helper
+                    UserPromptPart = _get_user_prompt_part_class()
                     user_prompt_part = UserPromptPart(
                         content=no_progress_content,
                         part_kind="user-prompt",
@@ -393,17 +413,8 @@ NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
 
                     # Create user message asking for clarification
                     model_request_cls = get_model_messages()[0]
-                    # Get UserPromptPart from the messages module
-                    import importlib
-
-                    messages = importlib.import_module("pydantic_ai.messages")
-                    UserPromptPart = getattr(messages, "UserPromptPart", None)
-                    if UserPromptPart is None:
-                        # Fallback for test environment
-                        class UserPromptPart:
-                            def __init__(self, content, part_kind):
-                                self.content = content
-                                self.part_kind = part_kind
+                    # Get UserPromptPart from the cached helper
+                    UserPromptPart = _get_user_prompt_part_class()
 
                     clarification_content = f"""I need clarification to continue.
 
@@ -474,18 +485,8 @@ Please let me know how to proceed."""
 
                     # Create user message
                     model_request_cls = get_model_messages()[0]
-                    # Get UserPromptPart from the messages module
-                    import importlib
-
-                    messages = importlib.import_module("pydantic_ai.messages")
-                    UserPromptPart = getattr(messages, "UserPromptPart", None)
-                    if UserPromptPart is None:
-                        # Fallback for test environment
-                        class UserPromptPart:
-                            def __init__(self, content, part_kind):
-                                self.content = content
-                                self.part_kind = part_kind
-
+                    # Get UserPromptPart from the cached helper
+                    UserPromptPart = _get_user_prompt_part_class()
                     user_prompt_part = UserPromptPart(
                         content=extend_content,
                         part_kind="user-prompt",
@@ -664,8 +665,8 @@ Please let me know how to proceed."""
 
             # For non-fallback cases, we still need to handle the response_state
             # Create a minimal wrapper just to add response_state
-            wrapper = AgentRunWithState(agent_run, response_state)
-            return wrapper
+            state_wrapper = AgentRunWithState(agent_run, response_state)
+            return state_wrapper
 
     except UserAbortError:
         raise
