@@ -43,7 +43,7 @@ repos:
     hooks:
       - id: ruff
         args: ['--fix', '--show-fixes']
-      - id: ruff-format
+      # - id: ruff-format  # Disabled - make-lint already handles formatting
 
   # Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -64,7 +64,7 @@ repos:
       # Existing make lint check - already runs ruff which respects exclusions
       - id: make-lint
         name: Run make lint check
-        entry: make lint-check
+        entry: make lint
         language: system
         pass_filenames: false
         always_run: true
@@ -120,12 +120,12 @@ repos:
       #   pass_filenames: false
       #   always_run: true
 
-  # Import sorting with isort
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ['--profile', 'black', '--filter-files']
+  # Import sorting with isort - DISABLED (ruff handles this with extend-select = ["I"])
+  # - repo: https://github.com/pycqa/isort
+  #   rev: 5.13.2
+  #   hooks:
+  #     - id: isort
+  #       args: ['--profile', 'black', '--filter-files']
 
   # Documentation linting
   - repo: https://github.com/pycqa/doc8
