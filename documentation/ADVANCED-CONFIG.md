@@ -107,7 +107,18 @@ provider:model-name
 
 ## MCP (Model Context Protocol) Support
 
-Extend your AI's capabilities with MCP servers. MCP allows you to connect external tools and services to TunaCode.
+Extend your AI's capabilities with MCP servers. MCP allows you to connect external tools and services to TunaCode, seamlessly integrating with the built-in tool system.
+
+### MCP Integration Features
+
+TunaCode provides robust MCP integration with:
+
+- **Automatic Tool Discovery**: MCP tools are automatically detected and integrated
+- **Silent Operation**: MCP server stderr output is suppressed to prevent noise
+- **Error Recovery**: Graceful handling of MCP server failures and disconnections
+- **Schema Validation**: Full parameter validation using MCP tool schemas
+- **Resource Support**: Access to MCP resource protocols for data exchange
+- **Seamless UX**: External MCP tools work exactly like built-in tools
 
 ### Basic MCP Configuration
 
@@ -161,6 +172,70 @@ Extend your AI's capabilities with MCP servers. MCP allows you to connect extern
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/directory"]
+    }
+  }
+}
+```
+
+### MCP Architecture Integration
+
+TunaCode's MCP integration (`src/tunacode/services/mcp.py`) provides:
+
+**QuietMCPServer**: Suppresses MCP server stderr output for clean operation
+```python
+class QuietMCPServer(MCPServerStdio):
+    """Silences MCP server stderr while preserving JSON-RPC communication"""
+```
+
+**Server Lifecycle**:
+- MCP servers are loaded during agent initialization
+- Automatic connection management with proper cleanup
+- Error handling prevents single server failures from affecting other tools
+
+**Tool Integration**:
+- MCP tools appear alongside built-in tools in the agent's tool list
+- Same confirmation flow and error handling as internal tools
+- Full support for parallel execution (read-only MCP tools run concurrently)
+
+### Popular MCP Servers
+
+**Database Access:**
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "DATABASE_URL": "postgresql://user:password@localhost:5432/dbname"
+      }
+    }
+  }
+}
+```
+
+**SQLite:**
+```json
+{
+  "mcpServers": {
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "/path/to/database.db"]
+    }
+  }
+}
+```
+
+**Brave Search:**
+```json
+{
+  "mcpServers": {
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "your-brave-api-key"
+      }
     }
   }
 }
@@ -244,6 +319,13 @@ Edit `~/.config/tunacode.json`:
    - Ensure the command is installed (npm, uvx, etc.)
    - Check that all required environment variables are set
    - Verify the server supports your operating system
+   - Check MCP server logs (stderr is suppressed but logged internally)
+
+4. **MCP Tools Not Appearing**
+   - Verify the server configuration in `mcpServers` section
+   - Check that the MCP server supports tool discovery
+   - Use `/refresh` command to reload MCP servers
+   - Enable debug mode to see MCP initialization logs
 
 ### Debug Mode
 
