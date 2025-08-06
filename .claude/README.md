@@ -1,64 +1,52 @@
-# .claude Directory Structure
+# .claude
 
-This directory contains optimized metadata for Claude/LLM interaction with the TunaCode repository.
+Developer and agent-specific documentation for tunacode.
 
-## Memory Anchors
+## Directory Structure
 
-Memory anchors are embedded directly in source files using the format:
-```python
-CLAUDE_ANCHOR[anchor-key]: Description of this code section
+```
+.claude/
+├── agents/                    # Agent definitions
+│   ├── bug-context-analyzer.md
+│   ├── code-synthesis-analyzer.md
+│   ├── documentation-synthesis-qa.md
+│   ├── expert-debugger.md
+│   ├── phased-task-processor.md
+│   ├── prompt-engineer.md
+│   ├── rapid-code-synthesis-qa.md
+│   └── tech-docs-maintainer.md
+├── commands/                  # Slash commands
+│   ├── deploy.md
+│   ├── github-issue.md
+│   ├── smells.md
+│   ├── work.md
+│   └── workflow.md
+├── delta/                     # Version diffs and changes
+│   ├── 2025-01-05-baseline.yml
+│   ├── fix-text-alignment-layout-task3.md
+│   ├── task4_ui_formatting_fix.md
+│   └── v0.0.53_to_v0.0.54.diff
+├── metadata/                  # Project metadata
+│   ├── components.yml
+│   └── hotspots.txt
+├── patterns/                  # Code patterns
+│   └── json_retry_implementation.md
+├── qa/                        # QA test definitions
+│   ├── fix-agent-errors.yml
+│   ├── fix-publish-script.yml
+│   └── fix-runtime-warnings.yml
+├── scratchpad/               # Working notes
+│   ├── active/              # Current tasks
+│   ├── agents/              # Agent-specific notes
+│   ├── archived/            # Completed tasks
+│   ├── locks/               # Lock files
+│   └── shared/              # Shared resources
+├── anchors.json              # Memory anchors
+├── MEMORY_ANCHOR_SPEC.md     # Anchor specifications
+├── NEXT_PR_RULES.md          # PR guidelines
+└── settings.local.json       # Local settings
 ```
 
-These anchors provide:
-- **Persistent references** across code changes
-- **Semantic context** for important code sections
-- **Quick navigation** to critical implementation points
-- **LLM optimization** for improved code understanding and navigation
-- **Cross-session memory** to maintain context between different sessions
+## Purpose
 
-The `anchors.json` file maps these in-file anchors with their locations and descriptions. Current anchors include:
-- `main-agent-module`: Core agent with parallel tool execution
-- `grep-module`: Fast parallel file search with 3-second deadline
-- `parallel-grep-class`: Main grep implementation with timeout handling
-- `state-manager`: Central application state management
-- `request-processor`: Main request handling pipeline
-
-## Structure
-
-- **agents/** - Agent-specific configurations and prompts
-- **commands/** - Command templates and patterns
-- **code_index/** - Semantic code relationships and call graphs
-- **debug_history/** - Historical debugging sessions and solutions
-- **delta/** - Version-to-version change summaries
-- **metadata/** - Component metadata and hotspots
-- **patterns/** - Code patterns and implementation templates
-- **qa/** - Question-answer pairs from resolved issues
-- **scratchpad/** - Temporary working notes
-
-## Key Files
-
-- `anchors.json` - Maps in-file CLAUDE_ANCHOR tags with locations and descriptions
-- `MEMORY_ANCHOR_SPEC.md` - Specification for memory anchor format and usage
-- `NEXT_PR_RULES.md` - Maintenance guidelines for contributors
-- `settings.local.json` - Local Claude configuration settings
-- `agents/tech-docs-maintainer.md` - Documentation maintenance agent definition
-
-## Recent Updates
-
-This directory now includes:
-
-- **Memory Anchor Specification** - Formal specification for in-file anchor usage
-- **Agent Definitions** - Specialized agents for different development tasks
-- **Enhanced Documentation** - Improved structure for better LLM navigation
-- **Tool Integration** - Better integration with TunaCode's parallel tool execution system
-
-## Usage
-
-Files are designed for machine parsing. Updates should preserve existing keys and merge new data idempotently.
-
-### Adding New Anchors
-
-When adding critical code sections:
-1. Add `CLAUDE_ANCHOR[descriptive-key]: Brief description` comment
-2. Update `anchors.json` with the new anchor reference
-3. Use consistent naming: `module-name`, `feature-handler`, `critical-function`
+Developer-specific documentation, agent configurations, and internal workflows
