@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────
 # scratchpad-multi.sh – Multi-agent enhanced scratchpad workflow
+#                      with documentation categorization
 #
 # Commands (with optional --agent <name>):
 #   start   <task‑title>          → create/overwrite scratchpad.md
@@ -9,13 +10,18 @@
 #   branch  <N>    <text>|‑       → start sub‑step N.x (branch)
 #   append  <text>|‑              → raw append (fallback / free‑form)
 #   status                       → show counters & last entries
-#   finish  [task‑title]          → archive scratchpad to done_tasks
+#   finish  [task‑title]          → archive with categorization prompt
+#   categorize                   → show documentation guidelines
 #   handoff <to-agent> <message>  → handoff task to another agent
 #   agents                       → list active agents
 #
+# Documentation structure:
+# - @documentation/  → General user-facing documentation
+# - @.claude/       → Developer/tunacode-specific documentation
+#
 # Multi-agent features:
-# - Agent-specific scratchpads: memory-bank/agents/<agent>/scratchpad.md
-# - Shared memory space: memory-bank/shared/
+# - Agent-specific scratchpads: .claude/scratchpad/agents/<agent>/
+# - Shared memory space: .claude/scratchpad/shared/
 # - File locking for concurrent access
 # - Agent handoff capabilities
 #
@@ -24,7 +30,8 @@
 set -euo pipefail
 
 # Default configuration
-BANK_DIR="${BANK_DIR:-memory-bank}"
+BANK_DIR="${BANK_DIR:-.claude/scratchpad}"
+DOC_DIR="${DOC_DIR:-documentation}"
 AGENT_NAME="${AGENT_NAME:-default}"
 LOCK_TIMEOUT="${LOCK_TIMEOUT:-5}"
 
@@ -47,11 +54,18 @@ AGENT_DIR="$BANK_DIR/agents/$AGENT_NAME"
 SHARED_DIR="$BANK_DIR/shared"
 SCRATCH="$AGENT_DIR/scratchpad.md"
 LOCK_FILE="$BANK_DIR/locks/${AGENT_NAME}.lock"
+# Documentation paths
+GENERAL_DOC_DIR="$DOC_DIR"
+DEV_DOC_DIR=".claude"
 
 # ──────────────────────────────────────────────────────────────
 usage() {
   cat >&2 <<EOF
-Usage: $0 [--agent <name>] {start|step|revise|branch|append|status|finish|handoff|agents} [...]
+Usage: $0 [--agent <name>] {start|step|revise|branch|append|status|finish|handoff|agents|categorize} [...]
+
+Documentation Directories:
+  @documentation/    General user-facing documentation
+  @.claude/         Developer/tunacode-specific documentation
 
 Multi-Agent Commands:
   --agent <name>                 Use agent-specific scratchpad (default: "default")
@@ -63,7 +77,8 @@ Standard Commands:
   branch <step-no> <text>|-     Add a branched sub‑step under <step-no>
   append <text>|-               Raw append (no numbering / validation)
   status                        Show last main/branch/revision indices
-  finish [task-title]           Archive scratchpad to shared/done_tasks
+  finish [task-title]           Archive scratchpad with categorization prompt
+  categorize                    Show documentation categorization guidelines
 
 Multi-Agent Commands:
   handoff <to-agent> <message>  Hand off current task to another agent
@@ -73,6 +88,8 @@ Examples:
   $0 --agent researcher start "Research latest AI papers"
   $0 --agent coder step "Implementing authentication module"
   $0 --agent researcher handoff coder "Research complete, please implement"
+  $0 categorize                # Show where to archive documentation
+  $0 finish                     # Prompts for categorization before archiving
   $0 agents
 EOF
   exit 1
@@ -80,7 +97,24 @@ EOF
 
 # ───────────────────── helpers ────────────────────────────
 init_dirs() {
+  # Check and create base directories
+  if [[ ! -d "$GENERAL_DOC_DIR" ]]; then
+    echo "WARNING: Documentation directory '$GENERAL_DOC_DIR' does not exist."
+    echo "Please create it with: mkdir -p $GENERAL_DOC_DIR"
+    echo "Creating basic structure..."
+    mkdir -p "$GENERAL_DOC_DIR"/{agent,configuration,development}
+  fi
+
+  if [[ ! -d "$DEV_DOC_DIR" ]]; then
+    echo "WARNING: Developer documentation directory '$DEV_DOC_DIR' does not exist."
+    echo "Please create it with: mkdir -p $DEV_DOC_DIR"
+    echo "Creating basic structure..."
+    mkdir -p "$DEV_DOC_DIR"/{agents,scratchpad,patterns,qa}
+  fi
+
+  # Create scratchpad directories
   mkdir -p "$AGENT_DIR" "$SHARED_DIR/done_tasks" "$BANK_DIR/locks"
+  mkdir -p "$DEV_DOC_DIR/scratchpad/active" "$DEV_DOC_DIR/scratchpad/archived"
 }
 
 _line() {
@@ -219,8 +253,90 @@ EOF"
     safe_title="${title// /_}"
     out="${AGENT_NAME}_${safe_title}_${ts}_scratchpad.md"
 
+    # Ask for categorization
+    echo ""
+    echo "Where should this documentation be archived?"
+    echo "1) General documentation (@documentation/) - for user-facing docs"
+    echo "2) Developer documentation (@.claude/) - for tunacode development docs"
+    echo "3) Both locations"
+    echo ""
+    read -p "Select (1/2/3): " choice
+
+    case "$choice" in
+      1)
+        # Determine subdirectory for general documentation
+        echo ""
+        echo "Select category for general documentation:"
+        echo "a) agent - Agent-related documentation"
+        echo "c) configuration - Configuration documentation"
+        echo "d) development - Development practices"
+        echo "o) other - Create in root documentation directory"
+        read -p "Select (a/c/d/o): " subchoice
+
+        case "$subchoice" in
+          a) target_dir="$GENERAL_DOC_DIR/agent" ;;
+          c) target_dir="$GENERAL_DOC_DIR/configuration" ;;
+          d) target_dir="$GENERAL_DOC_DIR/development" ;;
+          *) target_dir="$GENERAL_DOC_DIR" ;;
+        esac
+
+        mkdir -p "$target_dir"
+        with_lock "$LOCK_FILE" cp "$SCRATCH" "$target_dir/$out"
+        echo "Documentation archived to: $target_dir/$out"
+        ;;
+
+      2)
+        # Archive to developer documentation
+        target_dir="$DEV_DOC_DIR/scratchpad/archived"
+        mkdir -p "$target_dir"
+        with_lock "$LOCK_FILE" cp "$SCRATCH" "$target_dir/$out"
+        echo "Developer documentation archived to: $target_dir/$out"
+        ;;
+
+      3)
+        # Archive to both locations
+        echo "Archiving to both locations..."
+
+        # First to general documentation
+        echo ""
+        echo "Select category for general documentation:"
+        echo "a) agent - Agent-related documentation"
+        echo "c) configuration - Configuration documentation"
+        echo "d) development - Development practices"
+        echo "o) other - Create in root documentation directory"
+        read -p "Select (a/c/d/o): " subchoice
+
+        case "$subchoice" in
+          a) target_dir="$GENERAL_DOC_DIR/agent" ;;
+          c) target_dir="$GENERAL_DOC_DIR/configuration" ;;
+          d) target_dir="$GENERAL_DOC_DIR/development" ;;
+          *) target_dir="$GENERAL_DOC_DIR" ;;
+        esac
+
+        mkdir -p "$target_dir"
+        with_lock "$LOCK_FILE" cp "$SCRATCH" "$target_dir/$out"
+        echo "Documentation archived to: $target_dir/$out"
+
+        # Then to developer documentation
+        target_dir="$DEV_DOC_DIR/scratchpad/archived"
+        mkdir -p "$target_dir"
+        with_lock "$LOCK_FILE" cp "$SCRATCH" "$target_dir/$out"
+        echo "Developer documentation archived to: $target_dir/$out"
+        ;;
+
+      *)
+        echo "Invalid choice. Archiving to default location..."
+        target_dir="$DEV_DOC_DIR/scratchpad/archived"
+        mkdir -p "$target_dir"
+        with_lock "$LOCK_FILE" cp "$SCRATCH" "$target_dir/$out"
+        echo "Documentation archived to: $target_dir/$out"
+        ;;
+    esac
+
+    # Always keep a backup in shared done_tasks
+    mkdir -p "$SHARED_DIR/done_tasks"
     with_lock "$LOCK_FILE" mv "$SCRATCH" "$SHARED_DIR/done_tasks/$out"
-    echo "Agent '$AGENT_NAME' archived task to: $SHARED_DIR/done_tasks/$out"
+    echo "Backup kept in: $SHARED_DIR/done_tasks/$out"
     ;;
 
   # ───── handoff ─────────────────────────────────────────────
@@ -286,6 +402,48 @@ EOF"
         echo "  - $handoff"
       done
     fi
+    ;;
+
+  # ───── categorize ──────────────────────────────────────────
+  categorize)
+    echo "Documentation Categorization Guidelines:"
+    echo ""
+    echo "=== General Documentation (@documentation/) ==="
+    echo "For user-facing documentation that helps understand and use the codebase:"
+    echo ""
+    echo "• agent/ - Agent architecture, workflows, tool usage patterns"
+    echo "  - How agents work and interact"
+    echo "  - Agent design patterns and best practices"
+    echo "  - Tool workflow documentation"
+    echo ""
+    echo "• configuration/ - Setup and configuration guides"
+    echo "  - Installation instructions"
+    echo "  - Configuration file documentation"
+    echo "  - Environment setup guides"
+    echo ""
+    echo "• development/ - Development practices and guidelines"
+    echo "  - Coding standards and conventions"
+    echo "  - Testing strategies"
+    echo "  - Contribution guidelines"
+    echo ""
+    echo "=== Developer Documentation (@.claude/) ==="
+    echo "For tunacode-specific development and internal documentation:"
+    echo ""
+    echo "• agents/ - Agent implementation details"
+    echo "• scratchpad/ - Work-in-progress documentation"
+    echo "• patterns/ - Code patterns and templates"
+    echo "• qa/ - Quality assurance and testing docs"
+    echo "• delta/ - Change logs and migration guides"
+    echo "• metadata/ - System metadata and configurations"
+    echo ""
+    echo "=== Quick Decision Guide ==="
+    echo "Ask yourself:"
+    echo "1. Is this for end users of the codebase? → @documentation/"
+    echo "2. Is this for tunacode developers/agents? → @.claude/"
+    echo "3. Does it explain HOW to use something? → @documentation/"
+    echo "4. Does it explain HOW something works internally? → @.claude/"
+    echo ""
+    echo "When in doubt, choose @documentation/ for broader accessibility."
     ;;
 
   *) usage ;;
