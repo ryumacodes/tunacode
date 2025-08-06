@@ -81,7 +81,7 @@ repos:
       # Check for dead code in changed files only
       - id: vulture-changed
         name: Check for dead code in changed files
-        entry: venv/bin/vulture --min-confidence 80 src/ vulture_whitelist.py
+        entry: venv/bin/vulture --min-confidence 80 src/ scripts/utils/vulture_whitelist.py
         language: system
         files: \.py$
         exclude: ^(tests/|test_)
