@@ -251,6 +251,7 @@ async def repl(state_manager: StateManager):
     """Main REPL loop that handles user interaction and input processing."""
     action = None
     abort_pressed = False
+    last_abort_time = 0.0
 
     model_name = state_manager.session.current_model
     max_tokens = (
@@ -275,9 +276,19 @@ async def repl(state_manager: StateManager):
             try:
                 line = await ui.multiline_input(state_manager, _command_registry)
             except UserAbortError:
+                import time
+
+                current_time = time.time()
+
+                # Reset if more than 3 seconds have passed
+                if current_time - last_abort_time > 3.0:
+                    abort_pressed = False
+
                 if abort_pressed:
                     break
+
                 abort_pressed = True
+                last_abort_time = current_time
                 await ui.warning(MSG_HIT_ABORT_KEY)
                 continue
 

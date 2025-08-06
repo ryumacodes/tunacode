@@ -48,9 +48,7 @@ class SessionState:
     input_sessions: InputSessions = field(default_factory=dict)
     current_task: Optional[Any] = None
     todos: list[TodoItem] = field(default_factory=list)
-    # ESC key tracking for double-press functionality
-    esc_press_count: int = 0
-    last_esc_time: Optional[float] = None
+    # Operation state tracking
     operation_cancelled: bool = False
     # Enhanced tracking for thoughts display
     files_in_context: set[str] = field(default_factory=set)
