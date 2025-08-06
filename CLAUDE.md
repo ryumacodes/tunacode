@@ -34,4 +34,17 @@
 
 - the clear outline of the objective MUST be established before we begin ANY coding, do not under any circumstance begin any updates untill this is clearly understood, if you have any ambiuguity or quesiton, the user can be brought in or use best practises
 
-- use scratchpad-multi.sh as you work, after the MD file is done being used sort it to the approate dir in /
+- use scratchpad-multi.sh as you work, after the MD file is done being used sort it to the approate directory
+
+- General documentation → archive to @documentation/
+- Developer/tunacode-specific → archive to @ .claude
+- Organize archives by category (agent/development/ etc)
+- In general the scratchpad should never go in any other dirs ececpt the two above
+
+- if a task at hand is to big to handle as a one off use the taskmaster MCP but in general this should only be used as needed, usually it will not be needed
+
+- grep documentation and .claude as needed BOTH of these have a README.md that ahs a direcoty map, you MUST read these before any bigger grep or context searches
+
+- in general gather as much context as needed, unless specified by the user
+
+- this is the most important part of this prompt: Synthesis context aggressively and heuristically. You can deploy the appropriate subagent for complex tasks.
