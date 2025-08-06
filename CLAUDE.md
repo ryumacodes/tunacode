@@ -36,6 +36,23 @@
 
 - use scratchpad-multi.sh as you work, after the MD file is done being used sort it to the approate directory
 
+- the MD file created by the bash file MUST be used for the duiration of the task you will be PUNISHED if you do not update this file as you work.
+
+- any key logic or file's must be inlcuded here in the following format if this format is not followed you will STOP reasses, and begin again
+
+### Scratchpad Template Example
+
+```
+# Implementing Authentication Module
+_Started: 2025-08-06 10:00:00_
+_Agent: default_
+
+[1] Found auth logic in src/auth/handler.py:45
+[2] Key dependencies: jwt, bcrypt, session_manager
+[3] Modified login function to add rate limiting
+[3~1] Fixed edge case for empty passwords
+```
+
 - General documentation → archive to @documentation/
 - Developer/tunacode-specific → archive to @ .claude
 - Organize archives by category (agent/development/ etc)
@@ -47,4 +64,15 @@
 
 - in general gather as much context as needed, unless specified by the user
 
-- this is the most important part of this prompt: Synthesis context aggressively and heuristically. You can deploy the appropriate subagent for complex tasks.
+- this is the most important part of this prompt: Synthesis context aggressively and heuristically AS NEEDED ONLY You can deploy the appropriate subagent for complex tasks agents list below
+
+## Available Agents:
+
+1. **bug-context-analyzer** - Investigates precise context around bugs without suggesting fixes
+2. **code-synthesis-analyzer** - Analyzes recent code changes to identify issues needing fixes
+3. **documentation-synthesis-qa** - Creates comprehensive docs via multi-agent orchestration
+4. **expert-debugger** - Debugs issues using strategic logging and root cause analysis
+5. **phased-task-processor** - Breaks down markdown tasks into max 5 actionable phases
+6. **prompt-engineer** - Optimizes prompts using 26 documented engineering principles
+7. **rapid-code-synthesis-qa** - Quick quality assessment with confidence scores (1-5 scale)
+8. **tech-docs-maintainer** - Updates docs in @documentation and .claude directories
