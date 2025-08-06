@@ -52,6 +52,6 @@ async def test_repl_ctrl_c_behavior():
             await repl_mod.repl(state_manager)
 
             # First Ctrl+C: warning, second: exit/info
-            warning.assert_awaited_with("Hit Ctrl+C again to exit")
+            warning.assert_awaited_with("Hit ESC or Ctrl+C again to exit")
             info.assert_awaited_with("Session ended. Happy coding!")
             assert call_count["n"] == 2

@@ -12,7 +12,7 @@ import pytest
 
 from tunacode.cli.repl import (
     MSG_AGENT_BUSY,
-    MSG_HIT_CTRL_C,
+    MSG_HIT_ABORT_KEY,
     MSG_OPERATION_ABORTED,
     MSG_SESSION_ENDED,
     _handle_command,
@@ -265,7 +265,7 @@ class TestReplCharacterization:
                     await repl(mock_state_manager)
 
                     # Should show Ctrl+C warning
-                    mock_warning.assert_called_with(MSG_HIT_CTRL_C)
+                    mock_warning.assert_called_with(MSG_HIT_ABORT_KEY)
 
     @pytest.mark.asyncio
     async def test_repl_agent_busy_state(self, mock_state_manager):
