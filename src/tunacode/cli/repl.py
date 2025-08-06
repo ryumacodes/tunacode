@@ -43,7 +43,7 @@ MSG_TOOL_INTERRUPTED = "Tool execution was interrupted"
 MSG_REQUEST_CANCELLED = "Request cancelled"
 MSG_SESSION_ENDED = "Session ended. Happy coding!"
 MSG_AGENT_BUSY = "Agent is busy, press Ctrl+C to interrupt."
-MSG_HIT_CTRL_C = "Hit Ctrl+C again to exit"
+MSG_HIT_ABORT_KEY = "Hit ESC or Ctrl+C again to exit"
 SHELL_ENV_VAR = "SHELL"
 DEFAULT_SHELL = "bash"
 
@@ -250,7 +250,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
 async def repl(state_manager: StateManager):
     """Main REPL loop that handles user interaction and input processing."""
     action = None
-    ctrl_c_pressed = False
+    abort_pressed = False
 
     model_name = state_manager.session.current_model
     max_tokens = (
@@ -275,16 +275,16 @@ async def repl(state_manager: StateManager):
             try:
                 line = await ui.multiline_input(state_manager, _command_registry)
             except UserAbortError:
-                if ctrl_c_pressed:
+                if abort_pressed:
                     break
-                ctrl_c_pressed = True
-                await ui.warning(MSG_HIT_CTRL_C)
+                abort_pressed = True
+                await ui.warning(MSG_HIT_ABORT_KEY)
                 continue
 
             if not line:
                 continue
 
-            ctrl_c_pressed = False
+            abort_pressed = False
 
             if line.lower() in ["exit", "quit"]:
                 break
