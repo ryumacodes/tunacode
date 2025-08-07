@@ -6,6 +6,7 @@ from typing import Any, Awaitable, Callable, Optional, Tuple
 from tunacode.core.logging.logger import get_logger
 from tunacode.core.state import StateManager
 from tunacode.types import UsageTrackerProtocol
+from tunacode.ui.tool_descriptions import get_batch_description, get_tool_description
 
 from .response_state import ResponseState
 from .task_completion import check_task_completion
@@ -399,6 +400,17 @@ async def _process_tool_calls(
 
                         start_time = time.time()
 
+                        # Update spinner message for batch execution
+                        tool_names = [part.tool_name for part, _ in buffered_tasks]
+                        batch_msg = get_batch_description(len(buffered_tasks), tool_names)
+                        logger.debug(f"Updating spinner for batch: {batch_msg}")
+                        logger.debug(
+                            f"State manager spinner: {state_manager.session.spinner if state_manager and state_manager.session else 'None'}"
+                        )
+                        await ui.update_spinner_message(
+                            f"[bold #00d7ff]{batch_msg}...[/bold #00d7ff]", state_manager
+                        )
+
                         # Enhanced visual feedback for parallel execution
                         await ui.muted("\n" + "=" * 60)
                         await ui.muted(
@@ -452,9 +464,26 @@ async def _process_tool_calls(
                             f"(~{speedup:.1f}x faster than sequential)\n"
                         )
 
+                        # Reset spinner message back to thinking
+                        from tunacode.constants import UI_THINKING_MESSAGE
+
+                        await ui.update_spinner_message(UI_THINKING_MESSAGE, state_manager)
+
                     # Now execute the write/execute tool
                     if state_manager.session.show_thoughts:
                         await ui.warning(f"⚠️ SEQUENTIAL: {part.tool_name} (write/execute tool)")
+
+                    # Update spinner for sequential tool
+                    tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
+                    tool_desc = get_tool_description(part.tool_name, tool_args)
+                    logger.debug(f"Updating spinner for sequential tool: {tool_desc}")
+                    logger.debug(
+                        f"State manager spinner: {state_manager.session.spinner if state_manager and state_manager.session else 'None'}"
+                    )
+                    await ui.update_spinner_message(
+                        f"[bold #00d7ff]{tool_desc}...[/bold #00d7ff]", state_manager
+                    )
+
                     await tool_callback(part, node)
 
     # Track tool calls in session

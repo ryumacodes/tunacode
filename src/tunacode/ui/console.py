@@ -21,6 +21,7 @@ from .output import (
     spinner,
     sync_print,
     update_available,
+    update_spinner_message,
     usage,
     version,
 )
@@ -93,6 +94,7 @@ __all__ = [
     "spinner",
     "sync_print",
     "update_available",
+    "update_spinner_message",
     "usage",
     "version",
     # Unified logging wrappers

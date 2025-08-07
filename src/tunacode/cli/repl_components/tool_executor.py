@@ -43,8 +43,9 @@ async def tool_handler(part, state_manager: StateManager):
     if tool_handler_instance.should_confirm(part.tool_name):
         await ui.info(f"Tool({part.tool_name})")
 
-    if not state_manager.session.is_streaming_active and state_manager.session.spinner:
-        state_manager.session.spinner.stop()
+    # Keep spinner running during tool execution - it will be updated with tool status
+    # if not state_manager.session.is_streaming_active and state_manager.session.spinner:
+    #     state_manager.session.spinner.stop()
 
     streaming_panel = None
     if state_manager.session.is_streaming_active and hasattr(
@@ -80,5 +81,6 @@ async def tool_handler(part, state_manager: StateManager):
         if streaming_panel and tool_handler_instance.should_confirm(part.tool_name):
             await streaming_panel.start()
 
-        if not state_manager.session.is_streaming_active and state_manager.session.spinner:
-            state_manager.session.spinner.start()
+        # Spinner continues running - no need to restart
+        # if not state_manager.session.is_streaming_active and state_manager.session.spinner:
+        #     state_manager.session.spinner.start()
