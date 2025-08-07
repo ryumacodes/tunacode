@@ -1,5 +1,7 @@
 """Output and display functions for TunaCode UI."""
 
+from typing import Optional
+
 from prompt_toolkit.application import run_in_terminal
 from rich.console import Console
 from rich.padding import Padding
@@ -109,20 +111,39 @@ async def show_update_message(latest_version: str) -> None:
     await update_available(latest_version)
 
 
-async def spinner(show: bool = True, spinner_obj=None, state_manager: StateManager = None):
-    """Manage a spinner display."""
+async def spinner(
+    show: bool = True,
+    spinner_obj=None,
+    state_manager: StateManager = None,
+    message: Optional[str] = None,
+):
+    """Manage a spinner display with dynamic message support.
+
+    Args:
+        show: Whether to show (True) or hide (False) the spinner
+        spinner_obj: Existing spinner object to reuse
+        state_manager: State manager instance for storing spinner
+        message: Optional custom message to display (uses UI_THINKING_MESSAGE if None)
+
+    Returns:
+        The spinner object for further manipulation
+    """
     icon = SPINNER_TYPE
-    message = UI_THINKING_MESSAGE
+    display_message = message or UI_THINKING_MESSAGE
 
     # Get spinner from state manager if available
     if spinner_obj is None and state_manager:
         spinner_obj = state_manager.session.spinner
 
     if not spinner_obj:
-        spinner_obj = await run_in_terminal(lambda: console.status(message, spinner=icon))
+        spinner_obj = await run_in_terminal(lambda: console.status(display_message, spinner=icon))
         # Store it back in state manager if available
         if state_manager:
             state_manager.session.spinner = spinner_obj
+    else:
+        # Update existing spinner message if provided
+        if message and hasattr(spinner_obj, "update"):
+            spinner_obj.update(display_message)
 
     if show:
         spinner_obj.start()
@@ -130,6 +151,20 @@ async def spinner(show: bool = True, spinner_obj=None, state_manager: StateManag
         spinner_obj.stop()
 
     return spinner_obj
+
+
+async def update_spinner_message(message: str, state_manager: StateManager = None):
+    """Update the spinner message if a spinner is active.
+
+    Args:
+        message: New message to display
+        state_manager: State manager instance containing spinner
+    """
+    if state_manager and state_manager.session.spinner:
+        spinner_obj = state_manager.session.spinner
+        if hasattr(spinner_obj, "update"):
+            # Rich's Status object supports update method
+            await run_in_terminal(lambda: spinner_obj.update(message))
 
 
 def get_context_window_display(total_tokens: int, max_tokens: int) -> str:
