@@ -1,5 +1,7 @@
 """Panel display functions for TunaCode UI."""
 
+import asyncio
+import time
 from typing import Any, Optional, Union
 
 from rich.box import ROUNDED
@@ -86,6 +88,10 @@ class StreamingAgentPanel:
         self.title = f"[bold {colors.primary}]●[/bold {colors.primary}] {APP_NAME}"
         self.content = ""
         self.live = None
+        self._last_update_time = 0
+        self._dots_task = None
+        self._dots_count = 0
+        self._show_dots = False
 
     def _create_panel(self) -> Padding:
         """Create a Rich panel with current content."""
@@ -94,11 +100,19 @@ class StreamingAgentPanel:
 
         from tunacode.constants import UI_THINKING_MESSAGE
 
-        # Handle the default thinking message with Rich markup
+        # Show "Thinking..." only when no content has arrived yet
         if not self.content:
             content_renderable: Union[Text, Markdown] = Text.from_markup(UI_THINKING_MESSAGE)
         else:
-            content_renderable = Markdown(self.content)
+            # Once we have content, show it with optional dots animation
+            display_content = self.content
+            # Add animated dots if we're waiting for more content
+            if self._show_dots:
+                # Cycle through: "", ".", "..", "..."
+                dots_patterns = ["", ".", "..", "..."]
+                dots = dots_patterns[self._dots_count % len(dots_patterns)]
+                display_content = self.content.rstrip() + dots
+            content_renderable = Markdown(display_content)
         panel_obj = Panel(
             Padding(content_renderable, (0, 1, 0, 1)),
             title=f"[bold]{self.title}[/bold]",
@@ -117,12 +131,30 @@ class StreamingAgentPanel:
             ),
         )
 
+    async def _animate_dots(self):
+        """Animate dots after a pause in streaming."""
+        while True:
+            await asyncio.sleep(0.5)
+            current_time = time.time()
+            # Only show dots after 1 second of no updates
+            if current_time - self._last_update_time > 1.0:
+                self._show_dots = True
+                self._dots_count += 1
+                if self.live:
+                    self.live.update(self._create_panel())
+            else:
+                self._show_dots = False
+                self._dots_count = 0
+
     async def start(self):
         """Start the live streaming display."""
         from .output import console
 
         self.live = Live(self._create_panel(), console=console, refresh_per_second=4)
         self.live.start()
+        self._last_update_time = time.time()
+        # Start the dots animation task
+        self._dots_task = asyncio.create_task(self._animate_dots())
 
     async def update(self, content_chunk: str):
         """Update the streaming display with new content."""
@@ -131,6 +163,11 @@ class StreamingAgentPanel:
             content_chunk = ""
         # Ensure type safety for concatenation
         self.content = (self.content or "") + str(content_chunk)
+
+        # Reset the update timer when we get new content
+        self._last_update_time = time.time()
+        self._show_dots = False  # Hide dots immediately when new content arrives
+
         if self.live:
             self.live.update(self._create_panel())
 
@@ -142,6 +179,14 @@ class StreamingAgentPanel:
 
     async def stop(self):
         """Stop the live streaming display."""
+        # Cancel the dots animation task
+        if self._dots_task:
+            self._dots_task.cancel()
+            try:
+                await self._dots_task
+            except asyncio.CancelledError:
+                pass
+
         if self.live:
             # Get the console before stopping the live display
             from .output import console
