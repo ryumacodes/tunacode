@@ -6,17 +6,60 @@ Handles agent creation, configuration, and request processing.
 CLAUDE_ANCHOR[main-agent-module]: Primary agent orchestration and lifecycle management
 """
 
-# Re-export for backward compatibility
-from tunacode.services.mcp import get_mcp_servers
+from typing import TYPE_CHECKING, Awaitable, Callable, Optional
 
+from pydantic_ai import Agent
+
+if TYPE_CHECKING:
+    from pydantic_ai import Tool  # noqa: F401
+
+from tunacode.core.logging.logger import get_logger
+from tunacode.core.state import StateManager
+from tunacode.exceptions import ToolBatchingJSONError, UserAbortError
+from tunacode.services.mcp import get_mcp_servers
+from tunacode.types import (
+    AgentRun,
+    ModelName,
+    ToolCallback,
+    UsageTrackerProtocol,
+)
+
+# Import agent components
 from .agent_components import (
+    AgentRunWithState,
+    AgentRunWrapper,
+    ResponseState,
+    SimpleResult,
     ToolBuffer,
+    _process_node,
     check_task_completion,
+    create_empty_response_message,
+    create_fallback_response,
+    create_progress_summary,
+    create_user_message,
+    execute_tools_parallel,
     extract_and_execute_tool_calls,
+    format_fallback_output,
     get_model_messages,
+    get_or_create_agent,
+    get_recent_tools_context,
+    get_tool_summary,
     parse_json_tool_calls,
     patch_tool_messages,
 )
+
+# Import streaming types with fallback for older versions
+try:
+    from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
+
+    STREAMING_AVAILABLE = True
+except ImportError:
+    PartDeltaEvent = None
+    TextPartDelta = None
+    STREAMING_AVAILABLE = False
+
+# Configure logging
+logger = get_logger(__name__)
 
 __all__ = [
     "ToolBuffer",
@@ -38,90 +81,6 @@ __all__ = [
     "get_agent_tool",
 ]
 
-from typing import TYPE_CHECKING, Awaitable, Callable, Optional
-
-from pydantic_ai import Agent
-
-if TYPE_CHECKING:
-    from pydantic_ai import Tool  # noqa: F401
-
-from tunacode.core.logging.logger import get_logger
-
-# Import agent components
-from .agent_components import (
-    AgentRunWithState,
-    AgentRunWrapper,
-    ResponseState,
-    SimpleResult,
-    _process_node,
-    execute_tools_parallel,
-    get_or_create_agent,
-)
-
-# Import streaming types with fallback for older versions
-try:
-    from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
-
-    STREAMING_AVAILABLE = True
-except ImportError:
-    # Fallback for older pydantic-ai versions
-    PartDeltaEvent = None
-    TextPartDelta = None
-    STREAMING_AVAILABLE = False
-
-from tunacode.core.state import StateManager
-from tunacode.exceptions import ToolBatchingJSONError, UserAbortError
-from tunacode.types import (
-    AgentRun,
-    FallbackResponse,
-    ModelName,
-    ToolCallback,
-    UsageTrackerProtocol,
-)
-
-# Configure logging
-logger = get_logger(__name__)
-
-# Cache for UserPromptPart class to avoid repeated imports
-_USER_PROMPT_PART_CLASS = None
-
-
-def _get_user_prompt_part_class():
-    """Get UserPromptPart class with caching and fallback for test environment.
-
-    This function follows DRY principle by centralizing the UserPromptPart
-    import logic and caching the result to avoid repeated imports.
-    """
-    global _USER_PROMPT_PART_CLASS
-
-    if _USER_PROMPT_PART_CLASS is not None:
-        return _USER_PROMPT_PART_CLASS
-
-    try:
-        import importlib
-
-        messages = importlib.import_module("pydantic_ai.messages")
-        _USER_PROMPT_PART_CLASS = getattr(messages, "UserPromptPart", None)
-
-        if _USER_PROMPT_PART_CLASS is None:
-            # Fallback for test environment
-            class UserPromptPartFallback:
-                def __init__(self, content, part_kind):
-                    self.content = content
-                    self.part_kind = part_kind
-
-            _USER_PROMPT_PART_CLASS = UserPromptPartFallback
-    except Exception:
-        # Fallback for test environment
-        class UserPromptPartFallback:
-            def __init__(self, content, part_kind):
-                self.content = content
-                self.part_kind = part_kind
-
-        _USER_PROMPT_PART_CLASS = UserPromptPartFallback
-
-    return _USER_PROMPT_PART_CLASS
-
 
 def get_agent_tool() -> tuple[type[Agent], type["Tool"]]:
     """Lazy import for Agent and Tool to avoid circular imports."""
@@ -136,15 +95,8 @@ async def check_query_satisfaction(
     response: str,
     state_manager: StateManager,
 ) -> bool:
-    """
-    Check if the response satisfies the original query.
-
-    Returns:
-        bool: True if query is satisfied, False otherwise
-    """
-    # For now, always return True to avoid recursive checks
-    # The agent should use TUNACODE_TASK_COMPLETE marker instead
-    return True
+    """Check if the response satisfies the original query."""
+    return True  # Agent uses TUNACODE_TASK_COMPLETE marker
 
 
 async def process_request(
@@ -235,68 +187,21 @@ async def process_request(
                     response_state,
                 )
 
-                # Handle empty response by asking user for help instead of giving up
+                # Handle empty response
                 if empty_response:
-                    # Track consecutive empty responses
                     if not hasattr(state_manager.session, "consecutive_empty_responses"):
                         state_manager.session.consecutive_empty_responses = 0
                     state_manager.session.consecutive_empty_responses += 1
 
-                    # IMMEDIATE AGGRESSIVE INTERVENTION on ANY empty response
                     if state_manager.session.consecutive_empty_responses >= 1:
-                        # Get context about what was happening
-                        last_tools_used = []
-                        if state_manager.session.tool_calls:
-                            for tc in state_manager.session.tool_calls[-3:]:
-                                tool_name = tc.get("tool", "unknown")
-                                tool_args = tc.get("args", {})
-                                tool_desc = tool_name
-                                if tool_name in ["grep", "glob"] and isinstance(tool_args, dict):
-                                    pattern = tool_args.get("pattern", "")
-                                    tool_desc = f"{tool_name}('{pattern}')"
-                                elif tool_name == "read_file" and isinstance(tool_args, dict):
-                                    path = tool_args.get("file_path", tool_args.get("filepath", ""))
-                                    tool_desc = f"{tool_name}('{path}')"
-                                last_tools_used.append(tool_desc)
-
-                        tools_context = (
-                            f"Recent tools: {', '.join(last_tools_used)}"
-                            if last_tools_used
-                            else "No tools used yet"
+                        force_action_content = create_empty_response_message(
+                            message,
+                            empty_reason,
+                            state_manager.session.tool_calls,
+                            i,
+                            state_manager,
                         )
-
-                        # AGGRESSIVE prompt - YOU FAILED, TRY HARDER
-                        force_action_content = f"""FAILURE DETECTED: You returned {"an " + empty_reason if empty_reason != "empty" else "an empty"} response.
-
-This is UNACCEPTABLE. You FAILED to produce output.
-
-Task: {message[:200]}...
-{tools_context}
-Current iteration: {i}
-
-TRY AGAIN RIGHT NOW:
-
-1. If your search returned no results → Try a DIFFERENT search pattern
-2. If you found what you need → Use TUNACODE_TASK_COMPLETE
-3. If you're stuck → EXPLAIN SPECIFICALLY what's blocking you
-4. If you need to explore → Use list_dir or broader searches
-
-YOU MUST PRODUCE REAL OUTPUT IN THIS RESPONSE. NO EXCUSES.
-EXECUTE A TOOL OR PROVIDE SUBSTANTIAL CONTENT.
-DO NOT RETURN ANOTHER EMPTY RESPONSE."""
-
-                        model_request_cls = get_model_messages()[0]
-                        # Get UserPromptPart from the cached helper
-                        UserPromptPart = _get_user_prompt_part_class()
-                        user_prompt_part = UserPromptPart(
-                            content=force_action_content,
-                            part_kind="user-prompt",
-                        )
-                        force_message = model_request_cls(
-                            parts=[user_prompt_part],
-                            kind="request",
-                        )
-                        state_manager.session.messages.append(force_message)
+                        create_user_message(force_action_content, state_manager)
 
                         if state_manager.session.show_thoughts:
                             from tunacode.ui import console as ui
@@ -305,13 +210,13 @@ DO NOT RETURN ANOTHER EMPTY RESPONSE."""
                                 "\n⚠️ EMPTY RESPONSE FAILURE - AGGRESSIVE RETRY TRIGGERED"
                             )
                             await ui.muted(f"   Reason: {empty_reason}")
-                            await ui.muted(f"   Recent tools: {tools_context}")
+                            await ui.muted(
+                                f"   Recent tools: {get_recent_tools_context(state_manager.session.tool_calls)}"
+                            )
                             await ui.muted("   Injecting 'YOU FAILED TRY HARDER' prompt")
 
-                        # Reset counter after aggressive intervention
                         state_manager.session.consecutive_empty_responses = 0
                 else:
-                    # Reset counter on successful response
                     if hasattr(state_manager.session, "consecutive_empty_responses"):
                         state_manager.session.consecutive_empty_responses = 0
 
@@ -351,18 +256,7 @@ You're describing actions but not executing them. You MUST:
 
 NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
 
-                    model_request_cls = get_model_messages()[0]
-                    # Get UserPromptPart from the cached helper
-                    UserPromptPart = _get_user_prompt_part_class()
-                    user_prompt_part = UserPromptPart(
-                        content=no_progress_content,
-                        part_kind="user-prompt",
-                    )
-                    progress_message = model_request_cls(
-                        parts=[user_prompt_part],
-                        kind="request",
-                    )
-                    state_manager.session.messages.append(progress_message)
+                    create_user_message(no_progress_content, state_manager)
 
                     if state_manager.session.show_thoughts:
                         from tunacode.ui import console as ui
@@ -371,7 +265,6 @@ NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
                             f"⚠️ NO PROGRESS: {unproductive_iterations} iterations without tool usage"
                         )
 
-                    # Reset counter after intervention
                     unproductive_iterations = 0
 
                 # REMOVED: Recursive satisfaction check that caused empty responses
@@ -390,11 +283,7 @@ NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
 
                     # Show summary of tools used so far
                     if state_manager.session.tool_calls:
-                        tool_summary: dict[str, int] = {}
-                        for tc in state_manager.session.tool_calls:
-                            tool_name = tc.get("tool", "unknown")
-                            tool_summary[tool_name] = tool_summary.get(tool_name, 0) + 1
-
+                        tool_summary = get_tool_summary(state_manager.session.tool_calls)
                         summary_str = ", ".join(
                             [f"{name}: {count}" for name, count in tool_summary.items()]
                         )
@@ -402,23 +291,7 @@ NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
 
                 # User clarification: Ask user for guidance when explicitly awaiting
                 if response_state.awaiting_user_guidance:
-                    # Build a progress summary
-                    tool_summary = {}
-                    if state_manager.session.tool_calls:
-                        for tc in state_manager.session.tool_calls:
-                            tool_name = tc.get("tool", "unknown")
-                            tool_summary[tool_name] = tool_summary.get(tool_name, 0) + 1
-
-                    tools_used_str = (
-                        ", ".join([f"{name}: {count}" for name, count in tool_summary.items()])
-                        if tool_summary
-                        else "No tools used yet"
-                    )
-
-                    # Create user message asking for clarification
-                    model_request_cls = get_model_messages()[0]
-                    # Get UserPromptPart from the cached helper
-                    UserPromptPart = _get_user_prompt_part_class()
+                    _, tools_used_str = create_progress_summary(state_manager.session.tool_calls)
 
                     clarification_content = f"""I need clarification to continue.
 
@@ -431,15 +304,7 @@ Progress so far:
 If the task is complete, I should respond with TUNACODE_TASK_COMPLETE.
 Otherwise, please provide specific guidance on what to do next."""
 
-                    user_prompt_part = UserPromptPart(
-                        content=clarification_content,
-                        part_kind="user-prompt",
-                    )
-                    clarification_message = model_request_cls(
-                        parts=[user_prompt_part],
-                        kind="request",
-                    )
-                    state_manager.session.messages.append(clarification_message)
+                    create_user_message(clarification_content, state_manager)
 
                     if state_manager.session.show_thoughts:
                         from tunacode.ui import console as ui
@@ -448,7 +313,6 @@ Otherwise, please provide specific guidance on what to do next."""
                             "\n🤔 SEEKING CLARIFICATION: Asking user for guidance on task progress"
                         )
 
-                    # Mark that we've asked for user guidance
                     response_state.awaiting_user_guidance = True
 
                 # Check if task is explicitly completed
@@ -460,19 +324,8 @@ Otherwise, please provide specific guidance on what to do next."""
                     break
 
                 if i >= max_iterations and not response_state.task_completed:
-                    # Instead of breaking, ask user if they want to continue
-                    # Build progress summary
-                    tool_summary = {}
-                    if state_manager.session.tool_calls:
-                        for tc in state_manager.session.tool_calls:
-                            tool_name = tc.get("tool", "unknown")
-                            tool_summary[tool_name] = tool_summary.get(tool_name, 0) + 1
-
-                    tools_str = (
-                        ", ".join([f"{name}: {count}" for name, count in tool_summary.items()])
-                        if tool_summary
-                        else "No tools used"
-                    )
+                    _, tools_str = create_progress_summary(state_manager.session.tool_calls)
+                    tools_str = tools_str if tools_str != "No tools used yet" else "No tools used"
 
                     extend_content = f"""I've reached the iteration limit ({max_iterations}).
 
@@ -487,19 +340,7 @@ The task appears incomplete. Would you like me to:
 
 Please let me know how to proceed."""
 
-                    # Create user message
-                    model_request_cls = get_model_messages()[0]
-                    # Get UserPromptPart from the cached helper
-                    UserPromptPart = _get_user_prompt_part_class()
-                    user_prompt_part = UserPromptPart(
-                        content=extend_content,
-                        part_kind="user-prompt",
-                    )
-                    extend_message = model_request_cls(
-                        parts=[user_prompt_part],
-                        kind="request",
-                    )
-                    state_manager.session.messages.append(extend_message)
+                    create_user_message(extend_content, state_manager)
 
                     if state_manager.session.show_thoughts:
                         from tunacode.ui import console as ui
@@ -508,8 +349,7 @@ Please let me know how to proceed."""
                             f"\n📊 ITERATION LIMIT: Asking user for guidance at {max_iterations} iterations"
                         )
 
-                    # Extend the limit temporarily to allow processing the response
-                    max_iterations += 5  # Give 5 more iterations to process user guidance
+                    max_iterations += 5
                     response_state.awaiting_user_guidance = True
 
                 # Increment iteration counter
@@ -558,7 +398,6 @@ Please let me know how to proceed."""
                 )
 
             # If we need to add a fallback response, create a wrapper
-            # Don't add fallback if task was explicitly completed
             if (
                 not response_state.has_user_response
                 and not response_state.task_completed
@@ -568,100 +407,18 @@ Please let me know how to proceed."""
                 patch_tool_messages("Task incomplete", state_manager=state_manager)
                 response_state.has_final_synthesis = True
 
-                # Extract context from the agent run
-                tool_calls_summary = []
-                files_modified = set()
-                commands_run = []
-
-                # Analyze message history for context
-                for msg in state_manager.session.messages:
-                    if hasattr(msg, "parts"):
-                        for part in msg.parts:
-                            if hasattr(part, "part_kind") and part.part_kind == "tool-call":
-                                tool_name = getattr(part, "tool_name", "unknown")
-                                tool_calls_summary.append(tool_name)
-
-                                # Track specific operations
-                                if tool_name in ["write_file", "update_file"] and hasattr(
-                                    part, "args"
-                                ):
-                                    if isinstance(part.args, dict) and "file_path" in part.args:
-                                        files_modified.add(part.args["file_path"])
-                                elif tool_name in ["run_command", "bash"] and hasattr(part, "args"):
-                                    if isinstance(part.args, dict) and "command" in part.args:
-                                        commands_run.append(part.args["command"])
-
-                # Build fallback response with context
-                fallback = FallbackResponse(
-                    summary="Reached maximum iterations without producing a final response.",
-                    progress=f"Completed {i} iterations (limit: {max_iterations})",
-                )
-
-                # Get verbosity setting
                 verbosity = state_manager.session.user_config.get("settings", {}).get(
                     "fallback_verbosity", "normal"
                 )
-
-                if verbosity in ["normal", "detailed"]:
-                    # Add what was attempted
-                    if tool_calls_summary:
-                        tool_counts: dict[str, int] = {}
-                        for tool in tool_calls_summary:
-                            tool_counts[tool] = tool_counts.get(tool, 0) + 1
-
-                        fallback.issues.append(f"Executed {len(tool_calls_summary)} tool calls:")
-                        for tool, count in sorted(tool_counts.items()):
-                            fallback.issues.append(f"  • {tool}: {count}x")
-
-                    if verbosity == "detailed":
-                        if files_modified:
-                            fallback.issues.append(f"\nFiles modified ({len(files_modified)}):")
-                            for f in sorted(files_modified)[:5]:  # Limit to 5 files
-                                fallback.issues.append(f"  • {f}")
-                            if len(files_modified) > 5:
-                                fallback.issues.append(
-                                    f"  • ... and {len(files_modified) - 5} more"
-                                )
-
-                        if commands_run:
-                            fallback.issues.append(f"\nCommands executed ({len(commands_run)}):")
-                            for cmd in commands_run[:3]:  # Limit to 3 commands
-                                # Truncate long commands
-                                display_cmd = cmd if len(cmd) <= 60 else cmd[:57] + "..."
-                                fallback.issues.append(f"  • {display_cmd}")
-                            if len(commands_run) > 3:
-                                fallback.issues.append(f"  • ... and {len(commands_run) - 3} more")
-
-                # Add helpful next steps
-                fallback.next_steps.append(
-                    "The task may be too complex - try breaking it into smaller steps"
+                fallback = create_fallback_response(
+                    i,
+                    max_iterations,
+                    state_manager.session.tool_calls,
+                    state_manager.session.messages,
+                    verbosity,
                 )
-                fallback.next_steps.append(
-                    "Check the output above for any errors or partial progress"
-                )
-                if files_modified:
-                    fallback.next_steps.append(
-                        "Review modified files to see what changes were made"
-                    )
+                comprehensive_output = format_fallback_output(fallback)
 
-                # Create comprehensive output
-                output_parts = [fallback.summary, ""]
-
-                if fallback.progress:
-                    output_parts.append(f"Progress: {fallback.progress}")
-
-                if fallback.issues:
-                    output_parts.append("\nWhat happened:")
-                    output_parts.extend(fallback.issues)
-
-                if fallback.next_steps:
-                    output_parts.append("\nSuggested next steps:")
-                    for step in fallback.next_steps:
-                        output_parts.append(f"  • {step}")
-
-                comprehensive_output = "\n".join(output_parts)
-
-                # Create a wrapper object that mimics AgentRun with the required attributes
                 wrapper = AgentRunWrapper(
                     agent_run, SimpleResult(comprehensive_output), response_state
                 )
