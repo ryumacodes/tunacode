@@ -6,31 +6,10 @@
 MAX_LINES=500
 FOUND_LONG_FILES=0
 
-# Whitelisted files that are allowed to exceed the limit
-WHITELIST=(
-    "./src/tunacode/core/agents/main.py"
-)
-
-# Check if a file is whitelisted
-is_whitelisted() {
-    local file="$1"
-    for whitelisted in "${WHITELIST[@]}"; do
-        if [[ "$file" == "$whitelisted" ]]; then
-            return 0
-        fi
-    done
-    return 1
-}
-
 # Find all files, excluding common directories and binary files
 while IFS= read -r -d '' file; do
     # Skip if it's not a regular file
     if [ ! -f "$file" ]; then
-        continue
-    fi
-
-    # Skip whitelisted files
-    if is_whitelisted "$file"; then
         continue
     fi
 
