@@ -1,6 +1,17 @@
 """Agent components package for modular agent functionality."""
 
 from .agent_config import get_or_create_agent
+from .agent_helpers import (
+    create_empty_response_message,
+    create_fallback_response,
+    create_progress_summary,
+    create_user_message,
+    format_fallback_output,
+    get_recent_tools_context,
+    get_tool_description,
+    get_tool_summary,
+    get_user_prompt_part_class,
+)
 from .json_tool_parser import extract_and_execute_tool_calls, parse_json_tool_calls
 from .message_handler import get_model_messages, patch_tool_messages
 from .node_processor import _process_node
@@ -24,4 +35,13 @@ __all__ = [
     "check_task_completion",
     "ToolBuffer",
     "execute_tools_parallel",
+    "create_empty_response_message",
+    "create_fallback_response",
+    "create_progress_summary",
+    "create_user_message",
+    "format_fallback_output",
+    "get_recent_tools_context",
+    "get_tool_description",
+    "get_tool_summary",
+    "get_user_prompt_part_class",
 ]
