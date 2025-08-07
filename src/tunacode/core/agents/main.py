@@ -23,6 +23,7 @@ from tunacode.types import (
     ToolCallback,
     UsageTrackerProtocol,
 )
+from tunacode.ui.tool_descriptions import get_batch_description
 
 # Import agent components
 from .agent_components import (
@@ -364,6 +365,19 @@ Please let me know how to proceed."""
                 buffered_tasks = tool_buffer.flush()
                 start_time = time.time()
 
+                # Update spinner message for final batch execution
+                tool_names = [part.tool_name for part, _ in buffered_tasks]
+                batch_msg = get_batch_description(len(buffered_tasks), tool_names)
+                import builtins
+
+                builtins.print(f"[DEBUG FINAL FLUSH] About to update spinner: {batch_msg}")
+                builtins.print(
+                    f"[DEBUG FINAL FLUSH] Spinner exists: {state_manager.session.spinner if state_manager and state_manager.session else 'None'}"
+                )
+                await ui.update_spinner_message(
+                    f"[bold #00d7ff]{batch_msg}...[/bold #00d7ff]", state_manager
+                )
+
                 await ui.muted("\n" + "=" * 60)
                 await ui.muted(
                     f"🚀 FINAL BATCH: Executing {len(buffered_tasks)} buffered read-only tools"
@@ -396,6 +410,11 @@ Please let me know how to proceed."""
                     f"✅ Final batch completed in {elapsed_time:.0f}ms "
                     f"(~{speedup:.1f}x faster than sequential)\n"
                 )
+
+                # Reset spinner back to thinking
+                from tunacode.constants import UI_THINKING_MESSAGE
+
+                await ui.update_spinner_message(UI_THINKING_MESSAGE, state_manager)
 
             # If we need to add a fallback response, create a wrapper
             if (
