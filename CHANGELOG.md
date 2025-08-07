@@ -13,6 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated REPL functionality
 - Enhanced output display formatting
 - Refactored main.py to reduce file size from 691 to 447 lines
+- Improved ESC key handling with double-press safety and unified abort behavior
+- Added comprehensive ESC key investigation documentation
+
+### Added
+
+- New helper module `agent_helpers.py` for common agent operations
+- Streaming cancellation with AbortableStream for better ESC key response
+- Memory anchors and documentation organization improvements
+
+### Fixed
+
+- ESC key double-press safety restoration
+- Unified ESC and Ctrl+C abort handling in REPL
+- Pre-commit hook configuration for file length checks
 
 ### Contributors
 
