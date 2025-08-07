@@ -160,11 +160,24 @@ async def update_spinner_message(message: str, state_manager: StateManager = Non
         message: New message to display
         state_manager: State manager instance containing spinner
     """
+    import builtins
+
+    builtins.print(f"[DEBUG] update_spinner_message called with: {message}")
+    builtins.print(f"[DEBUG] state_manager: {state_manager}")
+    builtins.print(f"[DEBUG] session: {state_manager.session if state_manager else None}")
+    builtins.print(
+        f"[DEBUG] spinner: {state_manager.session.spinner if state_manager and state_manager.session else None}"
+    )
+
     if state_manager and state_manager.session.spinner:
         spinner_obj = state_manager.session.spinner
+        builtins.print(f"[DEBUG] Spinner type: {type(spinner_obj)}")
+        builtins.print(f"[DEBUG] Has update: {hasattr(spinner_obj, 'update')}")
         if hasattr(spinner_obj, "update"):
             # Rich's Status object supports update method
+            builtins.print(f"[DEBUG] CALLING SPINNER UPDATE WITH: {message}")
             await run_in_terminal(lambda: spinner_obj.update(message))
+            builtins.print("[DEBUG] SPINNER UPDATED!")
 
 
 def get_context_window_display(total_tokens: int, max_tokens: int) -> str:
