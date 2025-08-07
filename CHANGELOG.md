@@ -22,6 +22,7 @@ Special thanks to our community contributors:
 - **prudentbird** - Context window management (#17)
 - **Lftobs** - Todo tool functionality and @-file-ref enhancements (#17, #2)
 - **ColeMurray** - Security fix for B108 vulnerability (#25)
+- **ryumacodes** - Fix for RuntimeWarnings in REPL tests (#71)
 
 ## [0.0.23] - 2025-01-06
 
