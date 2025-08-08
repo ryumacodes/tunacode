@@ -88,7 +88,7 @@ class StreamingAgentPanel:
     content: str
     live: Optional[Live]
     _last_update_time: float
-    _dots_task: Optional[asyncio.Task[None]]
+    _dots_task: Optional[asyncio.Task]
     _dots_count: int
     _show_dots: bool
 
