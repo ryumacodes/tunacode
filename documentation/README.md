@@ -11,6 +11,7 @@ documentation/
 │   ├── agent-inspo.md
 │   └── main-agent-architecture.md
 ├── configuration/         # System configuration docs
+│   ├── config-file-example.md
 │   └── logging-configuration.md
 └── development/          # Development practices
     ├── codebase-hygiene.md
@@ -20,3 +21,7 @@ documentation/
 ## Purpose
 
 General project documentation for features, architecture, and best practices.
+
+## Quick Links
+
+- [Configuration File Example](configuration/config-file-example.md) - Complete example of `~/.config/tunacode.json` with all available settings.
