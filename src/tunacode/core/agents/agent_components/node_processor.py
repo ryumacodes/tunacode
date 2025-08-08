@@ -407,6 +407,14 @@ async def _process_tool_calls(
 
                     # Update spinner for sequential tool
                     tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
+                    # Parse args if they're a JSON string
+                    if isinstance(tool_args, str):
+                        import json
+
+                        try:
+                            tool_args = json.loads(tool_args)
+                        except (json.JSONDecodeError, TypeError):
+                            tool_args = {}
                     tool_desc = get_tool_description(part.tool_name, tool_args)
                     await ui.update_spinner_message(
                         f"[bold #00d7ff]{tool_desc}...[/bold #00d7ff]", state_manager
