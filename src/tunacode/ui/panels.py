@@ -83,12 +83,21 @@ async def agent(text: str, bottom: int = 1) -> None:
 class StreamingAgentPanel:
     """Streaming agent panel using Rich.Live for progressive display."""
 
+    bottom: int
+    title: str
+    content: str
+    live: Optional[Live]
+    _last_update_time: float
+    _dots_task: Optional[asyncio.Task[None]]
+    _dots_count: int
+    _show_dots: bool
+
     def __init__(self, bottom: int = 1):
         self.bottom = bottom
         self.title = f"[bold {colors.primary}]●[/bold {colors.primary}] {APP_NAME}"
         self.content = ""
         self.live = None
-        self._last_update_time = 0
+        self._last_update_time = 0.0
         self._dots_task = None
         self._dots_count = 0
         self._show_dots = False
