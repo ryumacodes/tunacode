@@ -368,12 +368,6 @@ Please let me know how to proceed."""
                 # Update spinner message for final batch execution
                 tool_names = [part.tool_name for part, _ in buffered_tasks]
                 batch_msg = get_batch_description(len(buffered_tasks), tool_names)
-                import builtins
-
-                builtins.print(f"[DEBUG FINAL FLUSH] About to update spinner: {batch_msg}")
-                builtins.print(
-                    f"[DEBUG FINAL FLUSH] Spinner exists: {state_manager.session.spinner if state_manager and state_manager.session else 'None'}"
-                )
                 await ui.update_spinner_message(
                     f"[bold #00d7ff]{batch_msg}...[/bold #00d7ff]", state_manager
                 )

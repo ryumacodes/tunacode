@@ -377,26 +377,15 @@ async def _process_tool_calls(
     # Process tool calls
     for part in node.model_response.parts:
         if hasattr(part, "part_kind") and part.part_kind == "tool-call":
-            import builtins
-
-            builtins.print(
-                f"[DEBUG] Found tool call: {part.tool_name if hasattr(part, 'tool_name') else 'unknown'}"
-            )
             is_processing_tools = True
             if tool_callback:
                 # Check if this is a read-only tool that can be batched
                 if tool_buffer is not None and part.tool_name in READ_ONLY_TOOLS:
-                    import builtins
-
-                    builtins.print(f"[DEBUG] Adding {part.tool_name} to buffer")
                     # Add to buffer instead of executing immediately
                     tool_buffer.add(part, node)
 
                     # Update spinner to show we're collecting tools
                     buffered_count = len(tool_buffer.read_only_tasks)
-                    builtins.print("[DEBUG] About to call update_spinner_message")
-                    builtins.print(f"[DEBUG] state_manager: {state_manager}")
-                    builtins.print(f"[DEBUG] buffered_count: {buffered_count}")
                     await ui.update_spinner_message(
                         f"[bold #00d7ff]Collecting tools ({buffered_count} buffered)...[/bold #00d7ff]",
                         state_manager,
@@ -422,9 +411,6 @@ async def _process_tool_calls(
                         # Update spinner message for batch execution
                         tool_names = [part.tool_name for part, _ in buffered_tasks]
                         batch_msg = get_batch_description(len(buffered_tasks), tool_names)
-                        import builtins
-
-                        builtins.print(f"[DEBUG] About to update spinner for batch: {batch_msg}")
                         await ui.update_spinner_message(
                             f"[bold #00d7ff]{batch_msg}...[/bold #00d7ff]", state_manager
                         )
