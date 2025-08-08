@@ -38,6 +38,27 @@ Special thanks to our community contributors:
 - **ColeMurray** - Security fix for B108 vulnerability (#25)
 - **ryumacodes** - Fix for RuntimeWarnings in REPL tests (#71)
 
+## [0.0.55] - 2025-08-08
+
+### Added
+- Activity indicator with animated dots during operations
+- Spinner update infrastructure for better tool execution status feedback
+
+### Changed
+- Simplified type hint for asyncio.Task in StreamingAgentPanel
+- Extracted truncation checking to separate module (node_processor.py reduced to 438 lines)
+
+### Fixed
+- JSON string args handling in get_tool_description call
+- Debug print statements causing console pollution
+- Dynamic spinner messages by keeping spinner running during tool execution
+
+## [0.0.54] - 2025-08-08
+
+### Fixed
+- Made publish script idempotent and handle partial completions
+- Moved cleanup section after version calculation in publish script
+
 ## [0.0.23] - 2025-01-06
 
 ### Added
