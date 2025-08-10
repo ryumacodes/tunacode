@@ -43,8 +43,9 @@ async def tool_handler(part, state_manager: StateManager):
     if tool_handler_instance.should_confirm(part.tool_name):
         await ui.info(f"Tool({part.tool_name})")
 
-    if not state_manager.session.is_streaming_active and state_manager.session.spinner:
-        state_manager.session.spinner.stop()
+    # Keep spinner running during tool execution - it will be updated with tool status
+    # if not state_manager.session.is_streaming_active and state_manager.session.spinner:
+    #     state_manager.session.spinner.stop()
 
     streaming_panel = None
     if state_manager.session.is_streaming_active and hasattr(
@@ -58,6 +59,15 @@ async def tool_handler(part, state_manager: StateManager):
         args = parse_args(part.args)
 
         def confirm_func():
+            # Check if tool is blocked in plan mode first
+            if tool_handler_instance.is_tool_blocked_in_plan_mode(part.tool_name):
+                from tunacode.constants import READ_ONLY_TOOLS
+                error_msg = (f"🔍 Plan Mode: Tool '{part.tool_name}' is not available in Plan Mode.\n"
+                           f"Only read-only tools are allowed: {', '.join(READ_ONLY_TOOLS)}\n"
+                           f"Use 'exit_plan_mode' tool to present your plan and exit Plan Mode.")
+                print(f"\n❌ {error_msg}\n")
+                return True  # Abort the tool
+            
             if not tool_handler_instance.should_confirm(part.tool_name):
                 return False
             request = tool_handler_instance.create_confirmation_request(part.tool_name, args)
@@ -80,5 +90,6 @@ async def tool_handler(part, state_manager: StateManager):
         if streaming_panel and tool_handler_instance.should_confirm(part.tool_name):
             await streaming_panel.start()
 
-        if not state_manager.session.is_streaming_active and state_manager.session.spinner:
-            state_manager.session.spinner.start()
+        # Spinner continues running - no need to restart
+        # if not state_manager.session.is_streaming_active and state_manager.session.spinner:
+        #     state_manager.session.spinner.start()

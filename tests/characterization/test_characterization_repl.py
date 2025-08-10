@@ -62,6 +62,9 @@ class TestReplCharacterization:
         # Mock for messages
         state_manager.session.messages = []
 
+        # Add is_plan_mode mock for plan mode UI
+        state_manager.is_plan_mode = MagicMock(return_value=False)
+
         return state_manager
 
     def test_parse_args_with_string(self):
@@ -111,6 +114,7 @@ class TestReplCharacterization:
             mock_handler = MagicMock()
             mock_handler.should_confirm.return_value = False  # Don't show confirmation
             mock_handler.execute_tool = AsyncMock(return_value="file contents")
+            mock_handler.is_tool_blocked_in_plan_mode = MagicMock(return_value=False)
             mock_handler_class.return_value = mock_handler
 
             # Mock the state_manager to have is_streaming_active and spinner
@@ -188,7 +192,7 @@ class TestReplCharacterization:
                 await process_request(text, mock_state_manager)
 
                 mock_agent_process.assert_called_once()
-                mock_display.assert_called_once_with(mock_run, False)
+                mock_display.assert_called_once_with(mock_run, False, mock_state_manager)
 
     @pytest.mark.asyncio
     async def test_process_request_with_error(self, mock_state_manager):

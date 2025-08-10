@@ -6,10 +6,12 @@ from typing import Any, Awaitable, Callable, Optional, Tuple
 from tunacode.core.logging.logger import get_logger
 from tunacode.core.state import StateManager
 from tunacode.types import UsageTrackerProtocol
+from tunacode.ui.tool_descriptions import get_batch_description, get_tool_description
 
 from .response_state import ResponseState
 from .task_completion import check_task_completion
 from .tool_buffer import ToolBuffer
+from .truncation_checker import check_for_truncation
 
 logger = get_logger(__name__)
 
@@ -171,7 +173,7 @@ async def _process_node(
             # Check for truncation patterns
             if all_content_parts:
                 combined_content = " ".join(all_content_parts).strip()
-                appears_truncated = _check_for_truncation(combined_content)
+                appears_truncated = check_for_truncation(combined_content)
 
             # If we only got empty content and no tool calls, we should NOT consider this a valid response
             # This prevents the agent from stopping when it gets empty responses
@@ -227,79 +229,6 @@ async def _process_node(
         return True, "intention_without_action"
 
     return False, None
-
-
-def _check_for_truncation(combined_content: str) -> bool:
-    """Check if content appears to be truncated."""
-    if not combined_content:
-        return False
-
-    # Truncation indicators:
-    # 1. Ends with "..." or "…" (but not part of a complete sentence)
-    # 2. Ends mid-word (no punctuation, space, or complete word)
-    # 3. Contains incomplete markdown/code blocks
-    # 4. Ends with incomplete parentheses/brackets
-
-    # Check for ellipsis at end suggesting truncation
-    if combined_content.endswith(("...", "…")) and not combined_content.endswith(("....", "….")):
-        return True
-
-    # Check for mid-word truncation (ends with letters but no punctuation)
-    if combined_content and combined_content[-1].isalpha():
-        # Look for incomplete words by checking if last "word" seems cut off
-        words = combined_content.split()
-        if words:
-            last_word = words[-1]
-            # Common complete word endings vs likely truncations
-            complete_endings = (
-                "ing",
-                "ed",
-                "ly",
-                "er",
-                "est",
-                "tion",
-                "ment",
-                "ness",
-                "ity",
-                "ous",
-                "ive",
-                "able",
-                "ible",
-            )
-            incomplete_patterns = (
-                "referen",
-                "inte",
-                "proces",
-                "analy",
-                "deve",
-                "imple",
-                "execu",
-            )
-
-            if any(last_word.lower().endswith(pattern) for pattern in incomplete_patterns):
-                return True
-            elif len(last_word) > 2 and not any(
-                last_word.lower().endswith(end) for end in complete_endings
-            ):
-                # Likely truncated if doesn't end with common suffix
-                return True
-
-    # Check for unclosed markdown code blocks
-    code_block_count = combined_content.count("```")
-    if code_block_count % 2 != 0:
-        return True
-
-    # Check for unclosed brackets/parentheses (more opens than closes)
-    open_brackets = (
-        combined_content.count("[") + combined_content.count("(") + combined_content.count("{")
-    )
-    close_brackets = (
-        combined_content.count("]") + combined_content.count(")") + combined_content.count("}")
-    )
-    if open_brackets > close_brackets:
-        return True
-
-    return False
 
 
 async def _display_raw_api_response(node: Any, ui: Any) -> None:
@@ -382,6 +311,14 @@ async def _process_tool_calls(
                 if tool_buffer is not None and part.tool_name in READ_ONLY_TOOLS:
                     # Add to buffer instead of executing immediately
                     tool_buffer.add(part, node)
+
+                    # Update spinner to show we're collecting tools
+                    buffered_count = len(tool_buffer.read_only_tasks)
+                    await ui.update_spinner_message(
+                        f"[bold #00d7ff]Collecting tools ({buffered_count} buffered)...[/bold #00d7ff]",
+                        state_manager,
+                    )
+
                     if state_manager.session.show_thoughts:
                         await ui.muted(
                             f"⏸️ BUFFERED: {part.tool_name} (will execute in parallel batch)"
@@ -399,45 +336,53 @@ async def _process_tool_calls(
 
                         start_time = time.time()
 
-                        # Enhanced visual feedback for parallel execution
-                        await ui.muted("\n" + "=" * 60)
-                        await ui.muted(
-                            f"🚀 PARALLEL BATCH #{batch_id}: Executing {len(buffered_tasks)} read-only tools concurrently"
+                        # Update spinner message for batch execution
+                        tool_names = [part.tool_name for part, _ in buffered_tasks]
+                        batch_msg = get_batch_description(len(buffered_tasks), tool_names)
+                        await ui.update_spinner_message(
+                            f"[bold #00d7ff]{batch_msg}...[/bold #00d7ff]", state_manager
                         )
-                        await ui.muted("=" * 60)
 
-                        # Display details of what's being executed
-                        for idx, (buffered_part, _) in enumerate(buffered_tasks, 1):
-                            tool_desc = f"  [{idx}] {buffered_part.tool_name}"
-                            if hasattr(buffered_part, "args") and isinstance(
-                                buffered_part.args, dict
-                            ):
-                                if (
-                                    buffered_part.tool_name == "read_file"
-                                    and "file_path" in buffered_part.args
+                        # Enhanced visual feedback for parallel execution (suppress in plan mode)
+                        if not state_manager.is_plan_mode():
+                            await ui.muted("\n" + "=" * 60)
+                            await ui.muted(
+                                f"🚀 PARALLEL BATCH #{batch_id}: Executing {len(buffered_tasks)} read-only tools concurrently"
+                            )
+                            await ui.muted("=" * 60)
+
+                            # Display details of what's being executed
+                            for idx, (buffered_part, _) in enumerate(buffered_tasks, 1):
+                                tool_desc = f"  [{idx}] {buffered_part.tool_name}"
+                                if hasattr(buffered_part, "args") and isinstance(
+                                    buffered_part.args, dict
                                 ):
-                                    tool_desc += f" → {buffered_part.args['file_path']}"
-                                elif (
-                                    buffered_part.tool_name == "grep"
-                                    and "pattern" in buffered_part.args
-                                ):
-                                    tool_desc += f" → pattern: '{buffered_part.args['pattern']}'"
-                                    if "include_files" in buffered_part.args:
-                                        tool_desc += (
-                                            f", files: '{buffered_part.args['include_files']}'"
-                                        )
-                                elif (
-                                    buffered_part.tool_name == "list_dir"
-                                    and "directory" in buffered_part.args
-                                ):
-                                    tool_desc += f" → {buffered_part.args['directory']}"
-                                elif (
-                                    buffered_part.tool_name == "glob"
-                                    and "pattern" in buffered_part.args
-                                ):
-                                    tool_desc += f" → pattern: '{buffered_part.args['pattern']}'"
-                            await ui.muted(tool_desc)
-                        await ui.muted("=" * 60)
+                                    if (
+                                        buffered_part.tool_name == "read_file"
+                                        and "file_path" in buffered_part.args
+                                    ):
+                                        tool_desc += f" → {buffered_part.args['file_path']}"
+                                    elif (
+                                        buffered_part.tool_name == "grep"
+                                        and "pattern" in buffered_part.args
+                                    ):
+                                        tool_desc += f" → pattern: '{buffered_part.args['pattern']}'"
+                                        if "include_files" in buffered_part.args:
+                                            tool_desc += (
+                                                f", files: '{buffered_part.args['include_files']}'"
+                                            )
+                                    elif (
+                                        buffered_part.tool_name == "list_dir"
+                                        and "directory" in buffered_part.args
+                                    ):
+                                        tool_desc += f" → {buffered_part.args['directory']}"
+                                    elif (
+                                        buffered_part.tool_name == "glob"
+                                        and "pattern" in buffered_part.args
+                                    ):
+                                        tool_desc += f" → pattern: '{buffered_part.args['pattern']}'"
+                                await ui.muted(tool_desc)
+                            await ui.muted("=" * 60)
 
                         await execute_tools_parallel(buffered_tasks, tool_callback)
 
@@ -447,14 +392,36 @@ async def _process_tool_calls(
                         )  # Assume 100ms per tool average
                         speedup = sequential_estimate / elapsed_time if elapsed_time > 0 else 1.0
 
-                        await ui.muted(
-                            f"✅ Parallel batch completed in {elapsed_time:.0f}ms "
-                            f"(~{speedup:.1f}x faster than sequential)\n"
-                        )
+                        if not state_manager.is_plan_mode():
+                            await ui.muted(
+                                f"✅ Parallel batch completed in {elapsed_time:.0f}ms "
+                                f"(~{speedup:.1f}x faster than sequential)\n"
+                            )
+
+                        # Reset spinner message back to thinking
+                        from tunacode.constants import UI_THINKING_MESSAGE
+
+                        await ui.update_spinner_message(UI_THINKING_MESSAGE, state_manager)
 
                     # Now execute the write/execute tool
                     if state_manager.session.show_thoughts:
                         await ui.warning(f"⚠️ SEQUENTIAL: {part.tool_name} (write/execute tool)")
+
+                    # Update spinner for sequential tool
+                    tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
+                    # Parse args if they're a JSON string
+                    if isinstance(tool_args, str):
+                        import json
+
+                        try:
+                            tool_args = json.loads(tool_args)
+                        except (json.JSONDecodeError, TypeError):
+                            tool_args = {}
+                    tool_desc = get_tool_description(part.tool_name, tool_args)
+                    await ui.update_spinner_message(
+                        f"[bold #00d7ff]{tool_desc}...[/bold #00d7ff]", state_manager
+                    )
+
                     await tool_callback(part, node)
 
     # Track tool calls in session
