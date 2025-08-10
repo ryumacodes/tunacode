@@ -2,8 +2,7 @@
 
 - update the documents @documentation and in .claude after any update.
 
-
--  use the subagent tech-docs-maintainer to update the documentation you MUST instruct the subagent to keep doc updates short you will be PUNISHED for not telling the documentation agent to keep it to only the most distilled information
+- use the subagent tech-docs-maintainer to update the documentation you MUST instruct the subagent to keep doc updates short you will be PUNISHED for not telling the documentation agent to keep it to only the most distilled information
 
 - always follow best practices with git commits naming and gh cli workflows
 
@@ -13,6 +12,7 @@
 
 ### Python Coding Standards
 
+- always use the venv
 - Use type hints (PEP 484) for all function signatures
 - Prefer f-strings (PEP 498) over %-formatting or .format()
 - Use pathlib.Path instead of os.path for filesystem operations
