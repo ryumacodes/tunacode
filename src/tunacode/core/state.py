@@ -86,7 +86,7 @@ class SessionState:
     task_hierarchy: dict[str, Any] = field(default_factory=dict)
     iteration_budgets: dict[str, int] = field(default_factory=dict)
     recursive_context_stack: list[dict[str, Any]] = field(default_factory=list)
-    
+
     # Plan Mode state tracking
     plan_mode: bool = False
     plan_phase: Optional[PlanPhase] = None

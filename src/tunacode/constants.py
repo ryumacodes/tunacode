@@ -60,7 +60,13 @@ TOOL_TODO = ToolName.TODO
 TOOL_EXIT_PLAN_MODE = ToolName.EXIT_PLAN_MODE
 
 # Tool categorization
-READ_ONLY_TOOLS = [ToolName.READ_FILE, ToolName.GREP, ToolName.LIST_DIR, ToolName.GLOB, ToolName.EXIT_PLAN_MODE]
+READ_ONLY_TOOLS = [
+    ToolName.READ_FILE,
+    ToolName.GREP,
+    ToolName.LIST_DIR,
+    ToolName.GLOB,
+    ToolName.EXIT_PLAN_MODE,
+]
 WRITE_TOOLS = [ToolName.WRITE_FILE, ToolName.UPDATE_FILE]
 EXECUTE_TOOLS = [ToolName.BASH, ToolName.RUN_COMMAND]
 

@@ -47,6 +47,7 @@ def create_key_bindings(state_manager: StateManager = None) -> KeyBindings:
         # Trigger the same behavior as Ctrl+C by sending the signal
         import os
         import signal
+
         os.kill(os.getpid(), signal.SIGINT)
 
     @kb.add("s-tab")  # shift+tab

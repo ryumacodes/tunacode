@@ -7,6 +7,9 @@ used throughout the TunaCode codebase.
 
 from dataclasses import dataclass, field
 from datetime import datetime
+
+# Plan types will be defined below
+from enum import Enum
 from pathlib import Path
 from typing import (
     Any,
@@ -20,9 +23,6 @@ from typing import (
     Tuple,
     Union,
 )
-
-# Plan types will be defined below
-from enum import Enum
 
 # Try to import pydantic-ai types if available
 try:
@@ -202,6 +202,7 @@ class SimpleResult:
 
 class PlanPhase(Enum):
     """Plan Mode phases."""
+
     PLANNING_RESEARCH = "research"
     PLANNING_DRAFT = "draft"
     PLAN_READY = "ready"
@@ -211,14 +212,14 @@ class PlanPhase(Enum):
 @dataclass
 class PlanDoc:
     """Structured plan document with all required sections."""
-    
+
     # Required sections
     title: str
     overview: str
     steps: List[str]
     files_to_modify: List[str]
     files_to_create: List[str]
-    
+
     # Optional but recommended sections
     risks: List[str] = field(default_factory=list)
     tests: List[str] = field(default_factory=list)
@@ -226,16 +227,16 @@ class PlanDoc:
     open_questions: List[str] = field(default_factory=list)
     success_criteria: List[str] = field(default_factory=list)
     references: List[str] = field(default_factory=list)
-    
+
     def validate(self) -> Tuple[bool, List[str]]:
         """
         Validate the plan document.
-        
+
         Returns:
             tuple: (is_valid, list_of_missing_sections)
         """
         missing = []
-        
+
         # Check required fields
         if not self.title or not self.title.strip():
             missing.append("title")
@@ -245,7 +246,7 @@ class PlanDoc:
             missing.append("steps")
         if not self.files_to_modify and not self.files_to_create:
             missing.append("files_to_modify or files_to_create")
-            
+
         return len(missing) == 0, missing
 
 

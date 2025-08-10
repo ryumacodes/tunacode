@@ -79,6 +79,7 @@ async def multiline_input(
 
     # Clear any residual terminal output
     import sys
+
     sys.stdout.flush()
 
     # Full placeholder with all keyboard shortcuts
