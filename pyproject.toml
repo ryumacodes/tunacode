@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tunacode-cli"
 
-version = "0.0.55"
+version = "0.0.56"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
@@ -172,7 +172,7 @@ dead-code-check = [
     "python -c \"print('Running comprehensive dead code analysis...')\"",
     "python -c \"print('\\n=== Vulture (unused code) ===')\"",
     "python -m vulture . --min-confidence 80 --exclude '*/test/*,*/tests/*,venv/*,build/*,dist/*' || true",
-    "python -c \"print('\\n=== Unimport (unused imports) ===')\"", 
+    "python -c \"print('\\n=== Unimport (unused imports) ===')\"",
     "python -m unimport --check . || true",
     "python -c \"print('\\n=== Dead (dead code detector) ===')\"",
     "python -m dead . || true",
