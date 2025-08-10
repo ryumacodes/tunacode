@@ -106,13 +106,19 @@ class PromptManager:
             base_prompt = prompt
 
             # Add Plan Mode indicator if active
-            if (self.state_manager and
-                self.state_manager.is_plan_mode() and
-                "PLAN MODE ON" not in base_prompt):
-                base_prompt = '<style fg="#40E0D0"><bold>⏸  PLAN MODE ON</bold></style>\n' + base_prompt
-            elif (self.state_manager and
-                  not self.state_manager.is_plan_mode() and
-                  ("⏸" in base_prompt or "PLAN MODE ON" in base_prompt)):
+            if (
+                self.state_manager
+                and self.state_manager.is_plan_mode()
+                and "PLAN MODE ON" not in base_prompt
+            ):
+                base_prompt = (
+                    '<style fg="#40E0D0"><bold>⏸  PLAN MODE ON</bold></style>\n' + base_prompt
+                )
+            elif (
+                self.state_manager
+                and not self.state_manager.is_plan_mode()
+                and ("⏸" in base_prompt or "PLAN MODE ON" in base_prompt)
+            ):
                 # Remove plan mode indicator if no longer in plan mode
                 lines = base_prompt.split("\n")
                 if len(lines) > 1 and ("⏸" in lines[0] or "PLAN MODE ON" in lines[0]):

@@ -165,13 +165,13 @@ async def _detect_and_handle_text_plan(state_manager, agent_response, original_r
     try:
         # Extract response text
         response_text = ""
-        if hasattr(agent_response, 'messages') and agent_response.messages:
+        if hasattr(agent_response, "messages") and agent_response.messages:
             latest_msg = agent_response.messages[-1]
-            if hasattr(latest_msg, 'content'):
+            if hasattr(latest_msg, "content"):
                 response_text = str(latest_msg.content)
-            elif hasattr(latest_msg, 'text'):
+            elif hasattr(latest_msg, "text"):
                 response_text = str(latest_msg.text)
-        elif hasattr(agent_response, 'result') and hasattr(agent_response.result, 'output'):
+        elif hasattr(agent_response, "result") and hasattr(agent_response.result, "output"):
             response_text = str(agent_response.result.output)
         else:
             response_text = str(agent_response)
@@ -179,31 +179,49 @@ async def _detect_and_handle_text_plan(state_manager, agent_response, original_r
         # Skip if agent just returned TUNACODE_TASK_COMPLETE or showed present_plan as text
         if "TUNACODE_TASK_COMPLETE" in response_text:
             logger.debug("Agent returned TUNACODE_TASK_COMPLETE instead of calling present_plan")
-            await ui.warning("⚠️ Agent failed to call present_plan tool. Please provide clearer instructions to plan the task.")
+            await ui.warning(
+                "⚠️ Agent failed to call present_plan tool. Please provide clearer instructions to plan the task."
+            )
             return
 
         if "present_plan(" in response_text:
             logger.debug("Agent showed present_plan as text instead of executing it")
-            await ui.error("❌ Agent showed present_plan as text instead of EXECUTING it as a tool!")
+            await ui.error(
+                "❌ Agent showed present_plan as text instead of EXECUTING it as a tool!"
+            )
             await ui.info("The agent must EXECUTE the present_plan tool, not show it as code.")
             await ui.info("Try again with: 'Execute the present_plan tool to create a plan for...'")
             return
 
         # Check for plan indicators
         plan_indicators = [
-            "plan for", "implementation plan", "here's a plan", "i'll create a plan",
-            "plan to write", "plan to create", "markdown file", "outline for the",
-            "plan title", "overview:", "steps:", "file title and introduction",
-            "main functions", "sections to cover", "structure for", "plan overview"
+            "plan for",
+            "implementation plan",
+            "here's a plan",
+            "i'll create a plan",
+            "plan to write",
+            "plan to create",
+            "markdown file",
+            "outline for the",
+            "plan title",
+            "overview:",
+            "steps:",
+            "file title and introduction",
+            "main functions",
+            "sections to cover",
+            "structure for",
+            "plan overview",
         ]
 
-        has_plan_indicators = any(indicator in response_text.lower() for indicator in plan_indicators)
+        has_plan_indicators = any(
+            indicator in response_text.lower() for indicator in plan_indicators
+        )
 
         # Also check for structured content (numbered lists, bullet points, sections)
         has_structure = bool(
-            ("1." in response_text or "2." in response_text or "3." in response_text) or
-            ("•" in response_text and response_text.count("•") >= 3) or
-            ("Title:" in response_text and "Overview:" in response_text)
+            ("1." in response_text or "2." in response_text or "3." in response_text)
+            or ("•" in response_text and response_text.count("•") >= 3)
+            or ("Title:" in response_text and "Overview:" in response_text)
         )
 
         if has_plan_indicators and has_structure:
@@ -231,11 +249,11 @@ async def _detect_and_handle_text_plan(state_manager, agent_response, original_r
                     "Draft document structure with sections",
                     "Detail each function with descriptions and examples",
                     "Add usage guidelines and best practices",
-                    "Review and finalize content"
+                    "Review and finalize content",
                 ],
                 files_to_modify=[],
                 files_to_create=["TunaCode_Functions_Overview.md"],
-                success_criteria=["Clear documentation of all main TunaCode functions"]
+                success_criteria=["Clear documentation of all main TunaCode functions"],
             )
 
             # Set plan ready state and trigger approval
@@ -288,6 +306,7 @@ async def _handle_plan_approval(state_manager, original_request=None):
 
         # Handle double-escape pattern like main REPL
         from tunacode.ui.keybindings import create_key_bindings
+
         kb = create_key_bindings(state_manager)
 
         while True:
@@ -296,7 +315,7 @@ async def _handle_plan_approval(state_manager, original_request=None):
                     session_key="plan_approval",
                     pretext="  → Your choice [a/m/r]: ",
                     key_bindings=kb,
-                    state_manager=state_manager
+                    state_manager=state_manager,
                 )
                 response = response.strip().lower()
 
@@ -307,11 +326,16 @@ async def _handle_plan_approval(state_manager, original_request=None):
 
             except UserAbortError:
                 import time
+
                 current_time = time.time()
 
                 # Get current session state
-                approval_abort_pressed = getattr(state_manager.session, 'approval_abort_pressed', False)
-                approval_last_abort_time = getattr(state_manager.session, 'approval_last_abort_time', 0.0)
+                approval_abort_pressed = getattr(
+                    state_manager.session, "approval_abort_pressed", False
+                )
+                approval_last_abort_time = getattr(
+                    state_manager.session, "approval_last_abort_time", 0.0
+                )
 
                 # Reset if more than 3 seconds have passed
                 if current_time - approval_last_abort_time > 3.0:
@@ -337,7 +361,7 @@ async def _handle_plan_approval(state_manager, original_request=None):
                 await ui.line()
                 continue
 
-        if response in ['a', 'approve']:
+        if response in ["a", "approve"]:
             await ui.line()
             await ui.success("✅ Plan approved - proceeding with implementation")
             state_manager.approve_plan()
@@ -351,12 +375,12 @@ async def _handle_plan_approval(state_manager, original_request=None):
                 implementation_request = _transform_to_implementation_request(original_request)
                 await process_request(implementation_request, state_manager, output=True)
 
-        elif response in ['m', 'modify']:
+        elif response in ["m", "modify"]:
             await ui.line()
             await ui.info("📝 Returning to Plan Mode for modifications")
             state_manager.enter_plan_mode()
 
-        elif response in ['r', 'reject']:
+        elif response in ["r", "reject"]:
             await ui.line()
             await ui.warning("🔄 Plan rejected - returning to Plan Mode")
             state_manager.enter_plan_mode()
@@ -498,9 +522,15 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
 
             # Check if plan is ready for user review OR if agent presented text plan
             from tunacode.types import PlanPhase
-            if hasattr(state_manager.session, 'plan_phase') and state_manager.session.plan_phase == PlanPhase.PLAN_READY:
+
+            if (
+                hasattr(state_manager.session, "plan_phase")
+                and state_manager.session.plan_phase == PlanPhase.PLAN_READY
+            ):
                 await _handle_plan_approval(state_manager, text)
-            elif state_manager.is_plan_mode() and not getattr(state_manager.session, '_continuing_from_plan', False):
+            elif state_manager.is_plan_mode() and not getattr(
+                state_manager.session, "_continuing_from_plan", False
+            ):
                 # Check if agent presented a text plan instead of using the tool
                 await _detect_and_handle_text_plan(state_manager, res, text)
         else:
@@ -514,9 +544,15 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
 
         # Check if plan is ready for user review OR if agent presented text plan
         from tunacode.types import PlanPhase
-        if hasattr(state_manager.session, 'plan_phase') and state_manager.session.plan_phase == PlanPhase.PLAN_READY:
+
+        if (
+            hasattr(state_manager.session, "plan_phase")
+            and state_manager.session.plan_phase == PlanPhase.PLAN_READY
+        ):
             await _handle_plan_approval(state_manager, text)
-        elif state_manager.is_plan_mode() and not getattr(state_manager.session, '_continuing_from_plan', False):
+        elif state_manager.is_plan_mode() and not getattr(
+            state_manager.session, "_continuing_from_plan", False
+        ):
             # Check if agent presented a text plan instead of using the tool
             await _detect_and_handle_text_plan(state_manager, res, text)
 

@@ -130,8 +130,8 @@ class CommandRegistry:
             InitCommand,
             TemplateCommand,
             TodoCommand,
-            PlanCommand,        # Add plan command
-            ExitPlanCommand,    # Add exit plan command
+            PlanCommand,  # Add plan command
+            ExitPlanCommand,  # Add exit plan command
         ]
 
         # Register all discovered commands

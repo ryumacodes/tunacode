@@ -44,7 +44,7 @@ class ToolHandler:
         # Never confirm present_plan - it has its own approval flow
         if tool_name == "present_plan":
             return False
-            
+
         # Block write tools in plan mode
         if self.is_tool_blocked_in_plan_mode(tool_name):
             return True  # Force confirmation for blocked tools
@@ -64,11 +64,11 @@ class ToolHandler:
         """Check if tool is blocked in plan mode."""
         if not self.state.is_plan_mode():
             return False
-        
+
         # Allow present_plan tool to end planning phase
         if tool_name == "present_plan":
             return False
-            
+
         # Allow read-only tools
         return not is_read_only_tool(tool_name)
 
