@@ -63,7 +63,7 @@ tunacode --model "anthropic:claude-3.5-sonnet" --key "sk-ant-your-anthropic-key"
 tunacode --model "openrouter:openai/gpt-4o" --key "sk-or-your-openrouter-key"
 ```
 
-Your config is saved to `~/.config/tunacode.json` (edit directly with `nvim ~/.config/tunacode.json`)
+Your config is saved to `~/.config/tunacode.json`. This file stores your API keys, model preferences, and runtime settings like `max_iterations` (default: 40) and `context_window_size`. You can edit it directly with `nvim ~/.config/tunacode.json` or see [the complete configuration example](documentation/configuration/config-file-example.md) for all available options.
 
 ### Recommended Models
 
@@ -200,7 +200,7 @@ tunacode --model "anthropic:claude-3.5-sonnet" --key "sk-ant-your-anthropic-key"
 tunacode --model "openrouter:openai/gpt-4o" --key "sk-or-your-openrouter-key"
 ```
 
-Your config is saved to `~/.config/tunacode.json` (edit directly with `nvim ~/.config/tunacode.json`)
+Your config is saved to `~/.config/tunacode.json`. This file stores your API keys, model preferences, and runtime settings like `max_iterations` (default: 40) and `context_window_size`. You can edit it directly with `nvim ~/.config/tunacode.json` or see [the complete configuration example](documentation/configuration/config-file-example.md) for all available options.
 
 ### Recommended Models
 

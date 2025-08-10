@@ -128,7 +128,13 @@ class ParallelGrep(BaseTool):
             # 4️⃣ Execute chosen strategy with pre-filtered candidates
             # Execute search with pre-filtered candidates
             if search_type == "ripgrep":
+                # Try ripgrep first for performance. If ripgrep is unavailable or
+                # returns no results (e.g., binary missing), gracefully fallback to
+                # the Python implementation so the tool still returns matches.
                 results = await self._ripgrep_search_filtered(pattern, candidates, config)
+                if not results:
+                    # Fallback to python search when ripgrep produced no output
+                    results = await self._python_search_filtered(pattern, candidates, config)
             elif search_type == "python":
                 results = await self._python_search_filtered(pattern, candidates, config)
             elif search_type == "hybrid":

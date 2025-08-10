@@ -21,6 +21,7 @@ class TestAgentOutputFormatting:
         state_manager.session.spinner = None
         state_manager.session.files_in_context = set()
         state_manager.session.is_streaming_active = False
+        state_manager.is_plan_mode = MagicMock(return_value=False)
         return state_manager
 
     @pytest.mark.asyncio
