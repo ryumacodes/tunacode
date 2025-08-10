@@ -24,7 +24,7 @@
 
 ### Testing
 
-- "make test" command the entire testing suite
+- "hatch run test" command the entire testing suite
 
 - anytime a new feature or refactor is done, we MUST find or make the golden/character test FIRST as a baseline standaard BEFORE starting, under no circumstance are you to not follow this pattern
 

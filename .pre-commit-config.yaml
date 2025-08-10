@@ -43,7 +43,7 @@ repos:
     hooks:
       - id: ruff
         args: ['--fix', '--show-fixes']
-      # - id: ruff-format  # Disabled - make-lint already handles formatting
+      # - id: ruff-format  # Disabled - hatch-lint already handles formatting
 
   # Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -61,10 +61,10 @@ repos:
   # Local hooks for project-specific checks
   - repo: local
     hooks:
-      # Existing make lint check - already runs ruff which respects exclusions
-      - id: make-lint
-        name: Run make lint check
-        entry: make lint
+      # Existing hatch lint check - already runs ruff which respects exclusions
+      - id: hatch-lint
+        name: Run hatch lint check
+        entry: hatch run lint
         language: system
         pass_filenames: false
         always_run: true
@@ -87,7 +87,7 @@ repos:
         exclude: ^(tests/|test_)
         stages: [pre-commit]
 
-      # Run test suite (same as make test)
+      # Run test suite (same as hatch run test)
       - id: run-tests
         name: Run test suite
         entry: venv/bin/python -m pytest -q tests/characterization tests/test_security.py tests/test_agent_output_formatting.py tests/test_prompt_changes_validation.py
@@ -151,5 +151,5 @@ ci:
   autoupdate_branch: ''
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: weekly
-  skip: [run-tests, make-lint, dead-imports]
+  skip: [run-tests, hatch-lint, dead-imports]
   submodules: false

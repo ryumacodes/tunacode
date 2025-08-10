@@ -15,7 +15,7 @@ echo "==========================================="
 # Check venv exists
 if [ ! -d "venv" ]; then
     echo -e "${RED}✗ Virtual environment not found${NC}"
-    echo "  Run: make setup"
+    echo "  Run: hatch run install"
     exit 1
 fi
 

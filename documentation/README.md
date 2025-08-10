@@ -15,6 +15,7 @@ documentation/
 │   └── logging-configuration.md
 └── development/          # Development practices
     ├── codebase-hygiene.md
+    ├── hatch-build-system.md
     └── prompt-principles.md
 ```
 
@@ -24,4 +25,5 @@ General project documentation for features, architecture, and best practices.
 
 ## Quick Links
 
+- [Hatch Build System](development/hatch-build-system.md) - Complete guide to using Hatch for development and building.
 - [Configuration File Example](configuration/config-file-example.md) - Complete example of `~/.config/tunacode.json` with all available settings.
