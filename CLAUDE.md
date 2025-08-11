@@ -1,3 +1,39 @@
+### Workflow
+
+- before any updates make a git commit rollback point, clearly labeled for future agents
+
+- the clear outline of the objective MUST be established before we begin ANY coding, do not under any circumstance begin any updates untill this is clearly understood, if you have any ambiuguity or quesiton, the user can be brought in or use best practises
+
+- use scratchpad-multi.sh as you work, after the MD file is done being used sort it to the approate directory
+
+- the MD file created by the bash file MUST be used for the duiration of the task you will be PUNISHED if you do not update this file as you work.
+
+- any key logic or file's must be inlcuded here in the following format if this format is not followed you will STOP reasses, and begin again
+
+```
+# Implementing Authentication Module
+_Started: 2025-08-06 10:00:00_
+_Agent: default_
+
+[1] Found auth logic in src/auth/handler.py:45
+[2] Key dependencies: jwt, bcrypt, session_manager
+[3] Modified login function to add rate limiting
+[3~1] Fixed edge case for empty passwords
+```
+
+- General documentation → archive to @documentation/
+- Developer/tunacode-specific → archive to @ .claude
+- Organize archives by category (agent/development/ etc)
+- In general the scratchpad should never go in any other dirs ececpt the two above
+
+- if a task at hand is to big to handle as a one off use the taskmaster MCP but in general this should only be used as needed, usually it will not be needed
+
+- grep documentation and .claude as needed BOTH of these have a README.md that ahs a direcoty map, you MUST read these before any bigger grep or context searches
+
+- in general gather as much context as needed, unless specified by the user
+
+- this is the most important part of this prompt: Synthesis context aggressively and heuristically AS NEEDED ONLY You can deploy the appropriate subagent for complex tasks agents list below
+
 ### Documentation
 
 - update the documents @documentation and in .claude after any update.
@@ -28,43 +64,7 @@
 
 - anytime a new feature or refactor is done, we MUST find or make the golden/character test FIRST as a baseline standaard BEFORE starting, under no circumstance are you to not follow this pattern
 
-### Workflow
 
-- before any updates make a git commit rollback point, clearly labeled for future agents
-
-- the clear outline of the objective MUST be established before we begin ANY coding, do not under any circumstance begin any updates untill this is clearly understood, if you have any ambiuguity or quesiton, the user can be brought in or use best practises
-
-- use scratchpad-multi.sh as you work, after the MD file is done being used sort it to the approate directory
-
-- the MD file created by the bash file MUST be used for the duiration of the task you will be PUNISHED if you do not update this file as you work.
-
-- any key logic or file's must be inlcuded here in the following format if this format is not followed you will STOP reasses, and begin again
-
-### Scratchpad Template Example
-
-```
-# Implementing Authentication Module
-_Started: 2025-08-06 10:00:00_
-_Agent: default_
-
-[1] Found auth logic in src/auth/handler.py:45
-[2] Key dependencies: jwt, bcrypt, session_manager
-[3] Modified login function to add rate limiting
-[3~1] Fixed edge case for empty passwords
-```
-
-- General documentation → archive to @documentation/
-- Developer/tunacode-specific → archive to @ .claude
-- Organize archives by category (agent/development/ etc)
-- In general the scratchpad should never go in any other dirs ececpt the two above
-
-- if a task at hand is to big to handle as a one off use the taskmaster MCP but in general this should only be used as needed, usually it will not be needed
-
-- grep documentation and .claude as needed BOTH of these have a README.md that ahs a direcoty map, you MUST read these before any bigger grep or context searches
-
-- in general gather as much context as needed, unless specified by the user
-
-- this is the most important part of this prompt: Synthesis context aggressively and heuristically AS NEEDED ONLY You can deploy the appropriate subagent for complex tasks agents list below
 
 ## Available Agents:
 

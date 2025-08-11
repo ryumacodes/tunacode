@@ -100,7 +100,7 @@ class StreamingAgentPanel:
         self._last_update_time = 0.0
         self._dots_task = None
         self._dots_count = 0
-        self._show_dots = False
+        self._show_dots = True  # Start with dots enabled for "Thinking..."
 
     def _create_panel(self) -> Padding:
         """Create a Rich panel with current content."""
@@ -111,7 +111,15 @@ class StreamingAgentPanel:
 
         # Show "Thinking..." only when no content has arrived yet
         if not self.content:
-            content_renderable: Union[Text, Markdown] = Text.from_markup(UI_THINKING_MESSAGE)
+            # Apply dots animation to "Thinking..." message too
+            thinking_msg = UI_THINKING_MESSAGE
+            if self._show_dots:
+                # Remove the existing ... from the message and add animated dots
+                base_msg = thinking_msg.replace("...", "")
+                dots_patterns = ["", ".", "..", "..."]
+                dots = dots_patterns[self._dots_count % len(dots_patterns)]
+                thinking_msg = base_msg + dots
+            content_renderable: Union[Text, Markdown] = Text.from_markup(thinking_msg)
         else:
             # Once we have content, show it with optional dots animation
             display_content = self.content
@@ -143,17 +151,21 @@ class StreamingAgentPanel:
     async def _animate_dots(self):
         """Animate dots after a pause in streaming."""
         while True:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.2)  # Faster animation cycle
             current_time = time.time()
-            # Only show dots after 1 second of no updates
-            if current_time - self._last_update_time > 1.0:
+            # Use shorter delay for initial "Thinking..." phase
+            delay_threshold = 0.3 if not self.content else 1.0
+            # Show dots after the delay threshold
+            if current_time - self._last_update_time > delay_threshold:
                 self._show_dots = True
                 self._dots_count += 1
                 if self.live:
                     self.live.update(self._create_panel())
             else:
-                self._show_dots = False
-                self._dots_count = 0
+                # Only reset if we have content (keep dots for initial "Thinking...")
+                if self.content:
+                    self._show_dots = False
+                    self._dots_count = 0
 
     async def start(self):
         """Start the live streaming display."""
@@ -161,7 +173,11 @@ class StreamingAgentPanel:
 
         self.live = Live(self._create_panel(), console=console, refresh_per_second=4)
         self.live.start()
-        self._last_update_time = time.time()
+        # For "Thinking...", set time in past to trigger dots immediately
+        if not self.content:
+            self._last_update_time = time.time() - 0.4  # Triggers dots on first cycle
+        else:
+            self._last_update_time = time.time()
         # Start the dots animation task
         self._dots_task = asyncio.create_task(self._animate_dots())
 
