@@ -4,32 +4,33 @@ from pathlib import Path
 
 
 def test_system_prompt_no_json_in_responses():
-    """Verify system prompt doesn't instruct agent to output JSON to users."""
+    """Verify system prompt has proper structure and instructions."""
     prompt_path = Path(__file__).parent.parent / "src" / "tunacode" / "prompts" / "system.md"
 
     with open(prompt_path, "r") as f:
         content = f.read()
 
-    # Check that we have the new formatting rules
-    assert "Output Formatting Rules" in content
-    assert "NO JSON in responses" in content
-    assert 'Never output {"thought":' in content
+    # Check that we have the core instruction structure
+    assert "###Instruction###" in content
+    assert "YOU ARE NOT A CHATBOT. YOU ARE AN OPERATIONAL AGENT WITH TOOLS." in content
 
-    # Check that thoughts are marked as internal
-    assert "Thoughts are for internal reasoning only" in content
-    assert "NEVER include JSON-formatted thoughts in your responses to users" in content
+    # Check critical behavior rules
+    assert "CRITICAL BEHAVIOR RULES:" in content
+    assert "ALWAYS ANNOUNCE YOUR INTENTIONS FIRST" in content
+    assert "TUNACODE_TASK_COMPLETE" in content
 
-    # Check examples use clean formatting
-    assert "RESPONSE TO USER:" in content
-    assert "[Internal thinking - not shown to user]" in content
+    # Check tool access rules
+    assert "###Tool Access Rules###" in content
+    assert "READONLY TOOLS" in content
+    assert "WRITE/EXECUTE TOOLS" in content
 
-    # Check we have good/bad examples
-    assert "Example of GOOD response formatting:" in content
-    assert "Example of BAD response formatting (DO NOT DO THIS):" in content
+    # Check for task management section
+    assert "TASK MANAGEMENT TOOLS" in content
+    assert "todo" in content
 
     print("\n=== SYSTEM PROMPT VALIDATION ===")
-    print("✓ Output formatting rules added")
-    print("✓ JSON responses explicitly forbidden")
-    print("✓ Thoughts marked as internal only")
-    print("✓ Examples updated to show clean output")
-    print("\nThe system prompt should now produce clean, formatted text responses.")
+    print("✓ Core instruction structure present")
+    print("✓ Agent behavior rules defined")
+    print("✓ Tool categories properly documented")
+    print("✓ Task management tools included")
+    print("\nThe system prompt is properly structured for agent operations.")

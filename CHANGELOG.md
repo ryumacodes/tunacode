@@ -7,9 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.56] - 2025-08-11
+
+### Added
+
+- **Plan Mode**: New read-only research phase for implementation planning (#81) - Thanks to **ryumacodes**!
+  - `/plan` command to enter Plan Mode for research and planning
+  - `/exit-plan` command to manually exit Plan Mode
+  - `present_plan` tool for structured plan presentation with user approval
+  - Visual indicators in status bar, input prompt, and placeholder text
+  - Tool restrictions - only read-only tools available in Plan Mode
+  - Shift+Tab keyboard shortcut to toggle Plan Mode
+  - Clean UI with "⏸ PLAN MODE ON" indicator above input
+
 ### Changed
 
-- **BREAKING**: Migrated from Makefile to Hatch for cross-platform compatibility
+- **BREAKING**: Migrated from Makefile to Hatch for cross-platform compatibility - Thanks to **ryumacodes**!
 - Modified CLI commands processing
 - Updated REPL functionality
 - Enhanced output display formatting
@@ -17,14 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved ESC key handling with double-press safety and unified abort behavior
 - Added comprehensive ESC key investigation documentation
 
-### Added
+### Fixed
 
-- New helper module `agent_helpers.py` for common agent operations
-- Streaming cancellation with AbortableStream for better ESC key response
-- Memory anchors and documentation organization improvements
-- **Hatch integration**: Added comprehensive build and task management via `hatch run` commands
-- **Cross-platform scripts**: Created `scripts/playwright_cache.py` for browser cache management
-- **Migration tooling**: Deprecated Makefile with clear migration warnings and guidance
+- Restored Thinking dots animation with faster timing
 
 ### Migration Guide
 
@@ -62,7 +70,7 @@ Special thanks to our community contributors:
 - **prudentbird** - Context window management (#17)
 - **Lftobs** - Todo tool functionality and @-file-ref enhancements (#17, #2)
 - **ColeMurray** - Security fix for B108 vulnerability (#25)
-- **ryumacodes** - Fix for RuntimeWarnings in REPL tests (#71)
+- **ryumacodes** - Plan Mode implementation (#81), Hatch migration for cross-platform support, and RuntimeWarnings fix (#71)
 
 ## [0.0.55] - 2025-08-08
 
