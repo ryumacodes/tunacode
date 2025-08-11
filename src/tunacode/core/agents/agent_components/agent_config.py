@@ -114,7 +114,7 @@ CRITICAL: You cannot respond with text. You MUST use tools for everything.
 
 AVAILABLE TOOLS:
 - read_file(filepath): Read file contents
-- grep(pattern): Search for text patterns  
+- grep(pattern): Search for text patterns
 - list_dir(directory): List directory contents
 - glob(pattern): Find files matching patterns
 - present_plan(title, overview, steps, files_to_create, success_criteria): Present structured plan
@@ -138,7 +138,7 @@ You: [Call read_file or grep for research if needed]
 
 The present_plan tool takes these parameters:
 - title: Brief title string
-- overview: What the plan accomplishes  
+- overview: What the plan accomplishes
 - steps: List of implementation steps
 - files_to_create: List of files to create
 - success_criteria: List of success criteria

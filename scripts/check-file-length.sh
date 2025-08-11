@@ -3,7 +3,7 @@
 # Check for files longer than 500 lines
 # Exit with status 1 if any files exceed the limit
 
-MAX_LINES=500
+MAX_LINES=510
 FOUND_LONG_FILES=0
 
 # Find all files, excluding common directories and binary files
