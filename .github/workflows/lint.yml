@@ -1,0 +1,25 @@
+name: Lint & File Size Check
+
+on:
+  pull_request:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pre-commit
+      - name: Run Ruff (lint)
+        run: ruff check --output-format=github .
+      - name: Run Ruff (format check only)
+        run: ruff format --check .
+      - name: Enforce max file length (500 lines)
+        run: python .github/scripts/check_file_size.py
