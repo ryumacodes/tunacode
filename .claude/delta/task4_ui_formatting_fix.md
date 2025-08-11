@@ -47,3 +47,29 @@ Did NOT change print statements in `agents/main.py` or `utils/system.py` as they
 - src/tunacode/ui/display.py: Message display and formatting
 - src/tunacode/ui/tool_ui.py: Tool confirmation dialogs (fixed)
 - src/tunacode/core/setup/git_safety_setup.py: Git safety branch warning
+
+---
+
+# StreamingAgentPanel Dots Animation Fix
+
+**Date**: 2025-08-11
+**Component**: StreamingAgentPanel (src/tunacode/ui/panels.py)
+
+## Problem
+"Thinking..." dots animation wasn't appearing - content arrived too quickly (100-500ms) before dots could display.
+
+## Solution
+Adjusted animation timing:
+- **Cycle**: 0.2s (from 0.5s)
+- **Initial delay**: 0.3s for "Thinking..." phase
+- **Pre-dated timestamp**: Triggers immediate dots display
+
+## Key Changes
+```python
+# In StreamingAgentPanel._dots_animation()
+time.sleep(0.3)  # Reduced from 1.0s
+# Animation cycle: 0.2s per dots update
+```
+
+## Memory Anchor
+Animation timing: 0.2s cycle, 0.3s delay for Thinking, 1.0s delay for content pauses
