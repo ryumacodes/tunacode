@@ -1,9 +1,11 @@
-# SWE-bench Style Benchmark Design
-_Started: 2025-08-12 12:15:48_
+# Always-On Model/Context/Price Display Implementation
+_Started: 2025-08-12 15:31:29_
 _Agent: default
 
-[1] Understanding SWE-bench Core Concepts: SWE-bench evaluates AI models on real GitHub issues by providing a codebase and issue description, then checking if generated patches resolve the problem using Docker-based evaluation
-[2] Key Design Decisions for Simple Benchmark: (1) Use JSON format for test instances, (2) Focus on small, isolated code fixes, (3) Use pytest for evaluation, (4) Start with 2 problems from different domains
-[3] Proposed Directory Structure: benchmarks/ with subdirs: instances/ (test problems), solutions/ (reference fixes), evaluation/ (test harness), results/ (outputs)
-[4] Test Problem 1 - String Utility Bug: A simple string reversal function that fails on Unicode. Test Problem 2 - Math Calculation Error: A statistics function with incorrect edge case handling
-[5] JSON Instance Format: {id, repo, problem_statement, base_code, test_file, expected_patch, metadata:{difficulty, category, created_date}}
+[1] Starting implementation - found key files: src/tunacode/cli/repl.py:417-421 (show_context), src/tunacode/core/token_usage/usage_tracker.py:44 (display_summary), and session summary at repl.py:504-516
+[2] Updated repl.py:421-431 to always show context and session cost without show_thoughts gate
+[3] Added UsageTracker instantiation in process_request and wired to both streaming and non-streaming agent.process_request calls
+[4] Removed show_thoughts gate from session summary - now always displays if session_total_usage has data
+[5] Reviewed usage_tracker.py - logic is correct. Session state always updates, detailed display only when show_thoughts enabled. Added clarifying comments.
+[6] Fixed test_repl_initialization.py - updated tests to expect context always shown, startup message only on first run
+[7] Implementation complete! All tests passing. Pre-existing test failure in test_tool_batching_retry.py confirmed unrelated to our changes.
