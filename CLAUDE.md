@@ -10,6 +10,8 @@
 
 - any key logic or file's must be inlcuded here in the following format if this format is not followed you will STOP reasses, and begin again
 
+- pre-commit hooks can NOT be skipped, you will be punished for skipping the,
+
 ```
 # Implementing Authentication Module
 _Started: 2025-08-06 10:00:00_
