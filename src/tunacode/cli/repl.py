@@ -11,9 +11,13 @@ from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.application.current import get_app
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
+from tunacode.configuration.models import ModelRegistry
 from tunacode.constants import DEFAULT_CONTEXT_WINDOW
 from tunacode.core.agents import main as agent
 from tunacode.core.agents.main import patch_tool_messages
+from tunacode.core.token_usage.api_response_parser import ApiResponseParser
+from tunacode.core.token_usage.cost_calculator import CostCalculator
+from tunacode.core.token_usage.usage_tracker import UsageTracker
 from tunacode.exceptions import UserAbortError, ValidationError
 from tunacode.ui import console as ui
 from tunacode.ui.output import get_context_window_display
@@ -306,6 +310,12 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
             "enable_streaming", True
         )
 
+        # Create UsageTracker to ensure session cost tracking
+        model_registry = ModelRegistry()
+        parser = ApiResponseParser()
+        calculator = CostCalculator(model_registry)
+        usage_tracker = UsageTracker(parser, calculator, state_manager)
+
         if enable_streaming:
             await ui.spinner(False, state_manager.session.spinner, state_manager)
             state_manager.session.is_streaming_active = True
@@ -320,6 +330,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                     state_manager,
                     tool_callback=tool_callback_with_state,
                     streaming_callback=lambda content: streaming_panel.update(content),
+                    usage_tracker=usage_tracker,
                 )
             finally:
                 await streaming_panel.stop()
@@ -331,6 +342,7 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                 state_manager.session.current_model,
                 state_manager,
                 tool_callback=tool_callback_with_state,
+                usage_tracker=usage_tracker,
             )
 
         # Handle plan approval or detection
@@ -415,12 +427,22 @@ async def repl(state_manager: StateManager):
     state_manager.session.update_token_count()
 
     async def show_context():
-        if state_manager.session.show_thoughts:
-            context = get_context_window_display(state_manager.session.total_tokens, max_tokens)
-            await ui.muted(f"• Model: {state_manager.session.current_model} • {context}")
+        context = get_context_window_display(state_manager.session.total_tokens, max_tokens)
 
-    if state_manager.session.show_thoughts or not hasattr(state_manager.session, "_startup_shown"):
-        await show_context()
+        # Get session cost for display
+        session_cost = 0.0
+        if state_manager.session.session_total_usage:
+            session_cost = float(state_manager.session.session_total_usage.get("cost", 0.0) or 0.0)
+
+        await ui.muted(f"• Model: {state_manager.session.current_model} • {context}")
+        if session_cost > 0:
+            await ui.muted(f"• Session Cost: ${session_cost:.4f}")
+
+    # Always show context
+    await show_context()
+
+    # Show startup message only once
+    if not hasattr(state_manager.session, "_startup_shown"):
         await ui.success("Ready to assist")
         state_manager.session._startup_shown = True
 
@@ -502,7 +524,7 @@ async def repl(state_manager: StateManager):
         await repl(state_manager)
     else:
         session_total = state_manager.session.session_total_usage
-        if session_total and state_manager.session.show_thoughts:
+        if session_total:
             try:
                 total_tokens = int(session_total.get("prompt_tokens", 0) or 0) + int(
                     session_total.get("completion_tokens", 0) or 0

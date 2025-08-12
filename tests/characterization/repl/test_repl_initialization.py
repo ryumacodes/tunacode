@@ -18,6 +18,12 @@ async def test_repl_initialization_basic(monkeypatch):
     state_manager.session.total_tokens = 0
     state_manager.session.max_tokens = 200000
     state_manager.session.user_config = {"context_window_size": 200000}
+    state_manager.session.session_total_usage = None  # No session data initially
+    # Don't set _startup_shown so "Ready to assist" will be shown
+    # Ensure hasattr check will return False for _startup_shown
+    delattr(state_manager.session, "_startup_shown") if hasattr(
+        state_manager.session, "_startup_shown"
+    ) else None
 
     def mock_update_token_count():
         state_manager.session.total_tokens = 100
@@ -60,7 +66,7 @@ async def test_repl_initialization_basic(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_repl_initialization_no_thoughts_no_startup_messages(monkeypatch):
-    """Test REPL startup: no startup messages shown when show_thoughts is False."""
+    """Test REPL startup: context always shown, but 'Ready to assist' only shown once."""
 
     # Mock StateManager and session
     state_manager = MagicMock()
@@ -71,6 +77,7 @@ async def test_repl_initialization_no_thoughts_no_startup_messages(monkeypatch):
     state_manager.session.max_tokens = 200000
     state_manager.session.user_config = {"context_window_size": 200000}
     state_manager.session._startup_shown = True  # Simulate not first run
+    state_manager.session.session_total_usage = None  # No session data initially
 
     def mock_update_token_count():
         state_manager.session.total_tokens = 100
@@ -102,12 +109,13 @@ async def test_repl_initialization_no_thoughts_no_startup_messages(monkeypatch):
         ):
             await repl_mod.repl(state_manager)
 
-    # Check that startup UI was NOT called since show_thoughts is False and not first run
-    assert not any("Model:" in str(call) for call in muted.await_args_list), (
-        "Startup model message should not be shown when show_thoughts is False"
+    # Check that context is always shown (even when show_thoughts is False)
+    assert any("Model:" in str(call) for call in muted.await_args_list), (
+        "Context (model/tokens) should always be shown regardless of show_thoughts"
     )
+    # But "Ready to assist" should not be shown since _startup_shown is True
     assert not any("Ready to assist" in str(call) for call in success.await_args_list), (
-        "Startup success message should not be shown when show_thoughts is False"
+        "Startup success message should not be shown when _startup_shown is True"
     )
 
     get_agent.assert_called_once_with("gpt-test", state_manager)

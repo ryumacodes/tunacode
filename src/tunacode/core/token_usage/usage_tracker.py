@@ -37,10 +37,10 @@ class UsageTracker(UsageTrackerProtocol):
             # 2. Calculate the cost
             cost = self._calculate_cost(parsed_data)
 
-            # 3. Update the session state
+            # 3. Update the session state (always done to track totals for session cost display)
             self._update_state(parsed_data, cost)
 
-            # 4. Display the summary if enabled
+            # 4. Display detailed per-call summary only if debugging enabled
             if self.state_manager.session.show_thoughts:
                 await self._display_summary()
 
