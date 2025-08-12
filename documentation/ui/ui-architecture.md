@@ -272,7 +272,7 @@ class SessionState:
     streaming_panel: Optional[StreamingAgentPanel] = None
 
     # UI Preferences
-    show_thoughts: bool = False
+    show_thoughts: bool = False      # Controls detailed debugging output only
     enable_streaming: bool = True
 
     # Operation State
@@ -306,6 +306,33 @@ state_manager.session.streaming_panel = StreamingAgentPanel()
 state_manager.session.streaming_panel.stop()
 state_manager.session.is_streaming_active = False
 ```
+
+### Always-On Display Elements
+
+As of v0.0.57+, certain critical UX elements are **always displayed** regardless of the `show_thoughts` setting:
+
+#### Model Information and Context Usage
+```python
+# Always shown at REPL startup and context updates
+await ui.muted(f"• Model: {state_manager.session.current_model} • {context}")
+```
+
+#### Session Cost Tracking
+```python
+# Displayed when session cost > 0
+if session_cost > 0:
+    await ui.muted(f"• Session Cost: ${session_cost:.4f}")
+```
+
+#### Session Summary
+Session summaries are now **always shown** when there's usage data:
+```python
+if total_tokens > 0 or total_cost > 0:
+    ui.console.print(
+        f"\n[bold cyan]TunaCode Session Summary[/bold cyan]\n"
+        f"  - Total Tokens: {total_tokens:,}\n"
+        f"  - Total Cost: ${total_cost:.4f}"
+    )
 
 ## Visual Elements
 
@@ -387,8 +414,11 @@ Multiple levels of progress feedback:
 1. **Spinner** - "Thinking..." for initial processing
 2. **Streaming text** - Real-time response generation
 3. **Tool batches** - "Executing N tools in parallel"
-4. **Iteration count** - "ITERATION: 3/15" in thought mode
-5. **Token usage** - Context window percentage
+4. **Iteration count** - "ITERATION: 3/15" in detailed debugging mode (`show_thoughts`)
+5. **Model & token usage** - Always displayed: model name, context window percentage
+6. **Session cost** - Always displayed when cost > 0
+
+**Note:** As of v0.0.57+, `show_thoughts` only controls detailed debugging output (iterations, internal processing steps). Critical information like model name, context usage, and session costs are always visible.
 
 ### Error Handling Display
 
