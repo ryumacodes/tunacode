@@ -4,10 +4,13 @@ This tool allows the AI agent to manage todo items during task execution.
 It provides functionality for creating, updating, and tracking tasks.
 """
 
+import logging
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 
+import defusedxml.ElementTree as ET
 from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.constants import (
@@ -21,9 +24,113 @@ from tunacode.types import TodoItem, ToolResult, UILogger
 
 from .base import BaseTool
 
+logger = logging.getLogger(__name__)
+
 
 class TodoTool(BaseTool):
     """Tool for managing todo items from the AI agent."""
+
+    def _get_base_prompt(self) -> str:
+        """Load and return the base prompt from XML file.
+
+        Returns:
+            str: The loaded prompt from XML or a default prompt
+        """
+        try:
+            # Load prompt from XML file
+            prompt_file = Path(__file__).parent / "prompts" / "todo_prompt.xml"
+            if prompt_file.exists():
+                tree = ET.parse(prompt_file)
+                root = tree.getroot()
+                description = root.find("description")
+                if description is not None:
+                    return description.text.strip()
+        except Exception as e:
+            logger.warning(f"Failed to load XML prompt for todo: {e}")
+
+        # Fallback to default prompt
+        return """Use this tool to create and manage a structured task list"""
+
+    def _get_parameters_schema(self) -> Dict[str, Any]:
+        """Get the parameters schema for todo tool.
+
+        Returns:
+            Dict containing the JSON schema for tool parameters
+        """
+        # Try to load from XML first
+        try:
+            prompt_file = Path(__file__).parent / "prompts" / "todo_prompt.xml"
+            if prompt_file.exists():
+                tree = ET.parse(prompt_file)
+                root = tree.getroot()
+                parameters = root.find("parameters")
+                if parameters is not None:
+                    schema: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
+                    required_fields: List[str] = []
+
+                    for param in parameters.findall("parameter"):
+                        name = param.get("name")
+                        required = param.get("required", "false").lower() == "true"
+                        param_type = param.find("type")
+                        description = param.find("description")
+
+                        if name and param_type is not None:
+                            prop = {
+                                "type": param_type.text.strip(),
+                                "description": description.text.strip()
+                                if description is not None
+                                else "",
+                            }
+
+                            # Handle array types and nested objects
+                            if param_type.text.strip() == "array":
+                                items = param.find("items")
+                                if items is not None:
+                                    item_type = items.find("type")
+                                    if item_type is not None and item_type.text.strip() == "object":
+                                        # Handle object items
+                                        item_props = {}
+                                        item_properties = items.find("properties")
+                                        if item_properties is not None:
+                                            for item_prop in item_properties.findall("property"):
+                                                prop_name = item_prop.get("name")
+                                                prop_type_elem = item_prop.find("type")
+                                                if prop_name and prop_type_elem is not None:
+                                                    item_props[prop_name] = {
+                                                        "type": prop_type_elem.text.strip()
+                                                    }
+                                        prop["items"] = {"type": "object", "properties": item_props}
+                                    else:
+                                        prop["items"] = {"type": items.text.strip()}
+
+                            schema["properties"][name] = prop
+                            if required:
+                                required_fields.append(name)
+
+                    schema["required"] = required_fields
+                    return schema
+        except Exception as e:
+            logger.warning(f"Failed to load parameters from XML for todo: {e}")
+
+        # Fallback to hardcoded schema
+        return {
+            "type": "object",
+            "properties": {
+                "todos": {
+                    "type": "array",
+                    "description": "The updated todo list",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "content": {"type": "string"},
+                            "status": {"type": "string"},
+                        },
+                    },
+                },
+            },
+            "required": ["todos"],
+        }
 
     def __init__(self, state_manager, ui_logger: UILogger | None = None):
         """Initialize the todo tool.
@@ -38,44 +145,6 @@ class TodoTool(BaseTool):
     @property
     def tool_name(self) -> str:
         return "todo"
-
-    def _get_parameters_schema(self) -> Dict[str, Any]:
-        """Get the parameters schema for the todo tool."""
-        return {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["add", "add_multiple", "update", "complete", "list", "remove"],
-                    "description": "The action to perform",
-                },
-                "content": {
-                    "type": ["string", "array"],
-                    "items": {"type": "string"},
-                    "description": "Content for the todo item(s)",
-                },
-                "todo_id": {
-                    "type": "string",
-                    "description": "ID of the todo item to update/complete/remove",
-                },
-                "status": {
-                    "type": "string",
-                    "enum": ["pending", "in_progress", "completed"],
-                    "description": "Status to set for the todo",
-                },
-                "priority": {
-                    "type": "string",
-                    "enum": ["high", "medium", "low"],
-                    "description": "Priority level for the todo",
-                },
-                "todos": {
-                    "type": "array",
-                    "items": {"type": "object"},
-                    "description": "List of todo objects for bulk operations",
-                },
-            },
-            "required": ["action"],
-        }
 
     async def _execute(
         self,

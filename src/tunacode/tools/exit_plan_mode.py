@@ -1,10 +1,16 @@
 """Tool for exiting plan mode and presenting implementation plan."""
 
+import logging
+from pathlib import Path
 from typing import Any, Dict, List
+
+import defusedxml.ElementTree as ET
 
 from tunacode.tools.base import BaseTool
 from tunacode.types import ToolResult
 from tunacode.ui import console as ui
+
+logger = logging.getLogger(__name__)
 
 
 class ExitPlanModeTool(BaseTool):
@@ -23,6 +29,79 @@ class ExitPlanModeTool(BaseTool):
     @property
     def tool_name(self) -> str:
         return "exit_plan_mode"
+
+    def _get_base_prompt(self) -> str:
+        """Load and return the base prompt from XML file.
+
+        Returns:
+            str: The loaded prompt from XML or a default prompt
+        """
+        try:
+            # Load prompt from XML file
+            prompt_file = Path(__file__).parent / "prompts" / "exit_plan_mode_prompt.xml"
+            if prompt_file.exists():
+                tree = ET.parse(prompt_file)
+                root = tree.getroot()
+                description = root.find("description")
+                if description is not None:
+                    return description.text.strip()
+        except Exception as e:
+            logger.warning(f"Failed to load XML prompt for exit_plan_mode: {e}")
+
+        # Fallback to default prompt
+        return """Use this tool when you have finished presenting your plan and are ready to code"""
+
+    def _get_parameters_schema(self) -> Dict[str, Any]:
+        """Get the parameters schema for exit_plan_mode tool.
+
+        Returns:
+            Dict containing the JSON schema for tool parameters
+        """
+        # Try to load from XML first
+        try:
+            prompt_file = Path(__file__).parent / "prompts" / "exit_plan_mode_prompt.xml"
+            if prompt_file.exists():
+                tree = ET.parse(prompt_file)
+                root = tree.getroot()
+                parameters = root.find("parameters")
+                if parameters is not None:
+                    schema: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
+                    required_fields: List[str] = []
+
+                    for param in parameters.findall("parameter"):
+                        name = param.get("name")
+                        required = param.get("required", "false").lower() == "true"
+                        param_type = param.find("type")
+                        description = param.find("description")
+
+                        if name and param_type is not None:
+                            prop = {
+                                "type": param_type.text.strip(),
+                                "description": description.text.strip()
+                                if description is not None
+                                else "",
+                            }
+
+                            schema["properties"][name] = prop
+                            if required:
+                                required_fields.append(name)
+
+                    schema["required"] = required_fields
+                    return schema
+        except Exception as e:
+            logger.warning(f"Failed to load parameters from XML for exit_plan_mode: {e}")
+
+        # Fallback to hardcoded schema
+        return {
+            "type": "object",
+            "properties": {
+                "plan": {
+                    "type": "string",
+                    "description": "The plan you came up with",
+                },
+            },
+            "required": ["plan"],
+        }
 
     async def _execute(
         self,
