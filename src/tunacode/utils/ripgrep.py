@@ -91,7 +91,7 @@ def get_ripgrep_binary_path() -> Optional[Path]:
     return None
 
 
-def _check_ripgrep_version(rg_path: Path, min_version: str = "14.0.0") -> bool:
+def _check_ripgrep_version(rg_path: Path, min_version: str = "13.0.0") -> bool:
     """Check if ripgrep version meets minimum requirement.
 
     Args:

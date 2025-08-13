@@ -11,7 +11,7 @@ import os
 import re
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 from tunacode.core.code_index import CodeIndex
 from tunacode.exceptions import ToolExecutionError
@@ -60,8 +60,66 @@ class GlobTool(BaseTool):
     def tool_name(self) -> str:
         return "glob"
 
-    def _get_code_index(self) -> Optional[CodeIndex]:
-        """Get the CodeIndex instance if available."""
+    def _get_parameters_schema(self) -> Dict[str, Any]:
+        """Get the parameters schema for the glob tool."""
+        return {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "Glob pattern to match (e.g., '*.py', '**/*.{js,ts}')",
+                },
+                "directory": {
+                    "type": "string",
+                    "description": "Directory to search in",
+                    "default": ".",
+                },
+                "recursive": {
+                    "type": "boolean",
+                    "description": "Whether to search recursively",
+                    "default": True,
+                },
+                "include_hidden": {
+                    "type": "boolean",
+                    "description": "Whether to include hidden files/directories",
+                    "default": False,
+                },
+                "exclude_dirs": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Additional directories to exclude from search",
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum number of results to return",
+                    "default": 5000,
+                },
+                "sort_by": {
+                    "type": "string",
+                    "enum": ["modified", "size", "alphabetical", "depth"],
+                    "description": "How to sort results",
+                    "default": "modified",
+                },
+                "case_sensitive": {
+                    "type": "boolean",
+                    "description": "Whether pattern matching is case-sensitive",
+                    "default": False,
+                },
+                "use_gitignore": {
+                    "type": "boolean",
+                    "description": "Whether to respect .gitignore patterns",
+                    "default": True,
+                },
+            },
+            "required": ["pattern"],
+        }
+
+    def _get_code_index(self, directory: str) -> Optional[CodeIndex]:
+        """Get the CodeIndex instance if available and appropriate."""
+        # Only use CodeIndex if we're searching from the project root
+        if directory != "." and directory != os.getcwd():
+            return None
+
         if self._code_index is None:
             try:
                 self._code_index = CodeIndex.get_instance()
@@ -136,7 +194,7 @@ class GlobTool(BaseTool):
                 await self._load_gitignore_patterns(root_path)
 
             # Try to use CodeIndex for faster lookup if available
-            code_index = self._get_code_index()
+            code_index = self._get_code_index(directory)
             if code_index and not include_hidden and recursive:
                 # Use CodeIndex for common cases
                 matches = await self._glob_search_with_index(
@@ -299,6 +357,19 @@ class GlobTool(BaseTool):
         """Match a path against a glob pattern."""
         # Handle ** for recursive matching
         if "**" in pattern:
+            # Special case: **/*.ext should match both root files and nested files
+            if pattern.startswith("**/"):
+                # Match the pattern after **/ directly and also with any prefix
+                suffix_pattern = pattern[3:]  # Remove **/
+                if case_sensitive:
+                    # Check if path matches the suffix directly (root files)
+                    if fnmatch.fnmatch(path, suffix_pattern):
+                        return True
+                else:
+                    if fnmatch.fnmatch(path.lower(), suffix_pattern.lower()):
+                        return True
+
+            # Full recursive pattern matching
             regex_pat = pattern.replace("**", "__STARSTAR__")
             regex_pat = fnmatch.translate(regex_pat)
             regex_pat = regex_pat.replace("__STARSTAR__", ".*")
@@ -376,9 +447,22 @@ class GlobTool(BaseTool):
                                 for original_pat, compiled_pat in compiled_patterns:
                                     # For ** patterns, match against full relative path
                                     if "**" in original_pat:
-                                        if compiled_pat.match(rel_path):
+                                        # Special handling for **/*.ext patterns
+                                        if original_pat.startswith("**/") and not recursive:
+                                            # In non-recursive mode, match only filename
+                                            suffix_pat = original_pat[3:]
+                                            if fnmatch.fnmatch(entry.name, suffix_pat):
+                                                matches.append(entry.path)
+                                                break
+                                        elif compiled_pat.match(rel_path):
                                             matches.append(entry.path)
                                             break
+                                        # Also check if filename matches the pattern after **/
+                                        elif original_pat.startswith("**/"):
+                                            suffix_pat = original_pat[3:]
+                                            if fnmatch.fnmatch(entry.name, suffix_pat):
+                                                matches.append(entry.path)
+                                                break
                                     else:
                                         # For simple patterns, match against filename only
                                         if compiled_pat.match(entry.name):

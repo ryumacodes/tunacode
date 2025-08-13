@@ -56,6 +56,43 @@ class ParallelGrep(BaseTool):
     def tool_name(self) -> str:
         return "grep"
 
+    def _get_parameters_schema(self) -> Dict:
+        """Get the parameters schema for grep tool.
+
+        Returns:
+            Dict containing the JSON schema for tool parameters
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "Regular expression pattern to search for",
+                },
+                "directory": {"type": "string", "description": "Directory to search in"},
+                "include": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "File patterns to include",
+                },
+                "exclude": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "File patterns to exclude",
+                },
+                "max_results": {"type": "integer", "description": "Maximum number of results"},
+                "context_before": {
+                    "type": "integer",
+                    "description": "Lines of context before matches",
+                },
+                "context_after": {
+                    "type": "integer",
+                    "description": "Lines of context after matches",
+                },
+            },
+            "required": ["pattern"],
+        }
+
     def _load_ripgrep_config(self) -> Dict:
         """Load ripgrep configuration from settings."""
         try:

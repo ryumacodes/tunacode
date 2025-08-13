@@ -5,6 +5,7 @@ for all tools including error handling, UI logging, and ModelRetry support.
 """
 
 from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional
 
 from pydantic_ai.exceptions import ModelRetry
 
@@ -24,6 +25,8 @@ class BaseTool(ABC):
         """
         self.ui = ui_logger
         self.logger = get_logger(self.__class__.__name__)
+        self._prompt_cache: Optional[str] = None
+        self._context: Dict[str, Any] = {}
 
     async def execute(self, *args, **kwargs) -> ToolResult:
         """Execute the tool with error handling and logging.
@@ -137,6 +140,113 @@ class BaseTool(ABC):
             str: Context for the error message
         """
         return f"in {self.tool_name}"
+
+    def prompt(self, context: Optional[Dict[str, Any]] = None) -> str:
+        """Generate the prompt for this tool.
+
+        Args:
+            context: Optional context including model, permissions, environment
+
+        Returns:
+            str: The generated prompt for this tool
+        """
+        # Update context if provided
+        if context:
+            self._context.update(context)
+
+        # Check cache if context hasn't changed
+        cache_key = str(sorted(self._context.items()))
+        if self._prompt_cache and cache_key == getattr(self, "_cache_key", None):
+            return self._prompt_cache
+
+        # Generate new prompt
+        prompt = self._generate_prompt()
+
+        # Cache the result
+        self._prompt_cache = prompt
+        self._cache_key = cache_key
+
+        return prompt
+
+    def _generate_prompt(self) -> str:
+        """Generate the actual prompt based on current context.
+
+        Override this method in subclasses to provide tool-specific prompts.
+
+        Returns:
+            str: The generated prompt
+        """
+        # Default prompt generation
+        base_prompt = self._get_base_prompt()
+
+        # Apply model-specific adjustments
+        if "model" in self._context:
+            base_prompt = self._adjust_for_model(base_prompt, self._context["model"])
+
+        # Apply permission-specific adjustments
+        if "permissions" in self._context:
+            base_prompt = self._adjust_for_permissions(base_prompt, self._context["permissions"])
+
+        return base_prompt
+
+    def _get_base_prompt(self) -> str:
+        """Get the base prompt for this tool.
+
+        Override this in subclasses to provide tool-specific base prompts.
+
+        Returns:
+            str: The base prompt template
+        """
+        return f"Execute the {self.tool_name} tool to perform its designated operation."
+
+    def _adjust_for_model(self, prompt: str, model: str) -> str:
+        """Adjust prompt based on the model being used.
+
+        Args:
+            prompt: The base prompt
+            model: The model identifier
+
+        Returns:
+            str: Adjusted prompt
+        """
+        # Default implementation - override in subclasses for specific adjustments
+        return prompt
+
+    def _adjust_for_permissions(self, prompt: str, permissions: Dict[str, Any]) -> str:
+        """Adjust prompt based on permissions.
+
+        Args:
+            prompt: The base prompt
+            permissions: Permission settings
+
+        Returns:
+            str: Adjusted prompt
+        """
+        # Default implementation - override in subclasses for specific adjustments
+        return prompt
+
+    def get_tool_schema(self) -> Dict[str, Any]:
+        """Generate the tool schema for API integration.
+
+        Returns:
+            Dict containing the tool schema in OpenAI function format
+        """
+        return {
+            "name": self.tool_name,
+            "description": self.prompt(),
+            "parameters": self._get_parameters_schema(),
+        }
+
+    @abstractmethod
+    def _get_parameters_schema(self) -> Dict[str, Any]:
+        """Get the parameters schema for this tool.
+
+        Must be implemented by subclasses.
+
+        Returns:
+            Dict containing the JSON schema for tool parameters
+        """
+        pass
 
 
 class FileBasedTool(BaseTool):

@@ -5,6 +5,7 @@
 - the clear outline of the objective MUST be established before we begin ANY coding, do not under any circumstance begin any updates untill this is clearly understood, if you have any ambiuguity or quesiton, the user can be brought in or use best practises
 
 - use scratchpad-multi.sh as you work, after the MD file is done being used sort it to the approate directory
+- To use `llm-agent-tools/scratchpad-multi.sh`, start a task with `./llm-agent-tools/scratchpad-multi.sh --agent <name> start "Task Title"` and record updates using `step`, `revise <N>`, and `branch <N>`. When complete, run `finish` to interactively archive the scratchpad to `documentation/` and/or `.claude/` (a backup is stored under `.claude/scratchpad/shared/done_tasks/`).
 
 - the MD file created by the bash file MUST be used for the duiration of the task you will be PUNISHED if you do not update this file as you work.
 

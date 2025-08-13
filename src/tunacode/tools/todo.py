@@ -6,7 +6,7 @@ It provides functionality for creating, updating, and tracking tasks.
 
 import uuid
 from datetime import datetime
-from typing import List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic_ai.exceptions import ModelRetry
 
@@ -38,6 +38,44 @@ class TodoTool(BaseTool):
     @property
     def tool_name(self) -> str:
         return "todo"
+
+    def _get_parameters_schema(self) -> Dict[str, Any]:
+        """Get the parameters schema for the todo tool."""
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["add", "add_multiple", "update", "complete", "list", "remove"],
+                    "description": "The action to perform",
+                },
+                "content": {
+                    "type": ["string", "array"],
+                    "items": {"type": "string"},
+                    "description": "Content for the todo item(s)",
+                },
+                "todo_id": {
+                    "type": "string",
+                    "description": "ID of the todo item to update/complete/remove",
+                },
+                "status": {
+                    "type": "string",
+                    "enum": ["pending", "in_progress", "completed"],
+                    "description": "Status to set for the todo",
+                },
+                "priority": {
+                    "type": "string",
+                    "enum": ["high", "medium", "low"],
+                    "description": "Priority level for the todo",
+                },
+                "todos": {
+                    "type": "array",
+                    "items": {"type": "object"},
+                    "description": "List of todo objects for bulk operations",
+                },
+            },
+            "required": ["action"],
+        }
 
     async def _execute(
         self,
