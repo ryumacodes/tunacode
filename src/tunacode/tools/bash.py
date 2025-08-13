@@ -7,16 +7,21 @@ environment variables, timeouts, and improved output handling.
 """
 
 import asyncio
+import logging
 import os
 import subprocess
-from typing import Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
+import defusedxml.ElementTree as ET
 from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.constants import MAX_COMMAND_OUTPUT
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import BaseTool
 from tunacode.types import ToolResult
+
+logger = logging.getLogger(__name__)
 
 
 class BashTool(BaseTool):
@@ -25,6 +30,93 @@ class BashTool(BaseTool):
     @property
     def tool_name(self) -> str:
         return "Bash"
+
+    def _get_base_prompt(self) -> str:
+        """Load and return the base prompt from XML file.
+
+        Returns:
+            str: The loaded prompt from XML or a default prompt
+        """
+        try:
+            # Load prompt from XML file
+            prompt_file = Path(__file__).parent / "prompts" / "bash_prompt.xml"
+            if prompt_file.exists():
+                tree = ET.parse(prompt_file)
+                root = tree.getroot()
+                description = root.find("description")
+                if description is not None:
+                    return description.text.strip()
+        except Exception as e:
+            logger.warning(f"Failed to load XML prompt for bash: {e}")
+
+        # Fallback to default prompt
+        return (
+            """Executes a given bash command in a persistent shell session with optional timeout"""
+        )
+
+    def _get_parameters_schema(self) -> Dict[str, Any]:
+        """Get the parameters schema for bash tool.
+
+        Returns:
+            Dict containing the JSON schema for tool parameters
+        """
+        # Try to load from XML first
+        try:
+            prompt_file = Path(__file__).parent / "prompts" / "bash_prompt.xml"
+            if prompt_file.exists():
+                tree = ET.parse(prompt_file)
+                root = tree.getroot()
+                parameters = root.find("parameters")
+                if parameters is not None:
+                    schema: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
+                    required_fields: List[str] = []
+
+                    for param in parameters.findall("parameter"):
+                        name = param.get("name")
+                        required = param.get("required", "false").lower() == "true"
+                        param_type = param.find("type")
+                        description = param.find("description")
+
+                        if name and param_type is not None:
+                            prop = {
+                                "type": param_type.text.strip(),
+                                "description": description.text.strip()
+                                if description is not None
+                                else "",
+                            }
+
+                            schema["properties"][name] = prop
+                            if required:
+                                required_fields.append(name)
+
+                    schema["required"] = required_fields
+                    return schema
+        except Exception as e:
+            logger.warning(f"Failed to load parameters from XML for bash: {e}")
+
+        # Fallback to hardcoded schema
+        return {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "The command to execute",
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Clear, concise description of what this command does",
+                },
+                "timeout": {
+                    "type": "number",
+                    "description": "Optional timeout in milliseconds",
+                },
+                "run_in_background": {
+                    "type": "boolean",
+                    "description": "Set to true to run this command in the background",
+                },
+            },
+            "required": ["command"],
+        }
 
     async def _execute(
         self,

@@ -5,7 +5,12 @@ Command execution tool for agent operations in the TunaCode application.
 Provides controlled shell command execution with output capture and truncation.
 """
 
+import logging
 import subprocess
+from pathlib import Path
+from typing import Any, Dict, List
+
+import defusedxml.ElementTree as ET
 
 from tunacode.constants import (
     CMD_OUTPUT_FORMAT,
@@ -23,9 +28,100 @@ from tunacode.tools.base import BaseTool
 from tunacode.types import ToolResult
 from tunacode.utils.security import CommandSecurityError, safe_subprocess_popen
 
+logger = logging.getLogger(__name__)
+
 
 class RunCommandTool(BaseTool):
     """Tool for running shell commands."""
+
+    def _get_base_prompt(self) -> str:
+        """Load and return the base prompt from XML file.
+
+        Returns:
+            str: The loaded prompt from XML or a default prompt
+        """
+        try:
+            # Load prompt from XML file
+            prompt_file = Path(__file__).parent / "prompts" / "run_command_prompt.xml"
+            if prompt_file.exists():
+                tree = ET.parse(prompt_file)
+                root = tree.getroot()
+                description = root.find("description")
+                if description is not None:
+                    return description.text.strip()
+        except Exception as e:
+            logger.warning(f"Failed to load XML prompt for run_command: {e}")
+
+        # Fallback to default prompt
+        return """Executes system commands with enhanced control and monitoring capabilities"""
+
+    def _get_parameters_schema(self) -> Dict[str, Any]:
+        """Get the parameters schema for run_command tool.
+
+        Returns:
+            Dict containing the JSON schema for tool parameters
+        """
+        # Try to load from XML first
+        try:
+            prompt_file = Path(__file__).parent / "prompts" / "run_command_prompt.xml"
+            if prompt_file.exists():
+                tree = ET.parse(prompt_file)
+                root = tree.getroot()
+                parameters = root.find("parameters")
+                if parameters is not None:
+                    schema: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
+                    required_fields: List[str] = []
+
+                    for param in parameters.findall("parameter"):
+                        name = param.get("name")
+                        required = param.get("required", "false").lower() == "true"
+                        param_type = param.find("type")
+                        description = param.find("description")
+
+                        if name and param_type is not None:
+                            prop = {
+                                "type": param_type.text.strip(),
+                                "description": description.text.strip()
+                                if description is not None
+                                else "",
+                            }
+
+                            schema["properties"][name] = prop
+                            if required:
+                                required_fields.append(name)
+
+                    schema["required"] = required_fields
+                    return schema
+        except Exception as e:
+            logger.warning(f"Failed to load parameters from XML for run_command: {e}")
+
+        # Fallback to hardcoded schema
+        return {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "The command to execute",
+                },
+                "cwd": {
+                    "type": "string",
+                    "description": "Working directory for the command",
+                },
+                "env": {
+                    "type": "object",
+                    "description": "Additional environment variables",
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "Command timeout in seconds",
+                },
+                "capture_output": {
+                    "type": "boolean",
+                    "description": "Whether to capture stdout/stderr",
+                },
+            },
+            "required": ["command"],
+        }
 
     @property
     def tool_name(self) -> str:
