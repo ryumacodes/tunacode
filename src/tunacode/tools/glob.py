@@ -8,9 +8,12 @@ complementing the grep tool's content search with fast filename-based searching.
 import asyncio
 import fnmatch
 import os
+import re
+from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Set, Union
 
+from tunacode.core.code_index import CodeIndex
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import BaseTool
 
@@ -35,12 +38,39 @@ EXCLUDE_DIRS = {
 }
 
 
+class SortOrder(Enum):
+    """Sorting options for glob results."""
+
+    MODIFIED = "modified"  # Sort by modification time (newest first)
+    SIZE = "size"  # Sort by file size (largest first)
+    ALPHABETICAL = "alphabetical"  # Sort alphabetically
+    DEPTH = "depth"  # Sort by path depth (shallow first)
+
+
 class GlobTool(BaseTool):
     """Fast file pattern matching tool using glob patterns."""
+
+    def __init__(self):
+        """Initialize the glob tool."""
+        super().__init__()
+        self._code_index: Optional[CodeIndex] = None
+        self._gitignore_patterns: Optional[Set[str]] = None
 
     @property
     def tool_name(self) -> str:
         return "glob"
+
+    def _get_code_index(self) -> Optional[CodeIndex]:
+        """Get the CodeIndex instance if available."""
+        if self._code_index is None:
+            try:
+                self._code_index = CodeIndex.get_instance()
+                # Ensure index is built
+                self._code_index.build_index()
+            except Exception:
+                # CodeIndex not available, fall back to filesystem traversal
+                self._code_index = None
+        return self._code_index
 
     async def _execute(
         self,
@@ -50,6 +80,9 @@ class GlobTool(BaseTool):
         include_hidden: bool = False,
         exclude_dirs: Optional[List[str]] = None,
         max_results: int = MAX_RESULTS,
+        sort_by: Union[str, SortOrder] = SortOrder.MODIFIED,
+        case_sensitive: bool = False,
+        use_gitignore: bool = True,
     ) -> str:
         """
         Find files matching glob patterns.
@@ -61,6 +94,9 @@ class GlobTool(BaseTool):
             include_hidden: Whether to include hidden files/directories (default: False)
             exclude_dirs: Additional directories to exclude from search
             max_results: Maximum number of results to return (default: 5000)
+            sort_by: How to sort results (modified/size/alphabetical/depth)
+            case_sensitive: Whether pattern matching is case-sensitive (default: False)
+            use_gitignore: Whether to respect .gitignore patterns (default: True)
 
         Returns:
             List of matching file paths as a formatted string
@@ -85,20 +121,45 @@ class GlobTool(BaseTool):
             if exclude_dirs:
                 all_exclude_dirs.update(exclude_dirs)
 
+            # Convert sort_by to enum if string
+            if isinstance(sort_by, str):
+                try:
+                    sort_by = SortOrder(sort_by)
+                except ValueError:
+                    sort_by = SortOrder.MODIFIED
+
             # Handle multiple extensions pattern like "*.{py,js,ts}"
             patterns = self._expand_brace_pattern(pattern)
 
-            # Perform the glob search
-            matches = await self._glob_search(
-                root_path, patterns, recursive, include_hidden, all_exclude_dirs, max_results
-            )
+            # Load gitignore patterns if requested
+            if use_gitignore:
+                await self._load_gitignore_patterns(root_path)
+
+            # Try to use CodeIndex for faster lookup if available
+            code_index = self._get_code_index()
+            if code_index and not include_hidden and recursive:
+                # Use CodeIndex for common cases
+                matches = await self._glob_search_with_index(
+                    code_index, patterns, root_path, all_exclude_dirs, max_results, case_sensitive
+                )
+            else:
+                # Fall back to filesystem traversal
+                matches = await self._glob_search(
+                    root_path,
+                    patterns,
+                    recursive,
+                    include_hidden,
+                    all_exclude_dirs,
+                    max_results,
+                    case_sensitive,
+                )
 
             # Format results
             if not matches:
                 return f"No files found matching pattern: {pattern}"
 
-            # Sort matches by path
-            matches.sort()
+            # Sort matches based on sort_by parameter
+            matches = await self._sort_matches(matches, sort_by)
 
             # Create formatted output
             output = []
@@ -128,6 +189,7 @@ class GlobTool(BaseTool):
     def _expand_brace_pattern(self, pattern: str) -> List[str]:
         """
         Expand brace patterns like "*.{py,js,ts}" into multiple patterns.
+        Also supports extended patterns like "?(pattern)" for optional matching.
 
         Args:
             pattern: Pattern that may contain braces
@@ -138,24 +200,116 @@ class GlobTool(BaseTool):
         if "{" not in pattern or "}" not in pattern:
             return [pattern]
 
-        # Find the brace expression
-        start = pattern.find("{")
-        end = pattern.find("}")
+        # Handle nested braces recursively
+        expanded = []
+        stack = [pattern]
 
-        if start == -1 or end == -1 or end < start:
-            return [pattern]
+        while stack:
+            current = stack.pop()
 
-        # Extract parts
-        prefix = pattern[:start]
-        suffix = pattern[end + 1 :]
-        options = pattern[start + 1 : end].split(",")
+            # Find the innermost brace expression
+            start = -1
+            depth = 0
+            for i, char in enumerate(current):
+                if char == "{":
+                    if depth == 0:
+                        start = i
+                    depth += 1
+                elif char == "}":
+                    depth -= 1
+                    if depth == 0 and start != -1:
+                        # Found a complete brace expression
+                        prefix = current[:start]
+                        suffix = current[i + 1 :]
+                        options = current[start + 1 : i].split(",")
 
-        # Generate all combinations
-        patterns = []
-        for option in options:
-            patterns.append(prefix + option.strip() + suffix)
+                        # Generate all combinations
+                        for option in options:
+                            new_pattern = prefix + option.strip() + suffix
+                            if "{" in new_pattern:
+                                stack.append(new_pattern)
+                            else:
+                                expanded.append(new_pattern)
+                        break
+            else:
+                # No more braces to expand
+                expanded.append(current)
 
-        return patterns
+        return expanded
+
+    async def _load_gitignore_patterns(self, root: Path) -> None:
+        """Load .gitignore patterns from the repository."""
+        if self._gitignore_patterns is not None:
+            return
+
+        self._gitignore_patterns = set()
+
+        # Look for .gitignore, .ignore, and .rgignore files
+        ignore_files = [".gitignore", ".ignore", ".rgignore"]
+
+        for ignore_file in ignore_files:
+            ignore_path = root / ignore_file
+            if ignore_path.exists():
+                try:
+                    with open(ignore_path, "r", encoding="utf-8") as f:
+                        for line in f:
+                            line = line.strip()
+                            if line and not line.startswith("#"):
+                                self._gitignore_patterns.add(line)
+                except Exception:
+                    pass
+
+    async def _glob_search_with_index(
+        self,
+        code_index: CodeIndex,
+        patterns: List[str],
+        root: Path,
+        exclude_dirs: set,
+        max_results: int,
+        case_sensitive: bool,
+    ) -> List[str]:
+        """Use CodeIndex for faster file matching."""
+        # Get all files from index
+        all_files = code_index.get_all_files()
+
+        matches = []
+        for file_path in all_files:
+            # Convert to absolute path
+            abs_path = code_index.root_dir / file_path
+
+            # Check against patterns
+            for pattern in patterns:
+                if self._match_pattern(str(file_path), pattern, case_sensitive):
+                    # Check if in excluded directories
+                    skip = False
+                    for exclude_dir in exclude_dirs:
+                        if exclude_dir in file_path.parts:
+                            skip = True
+                            break
+
+                    if not skip:
+                        matches.append(str(abs_path))
+                        if len(matches) >= max_results:
+                            return matches
+                    break
+
+        return matches
+
+    def _match_pattern(self, path: str, pattern: str, case_sensitive: bool) -> bool:
+        """Match a path against a glob pattern."""
+        # Handle ** for recursive matching
+        if "**" in pattern:
+            regex_pat = pattern.replace("**", "__STARSTAR__")
+            regex_pat = fnmatch.translate(regex_pat)
+            regex_pat = regex_pat.replace("__STARSTAR__", ".*")
+            flags = 0 if case_sensitive else re.IGNORECASE
+            return bool(re.match(regex_pat, path, flags))
+        else:
+            # Simple pattern matching
+            if case_sensitive:
+                return fnmatch.fnmatch(path, pattern)
+            else:
+                return fnmatch.fnmatch(path.lower(), pattern.lower())
 
     async def _glob_search(
         self,
@@ -165,6 +319,7 @@ class GlobTool(BaseTool):
         include_hidden: bool,
         exclude_dirs: set,
         max_results: int,
+        case_sensitive: bool = False,
     ) -> List[str]:
         """
         Perform the actual glob search using os.scandir for speed.
@@ -182,14 +337,13 @@ class GlobTool(BaseTool):
         """
 
         def search_sync():
-            # Import re here to avoid issues at module level
-            import re
-
             matches = []
             stack = [root]
 
             # Compile patterns to regex for faster matching
             compiled_patterns = []
+            flags = 0 if case_sensitive else re.IGNORECASE
+
             for pat in patterns:
                 # Handle ** for recursive matching
                 if "**" in pat:
@@ -197,11 +351,9 @@ class GlobTool(BaseTool):
                     regex_pat = pat.replace("**", "__STARSTAR__")
                     regex_pat = fnmatch.translate(regex_pat)
                     regex_pat = regex_pat.replace("__STARSTAR__", ".*")
-                    compiled_patterns.append((pat, re.compile(regex_pat, re.IGNORECASE)))
+                    compiled_patterns.append((pat, re.compile(regex_pat, flags)))
                 else:
-                    compiled_patterns.append(
-                        (pat, re.compile(fnmatch.translate(pat), re.IGNORECASE))
-                    )
+                    compiled_patterns.append((pat, re.compile(fnmatch.translate(pat), flags)))
 
             while stack and len(matches) < max_results:
                 current_dir = stack.pop()
@@ -246,6 +398,28 @@ class GlobTool(BaseTool):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, search_sync)
 
+    async def _sort_matches(self, matches: List[str], sort_by: SortOrder) -> List[str]:
+        """Sort matches based on the specified order."""
+        if not matches:
+            return matches
+
+        def sort_sync():
+            if sort_by == SortOrder.MODIFIED:
+                # Sort by modification time (newest first)
+                return sorted(matches, key=lambda p: os.path.getmtime(p), reverse=True)
+            elif sort_by == SortOrder.SIZE:
+                # Sort by file size (largest first)
+                return sorted(matches, key=lambda p: os.path.getsize(p), reverse=True)
+            elif sort_by == SortOrder.DEPTH:
+                # Sort by path depth (shallow first), then alphabetically
+                return sorted(matches, key=lambda p: (p.count(os.sep), p))
+            else:  # SortOrder.ALPHABETICAL
+                # Sort alphabetically
+                return sorted(matches)
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, sort_sync)
+
 
 # Create the tool function for pydantic-ai
 async def glob(
@@ -255,6 +429,9 @@ async def glob(
     include_hidden: bool = False,
     exclude_dirs: Optional[List[str]] = None,
     max_results: int = MAX_RESULTS,
+    sort_by: str = "modified",
+    case_sensitive: bool = False,
+    use_gitignore: bool = True,
 ) -> str:
     """
     Find files matching glob patterns with fast filesystem traversal.
@@ -266,6 +443,9 @@ async def glob(
         include_hidden: Whether to include hidden files/directories (default: False)
         exclude_dirs: Additional directories to exclude from search (default: common build/cache dirs)
         max_results: Maximum number of results to return (default: 5000)
+        sort_by: How to sort results - "modified", "size", "alphabetical", or "depth" (default: "modified")
+        case_sensitive: Whether pattern matching is case-sensitive (default: False)
+        use_gitignore: Whether to respect .gitignore patterns (default: True)
 
     Returns:
         Formatted list of matching file paths grouped by directory
@@ -276,6 +456,7 @@ async def glob(
         glob("*.{js,ts,jsx,tsx}")            # Multiple extensions
         glob("src/**/test_*.py")             # Test files in src directory
         glob("**/*.md", include_hidden=True) # Include hidden directories
+        glob("*.py", sort_by="size")        # Sort by file size
     """
     tool = GlobTool()
     return await tool._execute(
@@ -285,4 +466,7 @@ async def glob(
         include_hidden=include_hidden,
         exclude_dirs=exclude_dirs,
         max_results=max_results,
+        sort_by=sort_by,
+        case_sensitive=case_sensitive,
+        use_gitignore=use_gitignore,
     )

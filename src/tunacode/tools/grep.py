@@ -12,13 +12,14 @@ CLAUDE_ANCHOR[grep-module]: Fast parallel file search with 3-second deadline
 """
 
 import asyncio
+import logging
 import re
-import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
+from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.exceptions import TooBroadPatternError, ToolExecutionError
 from tunacode.tools.base import BaseTool
 from tunacode.tools.grep_components import (
@@ -28,6 +29,10 @@ from tunacode.tools.grep_components import (
     SearchResult,
 )
 from tunacode.tools.grep_components.result_formatter import ResultFormatter
+from tunacode.utils.ripgrep import RipgrepExecutor
+from tunacode.utils.ripgrep import metrics as ripgrep_metrics
+
+logger = logging.getLogger(__name__)
 
 
 class ParallelGrep(BaseTool):
@@ -42,10 +47,37 @@ class ParallelGrep(BaseTool):
         self._file_filter = FileFilter()
         self._pattern_matcher = PatternMatcher()
         self._result_formatter = ResultFormatter()
+        self._ripgrep_executor = RipgrepExecutor()
+
+        # Load configuration
+        self._config = self._load_ripgrep_config()
 
     @property
     def tool_name(self) -> str:
         return "grep"
+
+    def _load_ripgrep_config(self) -> Dict:
+        """Load ripgrep configuration from settings."""
+        try:
+            settings = DEFAULT_USER_CONFIG.get("settings", {})
+            return settings.get(
+                "ripgrep",
+                {
+                    "timeout": 10,
+                    "max_buffer_size": 1048576,
+                    "max_results": 100,
+                    "enable_metrics": False,
+                    "debug": False,
+                },
+            )
+        except Exception:
+            return {
+                "timeout": 10,
+                "max_buffer_size": 1048576,
+                "max_results": 100,
+                "enable_metrics": False,
+                "debug": False,
+            }
 
     async def _execute(
         self,
@@ -176,98 +208,106 @@ class ParallelGrep(BaseTool):
         self, pattern: str, candidates: List[Path], config: SearchConfig
     ) -> List[SearchResult]:
         """
-        Run ripgrep on pre-filtered file list with first match deadline.
+        Run ripgrep on pre-filtered file list using the enhanced RipgrepExecutor.
         """
 
-        def run_ripgrep_filtered():
-            cmd = ["rg", "--json"]
+        def run_enhanced_ripgrep():
+            """Execute ripgrep search using the new executor."""
+            start_time = time.time()
+            first_match_time = None
+            results = []
 
-            # Add configuration flags
-            if not config.case_sensitive:
-                cmd.append("--ignore-case")
-            if config.context_lines > 0:
-                cmd.extend(["--context", str(config.context_lines)])
-            if config.max_results:
-                cmd.extend(["--max-count", str(config.max_results)])
+            # Configure timeout from settings
+            timeout = min(self._config.get("timeout", 10), config.timeout_seconds)
 
-            # Add pattern and explicit file list
-            cmd.append(pattern)
-            cmd.extend(str(f) for f in candidates)
+            # If ripgrep executor is using fallback, skip this method entirely
+            if self._ripgrep_executor._use_python_fallback:
+                # Return empty to trigger Python fallback in the calling function
+                return []
 
             try:
-                # Start the process
-                process = subprocess.Popen(
-                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
+                # Use the enhanced executor with support for context lines
+                # Note: Currently searching all files, not using candidates
+                # This is a limitation that should be addressed in future enhancement
+                search_results = self._ripgrep_executor.search(
+                    pattern=pattern,
+                    path=".",  # Search in current directory
+                    timeout=timeout,
+                    max_matches=config.max_results,
+                    case_insensitive=not config.case_sensitive,
+                    context_before=config.context_lines,
+                    context_after=config.context_lines,
                 )
 
-                # Monitor for first match within deadline
-                start_time = time.time()
-                output_lines = []
-                first_match_found = False
+                # Track first match time for metrics
+                if search_results and first_match_time is None:
+                    first_match_time = time.time() - start_time
 
-                while True:
                     # Check if we exceeded the first match deadline
-                    if (
-                        not first_match_found
-                        and (time.time() - start_time) > config.first_match_deadline
-                    ):
-                        process.kill()
-                        process.wait()
+                    if first_match_time > config.first_match_deadline:
+                        if self._config.get("debug", False):
+                            logger.debug(
+                                f"Search exceeded first match deadline: {first_match_time:.2f}s"
+                            )
                         raise TooBroadPatternError(pattern, config.first_match_deadline)
 
-                    # Check if process is still running
-                    if process.poll() is not None:
-                        # Process finished, get any remaining output
-                        remaining_output, _ = process.communicate()
-                        if remaining_output:
-                            output_lines.extend(remaining_output.splitlines())
-                        break
+                # Parse results
+                for result_line in search_results:
+                    # Parse ripgrep output format "file:line:content"
+                    parts = result_line.split(":", 2)
+                    if len(parts) >= 3:
+                        # Filter to only include results from candidates
+                        file_path = Path(parts[0])
+                        if file_path not in candidates:
+                            continue
 
-                    # Try to read a line (non-blocking)
-                    try:
-                        # Use a small timeout to avoid blocking indefinitely
-                        line = process.stdout.readline()
-                        if line:
-                            output_lines.append(line.rstrip())
-                            # Check if this is a match line
-                            if '"type":"match"' in line:
-                                first_match_found = True
-                    except Exception:
-                        pass
+                        try:
+                            search_result = SearchResult(
+                                file_path=parts[0],
+                                line_number=int(parts[1]),
+                                line_content=parts[2] if len(parts) > 2 else "",
+                                match_start=0,
+                                match_end=len(parts[2]) if len(parts) > 2 else 0,
+                                context_before=[],
+                                context_after=[],
+                                relevance_score=1.0,
+                            )
+                            results.append(search_result)
 
-                    # Small sleep to avoid busy waiting
-                    time.sleep(0.01)
-
-                # Check exit code
-                if process.returncode == 0 or output_lines:
-                    # Return output even if exit code is non-zero but we have matches
-                    return "\n".join(output_lines)
-                else:
-                    return None
+                            # Stop if we have enough results
+                            if config.max_results and len(results) >= config.max_results:
+                                break
+                        except (ValueError, IndexError):
+                            continue
 
             except TooBroadPatternError:
                 raise
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                return None
-            except Exception:
-                # Make sure to clean up the process
-                if "process" in locals():
-                    try:
-                        process.kill()
-                        process.wait()
-                    except Exception:
-                        pass
-                return None
+            except Exception as e:
+                if self._config.get("debug", False):
+                    logger.debug(f"Search error: {e}")
+                # Return empty to trigger fallback
+                return []
 
-        # Run ripgrep with monitoring in thread pool
+            # Record metrics if enabled
+            if self._config.get("enable_metrics", False):
+                total_time = time.time() - start_time
+                ripgrep_metrics.record_search(
+                    duration=total_time, used_fallback=self._ripgrep_executor._use_python_fallback
+                )
+
+                if self._config.get("debug", False):
+                    logger.debug(
+                        f"Ripgrep search completed in {total_time:.2f}s "
+                        f"(first match: {first_match_time:.2f}s if found)"
+                    )
+
+            return results
+
+        # Run the enhanced ripgrep search
         try:
-            output = await asyncio.get_event_loop().run_in_executor(
-                self._executor, run_ripgrep_filtered
+            return await asyncio.get_event_loop().run_in_executor(
+                self._executor, run_enhanced_ripgrep
             )
-            if output:
-                parsed = self._pattern_matcher.parse_ripgrep_output(output)
-                return parsed
-            return []
         except TooBroadPatternError:
             raise
 
