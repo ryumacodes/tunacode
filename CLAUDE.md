@@ -1,5 +1,10 @@
 ### Workflow
 
+- **CRITICAL: WORKTREE REQUIREMENT** - When user requests a worktree, you MUST:
+  1. Create the worktree with `git worktree add -b branch-name ../dirname`
+  2. If access is blocked, immediately ask: "I cannot access the worktree directory. Should I: a) Work in a subdirectory instead, b) Use a branch in the main directory, or c) Another solution?"
+  3. NEVER proceed without a worktree if user specifically requested one
+
 - before any updates make a git commit rollback point, clearly labeled for future agents
 
 - the clear outline of the objective MUST be established before we begin ANY coding, do not under any circumstance begin any updates untill this is clearly understood, if you have any ambiuguity or quesiton, the user can be brought in or use best practises
