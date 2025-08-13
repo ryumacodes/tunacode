@@ -8,6 +8,7 @@ Provides safe file reading with size limits and proper error handling.
 import asyncio
 import logging
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -35,6 +36,7 @@ class ReadFileTool(FileBasedTool):
     def tool_name(self) -> str:
         return "Read"
 
+    @lru_cache(maxsize=1)
     def _get_base_prompt(self) -> str:
         """Load and return the base prompt from XML file.
 
@@ -56,6 +58,7 @@ class ReadFileTool(FileBasedTool):
         # Fallback to default prompt
         return """Reads a file from the local filesystem"""
 
+    @lru_cache(maxsize=1)
     def _get_parameters_schema(self) -> Dict[str, Any]:
         """Get the parameters schema for read_file tool.
 

@@ -7,7 +7,7 @@ Handles MCP server initialization, configuration validation, and client connecti
 
 import os
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, AsyncIterator, List, Optional, Tuple
+from typing import TYPE_CHECKING, AsyncIterator, Dict, List, Optional, Tuple
 
 from pydantic_ai.mcp import MCPServerStdio
 
@@ -18,6 +18,10 @@ if TYPE_CHECKING:
     from mcp.client.stdio import ReadStream, WriteStream
 
     from tunacode.core.state import StateManager
+
+# Module-level cache for MCP server instances
+_MCP_SERVER_CACHE: Dict[str, MCPServerStdio] = {}
+_MCP_CONFIG_HASH: Optional[int] = None
 
 
 class QuietMCPServer(MCPServerStdio):
@@ -55,27 +59,45 @@ class QuietMCPServer(MCPServerStdio):
 
 
 def get_mcp_servers(state_manager: "StateManager") -> List[MCPServerStdio]:
-    """Load MCP servers from configuration.
+    """Load MCP servers from configuration with caching.
 
     Args:
         state_manager: The state manager containing user configuration
 
     Returns:
-        List of MCP server instances
+        List of MCP server instances (cached when possible)
 
     Raises:
         MCPError: If a server configuration is invalid
     """
+    global _MCP_CONFIG_HASH
+
     mcp_servers: MCPServers = state_manager.session.user_config.get("mcpServers", {})
+
+    # Calculate hash of current config
+    current_hash = hash(str(mcp_servers))
+
+    # Check if config has changed
+    if _MCP_CONFIG_HASH == current_hash and _MCP_SERVER_CACHE:
+        # Return cached servers
+        return list(_MCP_SERVER_CACHE.values())
+
+    # Config changed or first load - clear cache and rebuild
+    _MCP_SERVER_CACHE.clear()
+    _MCP_CONFIG_HASH = current_hash
+
     loaded_servers: List[MCPServerStdio] = []
     MCPServerStdio.log_level = "critical"
 
     for server_name, conf in mcp_servers.items():
         try:
-            # loaded_servers.append(QuietMCPServer(**conf))
-            mcp_instance = MCPServerStdio(**conf)
-            # mcp_instance.log_level = "critical"
-            loaded_servers.append(mcp_instance)
+            # Check if this server is already cached
+            if server_name not in _MCP_SERVER_CACHE:
+                # Create new instance
+                mcp_instance = MCPServerStdio(**conf)
+                _MCP_SERVER_CACHE[server_name] = mcp_instance
+
+            loaded_servers.append(_MCP_SERVER_CACHE[server_name])
         except Exception as e:
             raise MCPError(
                 server_name=server_name,

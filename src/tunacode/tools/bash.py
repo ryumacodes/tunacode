@@ -10,6 +10,7 @@ import asyncio
 import logging
 import os
 import subprocess
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -31,6 +32,7 @@ class BashTool(BaseTool):
     def tool_name(self) -> str:
         return "Bash"
 
+    @lru_cache(maxsize=1)
     def _get_base_prompt(self) -> str:
         """Load and return the base prompt from XML file.
 
@@ -54,6 +56,7 @@ class BashTool(BaseTool):
             """Executes a given bash command in a persistent shell session with optional timeout"""
         )
 
+    @lru_cache(maxsize=1)
     def _get_parameters_schema(self) -> Dict[str, Any]:
         """Get the parameters schema for bash tool.
 

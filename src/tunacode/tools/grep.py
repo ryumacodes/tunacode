@@ -16,6 +16,7 @@ import logging
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -58,6 +59,7 @@ class ParallelGrep(BaseTool):
     def tool_name(self) -> str:
         return "grep"
 
+    @lru_cache(maxsize=1)
     def _get_base_prompt(self) -> str:
         """Load and return the base prompt from XML file.
 
@@ -85,6 +87,7 @@ Usage:
 - Filter files with glob or type parameters
 - Multiple output modes available"""
 
+    @lru_cache(maxsize=1)
     def _get_parameters_schema(self) -> Dict[str, Any]:
         """Get the parameters schema for grep tool.
 

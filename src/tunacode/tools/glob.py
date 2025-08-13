@@ -10,6 +10,7 @@ import fnmatch
 import os
 import re
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union
 
@@ -62,6 +63,7 @@ class GlobTool(BaseTool):
     def tool_name(self) -> str:
         return "glob"
 
+    @lru_cache(maxsize=1)
     def _get_base_prompt(self) -> str:
         """Load and return the base prompt from XML file.
 
@@ -87,6 +89,7 @@ class GlobTool(BaseTool):
 - Returns matching file paths sorted by modification time
 - Use this tool when you need to find files by name patterns"""
 
+    @lru_cache(maxsize=1)
     def _get_parameters_schema(self) -> Dict[str, Any]:
         """Get the parameters schema for the glob tool."""
         # Try to load from XML first

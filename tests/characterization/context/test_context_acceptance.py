@@ -81,6 +81,11 @@ async def test_agent_loads_tunacode_md_into_system_prompt():
         try:
             os.chdir(tmpdir)
 
+            # Clear caches to ensure fresh load
+            from tunacode.core.agents.agent_components.agent_config import clear_all_caches
+
+            clear_all_caches()
+
             # Create agent
             state_manager = StateManager()
             agent = get_or_create_agent("openai:gpt-4", state_manager)
