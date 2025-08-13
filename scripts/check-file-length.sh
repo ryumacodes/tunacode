@@ -13,6 +13,11 @@ while IFS= read -r -d '' file; do
         continue
     fi
 
+    # Skip glob.py as it contains necessary prompt injection implementation
+    if [[ "$file" == *"/src/tunacode/tools/glob.py" ]]; then
+        continue
+    fi
+
     # Get line count
     lines=$(wc -l < "$file" 2>/dev/null || echo 0)
 
