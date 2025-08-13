@@ -135,23 +135,28 @@ This document outlines the phased implementation plan for enhancing TunaCode's s
 - ✅ Added abstract `_get_parameters_schema()` for tool parameters
 
 ### 5.2 Dynamic Prompt Generation ✅
-- ✅ Created XML-based prompt system (tool_prompt.xml format)
-- ✅ Implemented tools_v2 directory structure:
-  - Each tool has `toolname.py` and `toolname_prompt.xml`
-  - XML defines description, usage rules, parameters, and examples
+- ✅ Created XML-based prompt system in `tools/prompts/` directory
+- ✅ Updated existing tools (grep.py, glob.py) with XML loading:
+  - Added `_get_base_prompt()` method to load from XML files
+  - Enhanced `_get_parameters_schema()` to parse XML parameters
+  - Fallback to hardcoded prompts if XML loading fails
 - ✅ Dynamic loading of prompts from XML files
 - ✅ Support for prompt updates without code changes
 
-### 5.3 API Integration Point ✅
-- ✅ Created `ToolSchemaAssembler` for managing tool schemas
-- ✅ Converts XML prompts to OpenAI-compatible function schemas
-- ✅ JSON-serializable schema format for API calls
-- ✅ Tested schema generation and API format compatibility
+### 5.3 Security and Type Safety ✅
+- ✅ Used defusedxml instead of xml.etree for secure XML parsing
+- ✅ Fixed type hints for proper mypy compliance
+- ✅ Added proper error handling with fallbacks
 
-### 5.4 Simplified Implementation (Per User Request)
-- Focused on tool and dynamic prompt only
-- Skipped complex context-aware features
-- Clean XML-based prompt system for easy updates
+### 5.4 Testing and Validation ✅
+- ✅ Updated tests to use regular tools (not tools_v2 approach)
+- ✅ All Phase 5 tests passing
+- ✅ Created `ToolSchemaAssembler` for managing tool schemas
+- ✅ JSON-serializable schema format for API calls
+
+### 5.5 Known Issues
+- glob.py file is 618 lines (exceeds 600 line recommendation)
+- Should be refactored in future to reduce file size
 
 ## Phase 6: Integration and Optimization
 
