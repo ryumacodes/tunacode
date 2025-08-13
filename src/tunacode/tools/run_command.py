@@ -7,6 +7,7 @@ Provides controlled shell command execution with output capture and truncation.
 
 import logging
 import subprocess
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -34,6 +35,7 @@ logger = logging.getLogger(__name__)
 class RunCommandTool(BaseTool):
     """Tool for running shell commands."""
 
+    @lru_cache(maxsize=1)
     def _get_base_prompt(self) -> str:
         """Load and return the base prompt from XML file.
 
@@ -55,6 +57,7 @@ class RunCommandTool(BaseTool):
         # Fallback to default prompt
         return """Executes system commands with enhanced control and monitoring capabilities"""
 
+    @lru_cache(maxsize=1)
     def _get_parameters_schema(self) -> Dict[str, Any]:
         """Get the parameters schema for run_command tool.
 

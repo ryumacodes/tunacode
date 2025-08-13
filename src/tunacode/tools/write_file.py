@@ -7,6 +7,7 @@ Provides safe file creation with conflict detection and encoding handling.
 
 import logging
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -27,6 +28,7 @@ class WriteFileTool(FileBasedTool):
     def tool_name(self) -> str:
         return "Write"
 
+    @lru_cache(maxsize=1)
     def _get_base_prompt(self) -> str:
         """Load and return the base prompt from XML file.
 
@@ -48,6 +50,7 @@ class WriteFileTool(FileBasedTool):
         # Fallback to default prompt
         return """Writes a file to the local filesystem"""
 
+    @lru_cache(maxsize=1)
     def _get_parameters_schema(self) -> Dict[str, Any]:
         """Get the parameters schema for write_file tool.
 

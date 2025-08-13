@@ -26,6 +26,18 @@ logger = get_logger(__name__)
 _PROMPT_CACHE: Dict[str, Tuple[str, float]] = {}
 _TUNACODE_CACHE: Dict[str, Tuple[str, float]] = {}
 
+# Module-level cache for agents to persist across requests
+_AGENT_CACHE: Dict[ModelName, PydanticAgent] = {}
+_AGENT_CACHE_VERSION: Dict[ModelName, int] = {}
+
+
+def clear_all_caches():
+    """Clear all module-level caches. Useful for testing."""
+    _PROMPT_CACHE.clear()
+    _TUNACODE_CACHE.clear()
+    _AGENT_CACHE.clear()
+    _AGENT_CACHE_VERSION.clear()
+
 
 def get_agent_tool():
     """Lazy import for Agent and Tool to avoid circular imports."""
@@ -115,7 +127,31 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
 
     logger = logging.getLogger(__name__)
 
-    if model not in state_manager.session.agents:
+    # Check session-level cache first (for backward compatibility with tests)
+    if model in state_manager.session.agents:
+        logger.debug(f"Using session-cached agent for model {model}")
+        return state_manager.session.agents[model]
+
+    # Check module-level cache
+    if model in _AGENT_CACHE:
+        # Verify cache is still valid (check for config changes)
+        current_version = hash(
+            (
+                state_manager.is_plan_mode(),
+                str(state_manager.session.user_config.get("settings", {}).get("max_retries", 3)),
+                str(state_manager.session.user_config.get("mcpServers", {})),
+            )
+        )
+        if _AGENT_CACHE_VERSION.get(model) == current_version:
+            logger.debug(f"Using module-cached agent for model {model}")
+            state_manager.session.agents[model] = _AGENT_CACHE[model]
+            return _AGENT_CACHE[model]
+        else:
+            logger.debug(f"Cache invalidated for model {model} due to config change")
+            del _AGENT_CACHE[model]
+            del _AGENT_CACHE_VERSION[model]
+
+    if model not in _AGENT_CACHE:
         logger.debug(
             f"Creating new agent for model {model}, plan_mode={state_manager.is_plan_mode()}"
         )
@@ -242,10 +278,22 @@ YOU MUST EXECUTE present_plan TOOL TO COMPLETE ANY PLANNING TASK.
         else:
             logger.debug("❌ Plan mode instructions NOT in system prompt")
 
-        state_manager.session.agents[model] = Agent(
+        agent = Agent(
             model=model,
             system_prompt=system_prompt,
             tools=tools_list,
             mcp_servers=get_mcp_servers(state_manager),
         )
-    return state_manager.session.agents[model]
+
+        # Store in both caches
+        _AGENT_CACHE[model] = agent
+        _AGENT_CACHE_VERSION[model] = hash(
+            (
+                state_manager.is_plan_mode(),
+                str(state_manager.session.user_config.get("settings", {}).get("max_retries", 3)),
+                str(state_manager.session.user_config.get("mcpServers", {})),
+            )
+        )
+        state_manager.session.agents[model] = agent
+
+    return _AGENT_CACHE[model]

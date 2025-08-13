@@ -7,6 +7,7 @@ Provides targeted file content modification with diff-based updates.
 
 import logging
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -27,6 +28,7 @@ class UpdateFileTool(FileBasedTool):
     def tool_name(self) -> str:
         return "Update"
 
+    @lru_cache(maxsize=1)
     def _get_base_prompt(self) -> str:
         """Load and return the base prompt from XML file.
 
@@ -48,6 +50,7 @@ class UpdateFileTool(FileBasedTool):
         # Fallback to default prompt
         return """Performs exact string replacements in files"""
 
+    @lru_cache(maxsize=1)
     def _get_parameters_schema(self) -> Dict[str, Any]:
         """Get the parameters schema for update_file tool.
 

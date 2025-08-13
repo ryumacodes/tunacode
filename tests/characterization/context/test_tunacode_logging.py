@@ -38,7 +38,11 @@ This file provides guidance to AI assistants.
             # Mock the logger to capture calls
             with patch("tunacode.core.agents.agent_components.agent_config.logger") as mock_logger:
                 from tunacode.core.agents.agent_components import get_or_create_agent
+                from tunacode.core.agents.agent_components.agent_config import clear_all_caches
                 from tunacode.core.state import StateManager
+
+                # Clear caches to ensure fresh load
+                clear_all_caches()
 
                 # Create state manager with thoughts enabled
                 state_manager = StateManager()
@@ -67,7 +71,11 @@ async def test_tunacode_not_found_message():
             # Mock the logger to capture calls
             with patch("tunacode.core.agents.agent_components.agent_config.logger") as mock_logger:
                 from tunacode.core.agents.agent_components import get_or_create_agent
+                from tunacode.core.agents.agent_components.agent_config import clear_all_caches
                 from tunacode.core.state import StateManager
+
+                # Clear caches to ensure fresh load
+                clear_all_caches()
 
                 # Create state manager
                 state_manager = StateManager()
