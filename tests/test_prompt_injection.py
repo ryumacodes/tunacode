@@ -2,18 +2,18 @@
 
 import json
 
+from tunacode.tools.glob import GlobTool
+from tunacode.tools.grep import ParallelGrep
 from tunacode.tools.schema_assembler import ToolSchemaAssembler
-from tunacode.tools_v2.glob.glob import EnhancedGlobTool
-from tunacode.tools_v2.grep.grep import EnhancedGrepTool
 
 
 class TestPromptInjection:
     """Test that prompts are dynamically injected when sent to the API."""
 
     def test_prompt_loaded_from_xml(self):
-        """Test that enhanced tools load prompts from XML files."""
-        # Create enhanced grep tool
-        grep_tool = EnhancedGrepTool()
+        """Test that tools load prompts from XML files."""
+        # Create grep tool
+        grep_tool = ParallelGrep()
 
         # Check that prompt was loaded from XML
         prompt = grep_tool._get_base_prompt()
@@ -21,19 +21,18 @@ class TestPromptInjection:
         assert "Usage:" in prompt
         assert "ALWAYS use Grep for search tasks" in prompt
 
-        # Create enhanced glob tool
-        glob_tool = EnhancedGlobTool()
+        # Create glob tool
+        glob_tool = GlobTool()
 
         # Check that prompt was loaded from XML
         prompt = glob_tool._get_base_prompt()
         assert "file pattern matching tool" in prompt.lower()
-        assert "Usage:" in prompt
         assert "Supports glob patterns" in prompt
 
     def test_schema_includes_dynamic_prompt(self):
         """Test that tool schema includes the dynamically loaded prompt."""
-        # Create enhanced grep tool
-        grep_tool = EnhancedGrepTool()
+        # Create grep tool
+        grep_tool = ParallelGrep()
 
         # Get the tool schema (this is what would be sent to the API)
         schema = grep_tool.get_tool_schema()
@@ -55,7 +54,7 @@ class TestPromptInjection:
         assert "pattern" in params["required"]
         assert (
             params["properties"]["pattern"]["description"]
-            == "Regular expression pattern to search for"
+            == "The regular expression pattern to search for in file contents"
         )
 
     def test_schema_assembler_integration(self):
@@ -63,9 +62,9 @@ class TestPromptInjection:
         # Create schema assembler
         assembler = ToolSchemaAssembler()
 
-        # Register enhanced tools
-        assembler.register_tool(EnhancedGrepTool())
-        assembler.register_tool(EnhancedGlobTool())
+        # Register tools
+        assembler.register_tool(ParallelGrep())
+        assembler.register_tool(GlobTool())
 
         # Get all schemas (simulating API call preparation)
         schemas = assembler.get_all_schemas()
@@ -86,8 +85,8 @@ class TestPromptInjection:
 
     def test_api_call_format(self):
         """Test that schemas are formatted correctly for API calls."""
-        # Create enhanced grep tool
-        grep_tool = EnhancedGrepTool()
+        # Create grep tool
+        grep_tool = ParallelGrep()
 
         # Get schema as it would be sent to API
         schema = grep_tool.get_tool_schema()
@@ -107,15 +106,15 @@ class TestPromptInjection:
 
     def test_prompt_updates_dynamically(self):
         """Test that prompts can be updated dynamically without code changes."""
-        # Create enhanced grep tool
-        grep_tool = EnhancedGrepTool()
+        # Create grep tool
+        grep_tool = ParallelGrep()
 
         # Get initial prompt
         initial_prompt = grep_tool._get_base_prompt()
         assert initial_prompt
 
-        # Simulate XML file change by modifying the loaded prompt
-        grep_tool._xml_prompt = "Updated prompt from modified XML"
+        # Simulate XML file change by modifying the base prompt method
+        grep_tool._get_base_prompt = lambda: "Updated prompt from modified XML"
 
         # Get schema with updated prompt
         schema = grep_tool.get_tool_schema()

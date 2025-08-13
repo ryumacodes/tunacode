@@ -7,3 +7,6 @@ _Agent: phase5-recovery
 [3] Test expects EnhancedGrepTool and EnhancedGlobTool in tools_v2 with XML prompt loading
 [4] Better approach: Update existing tools in src/tunacode/tools/ instead of creating tools_v2
 [5] Current state: base.py has prompt infrastructure, tools have _get_parameters_schema but need _get_base_prompt methods and XML loading
+[6] Adding XML loading to grep.py - need to import xml.etree and add _get_base_prompt method
+[7] Updated tests to use ParallelGrep and GlobTool instead of Enhanced* classes
+[8] Security issues with xml.etree - need to use defusedxml. Type issues with schema[required]
