@@ -6,9 +6,9 @@ This document outlines the phased implementation plan for enhancing TunaCode's s
 ## Implementation Status
 - ✅ **Phase 1**: Foundation - Ripgrep Binary Management (COMPLETED)
 - ✅ **Phase 2**: Search Tool Core Enhancements (COMPLETED)
-- ⏳ **Phase 3**: Glob Tool Optimization (PENDING)
+- ✅ **Phase 3**: Glob Tool Optimization (COMPLETED)
 - ⏳ **Phase 4**: Caching Layer Enhancement (PENDING)
-- ⏳ **Phase 5**: Tool Prompt Micro-Injection System (PENDING)
+- ✅ **Phase 5**: Tool Prompt Micro-Injection System (COMPLETED)
 - ⏳ **Phase 6**: Integration and Optimization (PENDING)
 - ⏳ **Phase 7**: Testing and Documentation (PENDING)
 
@@ -126,39 +126,32 @@ This document outlines the phased implementation plan for enhancing TunaCode's s
 - Add atomic cache operations
 - Create cache consistency checks
 
-## Phase 5: Tool Prompt Micro-Injection System
+## Phase 5: Tool Prompt Micro-Injection System ✅
 
-### 5.1 Base Tool Enhancement (`src/tunacode/tools/base.py`)
-- Add abstract `prompt()` method to BaseTool
-- Implement default prompt generation
-- Create prompt template system
-- Add context parameter support
+### 5.1 Base Tool Enhancement (`src/tunacode/tools/base.py`) ✅
+- ✅ Added `prompt()` method to BaseTool for dynamic prompt generation
+- ✅ Implemented prompt caching with context-based cache keys
+- ✅ Created `get_tool_schema()` method for API integration
+- ✅ Added abstract `_get_parameters_schema()` for tool parameters
 
-### 5.2 Dynamic Prompt Generation
-- Implement per-tool prompt methods:
-  - Model-specific instructions
-  - Permission-aware guidance
-  - Environment-specific hints
-- Create prompt evaluation pipeline
-- Add prompt caching for performance
+### 5.2 Dynamic Prompt Generation ✅
+- ✅ Created XML-based prompt system (tool_prompt.xml format)
+- ✅ Implemented tools_v2 directory structure:
+  - Each tool has `toolname.py` and `toolname_prompt.xml`
+  - XML defines description, usage rules, parameters, and examples
+- ✅ Dynamic loading of prompts from XML files
+- ✅ Support for prompt updates without code changes
 
-### 5.3 API Integration Point
-- Identify injection point in API call preparation
-- Create tool schema assembly:
-  - Convert prompts to function descriptions
-  - Generate OpenAI-compatible schemas
-  - Support for multiple API formats
-- Implement prompt refresh on context changes
+### 5.3 API Integration Point ✅
+- ✅ Created `ToolSchemaAssembler` for managing tool schemas
+- ✅ Converts XML prompts to OpenAI-compatible function schemas
+- ✅ JSON-serializable schema format for API calls
+- ✅ Tested schema generation and API format compatibility
 
-### 5.4 Context-Aware Features
-- Add model detection and adaptation
-- Implement permission level handling
-- Create environment variable support
-- Add dynamic prompt updates based on:
-  - Current model capabilities
-  - User permissions
-  - System resources
-  - Previous interactions
+### 5.4 Simplified Implementation (Per User Request)
+- Focused on tool and dynamic prompt only
+- Skipped complex context-aware features
+- Clean XML-based prompt system for easy updates
 
 ## Phase 6: Integration and Optimization
 
@@ -269,9 +262,10 @@ This document outlines the phased implementation plan for enhancing TunaCode's s
 ### Priority Order
 1. ✅ Ripgrep integration (foundation for speed)
 2. ✅ Resource management (reliability)
-3. ⏳ Caching enhancements (performance)
-4. ⏳ Advanced features (functionality)
-5. ⏳ Micro-injection system (extensibility)
+3. ✅ Glob tool optimization (file searching)
+4. ✅ Micro-injection system (extensibility)
+5. ⏳ Caching enhancements (performance)
+6. ⏳ Advanced features (functionality)
 
 ### Backward Compatibility
 - All enhancements maintain existing API
