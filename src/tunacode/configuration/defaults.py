@@ -24,6 +24,14 @@ DEFAULT_USER_CONFIG: UserConfig = {
         "fallback_response": True,
         "fallback_verbosity": "normal",  # Options: minimal, normal, detailed
         "context_window_size": 200000,
+        "ripgrep": {
+            "use_bundled": True,  # Use bundled ripgrep binary
+            "timeout": 10,  # Search timeout in seconds
+            "max_buffer_size": 1048576,  # 1MB max output buffer
+            "max_results": 100,  # Maximum results per search
+            "enable_metrics": False,  # Enable performance metrics collection
+            "debug": False,  # Enable debug logging for ripgrep operations
+        },
     },
     "mcpServers": {},
 }
