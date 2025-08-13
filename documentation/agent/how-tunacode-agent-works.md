@@ -203,10 +203,44 @@ class BaseTool(ABC):
             # Handle and wrap errors
             await self._handle_error(e, *args, **kwargs)
 
+    def _get_base_prompt(self) -> str:
+        """Load dynamic prompt from XML files"""
+        # XML-based prompt injection system (Phase 5)
+        # Loads prompts from tools/prompts/*.xml with fallbacks
+
+    def _get_parameters_schema(self) -> Dict[str, Any]:
+        """Generate JSON schema from XML or hardcoded fallback"""
+        # Dynamic parameter schema generation from XML
+
 class FileBasedTool(BaseTool):
     """Extended base for file operations"""
     # Adds file-specific error handling
 ```
+
+### Tool Prompt Injection System (Phase 5):
+
+All 12 tools now use XML-based dynamic prompt loading for enhanced flexibility:
+
+```
+src/tunacode/tools/prompts/
+├── bash_prompt.xml          # Bash command execution
+├── exit_plan_mode_prompt.xml # Plan mode controls
+├── glob_prompt.xml          # File pattern matching
+├── grep_prompt.xml          # Text search
+├── list_dir_prompt.xml      # Directory listing
+├── present_plan_prompt.xml  # Plan presentation
+├── read_file_prompt.xml     # File reading
+├── run_command_prompt.xml   # Command execution
+├── todo_prompt.xml          # Task management
+├── update_file_prompt.xml   # File modification
+└── write_file_prompt.xml    # File creation
+```
+
+**Benefits:**
+- Prompts can be updated without code changes
+- Consistent XML structure across all tools
+- Secure parsing using defusedxml
+- Graceful fallback to hardcoded prompts if XML fails
 
 ### Parallel Execution:
 
