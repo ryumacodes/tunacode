@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tunacode-cli"
 
-version = "0.0.56"
+version = "0.0.57"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
@@ -169,7 +169,7 @@ typecheck = "mypy src/"
 security = "bandit -r src/ -ll"
 
 # Version management
-version = "hatch version"
+version = "0.0.57"
 
 # Release workflow
 release = [
