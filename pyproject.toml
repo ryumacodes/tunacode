@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tunacode-cli"
 
-version = "0.0.57"
+version = "0.0.60"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
@@ -26,12 +26,14 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    "typer==0.15.3",
+    "typer>=0.9.0,<0.10.0",
+    "click>=8.0.0,<8.2.0",
     "prompt_toolkit==3.0.51",
     "pydantic-ai[logfire]==0.2.6",
     "pygments==2.19.1",
     "rich==14.0.0",
     "tiktoken>=0.5.2",
+    "defusedxml",
 ]
 
 [project.scripts]
@@ -52,7 +54,6 @@ dev = [
     "autoflake>=2.0.0",
     "dead>=1.5.0",
     "hatch>=1.6.0",
-    "defusedxml",
     "mypy",
     "bandit",
 ]
@@ -169,7 +170,7 @@ typecheck = "mypy src/"
 security = "bandit -r src/ -ll"
 
 # Version management
-version = "0.0.57"
+version = "0.0.60"
 
 # Release workflow
 release = [
