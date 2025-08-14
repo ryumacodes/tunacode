@@ -36,11 +36,10 @@ if [[ -n $(git status --porcelain) ]]; then
     die "Working directory is not clean. Commit or stash changes before publishing."
 fi
 
-# Use uv for package management
-command -v uv >/dev/null || die "uv not found - install with: curl -LsSf https://astral.sh/uv/install.sh | sh"
+# Use hatch for package management
+command -v hatch >/dev/null || die "hatch not found - install with: uv tool install hatch"
 
-# Ensure dependencies are installed
-uv sync --dev >/dev/null 2>&1 || die "Failed to sync dependencies with uv"
+# Hatch manages dependencies automatically when using features = [\"dev\"]
 
 # ── run tests and linting before publishing --------------------------------
 log "Running linting checks"
