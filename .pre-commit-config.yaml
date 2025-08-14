@@ -64,7 +64,7 @@ repos:
       # Existing hatch lint check - already runs ruff which respects exclusions
       - id: hatch-lint
         name: Run hatch lint check
-        entry: hatch run lint
+        entry: uv run hatch run lint
         language: system
         pass_filenames: false
         always_run: true
@@ -73,7 +73,7 @@ repos:
       # Check for unused imports in changed files only
       - id: dead-imports
         name: Check for unused imports in changed files
-        entry: venv/bin/unimport --check --diff --exclude "venv/*" --gitignore
+        entry: uv run unimport --check --diff --exclude "venv/*" --gitignore
         language: system
         files: \.py$
         stages: [pre-commit]
@@ -81,7 +81,7 @@ repos:
       # Check for dead code in changed files only
       - id: vulture-changed
         name: Check for dead code in changed files
-        entry: venv/bin/vulture --min-confidence 80 src/ scripts/utils/vulture_whitelist.py
+        entry: uv run vulture --min-confidence 80 src/ scripts/utils/vulture_whitelist.py
         language: system
         files: \.py$
         exclude: ^(tests/|test_)
@@ -90,7 +90,7 @@ repos:
       # Run test suite (same as hatch run test)
       - id: run-tests
         name: Run test suite
-        entry: venv/bin/python -m pytest -q tests/characterization tests/test_security.py tests/test_agent_output_formatting.py tests/test_prompt_changes_validation.py
+        entry: uv run pytest -q tests/characterization tests/test_security.py tests/test_agent_output_formatting.py tests/test_prompt_changes_validation.py
         language: system
         pass_filenames: false
         always_run: true

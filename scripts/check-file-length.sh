@@ -28,6 +28,7 @@ while IFS= read -r -d '' file; do
     fi
 done < <(find . -type f \
     -not -path "./venv/*" \
+    -not -path "./.venv/*" \
     -not -path "./.deploy_venv/*" \
     -not -path "./.git/*" \
     -not -path "./build/*" \
@@ -58,6 +59,7 @@ done < <(find . -type f \
     -not -name "*.webp" \
     -not -name "*.md" \
     -not -name ".coverage" \
+    -not -name "uv.lock" \
     -print0)
 
 exit $FOUND_LONG_FILES
