@@ -36,29 +36,27 @@ if [[ -n $(git status --porcelain) ]]; then
     die "Working directory is not clean. Commit or stash changes before publishing."
 fi
 
-# Use virtual environment
-VENV_PATH="venv"
-[[ -d "$VENV_PATH" ]] || die "Virtual environment not found at $VENV_PATH"
-PYTHON="$VENV_PATH/bin/python"
-PIP="$VENV_PATH/bin/pip"
+# Use uv for package management
+command -v uv >/dev/null || die "uv not found - install with: curl -LsSf https://astral.sh/uv/install.sh | sh"
 
-$PIP -q install build twine setuptools_scm packaging pytest black isort flake8 >/dev/null
+# Ensure dependencies are installed
+uv sync --dev >/dev/null 2>&1 || die "Failed to sync dependencies with uv"
 
 # ── run tests and linting before publishing --------------------------------
 log "Running linting checks"
-if ! hatch run lint-check; then
+if ! uv run hatch run lint-check; then
     die "Linting failed! Fix linting errors before publishing."
 fi
 
 log "Running tests"
-if ! hatch run test; then
+if ! uv run hatch run test; then
     die "Tests failed! Fix failing tests before publishing."
 fi
 
 log "All checks passed!"
 
 # ── fetch latest PyPI version ----------------------------------------------
-remote=$($PYTHON - "$PKG" <<'PY'
+remote=$(uv run python - "$PKG" <<'PY'
 import json, sys, ssl, urllib.request, packaging.version as V
 pkg=sys.argv[1]
 try:
@@ -77,7 +75,7 @@ local=$(git tag --sort=-v:refname | head -n1 | sed 's/^v//')
 log "Latest Git tag  : $local"
 
 # ── choose max(remote, local) & bump patch ----------------------------------
-base=$($PYTHON - "$remote" "$local" <<'PY'
+base=$(uv run python - "$remote" "$local" <<'PY'
 import sys, packaging.version as V
 r,l=sys.argv[1:]
 print(r if V.Version(r)>=V.Version(l) else l)
@@ -138,12 +136,12 @@ git push
 # ── build -------------------------------------------------------------------
 if [[ "$skip_build" != "true" ]]; then
     log "Building wheel/sdist"
-    $PYTHON -m build
+    uv run python -m build
 fi
 
 # ── upload ------------------------------------------------------------------
 log "Uploading to PyPI"
-$PYTHON -m twine upload -r pypi dist/* || log "Upload may have failed - package might already exist on PyPI"
+uv run python -m twine upload -r pypi dist/* || log "Upload may have failed - package might already exist on PyPI"
 
 log "✅ SUCCESS: $PKG $VERSION published on PyPI"
 log "🎉 Deployment complete! Package available at: https://pypi.org/project/$PKG/$VERSION/"
