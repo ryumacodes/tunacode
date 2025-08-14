@@ -115,18 +115,33 @@ class UpdateCommand(SimpleCommand):
             venv_python = os.path.join(venv_dir, "bin", "python")
 
             if os.path.exists(venv_tunacode) and os.path.exists(venv_python):
-                try:
-                    # Try python -m pip first (works with UV-created venvs)
-                    result = subprocess.run(
-                        [venv_python, "-m", "pip", "show", "tunacode-cli"],
-                        capture_output=True,
-                        text=True,
-                        timeout=10,
-                    )
-                    if result.returncode == 0:
-                        installation_method = "venv"
-                except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
-                    pass
+                # Try UV first if available (UV-created venvs don't have pip module)
+                if shutil.which("uv"):
+                    try:
+                        result = subprocess.run(
+                            ["uv", "pip", "show", "--python", venv_python, "tunacode-cli"],
+                            capture_output=True,
+                            text=True,
+                            timeout=10,
+                        )
+                        if result.returncode == 0:
+                            installation_method = "venv"
+                    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                        pass
+
+                # Fall back to python -m pip for pip-created venvs
+                if not installation_method:
+                    try:
+                        result = subprocess.run(
+                            [venv_python, "-m", "pip", "show", "tunacode-cli"],
+                            capture_output=True,
+                            text=True,
+                            timeout=10,
+                        )
+                        if result.returncode == 0:
+                            installation_method = "venv"
+                    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                        pass
 
         # Check if installed via pip
         if not installation_method:
