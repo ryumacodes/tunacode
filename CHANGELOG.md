@@ -9,7 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 
-- **Directory Caching System**: Implemented intelligent directory caching using CodeIndex infrastructure
+- **Tool Prompt Micro-Injection System**: XML-based prompt loading for tools
+  - Tool prompts now loaded from dedicated XML files in `tools/prompts/`
+  - Uses `defusedxml` for secure XML parsing with fallback mechanisms
+  - Added specialized prompts for grep and glob tools
+  - Tool parameters loaded from XML with fallbacks to hardcoded defaults
+  - Reduced overall context size through targeted prompt injection
+
+- **Agent Initialization Caching**: Multiple caching optimizations for startup speed
+  - Added `@lru_cache` to XML parsing methods in 8 tool files (~200ms improvement)
+  - Module-level agent caching with config validation (~1s improvement)
+  - MCP server connection caching with config hash validation (~500ms improvement)
+  - Added `clear_all_caches()` function for testing
+  - Total improvement: 1.7-2s faster agent initialization
+
+- **Directory Caching System**: Intelligent directory caching using CodeIndex infrastructure
   - Added singleton pattern to CodeIndex with public API and cache freshness tracking
   - Background pre-warming of directory cache during REPL startup (non-blocking)
   - Smart `list_dir` tool integration with CodeIndex cache lookup
@@ -18,16 +32,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic cache invalidation with 5-second TTL
   - Memory efficient: ~1-5MB overhead for typical projects
 
-- **System Prompt Caching**: Added file-based caching for system prompts and TUNACODE.md
+- **System Prompt Caching**: File-based caching for system prompts and TUNACODE.md
   - **9x faster** system prompt loading with modification time checking
   - **3-8 second reduction** in agent initialization time
   - Zero-risk automatic cache invalidation on file changes
 
+- **Search Infrastructure Foundation**: Base implementation for ripgrep binary management
+  - Added foundation for search tool improvements
+  - Cross-platform binary management infrastructure
+  - Preparation for future search optimizations
+
+### Added
+
+- **Tool Enhancement Infrastructure**: XML-based tool prompt system
+  - Created `src/tunacode/tools/prompts/` directory for prompt files
+  - Added XML prompt files for grep and glob tools
+  - Enhanced tool base classes with dynamic prompt loading
+
 ### Documentation
 
-- Added comprehensive performance optimization documentation
-- Created detailed technical documentation for directory caching system
-- Updated documentation index with performance optimization guides
+- Added performance optimization documentation
+- Documented XML-based tool prompt system
+- Updated directory caching technical documentation
+- Added performance guides to documentation index
 
 ## [0.0.62] - 2025-08-14
 
