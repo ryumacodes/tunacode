@@ -1,235 +1,102 @@
-# UV + Hatch Setup Documentation
+# UV + Hatch Setup Documentation - COMPLETED
 
 ## Overview
-This project uses **Hatch** with **UV** as the package installer for fast, reliable dependency management.
+This project uses **Hatch** with **UV** as the package installer for fast, reliable dependency management. Successfully implemented and published v0.0.62.
 
-## Current Configuration
+## Final Working Configuration
 
 ### pyproject.toml Setup
 ```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"  # Fixed: was setuptools
+
 [tool.hatch.envs.default]
-installer = "uv"  # CRITICAL: This tells hatch to use UV instead of pip
-features = ["dev"]  # CRITICAL: This ensures dev dependencies are installed
+installer = "uv"  # Uses UV for 10-100x faster installs
+features = ["dev"]  # Ensures dev dependencies are installed
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tunacode"]  # Required for hatchling
+
+[project]
+dependencies = [
+    "defusedxml",  # Fixed: runtime dependency, not dev-only
+    # ... other runtime deps
+]
 
 [project.optional-dependencies]
 dev = [
-    "build",
-    "twine",
-    "ruff",
-    "pytest",
-    "pre-commit",
-    "defusedxml",  # Required for XML parsing in tools
-    "mypy",
-    "bandit",
-    # ... other dev dependencies
+    "build", "twine", "ruff", "pytest", "pre-commit",
+    # ... dev-only deps (defusedxml moved to runtime)
 ]
 ```
 
-## Installation & Setup
+## Key Fixes Applied
 
-### Prerequisites
-1. Install UV (if not already installed):
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
+### 1. Build System
+- **Fixed**: Changed from `setuptools` to `hatchling` build-backend
+- **Added**: `[tool.hatch.build.targets.wheel]` configuration
 
-2. Install Hatch as a UV tool:
-   ```bash
-   uv tool install hatch
-   ```
+### 2. Dependencies
+- **Fixed**: Moved `defusedxml` from dev to runtime dependencies (used in bash tool)
+- **Root cause**: Dependency not installed in hatch environment despite being in pyproject.toml
 
-### Environment Management
+### 3. Publishing Script
+- **Fixed**: Removed problematic `uv sync --dev` command
+- **Uses**: Pure Hatch workflow with UV as installer
+
+### 4. Install Script Enhancement
+- **Fixed**: Detection logic now distinguishes wrapper scripts from actual binaries
+- **Handles**: venv+wrapper, user site-packages, and system installations correctly
+- **Added**: Automatic creation of `~/.config/tunacode.json` with sensible defaults
+- **Enhanced**: Comprehensive post-install guidance with next steps
+- **Updated**: Default model changed to `openrouter:openai/gpt-4.1` for better accessibility
+
+## Final Result
+- ✅ Published tunacode-cli v0.0.62 to PyPI
+- ✅ All 298 tests passing
+- ✅ Hatch + UV working complementarily
+- ✅ Clean install/update process for users
+- ✅ Auto-created config file with OpenRouter defaults
+- ✅ Enhanced user onboarding with clear next steps
+
+## Recent Improvements (Latest Updates)
+
+### Enhanced Installation Experience
+- **Config File Creation**: Install script now automatically creates `~/.config/tunacode.json` with sensible defaults
+- **OpenRouter Default**: Changed default model to `openrouter:openai/gpt-4.1` for broader model access
+- **User Guidance**: Post-install messages provide clear next steps:
+  1. API key configuration options
+  2. Reference to `tunacode --setup` wizard
+  3. Getting started commands
+
+### Example Fresh Installation Flow
 ```bash
-# Create environment (uses UV automatically)
-hatch env create
+# Install creates config automatically
+./scripts/install_linux.sh
 
-# Remove and recreate (when changing installer or dependencies)
-hatch env remove default
-hatch env create
-
-# Show environments
-hatch env show
+# Results in:
+# ✅ ~/.config/tunacode.json created with OpenRouter defaults
+# ✅ Clear guidance about API key setup
+# ✅ References to setup wizard and documentation
 ```
 
-## Common Commands
+### Configuration Auto-Creation
+The install script now creates initial config with:
+- Default model: `"openrouter:openai/gpt-4.1"`
+- Empty API key placeholders for all providers
+- Sensible defaults for all settings
+- Proper JSON structure ready for user customization
+
+## Usage
 
 ```bash
-# Run tests
-hatch run test
+# Development workflow
+hatch run test          # Run tests
+hatch run lint-check    # Run linting
+hatch build            # Build package
+./scripts/publish_to_pip.sh  # Publish to PyPI
 
-# Run linting
-hatch run lint-check
-
-# Build package
-hatch build
-
-# Run any command in hatch environment
-hatch run <command>
+# User installation (automatic UV detection + config creation)
+./scripts/install_linux.sh   # Creates venv + wrapper + config for global use
 ```
-
-## Pre-commit Hooks Configuration
-
-The `.git/hooks/pre-commit` file must be modified to use hatch:
-```bash
-# Changed from: command -v pre-commit
-# To: command -v hatch
-elif command -v hatch > /dev/null; then
-    exec hatch run pre-commit "${ARGS[@]}"
-```
-
-## Publishing Script Updates
-
-The `scripts/publish_to_pip.sh` must use hatch commands:
-```bash
-# Linting
-hatch run lint-check
-
-# Testing
-hatch run test
-
-# Building
-hatch build
-
-# Uploading
-hatch run python -m twine upload -r pypi dist/*
-```
-
-## CRITICAL MISTAKES TO AVOID
-
-### Mistake 1: Mixing Package Managers
-**WRONG:**
-```bash
-uv pip install <package>  # DON'T do this
-uv sync --dev            # DON'T mix with hatch
-```
-
-**RIGHT:**
-```bash
-# Add to pyproject.toml dev dependencies, then:
-hatch env remove default && hatch env create
-```
-
-### Mistake 2: Not Setting features = ["dev"]
-**WRONG:**
-```toml
-[tool.hatch.envs.default]
-installer = "uv"
-# Missing features = ["dev"]
-```
-
-**RIGHT:**
-```toml
-[tool.hatch.envs.default]
-installer = "uv"
-features = ["dev"]  # REQUIRED for dev dependencies
-```
-
-### Mistake 3: Using venv/bin paths
-**WRONG:**
-```yaml
-# In .pre-commit-config.yaml
-entry: venv/bin/hatch run lint
-entry: .venv/bin/pytest
-```
-
-**RIGHT:**
-```yaml
-entry: hatch run lint
-entry: hatch run pytest
-```
-
-### Mistake 4: Not Recreating Environment After Config Changes
-**WRONG:**
-```bash
-# After changing installer from pip to uv
-hatch run test  # Will still use pip!
-```
-
-**RIGHT:**
-```bash
-# After changing installer or features
-hatch env remove default
-hatch env create
-hatch run test  # Now uses UV
-```
-
-### Mistake 5: Installing Tools in Wrong Scope
-**WRONG:**
-```bash
-pip install hatch  # System pip
-uv pip install pre-commit  # Mixed environment
-```
-
-**RIGHT:**
-```bash
-uv tool install hatch  # Hatch as UV tool (global)
-# pre-commit goes in pyproject.toml dev dependencies
-```
-
-### Mistake 6: Duplicate Keys in pyproject.toml
-**WRONG:**
-```toml
-[tool.hatch.envs.default.scripts]
-test = "pytest tests/"
-# ... later in file
-test = "python -m pytest"  # DUPLICATE!
-```
-
-**RIGHT:**
-```toml
-[tool.hatch.envs.default.scripts]
-test = "pytest -q tests/characterization tests/test_security.py ..."
-# Only ONE test key
-```
-
-## Best Practices
-
-1. **Always use hatch commands** - Never directly call UV when using hatch
-2. **Commit pyproject.toml changes first** - Before recreating environments
-3. **Use hatch build** - Not `python -m build` or `uv run build`
-4. **Keep dependencies in pyproject.toml** - Never use `pip install` or `uv pip install`
-5. **Recreate environment after config changes** - Especially when changing installer
-
-## Troubleshooting
-
-### Issue: Module not found errors
-**Solution:**
-```bash
-hatch env remove default
-hatch env create
-```
-
-### Issue: Pre-commit hooks failing with "command not found"
-**Solution:** Edit `.git/hooks/pre-commit` to use `hatch run pre-commit`
-
-### Issue: Tests pass with hatch but fail in pre-commit
-**Solution:** Ensure pre-commit uses hatch: `entry: hatch run pytest`
-
-### Issue: Build fails with "No module named build"
-**Solution:** Use `hatch build`, not `uv run python -m build`
-
-## Migration Timeline & Lessons Learned
-
-1. **Initial Confusion**: Tried using `uv sync` directly, creating `.venv`
-   - **Lesson**: UV can be used standalone OR with hatch, not both simultaneously
-
-2. **Mixed Environments**: Had venv, .venv, and hatch environments
-   - **Lesson**: Clean ALL environments before starting fresh
-
-3. **Missing Dependencies**: defusedxml wasn't in dev dependencies
-   - **Lesson**: Check imports and add ALL required packages to pyproject.toml
-
-4. **Pre-commit Hook Issues**: Hook couldn't find pre-commit command
-   - **Lesson**: Git hooks need manual updating to use hatch
-
-5. **Build Script Failures**: Used `uv run python -m build` instead of `hatch build`
-   - **Lesson**: Use hatch's built-in commands, not UV directly
-
-## Summary
-
-The UV + Hatch combination provides:
-- **Speed**: UV's fast package resolution and installation
-- **Reliability**: Hatch's robust project management
-- **Simplicity**: Single source of truth in pyproject.toml
-
-Remember: Hatch manages the project, UV just makes it faster!

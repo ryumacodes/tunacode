@@ -36,7 +36,7 @@ _Updated: 2025-08-14_
 ## Installation Types Supported
 
 1. **Venv**: `~/.tunacode-venv/` (recommended)
-2. **Global System**: `/usr/local/bin/`, `/usr/bin/` 
+2. **Global System**: `/usr/local/bin/`, `/usr/bin/`
 3. **Global User**: `pip install --user`
 4. **Pipx**: `pipx install tunacode-cli`
 

@@ -59,9 +59,11 @@ repos:
 
 
   # Local hooks for project-specific checks
+  # Strategy: Use 'hatch run' for commands defined in pyproject.toml scripts
+  #          Use 'uv run' for standalone tools not managed by hatch environments
   - repo: local
     hooks:
-      # Existing hatch lint check - already runs ruff which respects exclusions
+      # Hatch-managed commands (use hatch run for consistency)
       - id: hatch-lint
         name: Run hatch lint check
         entry: hatch run lint
@@ -70,7 +72,7 @@ repos:
         always_run: true
         stages: [pre-commit]
 
-      # Check for unused imports in changed files only
+      # UV-managed standalone tools (not in hatch environments)
       - id: dead-imports
         name: Check for unused imports in changed files
         entry: uv run unimport --check --diff --exclude "venv/*" --gitignore
@@ -78,7 +80,6 @@ repos:
         files: \.py$
         stages: [pre-commit]
 
-      # Check for dead code in changed files only
       - id: vulture-changed
         name: Check for dead code in changed files
         entry: uv run vulture --min-confidence 80 src/ scripts/utils/vulture_whitelist.py
@@ -87,10 +88,10 @@ repos:
         exclude: ^(tests/|test_)
         stages: [pre-commit]
 
-      # Run test suite (same as hatch run test)
+      # Run test suite using hatch for consistency
       - id: run-tests
         name: Run test suite
-        entry: uv run pytest -q tests/characterization tests/test_security.py tests/test_agent_output_formatting.py tests/test_prompt_changes_validation.py
+        entry: hatch run test
         language: system
         pass_filenames: false
         always_run: true
@@ -151,5 +152,6 @@ ci:
   autoupdate_branch: ''
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: weekly
-  skip: [run-tests, hatch-lint, dead-imports]
+  # Skip hooks that require project-specific environment setup
+  skip: [run-tests, hatch-lint, dead-imports, vulture-changed]
   submodules: false
