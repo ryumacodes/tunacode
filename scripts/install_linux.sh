@@ -43,9 +43,9 @@ detect_installations() {
     local venv_working=false
     local global_system_working=false
     local global_user_working=false
-    
+
     echo -e "${BLUE}Scanning for existing TunaCode installations...${NC}"
-    
+
     # Check venv installation
     if [ -f "$VENV_DIR/bin/tunacode" ]; then
         found_venv=true
@@ -56,7 +56,7 @@ detect_installations() {
             echo -e "${YELLOW}⚠${NC} Found venv installation but it's not working"
         fi
     fi
-    
+
     # Check global system installation
     if command -v tunacode &>/dev/null; then
         local tunacode_path=$(command -v tunacode)
@@ -70,7 +70,7 @@ detect_installations() {
             fi
         fi
     fi
-    
+
     # Check global user installation
     if [ -f "$HOME/.local/bin/tunacode" ] && [ "$HOME/.local/bin/tunacode" != "$BIN_DIR/tunacode" ]; then
         found_global_user=true
@@ -81,7 +81,7 @@ detect_installations() {
             echo -e "${YELLOW}⚠${NC} Found global user installation but it's not working"
         fi
     fi
-    
+
     # Check wrapper script health
     local wrapper_status="missing"
     if [ -f "$BIN_DIR/tunacode" ]; then
@@ -100,7 +100,7 @@ detect_installations() {
     else
         echo -e "${YELLOW}⚠${NC} No wrapper script found"
     fi
-    
+
     # Export detection results
     export FOUND_VENV=$found_venv
     export FOUND_GLOBAL_SYSTEM=$found_global_system
@@ -115,19 +115,19 @@ detect_installations() {
 create_backup() {
     local backup_dir="/tmp/tunacode-backup-$(date +%s)"
     mkdir -p "$backup_dir"
-    
+
     echo -e "${BLUE}Creating backup at $backup_dir...${NC}"
-    
+
     # Backup venv if it exists
     if [ -d "$VENV_DIR" ]; then
         cp -r "$VENV_DIR" "$backup_dir/venv"
     fi
-    
+
     # Backup wrapper script
     if [ -f "$BIN_DIR/tunacode" ]; then
         cp "$BIN_DIR/tunacode" "$backup_dir/wrapper"
     fi
-    
+
     export BACKUP_DIR="$backup_dir"
     echo -e "${GREEN}✓${NC} Backup created at $backup_dir"
 }
@@ -136,19 +136,19 @@ create_backup() {
 rollback() {
     if [ -n "$BACKUP_DIR" ] && [ -d "$BACKUP_DIR" ]; then
         echo -e "${YELLOW}Rolling back to previous installation...${NC}"
-        
+
         # Restore venv
         if [ -d "$BACKUP_DIR/venv" ]; then
             rm -rf "$VENV_DIR" 2>/dev/null || true
             cp -r "$BACKUP_DIR/venv" "$VENV_DIR"
         fi
-        
+
         # Restore wrapper
         if [ -f "$BACKUP_DIR/wrapper" ]; then
             cp "$BACKUP_DIR/wrapper" "$BIN_DIR/tunacode"
             chmod +x "$BIN_DIR/tunacode"
         fi
-        
+
         echo -e "${GREEN}✓${NC} Rollback completed"
     else
         echo -e "${RED}✗${NC} No backup available for rollback"
@@ -160,10 +160,10 @@ perform_update() {
     local install_method="$1"
     local max_retries=3
     local retry_count=0
-    
+
     while [ $retry_count -lt $max_retries ]; do
         echo -e "${BLUE}Update attempt $((retry_count + 1))/$max_retries using $install_method method...${NC}"
-        
+
         case "$install_method" in
             "venv_uv")
                 if uv pip install --python "$VENV_DIR/bin/python" --upgrade tunacode-cli --quiet; then
@@ -191,23 +191,23 @@ perform_update() {
                 fi
                 ;;
         esac
-        
+
         retry_count=$((retry_count + 1))
         if [ $retry_count -lt $max_retries ]; then
             echo -e "${YELLOW}⚠${NC} Update failed, retrying in 3 seconds..."
             sleep 3
         fi
     done
-    
+
     return 1
 }
 
 # Verify installation after update
 verify_installation() {
     local method="$1"
-    
+
     echo -e "${BLUE}Verifying installation...${NC}"
-    
+
     case "$method" in
         "venv"*)
             if [ -f "$VENV_DIR/bin/tunacode" ] && "$VENV_DIR/bin/tunacode" --version &>/dev/null; then
@@ -222,7 +222,7 @@ verify_installation() {
             fi
             ;;
     esac
-    
+
     echo -e "${RED}✗${NC} Installation verification failed"
     return 1
 }
@@ -230,7 +230,7 @@ verify_installation() {
 # Repair or create wrapper script
 repair_wrapper() {
     echo -e "${BLUE}Repairing wrapper script...${NC}"
-    
+
     # Determine best target for wrapper
     if [ "$VENV_WORKING" = true ] || [ -f "$VENV_DIR/bin/tunacode" ]; then
         # Point to venv installation
@@ -250,9 +250,9 @@ EOW
         echo -e "${RED}✗${NC} No working installation found for wrapper"
         return 1
     fi
-    
+
     chmod +x "$BIN_DIR/tunacode"
-    
+
     # Verify wrapper works
     if "$BIN_DIR/tunacode" --version &>/dev/null; then
         echo -e "${GREEN}✓${NC} Wrapper script working correctly"
@@ -274,16 +274,16 @@ cleanup_backup() {
 # Main update logic
 if [ -d "$VENV_DIR" ] || [ -f "$BIN_DIR/tunacode" ] || command -v tunacode &>/dev/null; then
     echo -e "${YELLOW}TunaCode installation detected.${NC}"
-    
+
     # Enhanced detection
     detect_installations
-    
+
     # Count working installations
     working_count=0
     [ "$VENV_WORKING" = true ] && working_count=$((working_count + 1))
     [ "$GLOBAL_SYSTEM_WORKING" = true ] && working_count=$((working_count + 1))
     [ "$GLOBAL_USER_WORKING" = true ] && working_count=$((working_count + 1))
-    
+
     if [ $working_count -eq 0 ]; then
         echo -e "${RED}No working installations found. Please run a fresh installation.${NC}"
         echo -e "Remove $VENV_DIR and $BIN_DIR/tunacode if they exist, then re-run this script."
@@ -300,7 +300,7 @@ if [ -d "$VENV_DIR" ] || [ -f "$BIN_DIR/tunacode" ] || command -v tunacode &>/de
         echo -e "4) Skip update"
         echo -e "\nChoice (1-4): "
         read -r choice
-        
+
         case "$choice" in
             1) UPDATE_TARGET="venv" ;;
             2) UPDATE_TARGET="global_system" ;;
@@ -318,22 +318,22 @@ if [ -d "$VENV_DIR" ] || [ -f "$BIN_DIR/tunacode" ] || command -v tunacode &>/de
             UPDATE_TARGET="global_user"
         fi
     fi
-    
+
     echo -e "\nWould you like to update to the latest version? (y/N)"
     read -r response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
         echo -e "${BLUE}Skipping update.${NC}"
         exit 0
     fi
-    
+
     # Create backup before update
     create_backup
-    
+
     # Set trap for rollback on failure
     trap 'echo -e "\n${RED}Update failed!${NC}"; rollback; exit 1' ERR
-    
+
     echo -e "${BLUE}Updating TunaCode ($UPDATE_TARGET installation)...${NC}"
-    
+
     # Determine update method
     update_method=""
     case "$UPDATE_TARGET" in
@@ -361,32 +361,32 @@ if [ -d "$VENV_DIR" ] || [ -f "$BIN_DIR/tunacode" ] || command -v tunacode &>/de
             fi
             ;;
     esac
-    
+
     # Perform update with retry
     if ! perform_update "$update_method"; then
         echo -e "${RED}Update failed after multiple attempts${NC}"
         rollback
         exit 1
     fi
-    
+
     # Verify update worked
     if ! verify_installation "$update_method"; then
         echo -e "${RED}Update verification failed${NC}"
         rollback
         exit 1
     fi
-    
+
     # Repair wrapper script if needed
     if [ "$WRAPPER_STATUS" != "working" ]; then
         if ! repair_wrapper; then
             echo -e "${YELLOW}⚠${NC} Wrapper repair failed, but main installation is working"
         fi
     fi
-    
+
     # Clear trap and cleanup
     trap - ERR
     cleanup_backup
-    
+
     echo -e "\n${GREEN}✅ TunaCode updated successfully!${NC}"
     echo -e "Run ${BLUE}tunacode --version${NC} to verify the new version"
     exit 0
