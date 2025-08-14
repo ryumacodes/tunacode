@@ -1,5 +1,6 @@
 """System-level commands for TunaCode CLI."""
 
+import os
 import shutil
 import subprocess
 import sys
@@ -107,6 +108,26 @@ class UpdateCommand(SimpleCommand):
             except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
                 pass
 
+        # Check if installed via venv (from install script)
+        if not installation_method:
+            venv_dir = os.path.expanduser("~/.tunacode-venv")
+            venv_tunacode = os.path.join(venv_dir, "bin", "tunacode")
+            venv_python = os.path.join(venv_dir, "bin", "python")
+
+            if os.path.exists(venv_tunacode) and os.path.exists(venv_python):
+                try:
+                    # Try python -m pip first (works with UV-created venvs)
+                    result = subprocess.run(
+                        [venv_python, "-m", "pip", "show", "tunacode-cli"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if result.returncode == 0:
+                        installation_method = "venv"
+                except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                    pass
+
         # Check if installed via pip
         if not installation_method:
             try:
@@ -138,6 +159,35 @@ class UpdateCommand(SimpleCommand):
                     text=True,
                     timeout=60,
                 )
+            elif installation_method == "venv":
+                venv_dir = os.path.expanduser("~/.tunacode-venv")
+                venv_python = os.path.join(venv_dir, "bin", "python")
+
+                # Check if uv is available (same logic as install script)
+                if shutil.which("uv"):
+                    await ui.info("Updating via UV in venv...")
+                    result = subprocess.run(
+                        [
+                            "uv",
+                            "pip",
+                            "install",
+                            "--python",
+                            venv_python,
+                            "--upgrade",
+                            "tunacode-cli",
+                        ],
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+                else:
+                    await ui.info("Updating via pip in venv...")
+                    result = subprocess.run(
+                        [venv_python, "-m", "pip", "install", "--upgrade", "tunacode-cli"],
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
             else:  # pip
                 await ui.info("Updating via pip...")
                 result = subprocess.run(
