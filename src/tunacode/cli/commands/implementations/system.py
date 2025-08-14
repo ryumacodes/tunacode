@@ -143,6 +143,21 @@ class UpdateCommand(SimpleCommand):
                     except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
                         pass
 
+        # Check if installed via uv tool
+        if not installation_method:
+            if shutil.which("uv"):
+                try:
+                    result = subprocess.run(
+                        ["uv", "tool", "list"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if result.returncode == 0 and "tunacode-cli" in result.stdout.lower():
+                        installation_method = "uv_tool"
+                except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                    pass
+
         # Check if installed via pip
         if not installation_method:
             try:
@@ -160,10 +175,11 @@ class UpdateCommand(SimpleCommand):
         if not installation_method:
             await ui.error("Could not detect TunaCode installation method")
             await ui.muted("Manual update options:")
-            await ui.muted("  pipx: pipx upgrade tunacode")
-            await ui.muted("  pip:  pip install --upgrade tunacode-cli")
+            await ui.muted("  pipx:    pipx upgrade tunacode")
+            await ui.muted("  pip:     pip install --upgrade tunacode-cli")
+            await ui.muted("  uv tool: uv tool upgrade tunacode-cli")
             await ui.muted(
-                "  venv: uv pip install --python ~/.tunacode-venv/bin/python --upgrade tunacode-cli"
+                "  venv:    uv pip install --python ~/.tunacode-venv/bin/python --upgrade tunacode-cli"
             )
             return
 
@@ -206,6 +222,14 @@ class UpdateCommand(SimpleCommand):
                         text=True,
                         timeout=60,
                     )
+            elif installation_method == "uv_tool":
+                await ui.info("Updating via UV tool...")
+                result = subprocess.run(
+                    ["uv", "tool", "upgrade", "tunacode-cli"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
             else:  # pip
                 await ui.info("Updating via pip...")
                 result = subprocess.run(
