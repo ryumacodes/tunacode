@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TunaCode CLI Installer
+# TunaCode CLI Installer - UV/pip Enhanced Version
 #
 # One-line install:
 # curl -sSL https://raw.githubusercontent.com/alchemiststudiosDOTai/tunacode/master/scripts/install_linux.sh | bash
@@ -19,9 +19,21 @@ NC='\033[0m' # No Color
 VENV_DIR="${HOME}/.tunacode-venv"
 BIN_DIR="${HOME}/.local/bin"
 PYTHON=${PYTHON:-python3}
+USE_UV=false
 
 echo -e "${BLUE}🐟 TunaCode CLI Installer${NC}"
 echo "================================"
+
+# Detect UV availability
+if command -v uv &> /dev/null; then
+    USE_UV=true
+    UV_VERSION=$(uv --version 2>/dev/null | cut -d' ' -f2 || echo "unknown")
+    echo -e "${GREEN}✓${NC} UV detected (version: $UV_VERSION) - Using fast installer"
+else
+    echo -e "${BLUE}Using standard pip installer${NC}"
+    echo -e "  ${YELLOW}Tip:${NC} Install UV for 10-100x faster installations:"
+    echo -e "  curl -LsSf https://astral.sh/uv/install.sh | sh"
+fi
 
 # Check if TunaCode is already installed
 if [ -d "$VENV_DIR" ] && [ -f "$BIN_DIR/tunacode" ]; then
@@ -30,7 +42,11 @@ if [ -d "$VENV_DIR" ] && [ -f "$BIN_DIR/tunacode" ]; then
     read -r response
     if [[ "$response" =~ ^[Yy]$ ]]; then
         echo -e "${BLUE}Updating TunaCode...${NC}"
-        "$VENV_DIR/bin/pip" install --upgrade tunacode-cli --quiet
+        if [ "$USE_UV" = true ]; then
+            uv pip install --system --upgrade tunacode-cli --quiet
+        else
+            "$VENV_DIR/bin/pip" install --upgrade tunacode-cli --quiet
+        fi
         echo -e "${GREEN}✅ TunaCode updated successfully!${NC}"
         exit 0
     else
@@ -64,12 +80,21 @@ fi
 
 # Create virtual environment
 echo -e "\n${BLUE}Creating virtual environment...${NC}"
-"$PYTHON" -m venv "$VENV_DIR"
+if [ "$USE_UV" = true ]; then
+    uv venv "$VENV_DIR"
+else
+    "$PYTHON" -m venv "$VENV_DIR"
+fi
 
 # Upgrade pip and install tunacode
 echo -e "${BLUE}Installing TunaCode CLI...${NC}"
-"$VENV_DIR/bin/pip" install --upgrade pip --quiet
-"$VENV_DIR/bin/pip" install tunacode-cli --quiet
+if [ "$USE_UV" = true ]; then
+    # UV manages pip/setuptools automatically and is much faster
+    uv pip install --python "$VENV_DIR/bin/python" tunacode-cli --quiet
+else
+    "$VENV_DIR/bin/pip" install --upgrade pip --quiet
+    "$VENV_DIR/bin/pip" install tunacode-cli --quiet
+fi
 
 # Create bin directory and wrapper script
 mkdir -p "$BIN_DIR"

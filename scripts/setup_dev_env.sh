@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# TunaCode Development Environment Setup - Enhanced Version
+# TunaCode Development Environment Setup - UV/Hatch Enhanced Version
 #
 # This script sets up a clean development environment for TunaCode
 # with robust dependency verification and error handling
 #
 # Features:
+# - Auto-detects UV or falls back to pip
+# - Hatch integration for modern Python builds
 # - Explicit dependency verification
 # - Installation logging
 # - Rollback on failure
@@ -25,6 +27,11 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG_FILE="$PROJECT_ROOT/setup_dev_env.log"
 VENV_DIR="$PROJECT_ROOT/venv"
 
+# Detect package manager
+USE_UV=false
+UV_AVAILABLE=false
+HATCH_AVAILABLE=false
+
 # Initialize log file
 echo "TunaCode Development Environment Setup - $(date)" > "$LOG_FILE"
 
@@ -34,15 +41,65 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" | sed 's/\x1b\[[0-9;]*m//g' >> "$LOG_FILE"
 }
 
+# Detect available tools
+detect_tools() {
+    log "${BLUE}Detecting available tools...${NC}"
+
+    # Check for UV
+    if command -v uv &> /dev/null; then
+        UV_AVAILABLE=true
+        UV_VERSION=$(uv --version 2>/dev/null | cut -d' ' -f2 || echo "unknown")
+        log "${GREEN}✓${NC} UV detected (version: $UV_VERSION)"
+    else
+        log "${YELLOW}⚠${NC} UV not found - will use pip (slower but works fine)"
+        log "  ${BLUE}To install UV for faster installations:${NC}"
+        log "  curl -LsSf https://astral.sh/uv/install.sh | sh"
+    fi
+
+    # Check for Hatch
+    if command -v hatch &> /dev/null; then
+        HATCH_AVAILABLE=true
+        HATCH_VERSION=$(hatch --version 2>/dev/null | cut -d' ' -f2 || echo "unknown")
+        log "${GREEN}✓${NC} Hatch detected (version: $HATCH_VERSION)"
+    else
+        log "${YELLOW}⚠${NC} Hatch not found"
+        log "  ${BLUE}To install Hatch (recommended for development):${NC}"
+        if [ "$UV_AVAILABLE" = true ]; then
+            log "  uv tool install hatch"
+        else
+            log "  pip install --user hatch"
+        fi
+    fi
+
+    # Decide which installer to use
+    if [ "$UV_AVAILABLE" = true ] && [ "$HATCH_AVAILABLE" = true ]; then
+        USE_UV=true
+        log "${GREEN}✓${NC} Using UV+Hatch for fast, modern Python builds"
+    elif [ "$UV_AVAILABLE" = true ]; then
+        USE_UV=true
+        log "${BLUE}Using UV for fast installations (consider installing Hatch)${NC}"
+    else
+        log "${BLUE}Using pip for installations${NC}"
+    fi
+}
+
 # Function to check if a Python package can be imported
 check_python_import() {
     local package="$1"
     local import_name="${2:-$1}"
 
-    if "$VENV_DIR/bin/python" -c "import $import_name" 2>/dev/null; then
-        return 0
+    if [ "$HATCH_AVAILABLE" = true ]; then
+        if hatch run python -c "import $import_name" 2>/dev/null; then
+            return 0
+        else
+            return 1
+        fi
     else
-        return 1
+        if "$VENV_DIR/bin/python" -c "import $import_name" 2>/dev/null; then
+            return 0
+        else
+            return 1
+        fi
     fi
 }
 
@@ -83,11 +140,27 @@ install_with_retry() {
     local package="$1"
     local max_attempts=3
     local attempt=1
+    local install_cmd
+
+    # Hatch manages dependencies through pyproject.toml, not direct installs
+    if [ "$HATCH_AVAILABLE" = true ]; then
+        log "${YELLOW}Skipping direct install of $package - Hatch manages dependencies${NC}"
+        return 0
+    fi
+
+    # Choose installation command based on available tools
+    if [ "$USE_UV" = true ]; then
+        # Use UV directly for venv
+        install_cmd="uv pip install"
+    else
+        # Fallback to standard pip
+        install_cmd="pip install"
+    fi
 
     while [ $attempt -le $max_attempts ]; do
         log "${BLUE}Installing $package (attempt $attempt/$max_attempts)...${NC}"
 
-        if pip install "$package" 2>&1 | tee -a "$LOG_FILE"; then
+        if $install_cmd "$package" 2>&1 | tee -a "$LOG_FILE"; then
             log "${GREEN}✓${NC} Successfully installed $package"
             return 0
         else
@@ -120,6 +193,9 @@ trap cleanup_on_failure ERR
 
 log "${BLUE}TunaCode Development Environment Setup${NC}"
 log "=========================================="
+
+# Detect available tools first
+detect_tools
 
 # Change to project root
 cd "$PROJECT_ROOT"
@@ -158,57 +234,95 @@ if [ -d "$VENV_DIR" ]; then
     fi
 fi
 
-# Create virtual environment if it doesn't exist
-if [ ! -d "$VENV_DIR" ]; then
+# Handle virtual environment creation based on tools
+if [ "$HATCH_AVAILABLE" = true ]; then
+    log "\n${BLUE}Using Hatch for environment management...${NC}"
+    # Hatch manages its own environments
+    if [ "$USE_UV" = true ]; then
+        log "${GREEN}✓${NC} Hatch will use UV as installer for fast operations"
+    fi
+elif [ ! -d "$VENV_DIR" ]; then
     log "\n${BLUE}Creating virtual environment...${NC}"
-    "$PYTHON" -m venv "$VENV_DIR"
+    if [ "$USE_UV" = true ]; then
+        uv venv "$VENV_DIR"
+    else
+        "$PYTHON" -m venv "$VENV_DIR"
+    fi
     VENV_CREATED=true
 fi
 
-# Activate virtual environment
-log "${BLUE}Activating virtual environment...${NC}"
-source "$VENV_DIR/bin/activate"
-
-# Verify virtual environment is activated
-if [ "$VIRTUAL_ENV" != "$VENV_DIR" ]; then
-    log "${RED}Error: Failed to activate virtual environment${NC}"
-    exit 1
+# Activate virtual environment (only if not using Hatch)
+if [ "$HATCH_AVAILABLE" != true ]; then
+    log "${BLUE}Activating virtual environment...${NC}"
+    source "$VENV_DIR/bin/activate"
 fi
-log "${GREEN}✓${NC} Virtual environment activated"
+
+# Verify virtual environment is activated (skip for Hatch)
+if [ "$HATCH_AVAILABLE" != true ]; then
+    if [ "$VIRTUAL_ENV" != "$VENV_DIR" ]; then
+        log "${RED}Error: Failed to activate virtual environment${NC}"
+        exit 1
+    fi
+    log "${GREEN}✓${NC} Virtual environment activated"
+fi
 
 # Upgrade pip, setuptools, and wheel
-log "${BLUE}Upgrading pip, setuptools, and wheel...${NC}"
-if ! pip install --upgrade pip setuptools wheel 2>&1 | tee -a "$LOG_FILE"; then
-    log "${RED}Failed to upgrade pip, setuptools, and wheel${NC}"
-    cleanup_on_failure
-fi
-log "${GREEN}✓${NC} Successfully upgraded pip, setuptools, and wheel"
-
-# Install critical dependency pydantic-ai first
-log "${BLUE}Installing critical dependency: pydantic-ai...${NC}"
-if ! install_with_retry "pydantic-ai[logfire]==0.2.6"; then
-    log "${RED}Failed to install pydantic-ai - this is a critical dependency${NC}"
-    cleanup_on_failure
-fi
-
-# Verify pydantic-ai installed correctly
-if ! check_python_import "pydantic_ai" "pydantic_ai"; then
-    log "${RED}pydantic-ai installed but cannot be imported!${NC}"
-    log "This may indicate a version compatibility issue."
-    cleanup_on_failure
+if [ "$HATCH_AVAILABLE" = true ]; then
+    log "${BLUE}Ensuring Hatch environment is up to date...${NC}"
+    hatch env prune
+    hatch env create
+elif [ "$USE_UV" = true ]; then
+    log "${BLUE}UV manages pip/setuptools automatically${NC}"
+    log "${GREEN}✓${NC} UV environment ready"
+else
+    log "${BLUE}Upgrading pip, setuptools, and wheel...${NC}"
+    if ! pip install --upgrade pip setuptools wheel 2>&1 | tee -a "$LOG_FILE"; then
+        log "${RED}Failed to upgrade pip, setuptools, and wheel${NC}"
+        cleanup_on_failure
+    fi
+    log "${GREEN}✓${NC} Successfully upgraded pip, setuptools, and wheel"
 fi
 
-# Install the package in editable mode with dev dependencies
-log "${BLUE}Installing TunaCode in editable mode with dev dependencies...${NC}"
-if ! pip install -e ".[dev]" 2>&1 | tee -a "$LOG_FILE"; then
-    log "${RED}Failed to install TunaCode package${NC}"
-    cleanup_on_failure
-fi
+# Install the package and dependencies
+if [ "$HATCH_AVAILABLE" = true ]; then
+    log "${BLUE}Installing TunaCode and dependencies via Hatch...${NC}"
+    # Hatch handles all dependencies automatically from pyproject.toml
+    # No need to install individual packages
+    log "${GREEN}✓${NC} Hatch will handle all dependencies from pyproject.toml"
+else
+    # For non-Hatch installs, install critical dependency first
+    log "${BLUE}Installing critical dependency: pydantic-ai...${NC}"
+    if ! install_with_retry "pydantic-ai[logfire]==0.2.6"; then
+        log "${RED}Failed to install pydantic-ai - this is a critical dependency${NC}"
+        cleanup_on_failure
+    fi
 
-# Install additional test dependencies explicitly
-log "${BLUE}Installing additional test dependencies...${NC}"
-if ! install_with_retry "pytest-asyncio"; then
-    log "${YELLOW}Warning: Failed to install pytest-asyncio${NC}"
+    # Verify pydantic-ai installed correctly
+    if ! check_python_import "pydantic_ai" "pydantic_ai"; then
+        log "${RED}pydantic-ai installed but cannot be imported!${NC}"
+        log "This may indicate a version compatibility issue."
+        cleanup_on_failure
+    fi
+
+    # Install the package in editable mode with dev dependencies
+    log "${BLUE}Installing TunaCode in editable mode with dev dependencies...${NC}"
+    if [ "$USE_UV" = true ]; then
+        if ! uv pip install -e ".[dev]" 2>&1 | tee -a "$LOG_FILE"; then
+            log "${RED}Failed to install TunaCode package${NC}"
+            cleanup_on_failure
+        fi
+    else
+        if ! pip install -e ".[dev]" 2>&1 | tee -a "$LOG_FILE"; then
+            log "${RED}Failed to install TunaCode package${NC}"
+            cleanup_on_failure
+        fi
+    fi
+
+    # Install additional test dependencies explicitly
+    log "${BLUE}Installing additional test dependencies...${NC}"
+    if ! install_with_retry "pytest-asyncio"; then
+        log "${YELLOW}Warning: Failed to install pytest-asyncio${NC}"
+    fi
 fi
 
 # Verify all dependencies
@@ -240,20 +354,38 @@ fi
 
 # Test that the tunacode command is available
 log "${BLUE}Verifying tunacode CLI installation...${NC}"
-if "$VENV_DIR/bin/python" -m tunacode --version &>/dev/null; then
-    log "${GREEN}✓${NC} tunacode CLI is properly installed"
+if [ "$HATCH_AVAILABLE" = true ]; then
+    if hatch run tunacode --version &>/dev/null; then
+        log "${GREEN}✓${NC} tunacode CLI is properly installed"
+    else
+        log "${RED}✗${NC} tunacode CLI not working properly"
+        cleanup_on_failure
+    fi
 else
-    log "${RED}✗${NC} tunacode CLI not working properly"
-    cleanup_on_failure
+    if "$VENV_DIR/bin/tunacode" --version &>/dev/null; then
+        log "${GREEN}✓${NC} tunacode CLI is properly installed"
+    else
+        log "${RED}✗${NC} tunacode CLI not working properly"
+        cleanup_on_failure
+    fi
 fi
 
 # Final verification - run a simple test
 log "${BLUE}Running basic import test...${NC}"
-if "$VENV_DIR/bin/python" -c "from tunacode.cli.main import app; print('TunaCode imports working')" 2>&1 | tee -a "$LOG_FILE"; then
-    log "${GREEN}✓${NC} Basic import test passed"
+if [ "$HATCH_AVAILABLE" = true ]; then
+    if hatch run python -c "from tunacode.cli.main import app; print('TunaCode imports working')" 2>&1 | tee -a "$LOG_FILE"; then
+        log "${GREEN}✓${NC} Basic import test passed"
+    else
+        log "${RED}✗${NC} Basic import test failed"
+        cleanup_on_failure
+    fi
 else
-    log "${RED}✗${NC} Basic import test failed"
-    cleanup_on_failure
+    if "$VENV_DIR/bin/python" -c "from tunacode.cli.main import app; print('TunaCode imports working')" 2>&1 | tee -a "$LOG_FILE"; then
+        log "${GREEN}✓${NC} Basic import test passed"
+    else
+        log "${RED}✗${NC} Basic import test failed"
+        cleanup_on_failure
+    fi
 fi
 
 # Success! Clear the trap
@@ -261,28 +393,65 @@ trap - ERR
 
 # Display summary
 log "\n${GREEN}✨ Development environment setup complete!${NC}"
-log "\nInstalled packages:"
-log "${BLUE}Python:${NC} $("$VENV_DIR/bin/python" --version)"
-log "${BLUE}pip:${NC} $("$VENV_DIR/bin/pip" --version | cut -d' ' -f2)"
-log "${BLUE}pydantic-ai:${NC} $("$VENV_DIR/bin/pip" show pydantic-ai | grep Version | cut -d' ' -f2)"
+log "\nSetup Summary:"
+
+# Display tool status
+if [ "$UV_AVAILABLE" = true ] && [ "$HATCH_AVAILABLE" = true ]; then
+    log "${GREEN}✓${NC} UV + Hatch: Fast, modern Python toolchain active"
+elif [ "$UV_AVAILABLE" = true ]; then
+    log "${BLUE}✓${NC} UV: Fast package installation active"
+    log "${YELLOW}  Tip: Install Hatch for full modern toolchain${NC}"
+elif [ "$HATCH_AVAILABLE" = true ]; then
+    log "${BLUE}✓${NC} Hatch: Modern build system active (using pip)"
+else
+    log "${BLUE}✓${NC} pip: Standard package management active"
+    log "${YELLOW}  Tip: Install UV and Hatch for 10-100x faster operations${NC}"
+fi
+
+# Show version info
+if [ "$HATCH_AVAILABLE" = true ]; then
+    log "\n${BLUE}Python:${NC} $(hatch run python --version)"
+    log "${BLUE}pydantic-ai:${NC} $(hatch run pip show pydantic-ai | grep Version | cut -d' ' -f2)"
+else
+    log "\n${BLUE}Python:${NC} $("$VENV_DIR/bin/python" --version)"
+    log "${BLUE}pip:${NC} $("$VENV_DIR/bin/pip" --version | cut -d' ' -f2)"
+    log "${BLUE}pydantic-ai:${NC} $("$VENV_DIR/bin/pip" show pydantic-ai | grep Version | cut -d' ' -f2)"
+fi
 
 # Show available commands
-log "\n${GREEN}Available hatch commands:${NC}"
-log "  ${BLUE}hatch run lint${NC}      - Run linting and formatting (ruff)"
-log "  ${BLUE}hatch run test${NC}      - Run test suite"
-log "  ${BLUE}hatch run coverage${NC}  - Run tests with coverage"
-log "  ${BLUE}hatch build${NC}         - Build distribution packages"
-log "  ${BLUE}hatch run clean${NC}     - Clean build artifacts"
-log "\n${GREEN}All build commands now use Hatch:${NC}"
-log "  ${BLUE}hatch run lint/test/build${NC} - Modern Python build system"
+if [ "$HATCH_AVAILABLE" = true ]; then
+    log "\n${GREEN}Available Hatch commands:${NC}"
+    log "  ${BLUE}hatch run lint${NC}      - Run linting and formatting (ruff)"
+    log "  ${BLUE}hatch run test${NC}      - Run test suite"
+    log "  ${BLUE}hatch run coverage${NC}  - Run tests with coverage"
+    log "  ${BLUE}hatch build${NC}         - Build distribution packages"
+    log "  ${BLUE}hatch run clean${NC}     - Clean build artifacts"
+else
+    log "\n${GREEN}Available commands:${NC}"
+    log "  ${BLUE}ruff check .${NC}        - Run linting"
+    log "  ${BLUE}ruff format .${NC}       - Format code"
+    log "  ${BLUE}pytest${NC}              - Run test suite"
+    log "  ${BLUE}python -m build${NC}     - Build distribution packages"
+fi
 
-log "\n${YELLOW}Note:${NC} Activate the virtual environment with: ${GREEN}source venv/bin/activate${NC}"
+if [ "$HATCH_AVAILABLE" != true ]; then
+    log "\n${YELLOW}Note:${NC} Activate the virtual environment with: ${GREEN}source venv/bin/activate${NC}"
+fi
+
 log "\n${GREEN}Setup log saved to:${NC} $LOG_FILE"
 
 # Run a quick test to ensure everything works
 log "\n${BLUE}Running quick test suite verification...${NC}"
-if cd "$PROJECT_ROOT" && "$VENV_DIR/bin/python" -m pytest tests/test_import.py -v 2>&1 | tee -a "$LOG_FILE"; then
-    log "${GREEN}✓${NC} Test framework is working correctly"
+if [ "$HATCH_AVAILABLE" = true ]; then
+    if cd "$PROJECT_ROOT" && hatch run pytest tests/test_import.py -v 2>&1 | tee -a "$LOG_FILE"; then
+        log "${GREEN}✓${NC} Test framework is working correctly"
+    else
+        log "${YELLOW}⚠${NC} Test framework encountered issues - check the log"
+    fi
 else
-    log "${YELLOW}⚠${NC} Test framework encountered issues - check the log"
+    if cd "$PROJECT_ROOT" && "$VENV_DIR/bin/python" -m pytest tests/test_import.py -v 2>&1 | tee -a "$LOG_FILE"; then
+        log "${GREEN}✓${NC} Test framework is working correctly"
+    else
+        log "${YELLOW}⚠${NC} Test framework encountered issues - check the log"
+    fi
 fi
