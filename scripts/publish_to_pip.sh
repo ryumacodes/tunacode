@@ -44,12 +44,12 @@ uv sync --dev >/dev/null 2>&1 || die "Failed to sync dependencies with uv"
 
 # ── run tests and linting before publishing --------------------------------
 log "Running linting checks"
-if ! uv run hatch run lint-check; then
+if ! hatch run lint-check; then
     die "Linting failed! Fix linting errors before publishing."
 fi
 
 log "Running tests"
-if ! uv run hatch run test; then
+if ! hatch run test; then
     die "Tests failed! Fix failing tests before publishing."
 fi
 

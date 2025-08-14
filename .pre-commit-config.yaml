@@ -64,7 +64,7 @@ repos:
       # Existing hatch lint check - already runs ruff which respects exclusions
       - id: hatch-lint
         name: Run hatch lint check
-        entry: uv run hatch run lint
+        entry: hatch run lint
         language: system
         pass_filenames: false
         always_run: true
