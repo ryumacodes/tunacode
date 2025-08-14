@@ -162,6 +162,9 @@ class UpdateCommand(SimpleCommand):
             await ui.muted("Manual update options:")
             await ui.muted("  pipx: pipx upgrade tunacode")
             await ui.muted("  pip:  pip install --upgrade tunacode-cli")
+            await ui.muted(
+                "  venv: uv pip install --python ~/.tunacode-venv/bin/python --upgrade tunacode-cli"
+            )
             return
 
         # Perform update based on detected method
