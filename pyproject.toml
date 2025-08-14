@@ -152,11 +152,16 @@ follow_imports = "silent"
 # Allow CLAUDE_ANCHOR comments in docstrings
 disable_error_code = ["annotation-unchecked"]
 
+[tool.hatch.envs.default]
+installer = "uv"
+features = ["dev"]
+
 [tool.hatch.envs.default.scripts]
 # Development
 install = "pip install -e '.[dev]'"
 run = "python -m tunacode"
 dev = "python -m tunacode"
+test = "pytest -q tests/characterization tests/test_security.py tests/test_agent_output_formatting.py tests/test_prompt_changes_validation.py"
 test-script = "echo 'Test script works'"
 
 # Type checking and security
@@ -214,7 +219,6 @@ dead-code-report = [
 ]
 
 # Testing
-test = "python -m pytest -q tests/characterization tests/test_security.py tests/test_agent_output_formatting.py tests/test_prompt_changes_validation.py"
 coverage = "pytest --cov=src/tunacode --cov-report=term"
 
 # Building
