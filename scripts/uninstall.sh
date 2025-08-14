@@ -64,9 +64,9 @@ detect_installations() {
     local global_system_working=false
     local global_user_working=false
     local pipx_working=false
-    
+
     echo -e "${BLUE}Scanning for TunaCode installations...${NC}"
-    
+
     # Check venv installation
     if [ -d "$VENV_DIR" ]; then
         found_venv=true
@@ -81,7 +81,7 @@ detect_installations() {
             echo -e "${YELLOW}⚠${NC} Found venv directory but no tunacode binary"
         fi
     fi
-    
+
     # Check global system installation
     if command -v tunacode &>/dev/null; then
         local tunacode_path=$(command -v tunacode)
@@ -95,7 +95,7 @@ detect_installations() {
             fi
         fi
     fi
-    
+
     # Check global user installation (direct pip --user installs)
     if [ -f "$HOME/.local/bin/tunacode" ] && [ "$HOME/.local/bin/tunacode" != "$BIN_DIR/tunacode" ]; then
         found_global_user=true
@@ -106,7 +106,7 @@ detect_installations() {
             echo -e "${YELLOW}⚠${NC} Found global user installation but not working"
         fi
     fi
-    
+
     # Check pipx installation
     if command_exists pipx; then
         if pipx list 2>/dev/null | grep -q "tunacode"; then
@@ -119,7 +119,7 @@ detect_installations() {
             fi
         fi
     fi
-    
+
     # Check wrapper script
     if [ -f "$BIN_DIR/tunacode" ]; then
         echo -e "${BLUE}Found wrapper script at $BIN_DIR/tunacode${NC}"
@@ -133,7 +133,7 @@ detect_installations() {
             echo -e "${YELLOW}⚠${NC} Wrapper script not executable"
         fi
     fi
-    
+
     # Export detection results
     export FOUND_VENV=$found_venv
     export FOUND_GLOBAL_SYSTEM=$found_global_system
@@ -165,7 +165,7 @@ if [ $installation_count -eq 0 ]; then
     print_status "Checking for leftover files anyway..."
 else
     print_status "Found $installation_count TunaCode installation(s)"
-    
+
     # If multiple installations, ask user what to remove
     if [ $installation_count -gt 1 ]; then
         echo ""
@@ -182,21 +182,21 @@ else
         echo ""
         echo -n "Choice (1-3): "
         read -r choice
-        
+
         case "$choice" in
-            1) 
+            1)
                 REMOVE_ALL=true
                 print_status "Will remove all installations"
                 ;;
-            2) 
+            2)
                 REMOVE_ALL=false
                 print_status "Interactive removal mode"
                 ;;
-            3) 
+            3)
                 print_status "Uninstall cancelled by user"
                 exit 0
                 ;;
-            *) 
+            *)
                 print_error "Invalid choice. Cancelling uninstall."
                 exit 1
                 ;;
@@ -205,10 +205,10 @@ else
         REMOVE_ALL=true
         print_status "Single installation detected, will remove it"
     fi
-    
+
     echo ""
     print_status "Proceeding with TunaCode removal..."
-    
+
     # Remove venv installation
     if [ "$FOUND_VENV" = true ]; then
         should_remove=true
@@ -217,7 +217,7 @@ else
             read -r response
             [ "$response" != "y" ] && [ "$response" != "Y" ] && should_remove=false
         fi
-        
+
         if [ "$should_remove" = true ]; then
             print_status "Removing venv installation..."
             if safe_remove "$VENV_DIR"; then
@@ -226,7 +226,7 @@ else
             fi
         fi
     fi
-    
+
     # Remove pipx installation
     if [ "$FOUND_PIPX" = true ]; then
         should_remove=true
@@ -235,7 +235,7 @@ else
             read -r response
             [ "$response" != "y" ] && [ "$response" != "Y" ] && should_remove=false
         fi
-        
+
         if [ "$should_remove" = true ]; then
             print_status "Removing pipx installation..."
             if pipx uninstall tunacode; then
@@ -247,7 +247,7 @@ else
             fi
         fi
     fi
-    
+
     # Remove global user installation
     if [ "$FOUND_GLOBAL_USER" = true ]; then
         should_remove=true
@@ -256,12 +256,12 @@ else
             read -r response
             [ "$response" != "y" ] && [ "$response" != "Y" ] && should_remove=false
         fi
-        
+
         if [ "$should_remove" = true ]; then
             print_status "Removing global user installation..."
             # Try different methods for user installations
             local removed_via_pip=false
-            
+
             # Try UV first if available
             if command_exists uv; then
                 if uv pip uninstall tunacode-cli --user 2>/dev/null; then
@@ -269,7 +269,7 @@ else
                     print_success "Removed via UV"
                 fi
             fi
-            
+
             # Fallback to pip
             if [ "$removed_via_pip" = false ]; then
                 if pip uninstall tunacode-cli -y --user 2>/dev/null; then
@@ -282,7 +282,7 @@ else
                     fi
                 fi
             fi
-            
+
             if [ "$removed_via_pip" = true ]; then
                 found_installation=true
                 ((removed_count++))
@@ -291,7 +291,7 @@ else
             fi
         fi
     fi
-    
+
     # Remove global system installation
     if [ "$FOUND_GLOBAL_SYSTEM" = true ]; then
         should_remove=true
@@ -300,11 +300,11 @@ else
             read -r response
             [ "$response" != "y" ] && [ "$response" != "Y" ] && should_remove=false
         fi
-        
+
         if [ "$should_remove" = true ]; then
             print_status "Removing global system installation..."
             local removed_via_pip=false
-            
+
             # Try UV first if available
             if command_exists uv; then
                 if uv pip uninstall tunacode-cli --system 2>/dev/null; then
@@ -312,7 +312,7 @@ else
                     print_success "Removed via UV --system"
                 fi
             fi
-            
+
             # Fallback to pip
             if [ "$removed_via_pip" = false ]; then
                 if pip uninstall tunacode-cli -y 2>/dev/null; then
@@ -331,7 +331,7 @@ else
                     fi
                 fi
             fi
-            
+
             if [ "$removed_via_pip" = true ]; then
                 found_installation=true
                 ((removed_count++))
