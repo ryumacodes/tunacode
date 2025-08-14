@@ -1,11 +1,11 @@
 [build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "tunacode-cli"
 
-version = "0.0.60"
+version = "0.0.61"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
@@ -170,7 +170,7 @@ typecheck = "mypy src/"
 security = "bandit -r src/ -ll"
 
 # Version management
-version = "0.0.60"
+version = "0.0.61"
 
 # Release workflow
 release = [
@@ -270,3 +270,6 @@ python = "3.12"
 
 [tool.hatch.envs.py313]
 python = "3.13"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tunacode"]
