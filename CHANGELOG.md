@@ -29,6 +29,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created detailed technical documentation for directory caching system
 - Updated documentation index with performance optimization guides
 
+## [0.0.62] - 2025-08-14
+
+### Added
+
+- **Enhanced Installation Experience**: Complete overhaul of user onboarding
+  - **Automatic Config Creation**: Install script now creates `~/.config/tunacode.json` with sensible defaults
+  - **Comprehensive Setup Guidance**: Post-install messages with clear next steps for API key configuration
+  - **Setup Wizard Integration**: Prominent mention of `tunacode --setup` for guided configuration
+  - **Default Model Update**: Changed default from OpenAI to `openrouter:openai/gpt-4.1` for broader model access
+
+- **UV+Hatch Integration Improvements**: Complete build system enhancements
+  - **Dependency Management**: Fixed runtime vs dev dependency issues (moved `defusedxml` to runtime)
+  - **Build System**: Migrated to `hatchling` build backend with proper wheel configuration
+  - **Publishing Pipeline**: Streamlined publish workflow with pure Hatch+UV integration
+
+- **Robust Installation Scripts**: Professional-grade installation and maintenance
+  - **Smart Detection**: Install script distinguishes wrapper scripts from actual binaries
+  - **Update Logic**: Intelligent update detection for venv, global, and system installations
+  - **Comprehensive Uninstall**: Complete removal tool with multi-installation detection
+  - **UV Acceleration**: 10-100x faster installs when UV is available with graceful pip fallback
+
+### Changed
+
+- **Pre-commit Hook Optimization**: Consistent tool usage strategy
+  - Use `hatch run` for commands defined in pyproject.toml scripts
+  - Use `uv run` for standalone tools not managed by hatch environments
+  - Updated test runner from `uv run pytest` to `hatch run test` for consistency
+  - Enhanced CI configuration with appropriate hook skipping
+
+- **Development Workflow**: Improved developer experience
+  - All 298 tests passing with new build system
+  - Optimized pre-commit hooks for faster development cycles
+  - Better documentation maintenance with automated quality checks
+
+### Fixed
+
+- **Build System Issues**: Resolved setuptools to hatchling migration problems
+- **Dependency Resolution**: Fixed missing runtime dependencies in hatch environments
+- **Install Script**: Added missing print helper functions for consistent colored output
+- **Documentation**: Updated UV+Hatch setup documentation with recent improvements
+
+### Documentation
+
+- **UV+Hatch Setup Guide**: Comprehensive documentation of build system migration
+- **Installation Experience**: Documented automatic config creation and user guidance
+- **Development Workflow**: Updated all build, test, and deployment procedures
+- **Pre-commit Strategy**: Clear guidelines for tool selection and usage
+
 ## [0.0.56] - 2025-08-11
 
 ### Added
