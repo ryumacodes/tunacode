@@ -71,20 +71,27 @@ detect_installations() {
         fi
     fi
 
-    # Check global user installation
-    if [ -f "$HOME/.local/bin/tunacode" ] && [ "$HOME/.local/bin/tunacode" != "$BIN_DIR/tunacode" ]; then
-        found_global_user=true
-        if "$HOME/.local/bin/tunacode" --version &>/dev/null; then
-            global_user_working=true
-            echo -e "${GREEN}✓${NC} Found working global user installation"
+    # Check global user installation (distinguish from wrapper script)
+    if [ -f "$HOME/.local/bin/tunacode" ]; then
+        # Check if it's our wrapper script or actual binary
+        if grep -q "\.tunacode-venv/bin/tunacode" "$HOME/.local/bin/tunacode" 2>/dev/null; then
+            # This is our wrapper script, not a user install
+            echo -e "${BLUE}Found wrapper script pointing to venv${NC}"
         else
-            echo -e "${YELLOW}⚠${NC} Found global user installation but it's not working"
+            # This is an actual user site-packages installation
+            found_global_user=true
+            if "$HOME/.local/bin/tunacode" --version &>/dev/null; then
+                global_user_working=true
+                echo -e "${GREEN}✓${NC} Found working global user installation"
+            else
+                echo -e "${YELLOW}⚠${NC} Found global user installation but it's not working"
+            fi
         fi
     fi
 
-    # Check wrapper script health
+    # Check wrapper script health (only if it's actually our wrapper)
     local wrapper_status="missing"
-    if [ -f "$BIN_DIR/tunacode" ]; then
+    if [ -f "$BIN_DIR/tunacode" ] && grep -q "\.tunacode-venv/bin/tunacode" "$BIN_DIR/tunacode" 2>/dev/null; then
         if [ -x "$BIN_DIR/tunacode" ]; then
             if "$BIN_DIR/tunacode" --version &>/dev/null; then
                 wrapper_status="working"
@@ -97,8 +104,6 @@ detect_installations() {
             wrapper_status="not_executable"
             echo -e "${YELLOW}⚠${NC} Wrapper script not executable"
         fi
-    else
-        echo -e "${YELLOW}⚠${NC} No wrapper script found"
     fi
 
     # Export detection results
@@ -452,9 +457,47 @@ if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
   fi
 fi
 
-# Create config directory (for user config storage)
+# Create config directory and initial config file
 CONFIG_DIR="${HOME}/.config"
+CONFIG_FILE="$CONFIG_DIR/tunacode.json"
 mkdir -p "$CONFIG_DIR"
+
+# Create initial config file if it doesn't exist
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo -e "${BLUE}Creating initial configuration file...${NC}"
+    cat <<'EOC' >"$CONFIG_FILE"
+{
+    "default_model": "openai:gpt-4.1",
+    "env": {
+        "ANTHROPIC_API_KEY": "",
+        "GEMINI_API_KEY": "",
+        "OPENAI_API_KEY": "",
+        "OPENROUTER_API_KEY": ""
+    },
+    "settings": {
+        "max_retries": 10,
+        "max_iterations": 40,
+        "tool_ignore": ["read_file"],
+        "guide_file": "TUNACODE.md",
+        "fallback_response": true,
+        "fallback_verbosity": "normal",
+        "context_window_size": 200000,
+        "ripgrep": {
+            "use_bundled": false,
+            "timeout": 10,
+            "max_buffer_size": 1048576,
+            "max_results": 100,
+            "enable_metrics": false,
+            "debug": false
+        }
+    },
+    "mcpServers": {}
+}
+EOC
+    print_success "Created config file at $CONFIG_FILE"
+else
+    print_status "Config file already exists at $CONFIG_FILE"
+fi
 
 # Check if bin directory is in PATH (after our auto-fallback)
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
@@ -469,8 +512,6 @@ if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
 fi
 
 echo -e "\n${GREEN}✨ Installation complete!${NC}"
-echo -e "\nRun ${BLUE}tunacode${NC} to get started"
-echo -e "Run ${BLUE}tunacode --help${NC} for usage information"
 
 # Test if we can run tunacode
 if command -v tunacode &> /dev/null; then
@@ -479,3 +520,16 @@ else
     echo -e "\n${YELLOW}!${NC} tunacode command not found in PATH"
     echo -e "   Try running: ${GREEN}$BIN_DIR/tunacode${NC}"
 fi
+
+echo ""
+echo -e "${BLUE}🔧 Next Steps:${NC}"
+echo -e "1. ${BLUE}Configure API keys:${NC} Edit ${GREEN}~/.config/tunacode.json${NC}"
+echo -e "   - Add your OpenAI, Anthropic, or other provider API keys"
+echo -e "   - Or run ${BLUE}tunacode --setup${NC} for guided configuration"
+echo -e ""
+echo -e "2. ${BLUE}Get started:${NC}"
+echo -e "   - Run ${BLUE}tunacode${NC} to start an interactive session"
+echo -e "   - Run ${BLUE}tunacode --help${NC} for all available options"
+echo -e ""
+echo -e "📖 ${BLUE}Documentation:${NC} Visit the repo for guides and examples"
+echo -e "🔑 ${BLUE}API Keys:${NC} You'll need keys from OpenAI, Anthropic, or OpenRouter to use TunaCode"
