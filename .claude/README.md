@@ -26,6 +26,8 @@ Developer and agent-specific documentation for tunacode.
 │   ├── fix-text-alignment-layout-task3.md
 │   ├── task4_ui_formatting_fix.md
 │   └── v0.0.53_to_v0.0.54.diff
+├── development/               # Development setup and guides
+│   └── uv-hatch-setup.md     # UV + Hatch configuration guide
 ├── metadata/                  # Project metadata
 │   ├── components.yml
 │   └── hotspots.txt

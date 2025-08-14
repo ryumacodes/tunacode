@@ -136,12 +136,12 @@ git push
 # ── build -------------------------------------------------------------------
 if [[ "$skip_build" != "true" ]]; then
     log "Building wheel/sdist"
-    uv run python -m build
+    hatch build
 fi
 
 # ── upload ------------------------------------------------------------------
 log "Uploading to PyPI"
-uv run python -m twine upload -r pypi dist/* || log "Upload may have failed - package might already exist on PyPI"
+hatch run python -m twine upload -r pypi dist/* || log "Upload may have failed - package might already exist on PyPI"
 
 log "✅ SUCCESS: $PKG $VERSION published on PyPI"
 log "🎉 Deployment complete! Package available at: https://pypi.org/project/$PKG/$VERSION/"
