@@ -21,6 +21,23 @@ BIN_DIR="${HOME}/.local/bin"
 PYTHON=${PYTHON:-python3}
 USE_UV=false
 
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
 echo -e "${BLUE}🐟 TunaCode CLI Installer${NC}"
 echo "================================"
 
@@ -496,7 +513,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 EOC
     print_success "Created config file at $CONFIG_FILE"
 else
-    print_status "Config file already exists at $CONFIG_FILE"
+    echo -e "${BLUE}Config file already exists at $CONFIG_FILE${NC}"
 fi
 
 # Check if bin directory is in PATH (after our auto-fallback)
