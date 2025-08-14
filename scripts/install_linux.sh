@@ -484,7 +484,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     echo -e "${BLUE}Creating initial configuration file...${NC}"
     cat <<'EOC' >"$CONFIG_FILE"
 {
-    "default_model": "openai:gpt-4.1",
+    "default_model": "openrouter:openai/gpt-4.1",
     "env": {
         "ANTHROPIC_API_KEY": "",
         "GEMINI_API_KEY": "",
