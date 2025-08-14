@@ -9,7 +9,7 @@ from tunacode.constants import GUIDE_FILE_NAME, ToolName
 from tunacode.types import UserConfig
 
 DEFAULT_USER_CONFIG: UserConfig = {
-    "default_model": "openai:gpt-4.1",
+    "default_model": "openrouter:openai/gpt-4.1",
     "env": {
         "ANTHROPIC_API_KEY": "",
         "GEMINI_API_KEY": "",
