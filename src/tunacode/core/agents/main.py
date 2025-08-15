@@ -214,7 +214,7 @@ async def process_request(
                             await ui.muted(
                                 f"   Recent tools: {get_recent_tools_context(state_manager.session.tool_calls)}"
                             )
-                            await ui.muted("   Injecting 'YOU FAILED TRY HARDER' prompt")
+                            await ui.muted("   Injecting retry guidance prompt")
 
                         state_manager.session.consecutive_empty_responses = 0
                 else:

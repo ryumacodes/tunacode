@@ -94,27 +94,28 @@ def create_empty_response_message(
     iteration: int,
     state_manager: StateManager,
 ) -> str:
-    """Create an aggressive message for handling empty responses."""
+    """Create a constructive message for handling empty responses."""
     tools_context = get_recent_tools_context(tool_calls)
 
-    content = f"""FAILURE DETECTED: You returned {("an " + empty_reason if empty_reason != "empty" else "an empty")} response.
-
-This is UNACCEPTABLE. You FAILED to produce output.
+    content = f"""Response appears {empty_reason if empty_reason != "empty" else "empty"} or incomplete. Let's troubleshoot and try again.
 
 Task: {message[:200]}...
 {tools_context}
-Current iteration: {iteration}
+Attempt: {iteration}
 
-TRY AGAIN RIGHT NOW:
+Please take one of these specific actions:
 
-1. If your search returned no results → Try a DIFFERENT search pattern
-2. If you found what you need → Use TUNACODE_TASK_COMPLETE
-3. If you're stuck → EXPLAIN SPECIFICALLY what's blocking you
-4. If you need to explore → Use list_dir or broader searches
+1. **Search yielded no results?** → Try alternative search terms or broader patterns
+2. **Found what you need?** → Use TUNACODE_TASK_COMPLETE to finalize
+3. **Encountering a blocker?** → Explain the specific issue preventing progress
+4. **Need more context?** → Use list_dir or expand your search scope
 
-YOU MUST PRODUCE REAL OUTPUT IN THIS RESPONSE. NO EXCUSES.
-EXECUTE A TOOL OR PROVIDE SUBSTANTIAL CONTENT.
-DO NOT RETURN ANOTHER EMPTY RESPONSE."""
+**Expected in your response:**
+- Execute at least one tool OR provide substantial analysis
+- If stuck, clearly describe what you've tried and what's blocking you
+- Avoid empty responses - the system needs actionable output to proceed
+
+Ready to continue with a complete response."""
 
     return content
 
