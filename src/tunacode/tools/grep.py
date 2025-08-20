@@ -20,8 +20,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-import defusedxml.ElementTree as ET
-
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.exceptions import TooBroadPatternError, ToolExecutionError
 from tunacode.tools.base import BaseTool
@@ -32,6 +30,7 @@ from tunacode.tools.grep_components import (
     SearchResult,
 )
 from tunacode.tools.grep_components.result_formatter import ResultFormatter
+from tunacode.tools.xml_helper import load_parameters_schema_from_xml, load_prompt_from_xml
 from tunacode.utils.ripgrep import RipgrepExecutor
 from tunacode.utils.ripgrep import metrics as ripgrep_metrics
 
@@ -66,17 +65,10 @@ class ParallelGrep(BaseTool):
         Returns:
             str: The loaded prompt from XML or a default prompt
         """
-        try:
-            # Load prompt from XML file
-            prompt_file = Path(__file__).parent / "prompts" / "grep_prompt.xml"
-            if prompt_file.exists():
-                tree = ET.parse(prompt_file)
-                root = tree.getroot()
-                description = root.find("description")
-                if description is not None:
-                    return description.text.strip()
-        except Exception as e:
-            logger.warning(f"Failed to load XML prompt for grep: {e}")
+        # Try to load from XML helper
+        prompt = load_prompt_from_xml("grep")
+        if prompt:
+            return prompt
 
         # Fallback to default prompt
         return """A powerful search tool built on ripgrep
@@ -94,44 +86,10 @@ Usage:
         Returns:
             Dict containing the JSON schema for tool parameters
         """
-        # Try to load from XML first
-        try:
-            prompt_file = Path(__file__).parent / "prompts" / "grep_prompt.xml"
-            if prompt_file.exists():
-                tree = ET.parse(prompt_file)
-                root = tree.getroot()
-                parameters = root.find("parameters")
-                if parameters is not None:
-                    schema: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
-                    required_fields: List[str] = []
-
-                    for param in parameters.findall("parameter"):
-                        name = param.get("name")
-                        required = param.get("required", "false").lower() == "true"
-                        param_type = param.find("type")
-                        description = param.find("description")
-
-                        if name and param_type is not None:
-                            prop = {
-                                "type": param_type.text.strip(),
-                                "description": description.text.strip()
-                                if description is not None
-                                else "",
-                            }
-
-                            # Add enum values if present
-                            enums = param.findall("enum")
-                            if enums:
-                                prop["enum"] = [e.text.strip() for e in enums]
-
-                            schema["properties"][name] = prop
-                            if required:
-                                required_fields.append(name)
-
-                    schema["required"] = required_fields
-                    return schema
-        except Exception as e:
-            logger.warning(f"Failed to load parameters from XML for grep: {e}")
+        # Try to load from XML helper
+        schema = load_parameters_schema_from_xml("grep")
+        if schema:
+            return schema
 
         # Fallback to hardcoded schema
         return {
