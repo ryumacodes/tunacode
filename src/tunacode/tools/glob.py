@@ -14,11 +14,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union
 
-import defusedxml.ElementTree as ET
-
 from tunacode.core.code_index import CodeIndex
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import BaseTool
+from tunacode.tools.xml_helper import load_parameters_schema_from_xml, load_prompt_from_xml
 
 # Configuration
 MAX_RESULTS = 5000  # Maximum files to return
@@ -70,17 +69,10 @@ class GlobTool(BaseTool):
         Returns:
             str: The loaded prompt from XML or a default prompt
         """
-        try:
-            # Load prompt from XML file
-            prompt_file = Path(__file__).parent / "prompts" / "glob_prompt.xml"
-            if prompt_file.exists():
-                tree = ET.parse(prompt_file)
-                root = tree.getroot()
-                description = root.find("description")
-                if description is not None:
-                    return description.text.strip()
-        except Exception:
-            pass  # Fall through to default
+        # Try to load from XML helper
+        prompt = load_prompt_from_xml("glob")
+        if prompt:
+            return prompt
 
         # Fallback to default prompt
         return """Fast file pattern matching tool
@@ -92,39 +84,10 @@ class GlobTool(BaseTool):
     @lru_cache(maxsize=1)
     def _get_parameters_schema(self) -> Dict[str, Any]:
         """Get the parameters schema for the glob tool."""
-        # Try to load from XML first
-        try:
-            prompt_file = Path(__file__).parent / "prompts" / "glob_prompt.xml"
-            if prompt_file.exists():
-                tree = ET.parse(prompt_file)
-                root = tree.getroot()
-                parameters = root.find("parameters")
-                if parameters is not None:
-                    schema: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
-                    required_fields: List[str] = []
-
-                    for param in parameters.findall("parameter"):
-                        name = param.get("name")
-                        required = param.get("required", "false").lower() == "true"
-                        param_type = param.find("type")
-                        description = param.find("description")
-
-                        if name and param_type is not None:
-                            prop = {
-                                "type": param_type.text.strip(),
-                                "description": description.text.strip()
-                                if description is not None
-                                else "",
-                            }
-
-                            schema["properties"][name] = prop
-                            if required:
-                                required_fields.append(name)
-
-                    schema["required"] = required_fields
-                    return schema
-        except Exception:
-            pass  # Fall through to hardcoded schema
+        # Try to load from XML helper
+        schema = load_parameters_schema_from_xml("glob")
+        if schema:
+            return schema
 
         # Fallback to hardcoded schema
         return {
