@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.69] - 2025-08-21
 
+### Summary
+This release includes comprehensive command system documentation, updated model configurations, and builds upon recent community contributions including the slash command system by @Lftobs (#85) and onboarding improvements by @ryumacodes (#88).
+
 ### Changed
 - Updated OpenRouter GPT model reference from `gpt-4o` to `gpt-4.1` in setup configuration
 
