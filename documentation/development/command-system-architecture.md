@@ -257,4 +257,3 @@ The `CommandContext` provides access to:
 
 - [Creating Custom Commands](creating-custom-commands.md) - Step-by-step guide
 - [User Commands](../user/commands.md) - User-facing command documentation
-- [Template System](../user/templates.md) - Template command integration
