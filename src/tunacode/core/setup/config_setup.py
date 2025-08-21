@@ -483,22 +483,30 @@ class ConfigSetup(BaseSetup):
         # Provide smart recommendations based on provider
         recommendations = {
             "OpenAI": [
-                ("openai:gpt-4o", "Latest GPT-4 model (recommended)"),
-                ("openai:gpt-4-turbo", "Fast GPT-4 variant"),
+                ("openai:gpt-4o", "GPT-4o flagship multimodal model (recommended)"),
+                ("openai:gpt-4.1", "Latest GPT-4.1 with enhanced coding"),
+                ("openai:o3", "Advanced reasoning model for complex tasks"),
             ],
             "Anthropic": [
-                ("anthropic:claude-3-opus-20240229", "Most capable Claude model (recommended)"),
-                ("anthropic:claude-3-haiku-20240307", "Fast and cost-effective"),
+                ("anthropic:claude-sonnet-4", "Claude Sonnet 4 latest generation (recommended)"),
+                ("anthropic:claude-opus-4.1", "Most capable Claude with extended thinking"),
+                ("anthropic:claude-3.5-sonnet", "Claude 3.5 Sonnet proven performance"),
             ],
             "OpenRouter": [
-                ("openrouter:anthropic/claude-3.5-sonnet", "Claude 3.5 Sonnet (recommended)"),
-                ("openrouter:openai/gpt-4o", "GPT-4o via OpenRouter"),
-                ("openrouter:google/gemini-2.0-flash-exp", "Google Gemini 2.0"),
+                (
+                    "openrouter:anthropic/claude-sonnet-4",
+                    "Claude Sonnet 4 via OpenRouter (recommended)",
+                ),
+                ("openrouter:openai/gpt-4o", "GPT-4o multimodal via OpenRouter"),
+                ("openrouter:google/gemini-2.5-flash", "Google Gemini 2.5 Flash latest"),
             ],
             "Google": [
-                ("google:gemini-2.0-flash-exp", "Latest Gemini model (recommended)"),
-                ("google:gemini-1.5-pro", "Gemini 1.5 Pro"),
-                ("google:gemini-1.5-flash", "Fast Gemini variant"),
+                (
+                    "google:gemini-2.5-pro",
+                    "Gemini 2.5 Pro with thinking capabilities (recommended)",
+                ),
+                ("google:gemini-2.5-flash", "Gemini 2.5 Flash best price-performance"),
+                ("google:gemini-2.0-flash", "Gemini 2.0 Flash with native tool use"),
             ],
         }
 
