@@ -497,7 +497,7 @@ class ConfigSetup(BaseSetup):
                     "openrouter:anthropic/claude-sonnet-4",
                     "Claude Sonnet 4 via OpenRouter (recommended)",
                 ),
-                ("openrouter:openai/gpt-4o", "GPT-4o multimodal via OpenRouter"),
+                ("openrouter:openai/gpt-4.1", "GPT-4.1 via OpenRouter"),
                 ("openrouter:google/gemini-2.5-flash", "Google Gemini 2.5 Flash latest"),
             ],
             "Google": [
