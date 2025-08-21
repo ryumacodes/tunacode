@@ -360,7 +360,7 @@ class ConfigSetup(BaseSetup):
 
         # Welcome message with provider guidance
         await ui.panel(
-            "🎯 Welcome to TunaCode Setup Wizard!",
+            "Welcome to TunaCode Setup Wizard!",
             "This guided setup will help you configure TunaCode in under 5 minutes.\n"
             "We'll help you choose a provider, set up your API keys, and configure your preferred model.",
             border_style=UI_COLORS["primary"],
@@ -384,10 +384,10 @@ class ConfigSetup(BaseSetup):
             try:
                 user_configuration.save_config(self.state_manager)
                 await ui.panel(
-                    "🎉 Setup Complete!",
+                    "Setup Complete!",
                     f"Configuration saved to: [bold]{self.config_file}[/bold]\n\n"
-                    "🚀 You're ready to start using TunaCode!\n"
-                    "💡 Use [green]/quickstart[/green] anytime for a tutorial.",
+                    "You're ready to start using TunaCode!\n"
+                    "Use [green]/quickstart[/green] anytime for a tutorial.",
                     border_style=UI_COLORS["success"],
                 )
             except ConfigurationError as e:
@@ -397,22 +397,22 @@ class ConfigSetup(BaseSetup):
         """Wizard step 1: Provider selection with detailed explanations."""
         provider_info = {
             "1": {
-                "name": "OpenAI",
-                "description": "GPT-4, GPT-3.5-turbo models",
-                "signup": "https://platform.openai.com/signup",
-                "key_name": "OPENAI_API_KEY",
-            },
-            "2": {
-                "name": "Anthropic",
-                "description": "Claude-3.5-sonnet, Claude-3 models",
-                "signup": "https://console.anthropic.com/",
-                "key_name": "ANTHROPIC_API_KEY",
-            },
-            "3": {
                 "name": "OpenRouter",
                 "description": "Access to multiple models (GPT-4, Claude, Gemini, etc.)",
                 "signup": "https://openrouter.ai/",
                 "key_name": "OPENROUTER_API_KEY",
+            },
+            "2": {
+                "name": "OpenAI",
+                "description": "GPT-4 models",
+                "signup": "https://platform.openai.com/signup",
+                "key_name": "OPENAI_API_KEY",
+            },
+            "3": {
+                "name": "Anthropic",
+                "description": "Claude-3 models",
+                "signup": "https://console.anthropic.com/",
+                "key_name": "ANTHROPIC_API_KEY",
             },
             "4": {
                 "name": "Google",
@@ -425,7 +425,6 @@ class ConfigSetup(BaseSetup):
         message = "Choose your AI provider:\n\n"
         for key, info in provider_info.items():
             message += f"  {key} - {info['name']}: {info['description']}\n"
-        message += "\n💡 OpenRouter is recommended for beginners (access to all models)"
 
         await ui.panel("Provider Selection", message, border_style=UI_COLORS["primary"])
 
@@ -451,8 +450,8 @@ class ConfigSetup(BaseSetup):
         provider = self._wizard_selected_provider
 
         message = f"Enter your {provider['name']} API key:\n\n"
-        message += f"📋 Get your key from: {provider['signup']}\n"
-        message += "🔒 Your key will be stored securely in your local config"
+        message += f"Get your key from: {provider['signup']}\n"
+        message += "Your key will be stored securely in your local config"
 
         await ui.panel(f"{provider['name']} API Key", message, border_style=UI_COLORS["primary"])
 
@@ -486,11 +485,9 @@ class ConfigSetup(BaseSetup):
             "OpenAI": [
                 ("openai:gpt-4o", "Latest GPT-4 model (recommended)"),
                 ("openai:gpt-4-turbo", "Fast GPT-4 variant"),
-                ("openai:gpt-3.5-turbo", "Cost-effective option"),
             ],
             "Anthropic": [
-                ("anthropic:claude-3-5-sonnet-20241022", "Latest Claude model (recommended)"),
-                ("anthropic:claude-3-opus-20240229", "Most capable Claude model"),
+                ("anthropic:claude-3-opus-20240229", "Most capable Claude model (recommended)"),
                 ("anthropic:claude-3-haiku-20240307", "Fast and cost-effective"),
             ],
             "OpenRouter": [
@@ -511,7 +508,7 @@ class ConfigSetup(BaseSetup):
         for i, (model_id, description) in enumerate(models, 1):
             message += f"  {i} - {description}\n"
 
-        message += "\n💡 You can change this later with [green]/model[/green]"
+        message += "\nYou can change this later with [green]/model[/green]"
 
         await ui.panel("Model Selection", message, border_style=UI_COLORS["primary"])
 
@@ -538,8 +535,7 @@ class ConfigSetup(BaseSetup):
         """Wizard step 4: Optional settings configuration."""
         message = "Configure optional settings:\n\n"
         message += "• Tutorial: Enable interactive tutorial for new users\n"
-        message += "• Streaming: Enable real-time response streaming\n"
-        message += "\n⏭️  Skip this step to use recommended defaults"
+        message += "\nSkip this step to use recommended defaults"
 
         await ui.panel("Optional Settings", message, border_style=UI_COLORS["primary"])
 
@@ -557,14 +553,6 @@ class ConfigSetup(BaseSetup):
 
         self.state_manager.session.user_config["settings"]["enable_tutorial"] = enable_tutorial
 
-        # Ask about streaming
-        streaming_choice = await ui.input(
-            "wizard_streaming",
-            pretext="  Enable response streaming? [Y/n]: ",
-            state_manager=self.state_manager,
-        )
-
-        enable_streaming = streaming_choice.strip().lower() not in ["n", "no", "false"]
-        self.state_manager.session.user_config["streaming"] = enable_streaming
+        # Streaming is always enabled - no user choice needed
 
         await ui.info("Optional settings configured!")
