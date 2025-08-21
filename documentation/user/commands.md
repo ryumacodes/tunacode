@@ -59,6 +59,55 @@ These commands are for debugging and troubleshooting the agent's behavior.
 
 - **`/parsetools`**: Manually triggers the parsing of JSON tool calls from the last response. This is a fallback for when the structured tool calling fails.
 
+## Utility Commands
+
+- **`/command-reload`**: Reloads all slash commands from the command directories. This is useful when developing or modifying custom slash commands, as it allows you to test changes without restarting TunaCode.
+
 ## Built-in Commands
 
 - **`exit`**: Exits the TunaCode application.
+
+## Custom Slash Commands
+
+TunaCode supports user-defined slash commands written in Markdown. These commands can be created without modifying the TunaCode codebase.
+
+### How Slash Commands Work
+
+Slash commands are discovered from these directories (in order of priority):
+1. `.tunacode/commands/` in your project directory
+2. `.claude/commands/` in your project directory
+3. `~/.tunacode/commands/` in your home directory
+4. `~/.claude/commands/` in your home directory
+
+Commands are invoked using their namespace and path: `/namespace:path:to:command`
+
+### Creating a Slash Command
+
+To create a custom command:
+
+1. Create a markdown file in one of the command directories
+2. Optionally add YAML frontmatter for configuration
+3. Write your command prompt/template
+
+Example: `.tunacode/commands/review.md`
+```markdown
+---
+description: "Review code for best practices"
+allowed-tools: ["read_file", "grep"]
+---
+
+Please review the following files for code quality: $ARGUMENTS
+```
+
+Usage: `/project:review src/main.py`
+
+### Template Features
+
+Slash commands support:
+- `$ARGUMENTS` - Command arguments
+- `$ENV_VAR` - Environment variables
+- `@file.py` - Include file contents
+- `@@*.py` - Include files by pattern
+- `!`command`` - Execute shell commands
+
+For detailed information on creating custom commands, see the [development documentation](../development/creating-custom-commands.md).
