@@ -15,6 +15,8 @@ documentation/
 │   └── logging-configuration.md
 ├── development/          # Development practices
 │   ├── codebase-hygiene.md
+│   ├── command-system-architecture.md
+│   ├── creating-custom-commands.md
 │   ├── hatch-build-system.md
 |   ├── performance-optimizations.md
 │   └── prompt-principles.md
@@ -30,6 +32,8 @@ General project documentation for features, architecture, and best practices.
 
 ## Quick Links
 
+- [Command System Architecture](development/command-system-architecture.md) - Technical overview of the command system design and components.
+- [Creating Custom Commands](development/creating-custom-commands.md) - Step-by-step guide for creating built-in and slash commands.
 - [Hatch Build System](development/hatch-build-system.md) - Complete guide to using Hatch for development and building.
 - [Configuration File Example](configuration/config-file-example.md) - Complete example of `~/.config/tunacode.json` with all available settings.
 - [Performance Optimizations](development/performance-optimizations.md) - Major performance improvements and optimization strategies.
