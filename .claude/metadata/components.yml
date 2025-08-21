@@ -22,11 +22,27 @@ components:
       - repl.py
       - commands.py
       - main.py
+      - commands/slash/processor.py
+      - commands/slash/loader.py
     dependencies:
       - prompt_toolkit
       - rich
     risk_level: medium
     churn_score: 70
+
+  slash_commands:
+    path: src/tunacode/cli/commands/slash/
+    description: Extensible slash command system with hot-reloading
+    key_files:
+      - command.py
+      - loader.py
+      - processor.py
+      - validator.py
+    dependencies:
+      - pydantic
+      - prompt_toolkit
+    risk_level: low
+    churn_score: 15
 
   tools:
     path: src/tunacode/tools/

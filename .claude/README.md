@@ -27,6 +27,8 @@ Developer and agent-specific documentation for tunacode.
 │   ├── task4_ui_formatting_fix.md
 │   └── v0.0.53_to_v0.0.54.diff
 ├── development/               # Development setup and guides
+│   ├── model-updates-2025.md # Latest model versions
+│   ├── slash-commands.md     # Slash command system overview
 │   └── uv-hatch-setup.md     # UV + Hatch configuration guide
 ├── metadata/                  # Project metadata
 │   ├── components.yml
