@@ -52,7 +52,7 @@ See the [Hatch Build System Guide](documentation/development/hatch-build-system.
 
 ## Configuration
 
-Choose your AI provider and set your API key. For more details, see the [Configuration Section](documentation/user/getting-started.md#2-configuration) in the Getting Started Guide.
+Choose your AI provider and set your API key. For more details, see the [Configuration Section](documentation/user/getting-started.md#2-configuration) in the Getting Started Guide. For local models (LM Studio, Ollama, etc.), see the [Local Models Setup Guide](documentation/configuration/local-models.md).
 
 ### Recommended Models
 
