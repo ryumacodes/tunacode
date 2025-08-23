@@ -44,6 +44,10 @@ class ConfigSetup(BaseSetup):
         self.state_manager.session.device_id = system.get_device_id()
         loaded_config = user_configuration.load_config()
 
+        # Set the loaded config to session BEFORE initializing first-time user
+        if loaded_config:
+            self.state_manager.session.user_config = loaded_config
+
         # Initialize first-time user settings if needed
         user_configuration.initialize_first_time_user(self.state_manager)
 
