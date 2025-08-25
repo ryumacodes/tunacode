@@ -16,6 +16,7 @@ from tunacode.exceptions import ConfigurationError
 from tunacode.types import ConfigFile, ConfigPath, UserConfig
 from tunacode.ui import console as ui
 from tunacode.utils import system, user_configuration
+from tunacode.utils.api_key_validation import validate_api_key_for_model
 from tunacode.utils.text_utils import key_to_title
 
 
@@ -138,11 +139,15 @@ class ConfigSetup(BaseSetup):
                 )
             )
 
-        # No model validation - trust user's model choice
+        # Validate API key exists for the selected model
+        model = self.state_manager.session.user_config["default_model"]
+        is_valid, error_msg = validate_api_key_for_model(
+            model, self.state_manager.session.user_config
+        )
+        if not is_valid:
+            raise ConfigurationError(error_msg)
 
-        self.state_manager.session.current_model = self.state_manager.session.user_config[
-            "default_model"
-        ]
+        self.state_manager.session.current_model = model
 
     async def validate(self) -> bool:
         """Validate that configuration is properly set up."""
@@ -152,6 +157,17 @@ class ConfigSetup(BaseSetup):
             valid = False
         elif not self.state_manager.session.user_config.get("default_model"):
             valid = False
+        else:
+            # Validate API key exists for the selected model
+            model = self.state_manager.session.user_config.get("default_model")
+            is_valid, error_msg = validate_api_key_for_model(
+                model, self.state_manager.session.user_config
+            )
+            if not is_valid:
+                valid = False
+                # Store error message for later use
+                setattr(self.state_manager, "_config_error", error_msg)
+
         # Cache result for fastpath
         if valid:
             setattr(self.state_manager, "_config_valid", True)

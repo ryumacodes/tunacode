@@ -77,7 +77,8 @@ def main(
             from tunacode.exceptions import ConfigurationError
 
             if isinstance(e, ConfigurationError):
-                # ConfigurationError already printed helpful message, just exit cleanly
+                # Display the configuration error message
+                await ui.error(str(e))
                 update_task.cancel()  # Cancel the update check
                 return
             import traceback
