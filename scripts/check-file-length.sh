@@ -41,6 +41,7 @@ done < <(find . -type f \
     -not -path "./htmlcov/*" \
     -not -path "./reports/*" \
     -not -path "./node_modules/*" \
+    -not -path "./llm-agent-tools/*" \
     -not -name "*.pyc" \
     -not -name "*.pyo" \
     -not -name "*.so" \
