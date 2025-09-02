@@ -1,3 +1,31 @@
+### CRITICAL WORKFLOW THAT MUST ALWAYS BE FOLLOWED
+
+**The llm-agent-tools scratchpad and RAG system create a knowledge-building workflow:**
+
+```bash
+# Start any task
+./llm-agent-tools/scratchpad.sh scaffold [task_name]
+./llm-agent-tools/claude-rag-lite.sh query "[related terms]"
+# GREP and SEARCH as usual with your own tools
+
+# During work
+./llm-agent-tools/scratchpad.sh append [research|plan|implement]_*.md "progress note"
+./llm-agent-tools/claude-rag-lite.sh query "error or pattern I need"
+# Ask the user questions of any issue or anti-pattern
+
+# Complete work
+./llm-agent-tools/scratchpad.sh fileto [file] [directory] [new_name]
+./llm-agent-tools/scratchpad.sh delta "Feature Name" "what changed"
+./llm-agent-tools/claude-rag-lite.sh build
+
+# Verify it's searchable
+./llm-agent-tools/claude-rag-lite.sh query "what I just built"
+```
+
+**This cycle ensures every piece of work becomes reusable knowledge for the entire team.**
+This keeps a system for developers and other agents in the future and is a separate system from main project documentation.
+llm-agent-tools/scratchpad.sh is NOT your only tool and should be used first, but as an augmentation of your tools.
+
 ### Workflow
 
 - **CRITICAL: WORKTREE REQUIREMENT** - When user requests a worktree, you MUST:
