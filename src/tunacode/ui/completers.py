@@ -143,7 +143,9 @@ class ModelCompleter(Completer):
                 # Try to load models (this will be fast if already loaded)
                 await self.registry.load()
                 self._registry_loaded = True
-                self._models_cache = list(self.registry.models.values()) if self.registry.models else []
+                self._models_cache = (
+                    list(self.registry.models.values()) if self.registry.models else []
+                )
             except Exception:
                 # If loading fails, use empty cache
                 self._models_cache = []
@@ -159,11 +161,11 @@ class ModelCompleter(Completer):
         text = document.text_before_cursor
 
         # Check if we're in a /model command context
-        lines = text.split('\n')
+        lines = text.split("\n")
         current_line = lines[-1].strip()
 
         # Must start with /model
-        if not current_line.startswith('/model'):
+        if not current_line.startswith("/model"):
             return
 
         # Try to load registry synchronously if not loaded
@@ -189,9 +191,7 @@ class ModelCompleter(Completer):
             popular_searches = ["claude", "gpt", "gemini", "openai", "anthropic"]
             for search_term in popular_searches:
                 yield Completion(
-                    text=search_term,
-                    display=f"{search_term} (search)",
-                    display_meta="search term"
+                    text=search_term, display=f"{search_term} (search)", display_meta="search term"
                 )
 
             # Also show top 3 most popular models if we have them
@@ -199,7 +199,7 @@ class ModelCompleter(Completer):
                 popular_models = []
                 # Look for common popular models
                 for model in self._models_cache:
-                    if any(pop in model.id.lower() for pop in ['gpt-4o', 'claude-3', 'gemini-2']):
+                    if any(pop in model.id.lower() for pop in ["gpt-4o", "claude-3", "gemini-2"]):
                         popular_models.append(model)
                         if len(popular_models) >= 3:
                             break
@@ -210,9 +210,7 @@ class ModelCompleter(Completer):
                         display += f" (${model.cost.input}/{model.cost.output})"
 
                     yield Completion(
-                        text=model.full_id,
-                        display=display,
-                        display_meta=f"{model.provider} model"
+                        text=model.full_id, display=display, display_meta=f"{model.provider} model"
                     )
             return
 
@@ -233,12 +231,19 @@ class ModelCompleter(Completer):
         shown_base_models = 0
 
         # Sort base models by popularity/relevance
-        sorted_base_models = sorted(base_models.items(), key=lambda x: (
-            # Popular models first
-            -1 if any(pop in x[0] for pop in ['gpt-4o', 'gpt-4', 'claude-3', 'gemini-2', 'o3', 'o1']) else 0,
-            # Then by name
-            x[0]
-        ))
+        sorted_base_models = sorted(
+            base_models.items(),
+            key=lambda x: (
+                # Popular models first
+                -1
+                if any(
+                    pop in x[0] for pop in ["gpt-4o", "gpt-4", "claude-3", "gemini-2", "o3", "o1"]
+                )
+                else 0,
+                # Then by name
+                x[0],
+            ),
+        )
 
         for base_model_name, variants in sorted_base_models:
             if shown_base_models >= 5:  # Limit to top 5 base models
@@ -279,12 +284,14 @@ class ModelCompleter(Completer):
                 if len(variants) > 1:
                     meta_info += f" ({len(variants)} sources)"
 
-                results.append(Completion(
-                    text=model.full_id,
-                    start_position=start_pos,
-                    display=display,
-                    display_meta=meta_info
-                ))
+                results.append(
+                    Completion(
+                        text=model.full_id,
+                        start_position=start_pos,
+                        display=display,
+                        display_meta=meta_info,
+                    )
+                )
 
                 shown_variants += 1
 
@@ -297,27 +304,27 @@ class ModelCompleter(Completer):
     def _get_provider_display_name(self, provider: str) -> str:
         """Get a user-friendly provider display name."""
         provider_names = {
-            'openai': 'OpenAI Direct',
-            'anthropic': 'Anthropic Direct',
-            'google': 'Google Direct',
-            'google-gla': 'Google Labs',
-            'openrouter': 'OpenRouter',
-            'github-models': 'GitHub Models (FREE)',
-            'azure': 'Azure OpenAI',
-            'fastrouter': 'FastRouter',
-            'requesty': 'Requesty',
-            'cloudflare-workers-ai': 'Cloudflare',
-            'amazon-bedrock': 'AWS Bedrock',
-            'chutes': 'Chutes AI',
-            'deepinfra': 'DeepInfra',
-            'venice': 'Venice AI'
+            "openai": "OpenAI Direct",
+            "anthropic": "Anthropic Direct",
+            "google": "Google Direct",
+            "google-gla": "Google Labs",
+            "openrouter": "OpenRouter",
+            "github-models": "GitHub Models (FREE)",
+            "azure": "Azure OpenAI",
+            "fastrouter": "FastRouter",
+            "requesty": "Requesty",
+            "cloudflare-workers-ai": "Cloudflare",
+            "amazon-bedrock": "AWS Bedrock",
+            "chutes": "Chutes AI",
+            "deepinfra": "DeepInfra",
+            "venice": "Venice AI",
         }
         return provider_names.get(provider, provider.title())
 
 
 def create_completer(
     command_registry: Optional["CommandRegistry"] = None,
-    models_registry: Optional["ModelsRegistry"] = None
+    models_registry: Optional["ModelsRegistry"] = None,
 ) -> Completer:
     """Create a merged completer for commands, file references, and models."""
     completers = [

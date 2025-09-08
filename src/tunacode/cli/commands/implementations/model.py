@@ -60,9 +60,7 @@ class ModelCommand(SimpleCommand):
         return await self._set_model(model_query, args[1:], context)
 
     async def _interactive_select(
-        self,
-        context: CommandContext,
-        initial_query: str = ""
+        self, context: CommandContext, initial_query: str = ""
     ) -> Optional[str]:
         """Show interactive model selector."""
         await self._ensure_registry()
@@ -116,7 +114,7 @@ class ModelCommand(SimpleCommand):
             if model.cost.input is not None:
                 details.append(f"${model.cost.input}/{model.cost.output}")
             if model.limits.context:
-                details.append(f"{model.limits.context//1000}k")
+                details.append(f"{model.limits.context // 1000}k")
             detail_str = f" ({', '.join(details)})" if details else ""
 
             await ui.info(f"{i:2d}. {model.full_id} - {model.name}{detail_str}")
@@ -128,10 +126,7 @@ class ModelCommand(SimpleCommand):
         return None
 
     async def _set_model(
-        self,
-        model_name: str,
-        extra_args: CommandArgs,
-        context: CommandContext
+        self, model_name: str, extra_args: CommandArgs, context: CommandContext
     ) -> Optional[str]:
         """Set model directly or by search."""
         # Load registry for validation
@@ -233,7 +228,7 @@ class ModelCommand(SimpleCommand):
                 if model.cost.input is not None:
                     line += f" (${model.cost.input}/{model.cost.output})"
                 if model.limits.context:
-                    line += f" [{model.limits.context//1000}k]"
+                    line += f" [{model.limits.context // 1000}k]"
                 await ui.muted(line)
 
         return None
@@ -252,19 +247,28 @@ class ModelCommand(SimpleCommand):
                 await ui.info(f"Found routing options for '{base_name}':")
 
                 # Sort variants by cost (FREE first)
-                sorted_variants = sorted(variants, key=lambda m: (
-                    0 if m.cost.input == 0 else 1,  # FREE first
-                    m.cost.input or float('inf'),   # Then by cost
-                    m.provider                      # Then by provider name
-                ))
+                sorted_variants = sorted(
+                    variants,
+                    key=lambda m: (
+                        0 if m.cost.input == 0 else 1,  # FREE first
+                        m.cost.input or float("inf"),  # Then by cost
+                        m.provider,  # Then by provider name
+                    ),
+                )
 
                 for variant in sorted_variants:
-                    cost_display = "FREE" if variant.cost.input == 0 else f"${variant.cost.input}/{variant.cost.output}"
+                    cost_display = (
+                        "FREE"
+                        if variant.cost.input == 0
+                        else f"${variant.cost.input}/{variant.cost.output}"
+                    )
                     provider_name = self._get_provider_display_name(variant.provider)
 
                     await ui.muted(f"  • {variant.full_id} - {provider_name} ({cost_display})")
 
-                await ui.muted("\nUse '/model <provider:model-id>' to select a specific routing option")
+                await ui.muted(
+                    "\nUse '/model <provider:model-id>' to select a specific routing option"
+                )
                 return None
             else:
                 await ui.error(f"Model '{model_id}' not found")
@@ -281,21 +285,30 @@ class ModelCommand(SimpleCommand):
             await ui.print("\nRouting Options:")
 
             # Sort variants by cost (FREE first)
-            sorted_variants = sorted(variants, key=lambda m: (
-                0 if m.cost.input == 0 else 1,  # FREE first
-                m.cost.input or float('inf'),   # Then by cost
-                m.provider                      # Then by provider name
-            ))
+            sorted_variants = sorted(
+                variants,
+                key=lambda m: (
+                    0 if m.cost.input == 0 else 1,  # FREE first
+                    m.cost.input or float("inf"),  # Then by cost
+                    m.provider,  # Then by provider name
+                ),
+            )
 
             for variant in sorted_variants:
-                cost_display = "FREE" if variant.cost.input == 0 else f"${variant.cost.input}/{variant.cost.output}"
+                cost_display = (
+                    "FREE"
+                    if variant.cost.input == 0
+                    else f"${variant.cost.input}/{variant.cost.output}"
+                )
                 provider_name = self._get_provider_display_name(variant.provider)
 
                 # Highlight current selection
                 prefix = "→ " if variant.full_id == model.full_id else "  "
                 free_indicator = " ⭐" if variant.cost.input == 0 else ""
 
-                await ui.muted(f"{prefix}{variant.full_id} - {provider_name} ({cost_display}){free_indicator}")
+                await ui.muted(
+                    f"{prefix}{variant.full_id} - {provider_name} ({cost_display}){free_indicator}"
+                )
 
         if model.cost.input is not None:
             await ui.print("\nPricing:")
@@ -330,19 +343,19 @@ class ModelCommand(SimpleCommand):
     def _get_provider_display_name(self, provider: str) -> str:
         """Get a user-friendly provider display name."""
         provider_names = {
-            'openai': 'OpenAI Direct',
-            'anthropic': 'Anthropic Direct',
-            'google': 'Google Direct',
-            'google-gla': 'Google Labs',
-            'openrouter': 'OpenRouter',
-            'github-models': 'GitHub Models (FREE)',
-            'azure': 'Azure OpenAI',
-            'fastrouter': 'FastRouter',
-            'requesty': 'Requesty',
-            'cloudflare-workers-ai': 'Cloudflare',
-            'amazon-bedrock': 'AWS Bedrock',
-            'chutes': 'Chutes AI',
-            'deepinfra': 'DeepInfra',
-            'venice': 'Venice AI'
+            "openai": "OpenAI Direct",
+            "anthropic": "Anthropic Direct",
+            "google": "Google Direct",
+            "google-gla": "Google Labs",
+            "openrouter": "OpenRouter",
+            "github-models": "GitHub Models (FREE)",
+            "azure": "Azure OpenAI",
+            "fastrouter": "FastRouter",
+            "requesty": "Requesty",
+            "cloudflare-workers-ai": "Cloudflare",
+            "amazon-bedrock": "AWS Bedrock",
+            "chutes": "Chutes AI",
+            "deepinfra": "DeepInfra",
+            "venice": "Venice AI",
         }
         return provider_names.get(provider, provider.title())
