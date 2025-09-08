@@ -85,25 +85,45 @@ class TestCommandBehaviors:
         context = mock.Mock()
         context.state_manager.session.current_model = "openai:gpt-3.5"
 
-        # Mock the UI warning function
-        with mock.patch("tunacode.ui.console.warning"):
-            result = await cmd.execute(["anthropic:claude-3"], context)
+        # Mock the models registry to avoid network calls and provide predictable results
+        mock_registry = mock.Mock()
+        mock_registry.get_model.return_value = None  # Model not found in registry
+        mock_registry.search_models.return_value = []  # No similar models
+        cmd.registry = mock_registry
+        cmd._registry_loaded = True
 
-        # Model should be updated
-        assert context.state_manager.session.current_model == "anthropic:claude-3"
+        # Mock UI functions
+        with mock.patch("tunacode.ui.console.warning") as mock_warning:
+            result = await cmd.execute(["anthropic:claude-3.5-sonnet"], context)
+
+        # Model should be updated even if not found in registry (with warning)
+        assert context.state_manager.session.current_model == "anthropic:claude-3.5-sonnet"
         assert result is None  # No restart needed
+        mock_warning.assert_called_with("Model not found in registry - setting anyway")
 
-    async def test_model_command_invalid_format(self, capsys):
-        """Test ModelCommand with invalid model format."""
+    async def test_model_command_search_behavior(self, capsys):
+        """Test ModelCommand treats non-colon input as search query."""
         cmd = commands.ModelCommand()
         context = mock.Mock()
 
-        # Mock the UI error function
-        with mock.patch("tunacode.ui.console.error") as mock_error:
-            await cmd.execute(["gpt-4"], context)  # Missing provider prefix
-            # Check that error was called about missing provider
-            mock_error.assert_called_once()
-            assert "provider prefix" in str(mock_error.call_args)
+        # Mock the models registry to simulate search behavior
+        mock_registry = mock.Mock()
+        mock_registry.search_models.return_value = []  # No models found
+        cmd.registry = mock_registry
+        cmd._registry_loaded = True
+
+        # Mock UI functions
+        with (
+            mock.patch("tunacode.ui.console.error") as mock_error,
+            mock.patch("tunacode.ui.console.muted") as mock_muted,
+        ):
+            result = await cmd.execute(["gpt-4"], context)  # No colon - treated as search
+
+            # Check that it searches and shows "no models found" error
+            mock_registry.search_models.assert_called_once_with("gpt-4")
+            mock_error.assert_called_once_with("No models found matching 'gpt-4'")
+            mock_muted.assert_called_once_with("Try /model --list to see all available models")
+            assert result is None
 
     async def test_yolo_command(self):
         """Test YoloCommand toggles yolo mode."""
