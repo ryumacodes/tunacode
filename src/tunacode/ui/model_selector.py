@@ -366,13 +366,13 @@ class ModelSelector:
             {
                 "provider": "bold cyan",
                 "model-id": "white",
-                "model-name": "bright_white",
+                "model-name": "ansiwhite",
                 "selected": "reverse bold",
                 "selected-id": "reverse bold white",
-                "selected-name": "reverse bold bright_white",
+                "selected-name": "reverse bold ansiwhite",
                 "muted": "gray",
                 "badges": "yellow",
-                "title": "bold bright_white",
+                "title": "bold ansiwhite",
                 "section": "bold cyan",
             }
         )
