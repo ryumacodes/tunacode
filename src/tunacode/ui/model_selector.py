@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from prompt_toolkit import Application
+from prompt_toolkit.application import Application
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.formatted_text import HTML, StyleAndTextTuples
 from prompt_toolkit.key_binding import KeyBindings
@@ -170,18 +170,20 @@ class ModelSelector:
                 parts.append(("", "  "))
 
             # Model ID and name
-            parts.append(("class:model-id" if not is_selected else "class:selected-id",
-                         f"{model.id}"))
+            parts.append(
+                ("class:model-id" if not is_selected else "class:selected-id", f"{model.id}")
+            )
             parts.append(("class:muted", " - "))
-            parts.append(("class:model-name" if not is_selected else "class:selected-name",
-                         model.name))
+            parts.append(
+                ("class:model-name" if not is_selected else "class:selected-name", model.name)
+            )
 
             # Cost and limits
             details = []
             if model.cost.input is not None:
                 details.append(f"${model.cost.input}/{model.cost.output}")
             if model.limits.context:
-                details.append(f"{model.limits.context//1000}k")
+                details.append(f"{model.limits.context // 1000}k")
 
             if details:
                 parts.append(("class:muted", f" ({', '.join(details)})"))
@@ -277,47 +279,32 @@ class ModelSelector:
     def _create_layout(self) -> Layout:
         """Create the application layout."""
         # Model list
-        model_list = FormattedTextControl(
-            self._get_model_lines,
-            focusable=False,
-            show_cursor=False
-        )
+        model_list = FormattedTextControl(self._get_model_lines, focusable=False, show_cursor=False)
 
         model_window = Window(
             content=model_list,
             width=Dimension(min=40, preferred=60),
             height=Dimension(min=10, preferred=20),
             scroll_offsets=True,
-            wrap_lines=False
+            wrap_lines=False,
         )
 
         # Details panel
         details_control = FormattedTextControl(
-            self._get_details_panel,
-            focusable=False,
-            show_cursor=False
+            self._get_details_panel, focusable=False, show_cursor=False
         )
 
         details_window = Window(
-            content=details_control,
-            width=Dimension(min=30, preferred=40),
-            wrap_lines=True
+            content=details_control, width=Dimension(min=30, preferred=40), wrap_lines=True
         )
 
         # Search bar
         search_field = Window(
-            BufferControl(
-                buffer=self.search_buffer,
-                focus_on_click=True
-            ),
-            height=1
+            BufferControl(buffer=self.search_buffer, focus_on_click=True), height=1
         )
 
         search_label = Window(
-            FormattedTextControl(HTML("<b>Search:</b> ")),
-            width=8,
-            height=1,
-            dont_extend_width=True
+            FormattedTextControl(HTML("<b>Search:</b> ")), width=8, height=1, dont_extend_width=True
         )
 
         search_bar = VSplit([search_label, search_field])
@@ -325,26 +312,29 @@ class ModelSelector:
         # Help text
         help_text = Window(
             FormattedTextControl(
-                HTML("<muted>↑↓: Navigate | Enter: Select | /: Search | Tab: Next provider | Esc: Cancel</muted>")
+                HTML(
+                    "<muted>↑↓: Navigate | Enter: Select | /: Search | Tab: Next provider | Esc: Cancel</muted>"
+                )
             ),
             height=1,
-            align=WindowAlign.CENTER
+            align=WindowAlign.CENTER,
         )
 
         # Main content
-        content = VSplit([
-            Frame(model_window, title="Select Model"),
-            Frame(details_window, title="Details")
-        ])
+        content = VSplit(
+            [Frame(model_window, title="Select Model"), Frame(details_window, title="Details")]
+        )
 
         # Root layout
-        root = HSplit([
-            search_bar,
-            Window(height=1),  # Spacer
-            content,
-            Window(height=1),  # Spacer
-            help_text
-        ])
+        root = HSplit(
+            [
+                search_bar,
+                Window(height=1),  # Spacer
+                content,
+                Window(height=1),  # Spacer
+                help_text,
+            ]
+        )
 
         return Layout(root)
 
@@ -363,7 +353,7 @@ class ModelSelector:
             key_bindings=self.kb,
             mouse_support=True,
             full_screen=False,
-            style=self._get_style()
+            style=self._get_style(),
         )
 
         # Run the selector
@@ -372,23 +362,24 @@ class ModelSelector:
 
     def _get_style(self) -> Style:
         """Get the style for the selector."""
-        return Style.from_dict({
-            'provider': 'bold cyan',
-            'model-id': 'white',
-            'model-name': 'bright_white',
-            'selected': 'reverse bold',
-            'selected-id': 'reverse bold white',
-            'selected-name': 'reverse bold bright_white',
-            'muted': 'gray',
-            'badges': 'yellow',
-            'title': 'bold bright_white',
-            'section': 'bold cyan',
-        })
+        return Style.from_dict(
+            {
+                "provider": "bold cyan",
+                "model-id": "white",
+                "model-name": "bright_white",
+                "selected": "reverse bold",
+                "selected-id": "reverse bold white",
+                "selected-name": "reverse bold bright_white",
+                "muted": "gray",
+                "badges": "yellow",
+                "title": "bold bright_white",
+                "section": "bold cyan",
+            }
+        )
 
 
 async def select_model_interactive(
-    registry: Optional[ModelsRegistry] = None,
-    initial_query: str = ""
+    registry: Optional[ModelsRegistry] = None, initial_query: str = ""
 ) -> Optional[str]:
     """Show interactive model selector and return selected model ID."""
     if registry is None:

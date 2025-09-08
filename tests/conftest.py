@@ -174,6 +174,28 @@ if "prompt_toolkit" not in sys.modules:
     async def run_in_terminal(func):
         return func()
 
+    class Application:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def run_async(self):
+            return None
+
+        def exit(self, result=None):
+            pass
+
+        def invalidate(self):
+            pass
+
+        @property
+        def layout(self):
+            return MockLayout()
+
+    class MockLayout:
+        def focus(self, *args):
+            pass
+
+    application.Application = Application
     application.run_in_terminal = run_in_terminal
     application.current = types.ModuleType("prompt_toolkit.application.current")
     application.current.get_app = lambda: None
@@ -225,8 +247,12 @@ if "prompt_toolkit" not in sys.modules:
     class FormattedText(list):
         pass
 
+    # StyleAndTextTuples is a type alias for List[Tuple[str, str]]
+    StyleAndTextTuples = list
+
     formatted_text.HTML = HTML
     formatted_text.FormattedText = FormattedText
+    formatted_text.StyleAndTextTuples = StyleAndTextTuples
     shortcuts = types.ModuleType("prompt_toolkit.shortcuts")
 
     class PromptSession:
@@ -267,6 +293,113 @@ if "prompt_toolkit" not in sys.modules:
     styles.Style = Style
     pt.styles = styles
     pt.shortcuts = shortcuts
+
+    # Add missing layout and widget modules
+    buffer_mod = types.ModuleType("prompt_toolkit.buffer")
+
+    class Buffer:
+        def __init__(self, *args, **kwargs):
+            self.text = ""
+            self.on_text_changed = kwargs.get("on_text_changed")
+
+    buffer_mod.Buffer = Buffer
+
+    layout_mod = types.ModuleType("prompt_toolkit.layout")
+
+    class Layout:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def focus(self, *args):
+            pass
+
+    class FormattedTextControl:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class HSplit:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class VSplit:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class Window:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class WindowAlign:
+        CENTER = "center"
+
+    layout_mod.Layout = Layout
+    layout_mod.FormattedTextControl = FormattedTextControl
+    layout_mod.HSplit = HSplit
+    layout_mod.VSplit = VSplit
+    layout_mod.Window = Window
+    layout_mod.WindowAlign = WindowAlign
+
+    controls_mod = types.ModuleType("prompt_toolkit.layout.controls")
+
+    class BufferControl:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    controls_mod.BufferControl = BufferControl
+
+    dimension_mod = types.ModuleType("prompt_toolkit.layout.dimension")
+
+    class Dimension:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        @staticmethod
+        def min(value):
+            return Dimension()
+
+        @staticmethod
+        def preferred(value):
+            return Dimension()
+
+    dimension_mod.Dimension = Dimension
+
+    search_mod = types.ModuleType("prompt_toolkit.search")
+
+    class SearchState:
+        def __init__(self):
+            pass
+
+    search_mod.SearchState = SearchState
+
+    widgets_mod = types.ModuleType("prompt_toolkit.widgets")
+
+    class Frame:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    widgets_mod.Frame = Frame
+
+    # Add patch_stdout module
+    patch_stdout_mod = types.ModuleType("prompt_toolkit.patch_stdout")
+
+    def patch_stdout():
+        class MockContext:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
+        return MockContext()
+
+    patch_stdout_mod.patch_stdout = patch_stdout
+
+    pt.buffer = buffer_mod
+    pt.layout = layout_mod
+    pt.search = search_mod
+    pt.widgets = widgets_mod
+    pt.patch_stdout = patch_stdout_mod
+
     sys.modules["prompt_toolkit"] = pt
     sys.modules["prompt_toolkit.application"] = application
     sys.modules["prompt_toolkit.application.current"] = application.current
@@ -278,3 +411,10 @@ if "prompt_toolkit" not in sys.modules:
     sys.modules["prompt_toolkit.document"] = document
     sys.modules["prompt_toolkit.validation"] = validation
     sys.modules["prompt_toolkit.styles"] = styles
+    sys.modules["prompt_toolkit.buffer"] = buffer_mod
+    sys.modules["prompt_toolkit.layout"] = layout_mod
+    sys.modules["prompt_toolkit.layout.controls"] = controls_mod
+    sys.modules["prompt_toolkit.layout.dimension"] = dimension_mod
+    sys.modules["prompt_toolkit.search"] = search_mod
+    sys.modules["prompt_toolkit.widgets"] = widgets_mod
+    sys.modules["prompt_toolkit.patch_stdout"] = patch_stdout_mod

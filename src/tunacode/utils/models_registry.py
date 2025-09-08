@@ -81,7 +81,7 @@ class ModelInfo:
             if self.cost.input is not None:
                 details.append(self.cost.format_cost())
             if self.limits.context:
-                details.append(f"{self.limits.context//1000}k context")
+                details.append(f"{self.limits.context // 1000}k context")
             if details:
                 display += f" ({', '.join(details)})"
         return display
@@ -161,10 +161,8 @@ class ModelsRegistry:
         try:
             # Add User-Agent header to avoid blocking
             import urllib.request
-            req = urllib.request.Request(
-                self.API_URL,
-                headers={'User-Agent': 'TunaCode-CLI/1.0'}
-            )
+
+            req = urllib.request.Request(self.API_URL, headers={"User-Agent": "TunaCode-CLI/1.0"})
             with urlopen(req, timeout=10) as response:  # nosec B310 - Using trusted models.dev API
                 data = json.loads(response.read())
 
@@ -195,7 +193,7 @@ class ModelsRegistry:
                         "temperature": True,
                         "knowledge": "2024-04",
                         "cost": {"input": 30.0, "output": 60.0},
-                        "limit": {"context": 128000, "output": 4096}
+                        "limit": {"context": 128000, "output": 4096},
                     },
                     "gpt-4-turbo": {
                         "name": "GPT-4 Turbo",
@@ -205,7 +203,7 @@ class ModelsRegistry:
                         "temperature": True,
                         "knowledge": "2024-04",
                         "cost": {"input": 10.0, "output": 30.0},
-                        "limit": {"context": 128000, "output": 4096}
+                        "limit": {"context": 128000, "output": 4096},
                     },
                     "gpt-3.5-turbo": {
                         "name": "GPT-3.5 Turbo",
@@ -215,9 +213,9 @@ class ModelsRegistry:
                         "temperature": True,
                         "knowledge": "2024-01",
                         "cost": {"input": 0.5, "output": 1.5},
-                        "limit": {"context": 16000, "output": 4096}
-                    }
-                }
+                        "limit": {"context": 16000, "output": 4096},
+                    },
+                },
             },
             "anthropic": {
                 "name": "Anthropic",
@@ -233,7 +231,7 @@ class ModelsRegistry:
                         "temperature": True,
                         "knowledge": "2024-04",
                         "cost": {"input": 15.0, "output": 75.0},
-                        "limit": {"context": 200000, "output": 4096}
+                        "limit": {"context": 200000, "output": 4096},
                     },
                     "claude-3-sonnet-20240229": {
                         "name": "Claude 3 Sonnet",
@@ -243,7 +241,7 @@ class ModelsRegistry:
                         "temperature": True,
                         "knowledge": "2024-04",
                         "cost": {"input": 3.0, "output": 15.0},
-                        "limit": {"context": 200000, "output": 4096}
+                        "limit": {"context": 200000, "output": 4096},
                     },
                     "claude-3-haiku-20240307": {
                         "name": "Claude 3 Haiku",
@@ -253,9 +251,9 @@ class ModelsRegistry:
                         "temperature": True,
                         "knowledge": "2024-04",
                         "cost": {"input": 0.25, "output": 1.25},
-                        "limit": {"context": 200000, "output": 4096}
-                    }
-                }
+                        "limit": {"context": 200000, "output": 4096},
+                    },
+                },
             },
             "google": {
                 "name": "Google",
@@ -271,7 +269,7 @@ class ModelsRegistry:
                         "temperature": True,
                         "knowledge": "2024-04",
                         "cost": {"input": 3.5, "output": 10.5},
-                        "limit": {"context": 2000000, "output": 8192}
+                        "limit": {"context": 2000000, "output": 8192},
                     },
                     "gemini-1.5-flash": {
                         "name": "Gemini 1.5 Flash",
@@ -281,10 +279,10 @@ class ModelsRegistry:
                         "temperature": True,
                         "knowledge": "2024-04",
                         "cost": {"input": 0.075, "output": 0.3},
-                        "limit": {"context": 1000000, "output": 8192}
-                    }
-                }
-            }
+                        "limit": {"context": 1000000, "output": 8192},
+                    },
+                },
+            },
         }
 
         self._parse_data(fallback_data)
@@ -305,7 +303,7 @@ class ModelsRegistry:
                 name=provider_data.get("name", provider_id),
                 env=provider_data.get("env", []),
                 npm=provider_data.get("npm"),
-                doc=provider_data.get("doc")
+                doc=provider_data.get("doc"),
             )
             self.providers[provider_id] = provider
 
@@ -321,7 +319,7 @@ class ModelsRegistry:
                     reasoning=model_data.get("reasoning", False),
                     tool_call=model_data.get("tool_call", False),
                     temperature=model_data.get("temperature", True),
-                    knowledge=model_data.get("knowledge")
+                    knowledge=model_data.get("knowledge"),
                 )
 
                 # Parse cost
@@ -329,14 +327,14 @@ class ModelsRegistry:
                 cost = ModelCost(
                     input=cost_data.get("input") if isinstance(cost_data, dict) else None,
                     output=cost_data.get("output") if isinstance(cost_data, dict) else None,
-                    cache=cost_data.get("cache") if isinstance(cost_data, dict) else None
+                    cache=cost_data.get("cache") if isinstance(cost_data, dict) else None,
                 )
 
                 # Parse limits
                 limit_data = model_data.get("limit", {})
                 limits = ModelLimits(
                     context=limit_data.get("context") if isinstance(limit_data, dict) else None,
-                    output=limit_data.get("output") if isinstance(limit_data, dict) else None
+                    output=limit_data.get("output") if isinstance(limit_data, dict) else None,
                 )
 
                 # Create model info
@@ -350,7 +348,7 @@ class ModelsRegistry:
                     release_date=model_data.get("release_date"),
                     last_updated=model_data.get("last_updated"),
                     open_weights=model_data.get("open_weights", False),
-                    modalities=model_data.get("modalities", {})
+                    modalities=model_data.get("modalities", {}),
                 )
 
                 # Store with full ID as key
@@ -377,11 +375,13 @@ class ModelsRegistry:
             self._loaded = True
             # Import ui locally to avoid circular imports
             from ..ui import console as ui
+
             await ui.warning("Using cached models data (API unavailable)")
             return True
 
         # Use fallback models as last resort
         from ..ui import console as ui
+
         await ui.warning("models.dev API unavailable, using fallback model list")
         self._load_fallback_models()
         self._loaded = True
@@ -405,10 +405,7 @@ class ModelsRegistry:
         return self.get_model(model_id) is not None
 
     def search_models(
-        self,
-        query: str = "",
-        provider: Optional[str] = None,
-        min_score: float = 0.3
+        self, query: str = "", provider: Optional[str] = None, min_score: float = 0.3
     ) -> List[ModelInfo]:
         """Search for models matching query."""
         results = []
@@ -450,24 +447,38 @@ class ModelsRegistry:
 
         # Remove common suffixes
         suffixes_to_remove = [
-            '-latest', '-preview', '-turbo', '-instruct', '-chat', '-base',
-            '-20240229', '-20240307', '-20240620', '-20241022', '-20250514',
-            '-0613', '-0125', '-0301', '-1106', '-2024', '-2025'
+            "-latest",
+            "-preview",
+            "-turbo",
+            "-instruct",
+            "-chat",
+            "-base",
+            "-20240229",
+            "-20240307",
+            "-20240620",
+            "-20241022",
+            "-20250514",
+            "-0613",
+            "-0125",
+            "-0301",
+            "-1106",
+            "-2024",
+            "-2025",
         ]
 
         for suffix in suffixes_to_remove:
             if base_name.endswith(suffix):
-                base_name = base_name[:-len(suffix)]
+                base_name = base_name[: -len(suffix)]
 
         # Handle versioned models (e.g., 'claude-3-5-sonnet' -> 'claude-3-sonnet')
-        if 'claude-3-5' in base_name:
-            base_name = base_name.replace('claude-3-5', 'claude-3')
-        elif 'claude-3-7' in base_name:
-            base_name = base_name.replace('claude-3-7', 'claude-3')
+        if "claude-3-5" in base_name:
+            base_name = base_name.replace("claude-3-5", "claude-3")
+        elif "claude-3-7" in base_name:
+            base_name = base_name.replace("claude-3-7", "claude-3")
 
         # Handle OpenRouter nested paths (e.g., 'openai/gpt-4o' -> 'gpt-4o')
-        if '/' in base_name:
-            base_name = base_name.split('/')[-1]
+        if "/" in base_name:
+            base_name = base_name.split("/")[-1]
 
         return base_name
 
@@ -499,10 +510,12 @@ class ModelsRegistry:
         matching_models = []
         for model in self.models.values():
             base_name = self._extract_base_model_name(model)
-            if (query_lower in model.id.lower() or
-                query_lower in model.name.lower() or
-                query_lower in base_name or
-                query_lower in model.provider.lower()):
+            if (
+                query_lower in model.id.lower()
+                or query_lower in model.name.lower()
+                or query_lower in base_name
+                or query_lower in model.provider.lower()
+            ):
                 matching_models.append((base_name, model))
 
         # Group by base model name
@@ -513,10 +526,12 @@ class ModelsRegistry:
 
         # Sort variants within each base model
         for base_name in base_models:
+
             def sort_key(model: ModelInfo) -> tuple:
                 cost = model.cost.input or 999
                 is_free = cost == 0
                 return (not is_free, cost, model.provider, model.id)
+
             base_models[base_name].sort(key=sort_key)
 
         return base_models
@@ -524,10 +539,19 @@ class ModelsRegistry:
     def get_popular_base_models(self) -> List[str]:
         """Get list of popular base model names for suggestions."""
         popular_patterns = [
-            'gpt-4o', 'gpt-4', 'gpt-3.5-turbo',
-            'claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku',
-            'gemini-2', 'gemini-1.5-pro', 'gemini-1.5-flash',
-            'o1-preview', 'o1-mini', 'o3', 'o3-mini'
+            "gpt-4o",
+            "gpt-4",
+            "gpt-3.5-turbo",
+            "claude-3-opus",
+            "claude-3-sonnet",
+            "claude-3-haiku",
+            "gemini-2",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+            "o1-preview",
+            "o1-mini",
+            "o3",
+            "o3-mini",
         ]
 
         available_base_models = []

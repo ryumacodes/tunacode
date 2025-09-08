@@ -97,6 +97,7 @@ async def multiline_input(
 
     # Create models registry for auto-completion (lazy loaded)
     from ..utils.models_registry import ModelsRegistry
+
     models_registry = ModelsRegistry()
     # Note: Registry will be loaded lazily by the completer when needed
 
