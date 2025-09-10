@@ -20,7 +20,8 @@ The TunaCode configuration file is located at `~/.config/tunacode.json`. This fi
         "guide_file": "TUNACODE.md",
         "fallback_response": true,
         "fallback_verbosity": "normal",
-        "context_window_size": 200000
+        "context_window_size": 200000,
+        "tool_strict_validation": false
     },
     "mcpServers": {},
     "skip_git_safety": true
@@ -44,6 +45,7 @@ The TunaCode configuration file is located at `~/.config/tunacode.json`. This fi
 - `fallback_response`: Enable fallback responses when iterations are exhausted (default: true)
 - `fallback_verbosity`: Verbosity of fallback responses (`minimal`, `normal`, `detailed`)
 - `context_window_size`: Maximum context window size in tokens (default: 200000)
+- `tool_strict_validation`: Whether tools use strict parameter validation (default: false)
 
 ## Creating the Config File
 
