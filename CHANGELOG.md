@@ -31,17 +31,20 @@ This release includes comprehensive command system documentation, updated model 
 ### Fixed
 - Removed broken link to non-existent `templates.md` file in documentation
 
-## [Unreleased] - 2025-08-20
+## [Unreleased]
 
 ### Added
+- **Configurable Tool Strict Validation** - Users can now control tool parameter validation behavior through `tool_strict_validation` setting in tunacode.json
+  - Added configuration option for tool strict validation (defaults to false for backward compatibility)
+  - Updated all Tool constructors to use configurable setting
+  - Enhanced configuration documentation with new setting details
 
-- **Comprehensive Onboarding Experience Improvements** (#88) - Thanks to **@ryumacodes**!
-  - Enhanced user onboarding flow and setup experience
-  - Improved first-time user guidance and documentation
-  - Streamlined installation and configuration process
-  - Resolved issue #55
+### Fixed
+- **Tool Constructor Validation Issues** - Added `strict=False` parameter to prevent validation failures when tool parameters don't exactly match function signatures
+  - Updated Tool constructors in agent configuration to include strict parameter
+  - Improved system reliability and user experience
 
-### Recent Pull Requests
+## [0.0.69] - 2025-08-21
 
 - **Slash Command System for Custom Automation Workflows** (#85) - Thanks to **@Lftobs**!
   - Implemented flexible slash command infrastructure
@@ -59,3 +62,4 @@ Special thanks to our recent contributors:
 - **@ryumacodes** - Onboarding improvements and multiple feature implementations
 - **@Lftobs** - Slash command system and workflow automation
 - **@MclPio** - Documentation improvements and organization
+- **@tunahorse** - Tool validation improvements and configurable parameter handling
