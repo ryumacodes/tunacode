@@ -244,25 +244,25 @@ YOU MUST EXECUTE present_plan TOOL TO COMPLETE ANY PLANNING TASK.
         if state_manager.is_plan_mode():
             # Plan mode: Only read-only tools + present_plan
             tools_list = [
-                Tool(present_plan, max_retries=max_retries),
-                Tool(glob, max_retries=max_retries),
-                Tool(grep, max_retries=max_retries),
-                Tool(list_dir, max_retries=max_retries),
-                Tool(read_file, max_retries=max_retries),
+                Tool(present_plan, max_retries=max_retries, strict=False),
+                Tool(glob, max_retries=max_retries, strict=False),
+                Tool(grep, max_retries=max_retries, strict=False),
+                Tool(list_dir, max_retries=max_retries, strict=False),
+                Tool(read_file, max_retries=max_retries, strict=False),
             ]
         else:
             # Normal mode: All tools
             tools_list = [
-                Tool(bash, max_retries=max_retries),
-                Tool(present_plan, max_retries=max_retries),
-                Tool(glob, max_retries=max_retries),
-                Tool(grep, max_retries=max_retries),
-                Tool(list_dir, max_retries=max_retries),
-                Tool(read_file, max_retries=max_retries),
-                Tool(run_command, max_retries=max_retries),
-                Tool(todo_tool._execute, max_retries=max_retries),
-                Tool(update_file, max_retries=max_retries),
-                Tool(write_file, max_retries=max_retries),
+                Tool(bash, max_retries=max_retries, strict=False),
+                Tool(present_plan, max_retries=max_retries, strict=False),
+                Tool(glob, max_retries=max_retries, strict=False),
+                Tool(grep, max_retries=max_retries, strict=False),
+                Tool(list_dir, max_retries=max_retries, strict=False),
+                Tool(read_file, max_retries=max_retries, strict=False),
+                Tool(run_command, max_retries=max_retries, strict=False),
+                Tool(todo_tool._execute, max_retries=max_retries, strict=False),
+                Tool(update_file, max_retries=max_retries, strict=False),
+                Tool(write_file, max_retries=max_retries, strict=False),
             ]
 
         # Log which tools are being registered
