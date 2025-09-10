@@ -4,7 +4,7 @@ from kosong.base.chat_provider import ChatProvider
 from kosong.chat_provider import Kimi, OpenAILegacy
 from pydantic import SecretStr
 
-from kimi.config import LLMModel, LLMProvider
+from kimi_cli.config import LLMModel, LLMProvider
 
 
 def augment_provider_with_env_vars(provider: LLMProvider):

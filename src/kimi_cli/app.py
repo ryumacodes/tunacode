@@ -15,8 +15,8 @@ from rich.console import Console
 from rich.markup import escape
 from rich.panel import Panel
 
-from kimi.command import get_command, get_commands
-from kimi.soul import Soul
+from kimi_cli.command import get_command, get_commands
+from kimi_cli.soul import Soul
 
 
 class _PrintAction(NamedTuple):

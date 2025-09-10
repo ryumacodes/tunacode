@@ -6,9 +6,9 @@ import click
 from kosong.tooling import SimpleToolset
 from pydantic import SecretStr
 
-from kimi.agent import load_agent
-from kimi.app import App
-from kimi.config import (
+from kimi_cli.agent import load_agent
+from kimi_cli.app import App
+from kimi_cli.config import (
     DEFAULT_KIMI_BASE_URL,
     DEFAULT_KIMI_MODEL,
     ConfigError,
@@ -16,9 +16,9 @@ from kimi.config import (
     LLMProvider,
     load_config,
 )
-from kimi.soul import Soul
-from kimi.tool import load_tool
-from kimi.utils.provider import augment_provider_with_env_vars, create_chat_provider
+from kimi_cli.soul import Soul
+from kimi_cli.tool import load_tool
+from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
 
 
 @click.command()

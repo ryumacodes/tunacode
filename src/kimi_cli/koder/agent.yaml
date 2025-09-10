@@ -3,5 +3,5 @@ agent:
   name: "Kimi Koder"
   system_prompt_path: ./system.md
   tools:
-    - "kimi.tools.test:Plus"
-    - "kimi.tools.test:Compare"
+    - "kimi_cli.tools.test:Plus"
+    - "kimi_cli.tools.test:Compare"

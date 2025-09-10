@@ -6,7 +6,7 @@ from kosong.base.message import Message
 from kosong.context import LinearContext
 from kosong.tooling import Toolset
 
-from kimi.utils.message import tool_result_to_messages
+from kimi_cli.utils.message import tool_result_to_messages
 
 
 class Soul:

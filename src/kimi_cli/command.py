@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from rich.panel import Panel
 
 if TYPE_CHECKING:
-    from kimi.app import App
+    from kimi_cli.app import App
 
 
 class Command(NamedTuple):

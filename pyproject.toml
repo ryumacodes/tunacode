@@ -20,10 +20,10 @@ requires = ["uv_build>=0.8.5,<0.9.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = ["kimi"]
+module-name = ["kimi_cli"]
 
 [project.scripts]
-kimi = "kimi.cli:main"
+kimi = "kimi_cli:main"
 
 [tool.ruff]
 line-length = 100
