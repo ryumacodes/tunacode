@@ -4,7 +4,16 @@ version = "0.1.0"
 description = "Ensoul is your next CLI agent."
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "click>=8.2.1",
+    "kosong>=0.2.2",
+    "prompt-toolkit>=3.0.52",
+    "pyyaml>=6.0.2",
+    "rich>=14.1.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.4.2", "ruff>=0.12.12"]
 
 [build-system]
 requires = ["uv_build>=0.8.5,<0.9.0"]
