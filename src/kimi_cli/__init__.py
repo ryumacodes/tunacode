@@ -21,23 +21,25 @@ from kimi_cli.tool import load_tool
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
 
 
-@click.command()
+@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.option(
     "--agent",
     "agent_path",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
     default=Path(__file__).parent / "koder" / "agent.yaml",
-    help="Custom agent definition path",
+    help="Custom agent definition file (default: builtin Kimi Koder)",
 )
 @click.option(
     "--model",
+    "-m",
     "model_name",
     type=str,
     default=None,
-    help="LLM model to use (default: use default model from config file)",
+    help="LLM model to use (default: default model set in config file)",
 )
 @click.option(
     "--work-dir",
+    "-w",
     type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
     default=Path.cwd(),
     help="Working directory for the agent (default: current directory)",
@@ -46,7 +48,7 @@ from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_
     "--verbose",
     is_flag=True,
     default=False,
-    help="Print detailed information (default: no print)",
+    help="Print verbose information (default: no)",
 )
 def kimi(
     agent_path: Path,
