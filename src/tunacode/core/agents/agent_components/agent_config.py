@@ -240,29 +240,34 @@ YOU MUST EXECUTE present_plan TOOL TO COMPLETE ANY PLANNING TASK.
         except Exception as e:
             logger.warning(f"Warning: Failed to load todos: {e}")
 
+        # Get tool strict validation setting from config (default to False for backward compatibility)
+        tool_strict_validation = state_manager.session.user_config.get("settings", {}).get(
+            "tool_strict_validation", False
+        )
+
         # Create tool list based on mode
         if state_manager.is_plan_mode():
             # Plan mode: Only read-only tools + present_plan
             tools_list = [
-                Tool(present_plan, max_retries=max_retries, strict=False),
-                Tool(glob, max_retries=max_retries, strict=False),
-                Tool(grep, max_retries=max_retries, strict=False),
-                Tool(list_dir, max_retries=max_retries, strict=False),
-                Tool(read_file, max_retries=max_retries, strict=False),
+                Tool(present_plan, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(glob, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(grep, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(list_dir, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(read_file, max_retries=max_retries, strict=tool_strict_validation),
             ]
         else:
             # Normal mode: All tools
             tools_list = [
-                Tool(bash, max_retries=max_retries, strict=False),
-                Tool(present_plan, max_retries=max_retries, strict=False),
-                Tool(glob, max_retries=max_retries, strict=False),
-                Tool(grep, max_retries=max_retries, strict=False),
-                Tool(list_dir, max_retries=max_retries, strict=False),
-                Tool(read_file, max_retries=max_retries, strict=False),
-                Tool(run_command, max_retries=max_retries, strict=False),
-                Tool(todo_tool._execute, max_retries=max_retries, strict=False),
-                Tool(update_file, max_retries=max_retries, strict=False),
-                Tool(write_file, max_retries=max_retries, strict=False),
+                Tool(bash, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(present_plan, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(glob, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(grep, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(list_dir, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(read_file, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(run_command, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(todo_tool._execute, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(update_file, max_retries=max_retries, strict=tool_strict_validation),
+                Tool(write_file, max_retries=max_retries, strict=tool_strict_validation),
             ]
 
         # Log which tools are being registered
@@ -291,6 +296,11 @@ YOU MUST EXECUTE present_plan TOOL TO COMPLETE ANY PLANNING TASK.
             (
                 state_manager.is_plan_mode(),
                 str(state_manager.session.user_config.get("settings", {}).get("max_retries", 3)),
+                str(
+                    state_manager.session.user_config.get("settings", {}).get(
+                        "tool_strict_validation", False
+                    )
+                ),
                 str(state_manager.session.user_config.get("mcpServers", {})),
             )
         )
