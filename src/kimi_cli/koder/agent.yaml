@@ -5,5 +5,4 @@ agent:
   system_prompt_args:
     KODER_NAME: "Kimi Koder"
   tools:
-    - "kimi_cli.tools.test:Plus"
-    - "kimi_cli.tools.test:Compare"
+    - "kimi_cli.tools.shell:Shell"
