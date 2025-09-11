@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from rich.panel import Panel
 
+from kimi_cli.console import console
+
 if TYPE_CHECKING:
     from kimi_cli.app import App
 
@@ -50,7 +52,7 @@ def quit(app: "App", args: list[str]):
 @meta_command
 def help(app: "App", args: list[str]):
     """Show help information."""
-    app.console.print(
+    console.print(
         Panel(
             f"Send message to {app.agent.name} to get things done!\n\n"
             "Meta commands are also available:\n\n"
