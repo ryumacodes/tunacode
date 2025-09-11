@@ -25,6 +25,12 @@ from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_
 
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Print verbose information (default: no)",
+)
+@click.option(
     "--agent",
     "agent_path",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
@@ -47,16 +53,21 @@ from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_
     help="Working directory for the agent (default: current directory)",
 )
 @click.option(
-    "--verbose",
-    is_flag=True,
-    default=False,
-    help="Print verbose information (default: no)",
+    "--command",
+    "-c",
+    "--query",
+    "-q",
+    "command",
+    type=str,
+    default=None,
+    help="User query to the agent (default: interactive mode)",
 )
 def kimi(
+    verbose: bool,
     agent_path: Path,
     model_name: str | None,
     work_dir: Path,
-    verbose: bool,
+    command: str | None,
 ):
     """Kimi, your next CLI agent."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
@@ -123,6 +134,11 @@ def kimi(
 
     echo(f"✓ Loaded tools: {[tool.name for tool in toolset.tools]}")
 
+    if command is not None:
+        command = command.strip()
+        if not command:
+            raise click.BadArgumentUsage("Command cannot be empty")
+
     context_storage = JsonlLinearStorage(get_share_dir() / "history.jsonl")
     soul = Soul(
         agent.name,
@@ -138,7 +154,7 @@ def kimi(
     os.chdir(work_dir)
 
     try:
-        asyncio.run(app.run())
+        asyncio.run(app.run(command))
     finally:
         # restore original working directory
         os.chdir(original_cwd)

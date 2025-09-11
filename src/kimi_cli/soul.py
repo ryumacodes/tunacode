@@ -40,21 +40,26 @@ class Soul:
             )
         return self._context
 
-    async def run(self, user_input: str, printer: "Printer", max_steps: int | None = None):
+    async def run(self, user_input: str, print: "StreamPrint", max_steps: int | None = None):
         context = self._get_context()
         await context.add_message(Message(role="user", content=user_input))
+        try:
+            return await self._loop(print, max_steps)
+        finally:
+            print.end_run()
 
+    async def _loop(self, print: "StreamPrint", max_steps: int | None = None):
+        context = self._get_context()
         n_steps = 0
         while True:
-            if n_steps > 0:
-                printer.separate_step()
+            print.start_step(n_steps)
 
             result = await kosong.step(
                 self._chat_provider,
                 context,
-                on_message_part=printer.print_message_part,
+                on_message_part=print.message_part,
             )
-            printer.ensure_new_line()
+            print.ensure_nl()
 
             await context.add_message(result.message)
             for tool_result in await result.tool_results():
@@ -64,12 +69,32 @@ class Soul:
             if not result.tool_calls or (max_steps is not None and n_steps >= max_steps):
                 return result.message.content
 
+            print.end_step(n_steps)
             n_steps += 1
 
 
 @runtime_checkable
-class Printer(Protocol):
-    def separate_step(self): ...
-    def ensure_new_line(self): ...
-    def println(self, text: str = ""): ...
-    def print_message_part(self, part: StreamedMessagePart): ...
+class StreamPrint(Protocol):
+    def start_step(self, n: int):
+        """Start a new step."""
+        ...
+
+    def end_step(self, n: int):
+        """End the current step."""
+        ...
+
+    def end_run(self):
+        """End the agent run."""
+        ...
+
+    def ensure_nl(self):
+        """Ensure the printer is at the beginning of a new line."""
+        ...
+
+    def line(self, text: str = ""):
+        """Print a text + line break."""
+        ...
+
+    def message_part(self, part: StreamedMessagePart):
+        """Print a message part."""
+        ...

@@ -18,82 +18,6 @@ from rich.panel import Panel
 from kimi_cli.meta_command import get_meta_command, get_meta_commands
 from kimi_cli.soul import Soul
 
-
-class _PrintAction(NamedTuple):
-    func: Callable[..., None]
-    args: tuple[Any, ...]
-
-
-class _StepSep:
-    pass
-
-
-class _AgentMessagePrinter:
-    def __init__(
-        self,
-        impl: "_AgentMessagePrinterImpl",
-        action_queue: asyncio.Queue[_PrintAction | _StepSep | None],
-    ):
-        self._impl = impl
-        self._action_queue = action_queue
-
-    def _end_of_run(self):
-        self._action_queue.put_nowait(None)
-
-    def separate_step(self):
-        self._action_queue.put_nowait(_StepSep())
-
-    def ensure_new_line(self):
-        self._action_queue.put_nowait(_PrintAction(self._impl.ensure_new_line, ()))
-
-    def println(self, text: str = ""):
-        self._action_queue.put_nowait(_PrintAction(self._impl.println, (text,)))
-
-    def print_message_part(self, part: StreamedMessagePart):
-        self._action_queue.put_nowait(_PrintAction(self._impl.print_message_part, (part,)))
-
-
-class _AgentMessagePrinterImpl:
-    def __init__(self, console: Console):
-        self._console = console
-        self._last_part_type: type[StreamedMessagePart] | None = None
-        self._n_tool_call_args_parts = 0
-
-    def separate_step(self):
-        self.ensure_new_line()
-
-    def ensure_new_line(self):
-        if self._last_part_type is not None:
-            self.println()
-            self._last_part_type = None
-
-    def println(self, text: str = ""):
-        self._console.print(escape(text))
-        self._last_part_type = None
-
-    def print_message_part(self, part: StreamedMessagePart):
-        match part:
-            case str(text) | TextPart(text=text):
-                if (self._last_part_type or TextPart) is not TextPart:
-                    self.ensure_new_line()
-                self._console.print(text, end="")
-                self._last_part_type = TextPart
-            case ToolCall(function=function):
-                self.ensure_new_line()
-                self._console.print(
-                    f"Using [underline]{function.name}[/underline][grey30]...[/grey30]", end=""
-                )
-                self._last_part_type = ToolCall
-            case ToolCallPart():
-                if self._last_part_type not in [ToolCall, ToolCallPart]:
-                    return
-                self._n_tool_call_args_parts += 1
-                if self._n_tool_call_args_parts == 10:
-                    self._console.print("[grey30].[/grey30]", end="")
-                    self._n_tool_call_args_parts = 0
-                self._last_part_type = ToolCallPart
-
-
 _WELCOME_MESSAGE = """
 [bold]Welcome to {name}![/bold]
 
@@ -107,10 +31,10 @@ class App:
         self.agent = agent
         self.console = Console(highlight=False)
 
-    async def run(self):
-        printer_impl = _AgentMessagePrinterImpl(self.console)
-        print_action_queue = asyncio.Queue[_PrintAction | _StepSep | None]()
-        printer = _AgentMessagePrinter(printer_impl, print_action_queue)
+    async def run(self, command: str | None = None):
+        print = _StreamPrint(self.console)
+        print_queue = asyncio.Queue[_PrintAction | None]()
+        print_producer = _StreamPrintProducer(print_queue, print)
 
         username = getpass.getuser()
 
@@ -128,6 +52,16 @@ class App:
             completer=meta_command_completer,
             complete_while_typing=True,
         )
+
+        if command is not None:
+            # run single command and exit
+            run_task = asyncio.create_task(self.agent.run(command, print_producer))
+            await self._print_loop(print_queue)
+            try:
+                await run_task
+            finally:
+                print.ensure_nl()
+            return
 
         welcome = _WELCOME_MESSAGE.format(
             name=self.agent.name,
@@ -152,41 +86,33 @@ class App:
                 continue
 
             if user_input in ["exit", "quit", "/exit", "/quit"]:
-                printer_impl.ensure_new_line()
-                printer_impl.println("Bye!")
+                print.ensure_nl()
+                print.line("Bye!")
                 break
             if user_input.startswith("/"):
                 await self._run_meta_command(user_input[1:])
                 continue
 
-            run_task = asyncio.create_task(self._run_agent(user_input, printer))
-            while True:
-                # spin the moon at the beginning of each step
-                with self.console.status("", spinner="moon"):
-                    action = await print_action_queue.get()
-
-                while isinstance(action, _PrintAction):
-                    action.func(*action.args)
-                    action = await print_action_queue.get()
-
-                if isinstance(action, _StepSep):
-                    printer_impl.separate_step()
-                    continue
-                if action is None:
-                    break
-
+            run_task = asyncio.create_task(self.agent.run(user_input, print_producer))
+            await self._print_loop(print_queue)
             try:
                 await run_task
-            except:
-                raise
             finally:
-                printer_impl.ensure_new_line()
+                print.ensure_nl()
 
-    async def _run_agent(self, user_input: str, printer: _AgentMessagePrinter):
-        try:
-            await self.agent.run(user_input, printer)
-        finally:
-            printer._end_of_run()
+    async def _print_loop(
+        self,
+        print_queue: asyncio.Queue["_PrintAction | None"],
+    ):
+        while True:
+            # spin the moon at the beginning of each step
+            with self.console.status("", spinner="moon"):
+                action = await print_queue.get()
+            while isinstance(action, _PrintAction):
+                action.func(*action.args)
+                action = await print_queue.get()
+            if action is None:
+                break
 
     async def _run_meta_command(self, command_str: str):
         parts = command_str.split(" ")
@@ -199,3 +125,80 @@ class App:
         ret = command.func(self, command_args)
         if inspect.isawaitable(ret):
             await ret
+
+
+class _PrintAction(NamedTuple):
+    func: Callable[..., None]
+    args: tuple[Any, ...]
+
+
+class _StreamPrintProducer:
+    def __init__(
+        self,
+        action_queue: asyncio.Queue[_PrintAction | None],
+        print: "_StreamPrint",
+    ):
+        self._action_queue = action_queue
+        self._print = print
+
+    def start_step(self, n: int):
+        self._action_queue.put_nowait(_PrintAction(self._print.start_step, (n,)))
+
+    def end_step(self, n: int):
+        self._action_queue.put_nowait(_PrintAction(self._print.end_step, (n,)))
+
+    def end_run(self):
+        self._action_queue.put_nowait(None)
+
+    def ensure_nl(self):
+        self._action_queue.put_nowait(_PrintAction(self._print.ensure_nl, ()))
+
+    def line(self, text: str = ""):
+        self._action_queue.put_nowait(_PrintAction(self._print.line, (text,)))
+
+    def message_part(self, part: StreamedMessagePart):
+        self._action_queue.put_nowait(_PrintAction(self._print.message_part, (part,)))
+
+
+class _StreamPrint:
+    def __init__(self, console: Console):
+        self._console = console
+        self._last_part_type: type[StreamedMessagePart] | None = None
+        self._n_tool_call_args_parts = 0
+
+    def start_step(self, n: int):
+        self.ensure_nl()
+
+    def end_step(self, n: int):
+        pass
+
+    def ensure_nl(self):
+        if self._last_part_type is not None:
+            self.line()
+            self._last_part_type = None
+
+    def line(self, text: str = ""):
+        self._console.print(escape(text))
+        self._last_part_type = None
+
+    def message_part(self, part: StreamedMessagePart):
+        match part:
+            case str(text) | TextPart(text=text):
+                if (self._last_part_type or TextPart) is not TextPart:
+                    self.ensure_nl()
+                self._console.print(text, end="")
+                self._last_part_type = TextPart
+            case ToolCall(function=function):
+                self.ensure_nl()
+                self._console.print(
+                    f"Using [underline]{function.name}[/underline][grey30]...[/grey30]", end=""
+                )
+                self._last_part_type = ToolCall
+            case ToolCallPart():
+                if self._last_part_type not in [ToolCall, ToolCallPart]:
+                    return
+                self._n_tool_call_args_parts += 1
+                if self._n_tool_call_args_parts == 10:
+                    self._console.print("[grey30].[/grey30]", end="")
+                    self._n_tool_call_args_parts = 0
+                self._last_part_type = ToolCallPart
