@@ -209,6 +209,15 @@ class PlanPhase(Enum):
     REVIEW_DECISION = "review"
 
 
+class AgentState(Enum):
+    """Agent loop states for enhanced completion detection."""
+
+    USER_INPUT = "user_input"  # Initial: user prompt received
+    ASSISTANT = "assistant"  # Reasoning/deciding phase
+    TOOL_EXECUTION = "tool_execution"  # Tool execution phase
+    RESPONSE = "response"  # Handling results, may complete or loop
+
+
 @dataclass
 class PlanDoc:
     """Structured plan document with all required sections."""
