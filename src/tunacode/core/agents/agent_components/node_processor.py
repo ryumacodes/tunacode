@@ -5,7 +5,7 @@ from typing import Any, Awaitable, Callable, Optional, Tuple
 
 from tunacode.core.logging.logger import get_logger
 from tunacode.core.state import StateManager
-from tunacode.types import UsageTrackerProtocol
+from tunacode.types import AgentState, UsageTrackerProtocol
 from tunacode.ui.tool_descriptions import get_batch_description, get_tool_description
 
 from .response_state import ResponseState
@@ -161,8 +161,9 @@ async def _process_node(
                                     f"Task completion with pending intentions detected: {found_phrases}"
                                 )
 
-                            # Normal completion
-                            response_state.task_completed = True
+                            # Normal completion - transition to RESPONSE state and mark completion
+                            response_state.transition_to(AgentState.RESPONSE)
+                            response_state.set_completion_detected(True)
                             response_state.has_user_response = True
                             # Update the part content to remove the marker
                             part.content = cleaned_content
