@@ -54,13 +54,28 @@ class ResponseState:
 
     @property
     def task_completed(self) -> bool:
-        """Legacy boolean flag for task completion."""
-        return self._task_completed
+        """Legacy boolean flag for task completion (derived from state machine)."""
+        # If explicitly set true, honor it; otherwise derive from state machine
+        return bool(self._task_completed or self._state_machine.is_completed())
 
     @task_completed.setter
     def task_completed(self, value: bool) -> None:
-        """Set the legacy task_completed flag."""
-        self._task_completed = value
+        """Set the legacy task_completed flag and sync with state machine."""
+        self._task_completed = bool(value)
+        if value:
+            # Ensure state reflects completion in RESPONSE
+            try:
+                if (
+                    self._state_machine.current_state != AgentState.RESPONSE
+                    and self._state_machine.can_transition_to(AgentState.RESPONSE)
+                ):
+                    self._state_machine.transition_to(AgentState.RESPONSE)
+            except Exception:
+                # Best-effort: ignore invalid transition in legacy paths
+                pass
+            self._state_machine.set_completion_detected(True)
+        else:
+            self._state_machine.set_completion_detected(False)
 
     @property
     def awaiting_user_guidance(self) -> bool:
