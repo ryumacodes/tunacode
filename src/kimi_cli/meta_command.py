@@ -54,7 +54,7 @@ def help(app: "App", args: list[str]):
     """Show help information."""
     console.print(
         Panel(
-            f"Send message to {app.agent.name} to get things done!\n\n"
+            f"Send message to {app.soul.name} to get things done!\n\n"
             "Meta commands are also available:\n\n"
             + "\n".join(
                 f"  /{command.name}: {command.description}" for command in get_meta_commands()

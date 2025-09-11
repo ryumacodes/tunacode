@@ -21,13 +21,13 @@ _WELCOME_MESSAGE = """
 
 
 class App:
-    def __init__(self, agent: Soul):
-        self.agent = agent
+    def __init__(self, soul: Soul):
+        self.soul = soul
 
     async def run(self, command: str | None = None):
         if command is not None:
             # run single command and exit
-            await self.agent.run(command)
+            await self.soul.run(command)
             return
 
         meta_command_completer = WordCompleter(
@@ -45,8 +45,8 @@ class App:
         )
 
         welcome = _WELCOME_MESSAGE.format(
-            name=self.agent.name,
-            model=self.agent.model,
+            name=self.soul.name,
+            model=self.soul.model,
             work_dir=Path.cwd().absolute(),
         )
         console.print()
@@ -73,7 +73,7 @@ class App:
                 await self._run_meta_command(user_input[1:])
                 continue
 
-            await self.agent.run(user_input)
+            await self.soul.run(user_input)
 
     async def _run_meta_command(self, command_str: str):
         parts = command_str.split(" ")
