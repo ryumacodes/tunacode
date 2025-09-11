@@ -72,12 +72,12 @@ class Shell(CallableTool):
 
         def stdout_cb(line: bytes):
             line_str = line.decode()
-            print(line_str, end="")
+            # print(line_str, end="")  # TODO: better printing
             output.append(line_str)
 
         def stderr_cb(line: bytes):
             line_str = line.decode()
-            print(line_str, end="")
+            # print(line_str, end="")  # TODO: better printing
             output.append(line_str)
 
         try:
