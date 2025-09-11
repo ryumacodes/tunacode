@@ -52,6 +52,12 @@ async def _process_node(
     has_intention = False
     has_tool_calls = False
 
+    # Transition to ASSISTANT at the start of node processing
+    if response_state and response_state.can_transition_to(AgentState.ASSISTANT):
+        response_state.transition_to(AgentState.ASSISTANT)
+        if state_manager.session.show_thoughts:
+            await ui.muted("STATE → ASSISTANT (reasoning)")
+
     if hasattr(node, "request"):
         state_manager.session.messages.append(node.request)
 
@@ -163,6 +169,8 @@ async def _process_node(
 
                             # Normal completion - transition to RESPONSE state and mark completion
                             response_state.transition_to(AgentState.RESPONSE)
+                            if state_manager.session.show_thoughts:
+                                await ui.muted("STATE → RESPONSE (completion detected)")
                             response_state.set_completion_detected(True)
                             response_state.has_user_response = True
                             # Update the part content to remove the marker
@@ -217,6 +225,14 @@ async def _process_node(
         await _process_tool_calls(
             node, buffering_callback, state_manager, tool_buffer, response_state
         )
+
+    # If there were no tools and we processed a model response, transition to RESPONSE
+    if response_state and response_state.can_transition_to(AgentState.RESPONSE):
+        # Only transition if not already completed (set by completion marker path)
+        if not response_state.is_completed():
+            response_state.transition_to(AgentState.RESPONSE)
+            if state_manager.session.show_thoughts:
+                await ui.muted("STATE → RESPONSE (handled output)")
 
     # Determine empty response reason
     if empty_response_detected:
@@ -307,6 +323,11 @@ async def _process_tool_calls(
     for part in node.model_response.parts:
         if hasattr(part, "part_kind") and part.part_kind == "tool-call":
             is_processing_tools = True
+            # Transition to TOOL_EXECUTION on first tool call
+            if response_state and response_state.can_transition_to(AgentState.TOOL_EXECUTION):
+                response_state.transition_to(AgentState.TOOL_EXECUTION)
+                if state_manager.session.show_thoughts:
+                    await ui.muted("STATE → TOOL_EXECUTION (executing tools)")
             if tool_callback:
                 # Check if this is a read-only tool that can be batched
                 if tool_buffer is not None and part.tool_name in READ_ONLY_TOOLS:
@@ -440,6 +461,16 @@ async def _process_tool_calls(
                     "timestamp": getattr(part, "timestamp", None),
                 }
                 state_manager.session.tool_calls.append(tool_info)
+
+    # After tools are processed, transition back to RESPONSE
+    if (
+        is_processing_tools
+        and response_state
+        and response_state.can_transition_to(AgentState.RESPONSE)
+    ):
+        response_state.transition_to(AgentState.RESPONSE)
+        if state_manager.session.show_thoughts:
+            await ui.muted("STATE → RESPONSE (tools finished)")
 
     # Update has_user_response based on presence of actual response content
     if (

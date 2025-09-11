@@ -97,7 +97,7 @@ async def check_query_satisfaction(
     state_manager: StateManager,
 ) -> bool:
     """Check if the response satisfies the original query."""
-    return True  # Agent uses TUNACODE_TASK_COMPLETE marker
+    return True  # Completion decided via DONE marker in RESPONSE
 
 
 async def process_request(
@@ -251,7 +251,7 @@ Task: {message[:200]}...
 
 You're describing actions but not executing them. You MUST:
 
-1. If task is COMPLETE: Start response with TUNACODE_TASK_COMPLETE
+1. If task is COMPLETE: Start response with TUNACODE DONE:
 2. If task needs work: Execute a tool RIGHT NOW (grep, read_file, bash, etc.)
 3. If stuck: Explain the specific blocker
 
@@ -269,7 +269,7 @@ NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
                     unproductive_iterations = 0
 
                 # REMOVED: Recursive satisfaction check that caused empty responses
-                # The agent now decides completion using TUNACODE_TASK_COMPLETE marker
+                # The agent now decides completion using a DONE marker
                 # This eliminates recursive agent calls and gives control back to the agent
 
                 # Store original query for reference
@@ -302,7 +302,7 @@ Progress so far:
 - Iterations: {i}
 - Tools used: {tools_used_str}
 
-If the task is complete, I should respond with TUNACODE_TASK_COMPLETE.
+If the task is complete, I should respond with TUNACODE DONE:
 Otherwise, please provide specific guidance on what to do next."""
 
                     create_user_message(clarification_content, state_manager)

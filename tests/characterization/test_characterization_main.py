@@ -51,7 +51,7 @@ class TestMainAgentCharacterization:
 
     def test_check_task_completion_with_marker(self):
         """Test detecting task completion marker."""
-        content = "TUNACODE_TASK_COMPLETE\nTask has been completed successfully."
+        content = "TUNACODE DONE:\nTask has been completed successfully."
 
         is_complete, cleaned = check_task_completion(content)
 

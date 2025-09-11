@@ -9,7 +9,7 @@ tags: [plan, state-machine, enum, completion-states]
 ---
 
 ## Goal
-Implement an enum-based state machine to replace binary completion flags, eliminating premature completion issues by enforcing valid state transitions and quality gates.
+Implement an enum-based state machine to replace binary completion flags, eliminating premature completion issues by enforcing valid state transitions and a clear completion decision via a DONE marker.
 
 ## Scope & Assumptions
 
@@ -78,7 +78,7 @@ Implement an enum-based state machine to replace binary completion flags, elimin
 ### Required Data
 - Current ResponseState usage patterns documented
 - Valid state transition rules defined
-- Quality gate thresholds established
+ - DONE marker specification confirmed (pattern, case, whitespace)
 - Backward compatibility requirements documented
  - Mapping from legacy boolean flags → enum states
  - Baseline datasets and workloads for performance comparison
@@ -174,8 +174,8 @@ Implement an enum-based state machine to replace binary completion flags, elimin
 - Error messages are helpful
 
 **Files/Interfaces**:
-- state_transition.py (Production implementation, manager with locking)
-- response_state.py (Integration methods, guards)
+- state_transition.py (Validation helpers)
+- response_state.py (Integration methods)
 
 ### Task T2.3: Integration with Existing Systems (M2)
 **Summary**: Integrate state machine with existing agent components
@@ -208,7 +208,7 @@ Implement an enum-based state machine to replace binary completion flags, elimin
 **Files/Interfaces**:
 - task_completion.py (Major refactoring)
 - main.py (Update completion prompting)
- - state.py (Persistence versioning/migration)
+ - state.py (Persistence mapping)
 
 ### Task T3.2: Backward Compatibility Layer (M3)
 **Summary**: Implement wrapper functions for existing boolean-based code
@@ -340,27 +340,16 @@ Implement an enum-based state machine to replace binary completion flags, elimin
 - **Tools**: Existing test suite, integration tests
 - **Metrics**: 100% compatibility with existing behavior
 
-### Shadow-Mode Parity Testing
-- **Scope**: Run legacy and new logic in parallel; compare outputs/states
-- **Focus**: Parity, drift detection, exception cataloging
-- **Tools**: Test harness, diff reporters
-- **Metrics**: ≥ 99.5% parity across scenarios; exceptions triaged
-
-### Property and Fuzz Testing
-- **Scope**: Random transition sequences constrained by rules
-- **Focus**: Only valid sequences succeed; invalid rejected
-- **Tools**: Hypothesis/quickcheck-style property tests
-- **Metrics**: 0 false accepts; clear error messages
-
-### Concurrency Testing
-- **Scope**: Interleaved transitions under async/threaded conditions
-- **Focus**: No races, deadlocks, or lost updates
-- **Tools**: Stress tests with interleaving and timeouts
-- **Metrics**: 0 deadlocks; consistent final states
+### Manual Test Checklist
+- No-tool path: USER_INPUT → ASSISTANT → RESPONSE (contains "TUNACODE DONE:") → end
+- Tool success loop: … → TOOL_EXECUTION → RESPONSE → ASSISTANT → RESPONSE (contains "TUNACODE DONE:") → end
+- Tool failure then retry: RESPONSE (no DONE) → ASSISTANT → TOOL_EXECUTION → RESPONSE (DONE)
+- Known premature completion scenario: verify no DONE, loop back to ASSISTANT
+- Persistence round-trip: load legacy → run → save → reload → verify `is_complete` and last state
 
 ### Persistence/Migration Testing
 - **Scope**: Load legacy sessions, map to enum, round-trip
-- **Focus**: Deterministic mapping and versioning
+- **Focus**: Deterministic mapping
 - **Tools**: Fixture corpus of legacy states
 - **Metrics**: 0 migration failures; documented fallbacks
 
@@ -412,11 +401,20 @@ Policy:
 - On load: map legacy boolean flags → enum deterministically; record mapping reason if ambiguous.
 - On save: write enum; optionally continue writing legacy booleans during a short transition window.
 
+Legacy mapping rules:
+- If legacy `completed=True`: set `state=RESPONSE` and `is_complete=True`.
+- Else if legacy `processing=True`: set `state=ASSISTANT` (default resume point).
+- Else: set `state=USER_INPUT`.
+
+Compatibility booleans (derived):
+- `is_complete`: True if `state==RESPONSE` and any line matches the DONE marker.
+- `is_processing`: True if `state in {ASSISTANT, TOOL_EXECUTION}`.
+
 ### Integration Points
 - response_state.py (Complete enum replacement)
 - task_completion.py (Update completion logic)
 - main.py (Update completion prompting)
-- state.py (Update persistence, versioning)
+- state.py (Update persistence mapping)
 
 
 ## References

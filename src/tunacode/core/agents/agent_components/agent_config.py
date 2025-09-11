@@ -169,18 +169,21 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
 
         # Add plan mode context if in plan mode
         if state_manager.is_plan_mode():
-            # REMOVE all TUNACODE_TASK_COMPLETE instructions from the system prompt
-            system_prompt = system_prompt.replace(
-                "TUNACODE_TASK_COMPLETE", "PLAN_MODE_TASK_PLACEHOLDER"
-            )
+            # REMOVE completion instructions from the system prompt in plan mode
+            for marker in ("TUNACODE_TASK_COMPLETE", "TUNACODE DONE:"):
+                system_prompt = system_prompt.replace(marker, "PLAN_MODE_TASK_PLACEHOLDER")
             # Remove the completion guidance that conflicts with plan mode
             lines_to_remove = [
+                "When a task is COMPLETE, start your response with: TUNACODE DONE:",
+                "4. When a task is COMPLETE, start your response with: TUNACODE DONE:",
                 "When a task is COMPLETE, start your response with: TUNACODE_TASK_COMPLETE",
                 "4. When a task is COMPLETE, start your response with: TUNACODE_TASK_COMPLETE",
                 "**How to signal completion:**",
                 "TUNACODE_TASK_COMPLETE",
+                "TUNACODE DONE:",
                 "[Your summary of what was accomplished]",
                 "**IMPORTANT**: Always evaluate if you've completed the task. If yes, use TUNACODE_TASK_COMPLETE.",
+                "**IMPORTANT**: Always evaluate if you've completed the task. If yes, use TUNACODE DONE:",
                 "This prevents wasting iterations and API calls.",
             ]
             for line in lines_to_remove:
