@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import click
+from kosong.context.linear import JsonlLinearStorage
 from kosong.tooling import SimpleToolset
 from pydantic import SecretStr
 
@@ -14,6 +15,7 @@ from kimi_cli.config import (
     ConfigError,
     LLMModel,
     LLMProvider,
+    get_share_dir,
     load_config,
 )
 from kimi_cli.soul import Soul
@@ -121,11 +123,13 @@ def kimi(
 
     echo(f"✓ Loaded tools: {[tool.name for tool in toolset.tools]}")
 
+    context_storage = JsonlLinearStorage(get_share_dir() / "history.jsonl")
     soul = Soul(
         agent.name,
         chat_provider=create_chat_provider(provider, model),
         system_prompt=system_prompt,
         toolset=toolset,
+        context_storage=context_storage,
     )
     app = App(soul)
 

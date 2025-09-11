@@ -4,6 +4,7 @@ import kosong
 from kosong.base.chat_provider import ChatProvider, StreamedMessagePart
 from kosong.base.message import Message
 from kosong.context import LinearContext
+from kosong.context.linear import LinearStorage
 from kosong.tooling import Toolset
 
 from kimi_cli.utils.message import tool_result_to_messages
@@ -17,11 +18,13 @@ class Soul:
         chat_provider: ChatProvider,
         system_prompt: str,
         toolset: Toolset,
+        context_storage: LinearStorage,
     ):
         self.name = name
         self._chat_provider = chat_provider
         self._system_prompt = system_prompt
         self._toolset = toolset
+        self._context_storage = context_storage
         self._context: LinearContext | None = None
 
     @property
@@ -33,6 +36,7 @@ class Soul:
             self._context = LinearContext(
                 system_prompt=self._system_prompt,
                 toolset=self._toolset,
+                storage=self._context_storage,
             )
         return self._context
 

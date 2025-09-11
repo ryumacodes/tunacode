@@ -46,6 +46,13 @@ def get_config_dir() -> Path:
     return config_dir
 
 
+def get_share_dir() -> Path:
+    """Get the shared directory path."""
+    share_dir = Path.home() / ".local" / "share" / "kimi"
+    share_dir.mkdir(parents=True, exist_ok=True)
+    return share_dir
+
+
 def get_config_file_path() -> Path:
     """Get the configuration file path."""
     return get_config_dir() / "config.json"
