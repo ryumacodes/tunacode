@@ -50,7 +50,7 @@ class Soul:
         await context.add_message(Message(role="user", content=user_input))
 
         print = _StreamPrint()
-        print_queue = asyncio.Queue[_PrintAction | None]()
+        print_queue = _PrintQueue()
         print_producer = _StreamPrintProducer(print_queue, print)
 
         agent_loop_task = asyncio.create_task(self._agent_loop(context, print_producer, max_steps))
@@ -60,18 +60,17 @@ class Soul:
         finally:
             print.ensure_nl()
 
-    async def _print_loop(
-        self,
-        print_queue: asyncio.Queue["_PrintAction | None"],
-    ):
+    async def _print_loop(self, print_queue: "_PrintQueue"):
         while True:
             # spin the moon at the beginning of each step
             with console.status("", spinner="moon"):
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.5)
                 action = await print_queue.get()
             while isinstance(action, _PrintAction):
                 action.func(*action.args)
                 action = await print_queue.get()
+            if isinstance(action, _StepSep):
+                continue
             if action is None:
                 break
 
@@ -86,7 +85,6 @@ class Soul:
             while True:
                 print.start_step(n_steps)
                 finished = await self._step(context, print)
-                print.end_step(n_steps)
                 n_steps += 1
                 if finished:
                     return
@@ -126,32 +124,34 @@ class _PrintAction(NamedTuple):
     args: tuple[Any, ...]
 
 
+class _StepSep:
+    pass
+
+
+_PrintQueue = asyncio.Queue[_PrintAction | _StepSep | None]
+
+
 class _StreamPrintProducer:
-    def __init__(
-        self,
-        action_queue: asyncio.Queue[_PrintAction | None],
-        print: "_StreamPrint",
-    ):
-        self._action_queue = action_queue
+    def __init__(self, print_queue: _PrintQueue, print: "_StreamPrint"):
+        self._print_queue = print_queue
         self._print = print
 
     def start_step(self, n: int):
-        self._action_queue.put_nowait(_PrintAction(self._print.start_step, (n,)))
-
-    def end_step(self, n: int):
-        self._action_queue.put_nowait(_PrintAction(self._print.end_step, (n,)))
+        self._print_queue.put_nowait(_PrintAction(self._print.step_begin, ()))
+        if n > 0:
+            self._print_queue.put_nowait(_StepSep())
 
     def end_run(self):
-        self._action_queue.put_nowait(None)
+        self._print_queue.put_nowait(None)
 
     def ensure_nl(self):
-        self._action_queue.put_nowait(_PrintAction(self._print.ensure_nl, ()))
+        self._print_queue.put_nowait(_PrintAction(self._print.ensure_nl, ()))
 
     def line(self, text: str = ""):
-        self._action_queue.put_nowait(_PrintAction(self._print.line, (text,)))
+        self._print_queue.put_nowait(_PrintAction(self._print.line, (text,)))
 
     def message_part(self, part: StreamedMessagePart):
-        self._action_queue.put_nowait(_PrintAction(self._print.message_part, (part,)))
+        self._print_queue.put_nowait(_PrintAction(self._print.message_part, (part,)))
 
 
 class _StreamPrint:
@@ -159,11 +159,8 @@ class _StreamPrint:
         self._last_part_type: type[StreamedMessagePart] | None = None
         self._n_tool_call_args_parts = 0
 
-    def start_step(self, n: int):
+    def step_begin(self):
         self.ensure_nl()
-
-    def end_step(self, n: int):
-        pass
 
     def ensure_nl(self):
         if self._last_part_type is not None:
