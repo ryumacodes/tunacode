@@ -7,25 +7,25 @@ if TYPE_CHECKING:
     from kimi_cli.app import App
 
 
-class Command(NamedTuple):
+class MetaCommand(NamedTuple):
     name: str
     description: str
     func: Callable[["App", list[str]], Awaitable[None] | None]
 
 
-_commands: dict[str, Command] = {}
+_meta_commands: dict[str, MetaCommand] = {}
 
 
-def get_command(name: str) -> Command | None:
-    return _commands.get(name)
+def get_meta_command(name: str) -> MetaCommand | None:
+    return _meta_commands.get(name)
 
 
-def get_commands() -> list[Command]:
-    return list(_commands.values())
+def get_meta_commands() -> list[MetaCommand]:
+    return list(_meta_commands.values())
 
 
-def command(func: Callable[["App", list[str]], None]):
-    _commands[func.__name__] = Command(
+def meta_command(func: Callable[["App", list[str]], None]):
+    _meta_commands[func.__name__] = MetaCommand(
         name=func.__name__,
         description=(func.__doc__ or "").strip(),
         func=func,
@@ -33,28 +33,30 @@ def command(func: Callable[["App", list[str]], None]):
     return func
 
 
-@command
+@meta_command
 def exit(app: "App", args: list[str]):
     """Exit the application."""
     # should be handled by `App`
     raise NotImplementedError
 
 
-@command
+@meta_command
 def quit(app: "App", args: list[str]):
     """Quit the application."""
     # should be handled by `App`
     raise NotImplementedError
 
 
-@command
+@meta_command
 def help(app: "App", args: list[str]):
     """Show help information."""
     app.console.print(
         Panel(
             f"Send message to {app.agent.name} to get things done!\n\n"
             "Meta commands are also available:\n\n"
-            + "\n".join(f"  /{command.name}: {command.description}" for command in get_commands()),
+            + "\n".join(
+                f"  /{command.name}: {command.description}" for command in get_meta_commands()
+            ),
             border_style="wheat4",
             expand=False,
             padding=(1, 2),

@@ -15,7 +15,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.panel import Panel
 
-from kimi_cli.command import get_command, get_commands
+from kimi_cli.meta_command import get_meta_command, get_meta_commands
 from kimi_cli.soul import Soul
 
 
@@ -114,9 +114,9 @@ class App:
 
         username = getpass.getuser()
 
-        command_completer = WordCompleter(
-            [f"/{command.name}" for command in get_commands()],
-            meta_dict={f"/{command.name}": command.description for command in get_commands()},
+        meta_command_completer = WordCompleter(
+            [f"/{command.name}" for command in get_meta_commands()],
+            meta_dict={f"/{command.name}": command.description for command in get_meta_commands()},
             ignore_case=True,
             match_middle=False,
             sentence=True,
@@ -125,7 +125,7 @@ class App:
         session = PromptSession(
             message=FormattedText([("bold", f"{username}✨ ")]),
             prompt_continuation=FormattedText([("fg:#4d4d4d", "... ")]),
-            completer=command_completer,
+            completer=meta_command_completer,
             complete_while_typing=True,
         )
 
@@ -156,7 +156,7 @@ class App:
                 printer_impl.println("Bye!")
                 break
             if user_input.startswith("/"):
-                await self._run_command(user_input[1:])
+                await self._run_meta_command(user_input[1:])
                 continue
 
             run_task = asyncio.create_task(self._run_agent(user_input, printer))
@@ -188,11 +188,11 @@ class App:
         finally:
             printer._end_of_run()
 
-    async def _run_command(self, command_str: str):
+    async def _run_meta_command(self, command_str: str):
         parts = command_str.split(" ")
         command_name = parts[0]
         command_args = parts[1:]
-        command = get_command(command_name)
+        command = get_meta_command(command_name)
         if command is None:
             self.console.print(f"Meta command /{command_name} not found")
             return
