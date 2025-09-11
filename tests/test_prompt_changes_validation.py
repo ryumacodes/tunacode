@@ -17,7 +17,7 @@ def test_system_prompt_no_json_in_responses():
     # Check critical behavior rules
     assert "CRITICAL BEHAVIOR RULES:" in content
     assert "ALWAYS ANNOUNCE YOUR INTENTIONS FIRST" in content
-    assert "TUNACODE_TASK_COMPLETE" in content
+    assert "TUNACODE DONE:" in content
 
     # Check tool access rules
     assert "###Tool Access Rules###" in content

@@ -1,0 +1,36 @@
+{
+    "default_model": "openai:gpt-4.1",
+    "env": {
+        "ANTHROPIC_API_KEY": "",
+        "GEMINI_API_KEY": "",
+        "OPENAI_API_KEY": "api-key",
+        "OPENROUTER_API_KEY": "",
+        #you can change base url to any openai comptable
+        #"OPENAI_BASE_URL": "https://api.cerebras.ai/v1"
+
+    },
+    "settings": {
+        "max_retries": 10,
+        "max_iterations": 40,
+        "tool_ignore": [
+            "read_file"
+        ],
+        "guide_file": "TUNACODE.md",
+        "fallback_response": true,
+        "fallback_verbosity": "normal",
+        "context_window_size": 200000,
+        "enable_streaming": true,
+        "ripgrep": {
+            "use_bundled": false,
+            "timeout": 10,
+            "max_buffer_size": 1048576,
+            "max_results": 100,
+            "enable_metrics": false,
+            "debug": false
+        },
+        "enable_tutorial": true,
+        "first_installation_date": "2025-09-11T11:50:40.167105",
+        "tutorial_declined": true
+    },
+    "mcpServers": {}
+}

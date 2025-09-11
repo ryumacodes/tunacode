@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import re
 import subprocess
 from asyncio.exceptions import CancelledError
 from pathlib import Path
@@ -112,7 +113,7 @@ async def _detect_and_handle_text_plan(state_manager, agent_response, original_r
         else:
             response_text = str(agent_response)
 
-        if "TUNACODE_TASK_COMPLETE" in response_text:
+        if re.search(r"^\s*TUNACODE\s+DONE:\s*", response_text, re.IGNORECASE):
             await ui.warning(
                 "⚠️ Agent failed to call present_plan tool. Please provide clearer instructions."
             )
