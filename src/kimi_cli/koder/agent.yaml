@@ -2,6 +2,8 @@ version: 1
 agent:
   name: "Kimi Koder"
   system_prompt_path: ./system.md
+  system_prompt_args:
+    KODER_NAME: "Kimi Koder"
   tools:
     - "kimi_cli.tools.test:Plus"
     - "kimi_cli.tools.test:Compare"

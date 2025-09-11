@@ -98,7 +98,7 @@ _WELCOME_MESSAGE = """
 [bold]Welcome to {name}![/bold]
 
 [grey30]Model: {model} [/grey30]
-[grey30]Workspace: {workspace} [/grey30]
+[grey30]Working directory: {work_dir} [/grey30]
 """.strip()
 
 
@@ -132,7 +132,7 @@ class App:
         welcome = _WELCOME_MESSAGE.format(
             name=self.agent.name,
             model=self.agent.model,
-            workspace=Path.cwd().absolute(),
+            work_dir=Path.cwd().absolute(),
         )
         self.console.print()
         self.console.print(

@@ -6,7 +6,7 @@ import click
 from kosong.tooling import SimpleToolset
 from pydantic import SecretStr
 
-from kimi_cli.agent import load_agent
+from kimi_cli.agent import load_agent, load_system_prompt
 from kimi_cli.app import App
 from kimi_cli.config import (
     DEFAULT_KIMI_BASE_URL,
@@ -59,6 +59,9 @@ def kimi(
     """Kimi, your next CLI agent."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
 
+    agent_path = agent_path.absolute()
+    work_dir = work_dir.absolute()
+
     try:
         config = load_config()
     except ConfigError as e:
@@ -95,7 +98,12 @@ def kimi(
     agent = load_agent(agent_path)
     echo(f"✓ Loaded agent: {agent.name}")
 
-    system_prompt = agent_path.parent.joinpath(agent.system_prompt_path).read_text().strip()
+    system_prompt = load_system_prompt(
+        agent,
+        builtin_args={
+            "ENSOUL_WORK_DIR": work_dir,
+        },
+    )
     preview = system_prompt[:200] + "..." if len(system_prompt) > 200 else system_prompt
     echo(f"✓ Loaded system prompt: {preview} ({len(system_prompt)} characters)")
 
