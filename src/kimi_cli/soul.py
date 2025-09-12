@@ -81,11 +81,13 @@ class Soul:
                             step.append_tool_call(event)
                         case ToolCallPart():
                             step.append_tool_call_part(event)
+                        case ToolResult():
+                            step.append_tool_result(event)
                         case _:
                             break  # break the step loop
                     event = await event_queue.get()
                 # cleanup the step live view before next step
-                step.finish_all()
+                step.finish()
 
             # step end or run end
             if isinstance(event, StepBegin):
@@ -118,6 +120,7 @@ class Soul:
             self._chat_provider,
             context,
             on_message_part=event_queue.put_nowait,
+            on_tool_result=event_queue.put_nowait,
         )
 
         # wait for all tool results (may be interrupted)

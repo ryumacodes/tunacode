@@ -1,3 +1,4 @@
+import asyncio
 from typing import override
 
 from kosong.base.tool import ParametersType
@@ -40,3 +41,19 @@ class Compare(CallableTool):
             return "less"
         else:
             return "equal"
+
+
+class Panic(CallableTool):
+    name: str = "panic"
+    description: str = "Raise an exception to cause the tool call to fail."
+    parameters: ParametersType = {
+        "type": "object",
+        "properties": {
+            "message": {"type": "string"},
+        },
+    }
+
+    @override
+    async def __call__(self, message: str) -> str:
+        await asyncio.sleep(2)
+        raise Exception(f"panicked with a message with {len(message)} characters")

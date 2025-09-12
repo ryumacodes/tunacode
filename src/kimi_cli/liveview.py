@@ -2,6 +2,8 @@ import json
 
 import streamingjson
 from kosong.base.message import ToolCall, ToolCallPart
+from kosong.tooling import ToolResult, ToolReturnType
+from kosong.tooling.error import ToolError
 from kosong.utils.typing import JsonType
 from rich.console import Group, RenderableType
 from rich.live import Live
@@ -19,9 +21,15 @@ class _ToolCallDisplay:
         if tool_call.function.arguments is not None:
             self._lexer.append_string(tool_call.function.arguments)
 
-        self._headline_markup = f"using [bold blue]{self._tool_name}[/bold blue]"
+        self._headline_markup = f"Using [bold blue]{self._tool_name}[/bold blue]"
         self._detail = _extract_detail(self._lexer, self._tool_name)
-        self._renderable: Spinner | Text = Spinner("dots", text=self._spinner_markup)
+        self._finished = False
+        self._spinner = Spinner("dots", text=self._spinner_markup)
+        self.renderable: RenderableType = Group(self._spinner)
+
+    @property
+    def finished(self) -> bool:
+        return self._finished
 
     @property
     def _detail_markup(self) -> str:
@@ -41,18 +49,27 @@ class _ToolCallDisplay:
         new_detail = _extract_detail(self._lexer, self._tool_name)
         if new_detail and new_detail != self._detail:
             self._detail = new_detail
-            assert isinstance(self._renderable, Spinner)
-            self._renderable.update(text=self._spinner_markup)
+            self._spinner.update(text=self._spinner_markup)
 
-    def finish(self):
-        self._renderable = Text.from_markup(
-            f"[bold green]✓[/bold green] "
-            f"used [bold blue]{self._tool_name}[/bold blue]" + self._detail_markup
+    def finish(self, result: ToolReturnType | ToolError):
+        """
+        Finish the live display of a tool call.
+        After calling this, the `renderable` property should be re-rendered.
+        """
+        self._finished = True
+        sign = (
+            "[bold red]✗[/bold red]"
+            if isinstance(result, ToolError)
+            else "[bold green]✓[/bold green]"
         )
-
-    @property
-    def finished(self) -> bool:
-        return isinstance(self._renderable, Text)
+        lines = [
+            Text.from_markup(
+                f"{sign} Used [bold blue]{self._tool_name}[/bold blue]" + self._detail_markup
+            )
+        ]
+        if isinstance(result, ToolError):
+            lines.append(Text.from_markup(f"  [red]{result.message}[/red]"))
+        self.renderable = Group(*lines)
 
 
 def _extract_detail(lexer: streamingjson.Lexer, tool_name: str) -> str:
@@ -92,7 +109,7 @@ class StepLiveView:
         if self._text:
             sections.append(self._text)
         for view in self._tool_calls.values():
-            sections.append(view._renderable)
+            sections.append(view.renderable)
         if self._percentage_text is not None:
             sections.append(self._percentage_text)
         return Group(*sections)
@@ -118,15 +135,22 @@ class StepLiveView:
             return
         self._last_tool_call.append_args_part(tool_call_part.arguments_part)
 
+    def append_tool_result(self, tool_result: ToolResult):
+        if view := self._tool_calls.get(tool_result.tool_call_id):
+            view.finish(tool_result.result)
+            self._live.update(self._compose())
+
     def update_percentage(self, percentage: float):
         if self._percentage_text is None:
             return
         self._percentage_text.plain = f"context: {percentage:.0%}"
 
-    def finish_all(self):
+    def finish(self):
         if not self._tool_calls:
             return
         for view in self._tool_calls.values():
-            view.finish()
+            if not view.finished:
+                # this should not happen, but just in case
+                view.finish("")
         self._percentage_text = None
         self._live.update(self._compose())
