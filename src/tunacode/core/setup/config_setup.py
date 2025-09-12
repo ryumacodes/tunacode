@@ -11,6 +11,7 @@ from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.configuration.models import ModelRegistry
 from tunacode.constants import APP_NAME, CONFIG_FILE_NAME, UI_COLORS
 from tunacode.core.setup.base import BaseSetup
+from tunacode.core.setup.config_wizard import ConfigWizard
 from tunacode.core.state import StateManager
 from tunacode.exceptions import ConfigurationError
 from tunacode.types import ConfigFile, ConfigPath, UserConfig
@@ -21,7 +22,6 @@ from tunacode.utils.api_key_validation import (
     validate_api_key_for_model,
 )
 from tunacode.utils.text_utils import key_to_title
-from tunacode.core.setup.config_wizard import ConfigWizard
 
 
 class ConfigSetup(BaseSetup):
@@ -427,5 +427,3 @@ class ConfigSetup(BaseSetup):
             await ui.success(f"Configuration saved to: {self.config_file}")
         except ConfigurationError as e:
             await ui.error(str(e))
-
-    

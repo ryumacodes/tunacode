@@ -226,4 +226,3 @@ class ConfigWizard:
         # Streaming is always enabled - no user choice needed
 
         await ui.info("Optional settings configured!")
-
