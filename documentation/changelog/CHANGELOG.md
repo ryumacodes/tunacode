@@ -5,6 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.75] - 2025-09-12
+
+### Changed
+- Removed fallback PyPI auth method from CI workflow
+- Bumped version to 0.0.75
+
+### Fixed
+- Fixed version check in CI pipeline
+- Updated publish workflow constants for version 0.0.73
+
+## [0.0.74] - 2025-09-11
+
+### Added
+- Implemented enum-based state machine for agent completion detection
+- Added Claude command executor documentation and test guides
+
+### Changed
+- Enhanced agent loop architecture
+
+## [0.0.73] - 2025-09-11
+
+### Changed
+- Made tool strict validation configurable in tunacode.json
+- Enhanced /model command with multi-source routing and models.dev integration
+
+### Fixed
+- Added strict=False parameter to Tool constructors to prevent validation issues
+- Replaced invalid bright_white with ansiwhite in model selector
+- Updated model command tests to match new models.dev integration behavior
+
+## [0.0.72] - 2025-09-10
+
+### Changed
+- Refactored agent and command documentation structure
+- Improved wizard UX and fixed API key loading
+
+### Fixed
+- Prevent crash when API key is missing for configured model
+- Prevent config reset on startup by loading config before initialization
+
+## [0.0.71] - 2025-08-25
+
+### Added
+- Comprehensive TunaCode tool system documentation
+- Local models configuration guide
+
+### Changed
+- Refactored tool system and cleaned up obsolete tools
+- Excluded llm-agent-tools from pre-commit hooks and file checks
+
+## [0.0.70] - 2025-08-23
+
+### Added
+- Enhanced /update command with UV tool installation support
+- Improved venv detection for UV-created environments
+- Added emoji prohibition to system prompt
+
+### Changed
+- Changed default model to OpenRouter GPT-4.1
+- Migrated to UV for dependency management with Hatch integration
+- Enhanced install script with config file creation and setup guidance
+
+### Fixed
+- Improved venv installation detection for /update command
+- Added defusedxml dependency and fixed typer compatibility
+
 ## [0.0.69] - 2025-08-21
 
 ### Summary
@@ -30,6 +96,67 @@ This release includes comprehensive command system documentation, updated model 
 
 ### Fixed
 - Removed broken link to non-existent `templates.md` file in documentation
+
+## [0.0.67] - 2025-08-14
+
+### Added
+- Added UV tool installation support to /update command
+- Added venv manual update option to error message
+- Added emoji prohibition to system prompt
+
+### Fixed
+- Improved venv detection for UV-created environments
+- Added venv installation detection for /update command
+
+## [0.0.66] - 2025-08-14
+
+### Fixed
+- Replaced aggressive retry messaging with constructive guidance
+
+## [0.0.65] - 2025-08-14
+
+### Added
+- Implemented robust uninstall script with comprehensive detection
+- Implemented robust update logic for Linux installer
+
+### Changed
+- Changed default model to OpenRouter GPT-4.1
+- Enhanced install script with config file creation and setup guidance
+
+### Fixed
+- Added missing print helper functions to install script
+
+## [0.0.64] - 2025-08-14
+
+### Added
+- Implemented UV and Hatch support to installation scripts
+- Added comprehensive UV+Hatch setup documentation
+
+### Changed
+- Migrated to UV for dependency management
+- Optimized pre-commit hooks for Hatch+UV integration
+
+### Fixed
+- Properly configured Hatch with UV installer
+- Added defusedxml dependency and fixed typer compatibility
+
+## [0.0.63] - 2025-08-14
+
+### Added
+- Phase 5 - Tool Prompt Micro-Injection System
+
+### Fixed
+- Fixed agent initialization performance with strategic caching
+- Added exception for glob.py in file length check
+
+## [0.0.62] - 2025-08-14
+
+### Added
+- **Major Performance Optimizations & JSON Recovery System** (#82)
+- Phase 1 - Ripgrep binary management foundation
+
+### Changed
+- Complete UV+Hatch integration with dependency fixes
 
 ## [Unreleased] - 2025-08-20
 

@@ -10,6 +10,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
 
+from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.types import (
     DeviceId,
     InputSessions,
@@ -39,7 +40,8 @@ class SessionState:
     )  # Keep as dict[str, Any] for agent instances
     messages: MessageHistory = field(default_factory=list)
     total_cost: float = 0.0
-    current_model: ModelName = "openai:gpt-4o"
+    # Keep session default in sync with configuration default
+    current_model: ModelName = DEFAULT_USER_CONFIG["default_model"]
     spinner: Optional[Any] = None
     tool_ignore: list[ToolName] = field(default_factory=list)
     yolo: bool = False

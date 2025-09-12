@@ -13,7 +13,7 @@ def test_state_manager_initialization_defaults():
     assert session.agents == {}
     assert session.messages == []
     assert session.total_cost == 0.0
-    assert session.current_model == "openai:gpt-4o"
+    assert session.current_model == "openrouter:openai/gpt-4.1"
     assert session.spinner is None
     assert session.tool_ignore == []
     assert session.yolo is False

@@ -109,10 +109,12 @@ class ConfigSetup(BaseSetup):
                 else:
                     await self._onboarding()
             else:
-                # No config found - show CLI usage instead of onboarding
+                # No config found - show CLI usage and continue with safe defaults (no crash)
                 from tunacode.ui.console import console
 
-                console.print("\n[bold red]No configuration found![/bold red]")
+                console.print(
+                    "\n[bold yellow]No configuration found — using safe defaults.[/bold yellow]"
+                )
                 console.print("\n[bold]Quick Setup:[/bold]")
                 console.print("Configure TunaCode using CLI flags:")
                 console.print("\n[blue]Examples:[/blue]")
@@ -127,16 +129,19 @@ class ConfigSetup(BaseSetup):
                 console.print("\n[yellow]Run 'tunacode --help' for more options[/yellow]\n")
                 console.print("\n[cyan]Or use --wizard for guided setup[/cyan]\n")
 
-                raise ConfigurationError(
-                    "No configuration found. Please use CLI flags to configure or --wizard for guided setup."
-                )
+                # Initialize in-memory defaults so we don't crash
+                self.state_manager.session.user_config = DEFAULT_USER_CONFIG.copy()
+                # Mark config as not fully validated for the fast path
+                setattr(self.state_manager, "_config_valid", False)
 
         if not self.state_manager.session.user_config.get("default_model"):
-            raise ConfigurationError(
-                (
-                    f"No default model found in config at [bold]{self.config_file}[/bold]\n\n"
-                    "Run [code]sidekick --setup[/code] to rerun the setup process."
-                )
+            # Gracefully apply default model instead of crashing
+            self.state_manager.session.user_config["default_model"] = DEFAULT_USER_CONFIG[
+                "default_model"
+            ]
+            await ui.warning(
+                "No default model set in config; applying safe default "
+                f"'{self.state_manager.session.user_config['default_model']}'."
             )
 
         # Validate API key exists for the selected model
@@ -145,9 +150,41 @@ class ConfigSetup(BaseSetup):
             model, self.state_manager.session.user_config
         )
         if not is_valid:
-            raise ConfigurationError(error_msg)
+            # Try to pick a fallback model based on whichever provider has a key configured
+            fallback = self._pick_fallback_model(self.state_manager.session.user_config)
+            if fallback and fallback != model:
+                await ui.warning(
+                    "API key missing for selected model; switching to configured provider: "
+                    f"'{fallback}'."
+                )
+                self.state_manager.session.user_config["default_model"] = fallback
+                model = fallback
+            else:
+                # No suitable fallback; continue without crashing but mark invalid
+                await ui.warning(
+                    (error_msg or "API key missing for model")
+                    + "\nContinuing without provider initialization; run 'tunacode --setup' later."
+                )
+                setattr(self.state_manager, "_config_valid", False)
 
         self.state_manager.session.current_model = model
+
+    def _pick_fallback_model(self, user_config: UserConfig) -> str | None:
+        """Select a reasonable fallback model based on configured API keys."""
+        env = (user_config or {}).get("env", {})
+
+        # Preference order: OpenAI → Anthropic → Google → OpenRouter
+        if env.get("OPENAI_API_KEY", "").strip():
+            return "openai:gpt-4o"
+        if env.get("ANTHROPIC_API_KEY", "").strip():
+            return "anthropic:claude-sonnet-4"
+        if env.get("GEMINI_API_KEY", "").strip():
+            return "google:gemini-2.5-flash"
+        if env.get("OPENROUTER_API_KEY", "").strip():
+            # Use the project default when OpenRouter is configured
+            return DEFAULT_USER_CONFIG.get("default_model", "openrouter:openai/gpt-4.1")
+
+        return None
 
     async def validate(self) -> bool:
         """Validate that configuration is properly set up."""
