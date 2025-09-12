@@ -54,6 +54,34 @@ See the [Hatch Build System Guide](documentation/development/hatch-build-system.
 
 Choose your AI provider and set your API key. For more details, see the [Configuration Section](documentation/user/getting-started.md#2-configuration) in the Getting Started Guide. For local models (LM Studio, Ollama, etc.), see the [Local Models Setup Guide](documentation/configuration/local-models.md).
 
+### New: Enhanced Model Selection
+
+TunaCode now automatically saves your model selection for future sessions. When you choose a model using `/model <provider:name>`, it will be remembered across restarts.
+
+**If you encounter API key errors**, you can manually create a configuration file:
+
+```bash
+# Create the config directory and file
+mkdir -p ~/.config/tunacode
+cat > ~/.config/tunacode/tunacode.json << 'EOF'
+{
+  "default_model": "openai/gpt-4.1",
+  "api_keys": {
+    "openai": "your-openai-api-key-here"
+  }
+}
+EOF
+```
+
+Replace the model name and API key with your preferred provider and credentials. Common providers:
+- `openai/gpt-4.1` (requires OPENAI_API_KEY)
+- `anthropic/claude-4-sonnet-20250522` (requires ANTHROPIC_API_KEY)
+- `google/gemini-2.5-pro` (requires GOOGLE_API_KEY)
+
+### ⚠️ Important Notice
+
+I apologize for any recent issues with model selection and configuration. I'm actively working to fix these problems and improve the overall stability of TunaCode. Your patience and feedback are greatly appreciated as I work to make the tool more reliable.
+
 ### Recommended Models
 
 Based on extensive testing, these models provide the best performance:
