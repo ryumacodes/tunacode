@@ -133,6 +133,11 @@ async def process_request(
     import uuid
 
     request_id = str(uuid.uuid4())[:8]
+    # Attach request_id to session for downstream logging/context
+    try:
+        state_manager.session.request_id = request_id
+    except Exception:
+        pass
 
     # Reset state for new request
     state_manager.session.current_iteration = 0
@@ -169,14 +174,43 @@ async def process_request(
                 # Handle token-level streaming for model request nodes
                 Agent, _ = get_agent_tool()
                 if streaming_callback and STREAMING_AVAILABLE and Agent.is_model_request_node(node):
-                    async with node.stream(agent_run.ctx) as request_stream:
-                        async for event in request_stream:
-                            if isinstance(event, PartDeltaEvent) and isinstance(
-                                event.delta, TextPartDelta
-                            ):
-                                # Stream individual token deltas
-                                if event.delta.content_delta and streaming_callback:
-                                    await streaming_callback(event.delta.content_delta)
+                    # Gracefully handle streaming errors from LLM provider
+                    for attempt in range(2):  # simple retry once, then degrade gracefully
+                        try:
+                            async with node.stream(agent_run.ctx) as request_stream:
+                                async for event in request_stream:
+                                    if isinstance(event, PartDeltaEvent) and isinstance(
+                                        event.delta, TextPartDelta
+                                    ):
+                                        # Stream individual token deltas
+                                        if event.delta.content_delta and streaming_callback:
+                                            await streaming_callback(event.delta.content_delta)
+                            break  # successful streaming; exit retry loop
+                        except Exception as stream_err:
+                            # Log with context and optionally notify UI, then retry once
+                            logger.warning(
+                                "Streaming error (attempt %s/2) req=%s iter=%s: %s",
+                                attempt + 1,
+                                request_id,
+                                i,
+                                stream_err,
+                                exc_info=True,
+                            )
+                            if getattr(state_manager.session, "show_thoughts", False):
+                                from tunacode.ui import console as ui
+
+                                await ui.warning(
+                                    "⚠️ Streaming failed; retrying once then falling back"
+                                )
+                            # On second failure, degrade gracefully (no streaming)
+                            if attempt == 1:
+                                if getattr(state_manager.session, "show_thoughts", False):
+                                    from tunacode.ui import console as ui
+
+                                    await ui.muted(
+                                        "Switching to non-streaming processing for this node"
+                                    )
+                                break
 
                 empty_response, empty_reason = await _process_node(
                     node,
@@ -451,10 +485,22 @@ Please let me know how to proceed."""
         # Re-raise to be handled by caller
         raise
     except Exception as e:
-        logger.error(f"Error in process_request: {e}", exc_info=True)
+        # Include request context to aid debugging
+        safe_iter = (
+            state_manager.session.current_iteration
+            if hasattr(state_manager.session, "current_iteration")
+            else "?"
+        )
+        logger.error(
+            f"Error in process_request [req={request_id} iter={safe_iter}]: {e}",
+            exc_info=True,
+        )
         # Patch orphaned tool messages with generic error
         patch_tool_messages(
             f"Request processing failed: {str(e)[:100]}...", state_manager=state_manager
         )
         # Re-raise to be handled by caller
         raise
+
+
+1

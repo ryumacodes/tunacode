@@ -19,7 +19,8 @@ documentation/
 │   ├── command-system-architecture.md
 │   ├── creating-custom-commands.md
 │   ├── hatch-build-system.md
-|   ├── performance-optimizations.md
+│   ├── performance-optimizations.md
+│   ├── publishing-workflow.md
 │   └── prompt-principles.md
 │── user/                 # user guides
     │── getting-started.md
@@ -36,6 +37,7 @@ General project documentation for features, architecture, and best practices.
 - [Command System Architecture](development/command-system-architecture.md) - Technical overview of the command system design and components.
 - [Creating Custom Commands](development/creating-custom-commands.md) - Step-by-step guide for creating built-in and slash commands.
 - [Hatch Build System](development/hatch-build-system.md) - Complete guide to using Hatch for development and building.
+- [Publishing Workflow](development/publishing-workflow.md) - Automated PyPI publishing process and release management.
 - [Configuration File Example](configuration/config-file-example.md) - Complete example of `~/.config/tunacode.json` with all available settings.
 - [Local Models Setup](configuration/local-models.md) - Guide for using local models with LM Studio or any OpenAI-compatible API.
 - [Performance Optimizations](development/performance-optimizations.md) - Major performance improvements and optimization strategies.

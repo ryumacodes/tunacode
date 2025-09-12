@@ -448,7 +448,22 @@ async def _process_tool_calls(
                         f"[bold #00d7ff]{tool_desc}...[/bold #00d7ff]", state_manager
                     )
 
-                    await tool_callback(part, node)
+                    # Execute the tool with robust error handling so one failure doesn't crash the run
+                    try:
+                        await tool_callback(part, node)
+                    except Exception as tool_err:
+                        logger.error(
+                            "Tool callback failed: tool=%s iter=%s err=%s",
+                            getattr(part, "tool_name", "<unknown>"),
+                            getattr(state_manager.session, "current_iteration", "?"),
+                            tool_err,
+                            exc_info=True,
+                        )
+                        # Surface to UI when thoughts are enabled, then continue gracefully
+                        if getattr(state_manager.session, "show_thoughts", False):
+                            await ui.warning(
+                                f"❌ Tool failed: {getattr(part, 'tool_name', '<unknown>')} — continuing"
+                            )
 
     # Track tool calls in session
     if is_processing_tools:
