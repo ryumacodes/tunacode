@@ -25,12 +25,12 @@ class StepLiveView:
         self._last_tool_call: _ToolCallDisplay | None = None
 
     def __enter__(self):
-        self.live = Live(self._compose(), console=console, refresh_per_second=4)
-        self.live.__enter__()
+        self._live = Live(self._compose(), console=console, refresh_per_second=4)
+        self._live.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.live.__exit__(exc_type, exc_value, traceback)
+        self._live.__exit__(exc_type, exc_value, traceback)
 
     def _compose(self) -> RenderableType:
         sections = []
@@ -44,7 +44,7 @@ class StepLiveView:
         if not self._text:
             self._text = Text(text)
             # update the whole display
-            self.live.update(self._compose())
+            self._live.update(self._compose())
         else:
             # only update the Text
             self._text.append(text)
@@ -52,7 +52,7 @@ class StepLiveView:
     def append_tool_call(self, tool_call: ToolCall):
         self._tool_calls[tool_call.id] = _ToolCallDisplay(tool_call)
         self._last_tool_call = self._tool_calls[tool_call.id]
-        self.live.update(self._compose())
+        self._live.update(self._compose())
 
     def append_tool_call_part(self, tool_call_part: ToolCallPart):
         if not tool_call_part.arguments_part:
@@ -70,4 +70,4 @@ class StepLiveView:
                 "[bold green]✓[/bold green] "
                 f"used [bold blue]{view.tool_call.function.name}[/bold blue]"
             )
-        self.live.update(self._compose())
+        self._live.update(self._compose())
