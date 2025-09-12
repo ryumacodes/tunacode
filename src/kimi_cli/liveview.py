@@ -34,16 +34,11 @@ class _ToolCallDisplay:
     def append_args_part(self, args_part: str):
         if self.finished:
             return
-
-        if len(self._detail) > 53:
-            return
         if len(self._detail) > 50:
             # TODO: better truncation
-            new_detail = self._detail + "..."
-        else:
-            self._lexer.append_string(args_part)
-            new_detail = _extract_detail(self._lexer, self._tool_name)
-
+            return
+        self._lexer.append_string(args_part)
+        new_detail = _extract_detail(self._lexer, self._tool_name)
         if new_detail and new_detail != self._detail:
             self._detail = new_detail
             assert isinstance(self._renderable, Spinner)
@@ -81,6 +76,8 @@ class StepLiveView:
         self._text = Text("")
         self._tool_calls: dict[str, _ToolCallDisplay] = {}
         self._last_tool_call: _ToolCallDisplay | None = None
+        # TODO: pass in initial context percentage
+        self._percentage_text: Text | None = Text("context: 0%", style="grey50", justify="right")
 
     def __enter__(self):
         self._live = Live(self._compose(), console=console, refresh_per_second=4)
@@ -96,6 +93,8 @@ class StepLiveView:
             sections.append(self._text)
         for view in self._tool_calls.values():
             sections.append(view._renderable)
+        if self._percentage_text is not None:
+            sections.append(self._percentage_text)
         return Group(*sections)
 
     def append_text(self, text: str):
@@ -119,9 +118,15 @@ class StepLiveView:
             return
         self._last_tool_call.append_args_part(tool_call_part.arguments_part)
 
+    def update_percentage(self, percentage: float):
+        if self._percentage_text is None:
+            return
+        self._percentage_text.plain = f"context: {percentage:.0%}"
+
     def finish_all(self):
         if not self._tool_calls:
             return
         for view in self._tool_calls.values():
             view.finish()
+        self._percentage_text = None
         self._live.update(self._compose())
