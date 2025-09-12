@@ -38,8 +38,14 @@ jobs:
         shell: bash
         run: |
           TAG="${{ steps.ver.outputs.tag }}"
-          PYPROJ=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
-          CONST=$(sed -n 's/^APP_VERSION = "\(.*\)"/\1/p' src/tunacode/constants.py)
+          # Extract only the [project] version from pyproject.toml
+          PYPROJ=$(awk '
+            /^\[project\]/ { in_proj=1; next }
+            /^\[/ { if (in_proj) exit }
+            in_proj && /^version =/ { match($0, /"([^"]+)"/, m); print m[1]; exit }
+          ' pyproject.toml)
+          # Extract APP_VERSION from constants
+          CONST=$(awk -F '"' '/^APP_VERSION =/ { print $2; exit }' src/tunacode/constants.py)
           echo "Tag: $TAG"
           echo "pyproject.toml: $PYPROJ"
           echo "constants.APP_VERSION: $CONST"
