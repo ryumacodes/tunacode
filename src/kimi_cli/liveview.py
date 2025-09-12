@@ -89,12 +89,13 @@ def _extract_detail(lexer: streamingjson.Lexer, tool_name: str) -> str:
 
 
 class StepLiveView:
-    def __init__(self):
+    def __init__(self, context_usage: float):
         self._text = Text("")
         self._tool_calls: dict[str, _ToolCallDisplay] = {}
         self._last_tool_call: _ToolCallDisplay | None = None
-        # TODO: pass in initial context percentage
-        self._percentage_text: Text | None = Text("context: 0%", style="grey50", justify="right")
+        self._context_usage_text: Text | None = Text(
+            f"context: {context_usage:.1%}", style="grey50", justify="right"
+        )
 
     def __enter__(self):
         self._live = Live(self._compose(), console=console, refresh_per_second=4)
@@ -110,8 +111,7 @@ class StepLiveView:
             sections.append(self._text)
         for view in self._tool_calls.values():
             sections.append(view.renderable)
-        if self._percentage_text is not None:
-            sections.append(self._percentage_text)
+        sections.append(self._context_usage_text)
         return Group(*sections)
 
     def append_text(self, text: str):
@@ -122,6 +122,7 @@ class StepLiveView:
         else:
             # only update the Text
             self._text.append(text)
+            # TODO: print to console once a `\n` is encountered
 
     def append_tool_call(self, tool_call: ToolCall):
         self._tool_calls[tool_call.id] = _ToolCallDisplay(tool_call)
@@ -140,10 +141,10 @@ class StepLiveView:
             view.finish(tool_result.result)
             self._live.update(self._compose())
 
-    def update_percentage(self, percentage: float):
-        if self._percentage_text is None:
+    def update_context_usage(self, usage: float):
+        if self._context_usage_text is None:
             return
-        self._percentage_text.plain = f"context: {percentage:.0%}"
+        self._context_usage_text.plain = f"context: {usage:.1%}"
 
     def finish(self):
         if not self._tool_calls:
@@ -152,5 +153,4 @@ class StepLiveView:
             if not view.finished:
                 # this should not happen, but just in case
                 view.finish("")
-        self._percentage_text = None
         self._live.update(self._compose())

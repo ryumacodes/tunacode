@@ -17,6 +17,10 @@ class StepBegin(NamedTuple):
     n: int
 
 
-type ControlFlowEvent = RunBegin | RunEnd | StepBegin
+class ContextUsageUpdate(NamedTuple):
+    usage_percentage: float
+
+
+type ControlFlowEvent = RunBegin | RunEnd | StepBegin | ContextUsageUpdate
 type Event = ControlFlowEvent | ContentPart | ToolCall | ToolCallPart | ToolResult
 EventQueue = asyncio.Queue[Event]

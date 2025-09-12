@@ -9,7 +9,7 @@ from kosong.context.linear import LinearStorage
 from kosong.tooling import ToolResult, Toolset
 
 from kimi_cli.console import console
-from kimi_cli.event import EventQueue, RunBegin, RunEnd, StepBegin
+from kimi_cli.event import ContextUsageUpdate, EventQueue, RunBegin, RunEnd, StepBegin
 from kimi_cli.liveview import StepLiveView
 from kimi_cli.utils.message import tool_result_to_messages
 
@@ -30,6 +30,8 @@ class Soul:
         self._toolset = toolset
         self._context_storage = context_storage
         self._context: LinearContext | None = None
+        self._max_context_size: int = 200_000  # unit: tokens
+        self._context_size: int = 0  # unit: tokens
 
     @property
     def model(self) -> str:
@@ -43,6 +45,10 @@ class Soul:
                 storage=self._context_storage,
             )
         return self._context
+
+    @property
+    def context_usage(self) -> float:
+        return self._context_size / self._max_context_size
 
     async def run(self, user_input: str, max_steps: int | None = None):
         context = self._get_context()
@@ -68,7 +74,7 @@ class Soul:
             with console.status("", spinner="moon"):
                 event = await event_queue.get()
 
-            with StepLiveView() as step:
+            with StepLiveView(self.context_usage) as step:
                 # step visualization loop
                 while True:
                     match event:
@@ -83,6 +89,8 @@ class Soul:
                             step.append_tool_call_part(event)
                         case ToolResult():
                             step.append_tool_result(event)
+                        case ContextUsageUpdate(usage_percentage=usage):
+                            step.update_context_usage(usage)
                         case _:
                             break  # break the step loop
                     event = await event_queue.get()
@@ -122,6 +130,9 @@ class Soul:
             on_message_part=event_queue.put_nowait,
             on_tool_result=event_queue.put_nowait,
         )
+        if result.usage is not None:
+            self._context_size = result.usage.total
+            event_queue.put_nowait(ContextUsageUpdate(self.context_usage))
 
         # wait for all tool results (may be interrupted)
         results = await result.tool_results()
