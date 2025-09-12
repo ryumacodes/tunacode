@@ -84,6 +84,8 @@ class TestCommandBehaviors:
         cmd = commands.ModelCommand()
         context = mock.Mock()
         context.state_manager.session.current_model = "openai:gpt-3.5"
+        # Ensure user_config is a real dict to support persistence
+        context.state_manager.session.user_config = {}
 
         # Mock the models registry to avoid network calls and provide predictable results
         mock_registry = mock.Mock()
@@ -92,8 +94,11 @@ class TestCommandBehaviors:
         cmd.registry = mock_registry
         cmd._registry_loaded = True
 
-        # Mock UI functions
-        with mock.patch("tunacode.ui.console.warning") as mock_warning:
+        # Mock UI functions and stub out config save to avoid real IO
+        with (
+            mock.patch("tunacode.ui.console.warning") as mock_warning,
+            mock.patch("tunacode.utils.user_configuration.save_config", return_value=True),
+        ):
             result = await cmd.execute(["anthropic:claude-3.5-sonnet"], context)
 
         # Model should be updated even if not found in registry (with warning)

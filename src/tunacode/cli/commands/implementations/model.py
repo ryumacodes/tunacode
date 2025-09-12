@@ -104,7 +104,15 @@ class ModelCommand(SimpleCommand):
             # Auto-select single result
             model = models[0]
             context.state_manager.session.current_model = model.full_id
-            await ui.success(f"Switched to model: {model.full_id} - {model.name}")
+            # Persist selection to config by default
+            try:
+                user_configuration.set_default_model(model.full_id, context.state_manager)
+                await ui.success(
+                    f"Switched to model: {model.full_id} - {model.name} (saved as default)"
+                )
+            except ConfigurationError as e:
+                await ui.error(str(e))
+                await ui.warning("Model switched for this session only; failed to save default.")
             return None
 
         # Show multiple results
@@ -159,7 +167,7 @@ class ModelCommand(SimpleCommand):
             # Set the model
             context.state_manager.session.current_model = model_name
 
-            # Check if setting as default
+            # Check if setting as default (preserve existing behavior)
             if extra_args and extra_args[0] == "default":
                 try:
                     user_configuration.set_default_model(model_name, context.state_manager)
@@ -169,7 +177,13 @@ class ModelCommand(SimpleCommand):
                     await ui.error(str(e))
                     return None
 
-            await ui.success(f"Switched to model: {model_name}")
+            # Persist selection to config by default (auto-persist)
+            try:
+                user_configuration.set_default_model(model_name, context.state_manager)
+                await ui.success(f"Switched to model: {model_name} (saved as default)")
+            except ConfigurationError as e:
+                await ui.error(str(e))
+                await ui.warning("Model switched for this session only; failed to save default.")
             return None
 
         # No colon - treat as search query
@@ -184,7 +198,15 @@ class ModelCommand(SimpleCommand):
             # Single match - use it
             model = models[0]
             context.state_manager.session.current_model = model.full_id
-            await ui.success(f"Switched to model: {model.full_id} - {model.name}")
+            # Persist selection to config by default
+            try:
+                user_configuration.set_default_model(model.full_id, context.state_manager)
+                await ui.success(
+                    f"Switched to model: {model.full_id} - {model.name} (saved as default)"
+                )
+            except ConfigurationError as e:
+                await ui.error(str(e))
+                await ui.warning("Model switched for this session only; failed to save default.")
             return None
 
         # Multiple matches - show interactive selector with results
@@ -193,7 +215,13 @@ class ModelCommand(SimpleCommand):
 
         if selected_model:
             context.state_manager.session.current_model = selected_model
-            await ui.success(f"Switched to model: {selected_model}")
+            # Persist selection to config by default
+            try:
+                user_configuration.set_default_model(selected_model, context.state_manager)
+                await ui.success(f"Switched to model: {selected_model} (saved as default)")
+            except ConfigurationError as e:
+                await ui.error(str(e))
+                await ui.warning("Model switched for this session only; failed to save default.")
         else:
             await ui.info("Model selection cancelled")
 
