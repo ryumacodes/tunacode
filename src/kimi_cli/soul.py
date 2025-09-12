@@ -2,15 +2,15 @@ import asyncio
 
 import kosong
 from kosong import StepResult
-from kosong.base.chat_provider import ChatProvider, StreamedMessagePart
+from kosong.base.chat_provider import ChatProvider
 from kosong.base.message import ContentPart, Message, TextPart, ToolCall, ToolCallPart
 from kosong.context import LinearContext
 from kosong.context.linear import LinearStorage
 from kosong.tooling import ToolResult, Toolset
-from rich.markup import escape
 
 from kimi_cli.console import console
 from kimi_cli.event import EventQueue, RunBegin, RunEnd, StepBegin
+from kimi_cli.liveview import StepLiveView
 from kimi_cli.utils.message import tool_result_to_messages
 
 
@@ -63,23 +63,35 @@ class Soul:
         # expect a StepBegin
         assert isinstance(await event_queue.get(), StepBegin)
 
-        printer = _StreamPrinter()
         while True:
             # spin the moon at the beginning of each step
             with console.status("", spinner="moon"):
-                await asyncio.sleep(0.5)
-                action = await event_queue.get()
-            # print the streamed parts
-            while isinstance(action, ContentPart | ToolCall | ToolCallPart):
-                printer.message_part(action)
-                action = await event_queue.get()
+                event = await event_queue.get()
+
+            with StepLiveView() as step:
+                # step visualization loop
+                while True:
+                    match event:
+                        case TextPart(text=text):
+                            step.append_text(text)
+                        case ContentPart():
+                            # TODO: support more content parts
+                            step.append_text(f"[{event.__class__.__name__}]")
+                        case ToolCall():
+                            step.append_tool_call(event)
+                        case ToolCallPart():
+                            step.append_tool_call_part(event)
+                        case _:
+                            break  # break the step loop
+                    event = await event_queue.get()
+                # cleanup the step live view before next step
+                step.finish_all()
 
             # step end or run end
-            printer.ensure_nl()
-            if isinstance(action, StepBegin):
+            if isinstance(event, StepBegin):
                 # start a new step
                 continue
-            assert isinstance(action, RunEnd)
+            assert isinstance(event, RunEnd)
             break
 
     async def _agent_loop(
@@ -121,40 +133,3 @@ class Soul:
         for tool_result in tool_results:
             for message in tool_result_to_messages(tool_result):
                 await context.add_message(message)
-
-
-class _StreamPrinter:
-    def __init__(self):
-        self._last_part_type: type[StreamedMessagePart] | None = None
-        self._n_tool_call_args_parts = 0
-
-    def ensure_nl(self):
-        if self._last_part_type is not None:
-            self.line()
-            self._last_part_type = None
-
-    def line(self, text: str = ""):
-        console.print(escape(text))
-        self._last_part_type = None
-
-    def message_part(self, part: StreamedMessagePart):
-        match part:
-            case str(text) | TextPart(text=text):
-                if (self._last_part_type or TextPart) is not TextPart:
-                    self.ensure_nl()
-                console.print(text, end="")
-                self._last_part_type = TextPart
-            case ToolCall(function=function):
-                self.ensure_nl()
-                console.print(
-                    f"Using [underline]{function.name}[/underline][grey30]...[/grey30]", end=""
-                )
-                self._last_part_type = ToolCall
-            case ToolCallPart():
-                if self._last_part_type not in [ToolCall, ToolCallPart]:
-                    return
-                self._n_tool_call_args_parts += 1
-                if self._n_tool_call_args_parts == 10:
-                    console.print("[grey30].[/grey30]", end="")
-                    self._n_tool_call_args_parts = 0
-                self._last_part_type = ToolCallPart

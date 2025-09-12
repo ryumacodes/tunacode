@@ -10,6 +10,7 @@ dependencies = [
     "prompt-toolkit>=3.0.52",
     "pyyaml>=6.0.2",
     "rich>=14.1.0",
+    "streamingjson>=0.0.5",
 ]
 
 [dependency-groups]

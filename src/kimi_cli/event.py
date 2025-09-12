@@ -1,5 +1,5 @@
 import asyncio
-from dataclasses import dataclass
+from typing import NamedTuple
 
 from kosong.base.message import ContentPart, ToolCall, ToolCallPart
 
@@ -12,10 +12,10 @@ class RunEnd:
     pass
 
 
-@dataclass
-class StepBegin:
+class StepBegin(NamedTuple):
     n: int
 
 
-type Event = RunBegin | RunEnd | StepBegin | ContentPart | ToolCall | ToolCallPart
+type ControlFlowEvent = RunBegin | RunEnd | StepBegin
+type Event = ControlFlowEvent | ContentPart | ToolCall | ToolCallPart
 EventQueue = asyncio.Queue[Event]
