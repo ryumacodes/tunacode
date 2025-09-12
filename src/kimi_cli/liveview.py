@@ -1,7 +1,11 @@
+import json
+
 import streamingjson
 from kosong.base.message import ToolCall, ToolCallPart
+from kosong.utils.typing import JsonType
 from rich.console import Group, RenderableType
 from rich.live import Live
+from rich.markup import escape
 from rich.spinner import Spinner
 from rich.text import Text
 
@@ -10,12 +14,66 @@ from kimi_cli.console import console
 
 class _ToolCallDisplay:
     def __init__(self, tool_call: ToolCall):
-        self.tool_call = tool_call
-        self.lexer = streamingjson.Lexer()
+        self._tool_name = tool_call.function.name
+        self._lexer = streamingjson.Lexer()
         if tool_call.function.arguments is not None:
-            self.lexer.append_string(tool_call.function.arguments)
-        headline = f"using [bold blue]{tool_call.function.name}[/bold blue][grey50]...[/grey50]"
-        self.renderable: Spinner | Text = Spinner("dots", text=headline)
+            self._lexer.append_string(tool_call.function.arguments)
+
+        self._headline_markup = f"using [bold blue]{self._tool_name}[/bold blue]"
+        self._detail = _extract_detail(self._lexer, self._tool_name)
+        self._renderable: Spinner | Text = Spinner("dots", text=self._spinner_markup)
+
+    @property
+    def _detail_markup(self) -> str:
+        return f"[grey50]: {escape(self._detail)}[/grey50]" if self._detail else ""
+
+    @property
+    def _spinner_markup(self) -> str:
+        return self._headline_markup + self._detail_markup
+
+    def append_args_part(self, args_part: str):
+        if self.finished:
+            return
+
+        if len(self._detail) > 53:
+            return
+        if len(self._detail) > 50:
+            # TODO: better truncation
+            new_detail = self._detail + "..."
+        else:
+            self._lexer.append_string(args_part)
+            new_detail = _extract_detail(self._lexer, self._tool_name)
+
+        if new_detail and new_detail != self._detail:
+            self._detail = new_detail
+            assert isinstance(self._renderable, Spinner)
+            self._renderable.update(text=self._spinner_markup)
+
+    def finish(self):
+        self._renderable = Text.from_markup(
+            f"[bold green]✓[/bold green] "
+            f"used [bold blue]{self._tool_name}[/bold blue]" + self._detail_markup
+        )
+
+    @property
+    def finished(self) -> bool:
+        return isinstance(self._renderable, Text)
+
+
+def _extract_detail(lexer: streamingjson.Lexer, tool_name: str) -> str:
+    try:
+        curr_args: JsonType = json.loads(lexer.complete_json())
+    except json.JSONDecodeError:
+        return ""
+    if not curr_args:
+        return ""
+    match tool_name:
+        case "shell":
+            if not isinstance(curr_args, dict) or not curr_args.get("command"):
+                return ""
+            return str(curr_args["command"])
+        case _:
+            return "".join(lexer.json_content)
 
 
 class StepLiveView:
@@ -37,7 +95,7 @@ class StepLiveView:
         if self._text:
             sections.append(self._text)
         for view in self._tool_calls.values():
-            sections.append(view.renderable)
+            sections.append(view._renderable)
         return Group(*sections)
 
     def append_text(self, text: str):
@@ -59,15 +117,11 @@ class StepLiveView:
             return
         if self._last_tool_call is None:
             return
-        self._last_tool_call.lexer.append_string(tool_call_part.arguments_part)
-        # TODO: update the tool call view
+        self._last_tool_call.append_args_part(tool_call_part.arguments_part)
 
     def finish_all(self):
         if not self._tool_calls:
             return
         for view in self._tool_calls.values():
-            view.renderable = Text.from_markup(
-                "[bold green]✓[/bold green] "
-                f"used [bold blue]{view.tool_call.function.name}[/bold blue]"
-            )
+            view.finish()
         self._live.update(self._compose())
