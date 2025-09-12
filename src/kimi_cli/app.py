@@ -9,7 +9,7 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from rich.panel import Panel
 
 from kimi_cli.console import console
-from kimi_cli.meta_command import get_meta_command, get_meta_commands
+from kimi_cli.metacmd import get_meta_command, get_meta_commands
 from kimi_cli.soul import Soul
 
 _WELCOME_MESSAGE = """
