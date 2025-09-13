@@ -101,3 +101,151 @@ To learn more about the tools available to the agent, see the [**Tools Guide**](
 -   **Use Version Control:** Always work on a Git branch and commit your changes frequently.
 -   **Review Changes:** Carefully review any changes the agent proposes before confirming them.
 -   **Keep Backups:** Ensure you have backups of your important work.
+TunaCode Getting Started
+
+This guide reflects the current CLI and agent behavior as implemented in the codebase. It covers installation, first‑time setup, core usage, configuration, and common workflows.
+
+What you’ll use
+- Command: `tunacode`
+- Python: 3.10 – 3.13
+- Config file: `~/.config/tunacode.json`
+- Templates dir: `~/.config/tunacode/templates/`
+
+Requirements
+- Python 3.10–3.13 available on your PATH
+- A terminal on macOS, Linux, or WSL2 (Windows)
+- At least one provider API key (OpenAI, Anthropic, Google Gemini, or OpenRouter)
+
+Install
+- pip (recommended): `pip install tunacode-cli`
+- pipx: `pipx install tunacode`
+- uv tool: `uv tool install tunacode-cli`
+
+Launch
+- From any project directory, run: `tunacode`
+- To show version: `tunacode --version`
+- To force fresh setup: `tunacode --setup`
+- Guided setup wizard: `tunacode --wizard`
+
+First‑time setup
+On first launch, TunaCode initializes your environment through several coordinated steps:
+- Configuration: Loads or creates `~/.config/tunacode.json`, merges defaults, and validates settings
+- Environment: Exports API keys from your config to the process environment
+- Templates: Creates `~/.config/tunacode/templates/` for future customization
+- Git safety: If in a git repo, offers to switch to a safety branch `<current-branch>-tunacode`
+
+Setup wizard (recommended)
+- Run `tunacode --wizard` to enter guided setup
+- Step 1: Enter any keys you use (you can skip what you don’t need)
+  - `OPENAI_API_KEY`
+  - `ANTHROPIC_API_KEY`
+  - `GEMINI_API_KEY`
+  - `OPENROUTER_API_KEY`
+- Step 2: Choose a default model from a presented list (format: `provider:model-id`, e.g. `openai:gpt-4.1`)
+- Your choices are saved to `~/.config/tunacode.json`
+
+CLI overrides (quick start without editing files)
+- You can set a key, model, base URL, and context window directly:
+  - `tunacode --model openai:gpt-4.1 --key sk-...`
+  - `tunacode --baseurl https://openrouter.ai/api/v1 --model openrouter:openai/gpt-4.1 --key sk-...`
+  - `tunacode --context 200000`
+- These values are merged into `~/.config/tunacode.json` and used immediately.
+
+Configuration file
+- Location: `~/.config/tunacode.json`
+- Example structure:
+  {
+    "default_model": "openrouter:openai/gpt-4.1",
+    "env": {
+      "OPENAI_API_KEY": "",
+      "ANTHROPIC_API_KEY": "",
+      "GEMINI_API_KEY": "",
+      "OPENROUTER_API_KEY": ""
+    },
+    "settings": {
+      "enable_streaming": true,
+      "max_iterations": 40,
+      "context_window_size": 200000
+    },
+    "mcpServers": {}
+  }
+- Notes
+  - If a selected model is missing a required key, TunaCode tries to pick a fallback based on any configured key.
+  - Environment variables defined under `env` are exported when the app starts.
+  - Safety preference `skip_git_safety` is stored here if you opt out of the safety branch.
+
+Updating
+- In-app: `/update` attempts to detect your install method (pipx, venv, uv tool, pip) and upgrade in place
+- Manual:
+  - pip: `pip install --upgrade tunacode-cli`
+  - pipx: `pipx upgrade tunacode`
+  - uv tool: `uv tool upgrade tunacode-cli`
+
+Using the REPL
+When TunaCode starts, it opens an interactive prompt.
+
+Basics
+- Type a request and press Enter to run the agent.
+- Multi‑line input is supported; `Esc+Enter` often submits depending on your terminal.
+- Shell escape: prefix a line with `!` to run a shell command (`!` alone opens an interactive shell).
+- View help: `/help`
+
+File references in prompts
+- Use `@` references to inline files/dirs into your prompt:
+  - `@path/to/file.py` → inserts the file wrapped in code fences
+  - `@src/` → inserts immediate files in that directory
+  - `@src/**` → inserts files recursively (with size and count safeguards)
+- TunaCode tracks which files are referenced and uses them for context.
+
+Models
+- Show model options and search interactively: `/model` (with prompts)
+- List all: `/model --list`
+- Show details and routing options: `/model --info <model-id>`
+- Set directly and persist: `/model <provider:model-id>` (auto‑saves as default)
+
+Plan Mode
+- Enter read‑only research mode: `/plan`
+- In Plan Mode, only read‑only tools execute (e.g., `read_file`, `grep`, `glob`, `list_dir`).
+- The agent can present a plan for approval, after which implementation proceeds.
+- Exit manually: `/exit-plan`
+
+Common commands
+- `/help` — show commands by category
+- `/clear` — clear history and file context
+- `/refresh` — merge latest default config keys into your current config
+- `/streaming on|off` — toggle streamed vs. full responses
+- `/update` — update TunaCode
+- `/model ...` — search, inspect, or set the model
+- `/plan`, `/exit-plan` — manage plan mode
+- `/quickstart` or `/qs` — run the interactive tutorial
+- `/branch <name>` — create/switch to a new git branch
+- `/init` — create or improve `TUNACODE.md` with project guidance
+
+Git safety branch
+- If you’re on a git repo and not already on a `-tunacode` branch, TunaCode offers to switch to `<current>-tunacode`.
+- Declining is allowed; your preference is remembered.
+- Not a git repo or detached HEAD: TunaCode continues with a warning.
+
+Costs and streaming
+- Streaming is enabled by default; disable via `/streaming off`.
+- Session token usage and estimated cost are tracked and shown.
+
+Troubleshooting
+- “No configuration found”: Run `tunacode --wizard` to set up keys/models. TunaCode will still start with safe defaults.
+- “Missing API key for model”: Provide the required key or pick a fallback model with `/model`.
+- “Model not found”: Try `/model --info <model>` or search with `/model <query>`; then set `/model <provider:model>`.
+- Reset setup at any time with `tunacode --setup`.
+- If streaming output is jumpy in your terminal, toggle it off: `/streaming off`.
+
+Advanced: Custom slash commands and templates
+- Slash commands: Markdown files under one of these are auto‑discovered with precedence:
+  - Project: `.tunacode/commands/` or `.claude/commands/`
+  - User: `~/.tunacode/commands/` or `~/.claude/commands/`
+- Templates: Place reusable scaffolds in `~/.config/tunacode/templates/`. Commands with shortcuts may appear directly in the REPL.
+
+Uninstall
+- pip: `pip uninstall tunacode-cli`
+- pipx: `pipx uninstall tunacode`
+- uv tool: `uv tool uninstall tunacode-cli`
+
+That’s it — run `tunacode`, complete the wizard, and start coding with the agent.
