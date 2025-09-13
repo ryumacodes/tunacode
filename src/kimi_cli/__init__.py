@@ -110,10 +110,14 @@ def kimi(
     agent = load_agent(agent_path)
     echo(f"✓ Loaded agent: {agent.name}")
 
+    agents_md_path = work_dir / "AGENTS.md"
+    agents_md = agents_md_path.read_text().strip() if agents_md_path.is_file() else ""
+
     system_prompt = load_system_prompt(
         agent,
         builtin_args={
             "ENSOUL_WORK_DIR": work_dir,
+            "ENSOUL_AGENTS_MD": agents_md,
         },
     )
     preview = system_prompt[:200] + "..." if len(system_prompt) > 200 else system_prompt
