@@ -112,6 +112,8 @@ def kimi(
 
     agents_md_path = work_dir / "AGENTS.md"
     agents_md = agents_md_path.read_text().strip() if agents_md_path.is_file() else ""
+    if agents_md:
+        echo(f"✓ Loaded agents.md: {agents_md_path}")
 
     system_prompt = load_system_prompt(
         agent,
