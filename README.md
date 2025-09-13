@@ -27,6 +27,27 @@ pip install tunacode-cli
 
 For detailed installation and configuration instructions, see the [**Getting Started Guide**](documentation/user/getting-started.md).
 
+## Quickstart
+
+```bash
+# 1) Install
+pip install tunacode-cli
+
+# 2) Launch the CLI
+tunacode --wizard   # guided setup (enter an API key, pick a model)
+
+# 3) Try common commands in the REPL
+/help        # see commands
+/model       # explore models and set a default
+/plan        # enter read-only Plan Mode
+```
+
+Tip: You can also skip the wizard and set everything via flags:
+
+```bash
+tunacode --model openai:gpt-4.1 --key sk-your-key
+```
+
 ## Development Installation
 
 For contributors and developers who want to work on TunaCode:
@@ -58,25 +79,33 @@ Choose your AI provider and set your API key. For more details, see the [Configu
 
 TunaCode now automatically saves your model selection for future sessions. When you choose a model using `/model <provider:name>`, it will be remembered across restarts.
 
-**If you encounter API key errors**, you can manually create a configuration file:
+**If you encounter API key errors**, you can manually create a configuration file that matches the current schema:
 
 ```bash
-# Create the config directory and file
-mkdir -p ~/.config/tunacode
-cat > ~/.config/tunacode/tunacode.json << 'EOF'
+# Create the config file
+cat > ~/.config/tunacode.json << 'EOF'
 {
-  "default_model": "openai/gpt-4.1",
-  "api_keys": {
-    "openai": "your-openai-api-key-here"
-  }
+  "default_model": "openai:gpt-4.1",
+  "env": {
+    "OPENAI_API_KEY": "your-openai-api-key-here",
+    "ANTHROPIC_API_KEY": "",
+    "GEMINI_API_KEY": "",
+    "OPENROUTER_API_KEY": ""
+  },
+  "settings": {
+    "enable_streaming": true,
+    "max_iterations": 40,
+    "context_window_size": 200000
+  },
+  "mcpServers": {}
 }
 EOF
 ```
 
-Replace the model name and API key with your preferred provider and credentials. Common providers:
-- `openai/gpt-4.1` (requires OPENAI_API_KEY)
-- `anthropic/claude-4-sonnet-20250522` (requires ANTHROPIC_API_KEY)
-- `google/gemini-2.5-pro` (requires GOOGLE_API_KEY)
+Replace the model and API key with your preferred provider and credentials. Examples:
+- `openai:gpt-4.1` (requires OPENAI_API_KEY)
+- `anthropic:claude-4-sonnet-20250522` (requires ANTHROPIC_API_KEY)
+- `google:gemini-2.5-pro` (requires GEMINI_API_KEY)
 
 ### ⚠️ Important Notice
 
