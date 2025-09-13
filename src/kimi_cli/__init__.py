@@ -14,9 +14,9 @@ from kimi_cli.config import (
     ConfigError,
     LLMModel,
     LLMProvider,
-    get_share_dir,
     load_config,
 )
+from kimi_cli.session import SessionManager
 from kimi_cli.soul import Soul
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
 
@@ -51,6 +51,14 @@ from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_
     help="Working directory for the agent (default: current directory)",
 )
 @click.option(
+    "--session",
+    "-s",
+    "session_name",
+    type=str,
+    default=None,
+    help="Session to use or create (default: session associated with work directory)",
+)
+@click.option(
     "--command",
     "-c",
     "--query",
@@ -65,6 +73,7 @@ def kimi(
     agent_path: Path,
     model_name: str | None,
     work_dir: Path,
+    session_name: str | None,
     command: str | None,
 ):
     """Kimi, your next CLI agent."""
@@ -132,7 +141,17 @@ def kimi(
         if not command:
             raise click.BadArgumentUsage("Command cannot be empty")
 
-    context_storage = JsonlLinearStorage(get_share_dir() / "history.jsonl")
+    session_manager = SessionManager()
+    # use specified session if provided, otherwise use work directory session
+    if session_name is not None:
+        session_name, history_file = session_manager.get_session_by_name(session_name)
+        echo(f"✓ Using specified session: {session_name}")
+    else:
+        session_name, history_file = session_manager.get_session_for_work_dir(work_dir)
+        echo(f"✓ Using session: {session_name}")
+    echo(f"✓ Using history file: {history_file}")
+
+    context_storage = JsonlLinearStorage(history_file)
     soul = Soul(
         agent.name,
         chat_provider=create_chat_provider(provider, model),
