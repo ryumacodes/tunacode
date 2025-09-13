@@ -1,12 +1,12 @@
 import os
+import textwrap
 from pathlib import Path
 
 import click
 from kosong.context.linear import JsonlLinearStorage
-from kosong.tooling import SimpleToolset
 from pydantic import SecretStr
 
-from kimi_cli.agent import load_agent, load_system_prompt
+from kimi_cli.agent import load_agent, load_agents_md, load_system_prompt, load_tools
 from kimi_cli.app import App
 from kimi_cli.config import (
     DEFAULT_KIMI_BASE_URL,
@@ -18,7 +18,6 @@ from kimi_cli.config import (
     load_config,
 )
 from kimi_cli.soul import Soul
-from kimi_cli.tool import load_tool
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
 
 
@@ -110,10 +109,9 @@ def kimi(
     agent = load_agent(agent_path)
     echo(f"✓ Loaded agent: {agent.name}")
 
-    agents_md_path = work_dir / "AGENTS.md"
-    agents_md = agents_md_path.read_text().strip() if agents_md_path.is_file() else ""
+    agents_md = load_agents_md(work_dir) or ""
     if agents_md:
-        echo(f"✓ Loaded agents.md: {agents_md_path}")
+        echo(f"✓ Loaded agents.md: {textwrap.shorten(agents_md, width=100)}")
 
     system_prompt = load_system_prompt(
         agent,
@@ -122,21 +120,11 @@ def kimi(
             "ENSOUL_AGENTS_MD": agents_md,
         },
     )
-    preview = system_prompt[:200] + "..." if len(system_prompt) > 200 else system_prompt
-    echo(f"✓ Loaded system prompt: {preview} ({len(system_prompt)} characters)")
+    echo(f"✓ Loaded system prompt: {textwrap.shorten(system_prompt, width=100)}")
 
-    toolset = SimpleToolset()
-    bad_tools = []
-    for tool_path in agent.tools:
-        tool = load_tool(tool_path)
-        if tool:
-            toolset += tool
-        else:
-            bad_tools.append(tool_path)
-
+    toolset, bad_tools = load_tools(agent)
     if bad_tools:
         raise click.ClickException(f"Failed to load tools: {bad_tools}")
-
     echo(f"✓ Loaded tools: {[tool.name for tool in toolset.tools]}")
 
     if command is not None:
