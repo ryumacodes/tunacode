@@ -2,7 +2,7 @@ import asyncio
 from typing import override
 
 from kosong.base.tool import ParametersType
-from kosong.tooling import CallableTool
+from kosong.tooling import CallableTool, ToolOk, ToolReturnType
 
 
 class Plus(CallableTool):
@@ -18,8 +18,8 @@ class Plus(CallableTool):
     }
 
     @override
-    async def __call__(self, a: float, b: float) -> float:
-        return a + b
+    async def __call__(self, a: float, b: float) -> ToolReturnType:
+        return ToolOk(str(a + b))
 
 
 class Compare(CallableTool):
@@ -34,13 +34,13 @@ class Compare(CallableTool):
     }
 
     @override
-    async def __call__(self, a: float, b: float) -> str:
+    async def __call__(self, a: float, b: float) -> ToolReturnType:
         if a > b:
-            return "greater"
+            return ToolOk("greater")
         elif a < b:
-            return "less"
+            return ToolOk("less")
         else:
-            return "equal"
+            return ToolOk("equal")
 
 
 class Panic(CallableTool):
@@ -54,6 +54,6 @@ class Panic(CallableTool):
     }
 
     @override
-    async def __call__(self, message: str) -> str:
+    async def __call__(self, message: str) -> ToolReturnType:
         await asyncio.sleep(2)
         raise Exception(f"panicked with a message with {len(message)} characters")

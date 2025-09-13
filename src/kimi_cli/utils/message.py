@@ -1,12 +1,11 @@
 from kosong.base.message import ContentPart, Message, TextPart
-from kosong.tooling import ToolResult, ToolReturnType
-from kosong.tooling.error import ToolError
+from kosong.tooling import ToolError, ToolOk, ToolResult
 
 
 def tool_result_to_messages(tool_result: ToolResult) -> list[Message]:
     """Convert a tool result to a list of messages."""
     if isinstance(tool_result.result, ToolError):
-        assert tool_result.result.message
+        assert tool_result.result.message, "ToolError should have a message"
         return [
             Message(
                 role="tool",
@@ -15,7 +14,7 @@ def tool_result_to_messages(tool_result: ToolResult) -> list[Message]:
             )
         ]
 
-    content = tool_ret_value_to_message_content(tool_result.result)
+    content = tool_ok_to_message_content(tool_result.result)
     text_only = True
     for part in content:
         if not isinstance(part, TextPart):
@@ -40,12 +39,12 @@ def tool_result_to_messages(tool_result: ToolResult) -> list[Message]:
     ]
 
 
-def tool_ret_value_to_message_content(result: ToolReturnType) -> list[ContentPart]:
+def tool_ok_to_message_content(result: ToolOk) -> list[ContentPart]:
     """Convert a tool return value to a list of message content parts."""
-    match result:
+    match value := result.value:
         case str():
-            return [TextPart(text=result)]
+            return [TextPart(text=value)]
         case ContentPart():
-            return [result]
+            return [value]
         case _:
-            return list(result)
+            return list(value)

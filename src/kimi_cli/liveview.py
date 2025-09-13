@@ -2,8 +2,7 @@ import json
 
 import streamingjson
 from kosong.base.message import ToolCall, ToolCallPart
-from kosong.tooling import ToolResult, ToolReturnType
-from kosong.tooling.error import ToolError
+from kosong.tooling import ToolError, ToolOk, ToolResult, ToolReturnType
 from kosong.utils.typing import JsonType
 from rich.console import Group, RenderableType
 from rich.live import Live
@@ -50,7 +49,7 @@ class _ToolCallDisplay:
             self._detail = new_detail
             self._spinner.update(text=self._spinner_markup)
 
-    def finish(self, result: ToolReturnType | ToolError):
+    def finish(self, result: ToolReturnType):
         """
         Finish the live display of a tool call.
         After calling this, the `renderable` property should be re-rendered.
@@ -66,8 +65,12 @@ class _ToolCallDisplay:
                 f"{sign} Used [bold blue]{self._tool_name}[/bold blue]" + self._detail_markup
             )
         ]
-        if isinstance(result, ToolError):
-            lines.append(Text.from_markup(f"  [red]{result.message}[/red]"))
+        if result.brief:
+            lines.append(
+                Text.from_markup(
+                    f"  {result.brief}", style="grey50" if isinstance(result, ToolOk) else "red"
+                )
+            )
         self.renderable = Group(*lines)
 
 
@@ -158,9 +161,10 @@ class StepLiveView:
         for view in self._tool_calls.values():
             if not view.finished:
                 # this should not happen, but just in case
-                view.finish("")
+                view.finish(ToolOk(""))
         self._live.update(self._compose())
-        self._push_out(line_buffer)
+        if line_buffer:
+            self._push_out(line_buffer)
 
     def interrupt(self):
         self._line_buffer = Text("")
@@ -168,5 +172,5 @@ class StepLiveView:
         # the line buffer will be duplicated, so let's just clear one of them.
         for view in self._tool_calls.values():
             if not view.finished:
-                view.finish(ToolError("Cancelled"))
+                view.finish(ToolError("Cancelled", brief="Cancelled"))
         self._live.update(self._compose())

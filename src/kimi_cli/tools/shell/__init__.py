@@ -2,7 +2,7 @@ import asyncio
 from typing import override
 
 from kosong.base.tool import ParametersType
-from kosong.tooling import CallableTool
+from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
 
 _DESCRIPTION = """
 Execute a shell command. Use this tool to explore the filesystem, edit files, \
@@ -67,28 +67,28 @@ class Shell(CallableTool):
     }
 
     @override
-    async def __call__(self, command: str, timeout: int = 60) -> str:
+    async def __call__(self, command: str, timeout: int = 60) -> ToolReturnType:
         output = []
 
         def stdout_cb(line: bytes):
             line_str = line.decode()
-            # print(line_str, end="")  # TODO: better printing
             output.append(line_str)
 
         def stderr_cb(line: bytes):
             line_str = line.decode()
-            # print(line_str, end="")  # TODO: better printing
             output.append(line_str)
 
         try:
             exitcode = await _stream_subprocess(command, stdout_cb, stderr_cb, timeout)
-            exit_str = f"(Exit code: {exitcode})"
+            output_str = "".join(output) + f"\n(Exit code: {exitcode})"
+            # TODO: truncate/compress the output if it is too long
+            if exitcode == 0:
+                return ToolOk(output_str)
+            return ToolError(output_str, f"Failed with exit code: {exitcode}")
         except TimeoutError:
-            exit_str = "(Command killed by timeout)"
-
-        output_str = "".join(output)
-        # TODO: truncate/compress the output if it is too long
-        return output_str + exit_str if output_str else exit_str
+            output.append(f"\n(Killed by timeout ({timeout}s))")
+            output_str = "".join(output)
+            return ToolError(output_str, f"Killed by timeout ({timeout}s)")
 
 
 async def _stream_subprocess(command: str, stdout_cb, stderr_cb, timeout: int) -> int:
