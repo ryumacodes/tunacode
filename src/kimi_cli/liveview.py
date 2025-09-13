@@ -12,6 +12,7 @@ from rich.spinner import Spinner
 from rich.text import Text
 
 from kimi_cli.console import console
+from kimi_cli.utils.string import shorten_middle
 
 
 class _ToolCallDisplay:
@@ -33,7 +34,8 @@ class _ToolCallDisplay:
 
     @property
     def _detail_markup(self) -> str:
-        return f"[grey50]: {escape(self._detail)}[/grey50]" if self._detail else ""
+        detail = shorten_middle(self._detail, width=50)
+        return f"[grey50]: {escape(detail)}[/grey50]" if detail else ""
 
     @property
     def _spinner_markup(self) -> str:
@@ -41,9 +43,6 @@ class _ToolCallDisplay:
 
     def append_args_part(self, args_part: str):
         if self.finished:
-            return
-        if len(self._detail) > 50:
-            # TODO: better truncation
             return
         self._lexer.append_string(args_part)
         new_detail = _extract_detail(self._lexer, self._tool_name)
