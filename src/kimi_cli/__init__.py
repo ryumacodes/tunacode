@@ -1,4 +1,3 @@
-import asyncio
 import os
 from pathlib import Path
 
@@ -154,7 +153,7 @@ def kimi(
     os.chdir(work_dir)
 
     try:
-        asyncio.run(app.run(command))
+        app.run(command)
     finally:
         # restore original working directory
         os.chdir(original_cwd)

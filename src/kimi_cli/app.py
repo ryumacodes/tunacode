@@ -1,5 +1,5 @@
+import asyncio
 import getpass
-import inspect
 from pathlib import Path
 
 from prompt_toolkit import PromptSession
@@ -24,10 +24,10 @@ class App:
     def __init__(self, soul: Soul):
         self.soul = soul
 
-    async def run(self, command: str | None = None):
+    def run(self, command: str | None = None):
         if command is not None:
             # run single command and exit
-            await self.soul.run(command)
+            asyncio.run(self.soul.run(command))
             return
 
         meta_command_completer = WordCompleter(
@@ -62,7 +62,7 @@ class App:
 
         while True:
             with patch_stdout():
-                user_input = str(await session.prompt_async()).strip()
+                user_input = str(session.prompt()).strip()
             if not user_input:
                 continue
 
@@ -70,12 +70,16 @@ class App:
                 console.print("Bye!")
                 break
             if user_input.startswith("/"):
-                await self._run_meta_command(user_input[1:])
+                self._run_meta_command(user_input[1:])
                 continue
 
-            await self.soul.run(user_input)
+            try:
+                asyncio.run(self.soul.run(user_input))
+            except KeyboardInterrupt:
+                console.print("[bold red]Interrupted by user[/bold red]")
+                continue
 
-    async def _run_meta_command(self, command_str: str):
+    def _run_meta_command(self, command_str: str):
         parts = command_str.split(" ")
         command_name = parts[0]
         command_args = parts[1:]
@@ -83,6 +87,4 @@ class App:
         if command is None:
             console.print(f"Meta command /{command_name} not found")
             return
-        ret = command.func(self, command_args)
-        if inspect.isawaitable(ret):
-            await ret
+        command.func(self, command_args)

@@ -1,4 +1,4 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from typing import TYPE_CHECKING, NamedTuple
 
 from rich.panel import Panel
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class MetaCommand(NamedTuple):
     name: str
     description: str
-    func: Callable[["App", list[str]], Awaitable[None] | None]
+    func: Callable[["App", list[str]], None]
 
 
 _meta_commands: dict[str, MetaCommand] = {}

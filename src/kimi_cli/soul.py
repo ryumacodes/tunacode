@@ -9,7 +9,15 @@ from kosong.context.linear import LinearStorage
 from kosong.tooling import ToolResult, Toolset
 
 from kimi_cli.console import console
-from kimi_cli.event import ContextUsageUpdate, EventQueue, RunBegin, RunEnd, StepBegin
+from kimi_cli.constant import MAX_CONTEXT_SIZE, MAX_STEPS
+from kimi_cli.event import (
+    ContextUsageUpdate,
+    EventQueue,
+    RunBegin,
+    RunEnd,
+    StepBegin,
+    StepCancelled,
+)
 from kimi_cli.liveview import StepLiveView
 from kimi_cli.utils.message import tool_result_to_messages
 
@@ -30,7 +38,7 @@ class Soul:
         self._toolset = toolset
         self._context_storage = context_storage
         self._context: LinearContext | None = None
-        self._max_context_size: int = 200_000  # unit: tokens
+        self._max_context_size: int = MAX_CONTEXT_SIZE  # unit: tokens
         self._context_size: int = 0  # unit: tokens
 
     @property
@@ -50,7 +58,7 @@ class Soul:
     def context_usage(self) -> float:
         return self._context_size / self._max_context_size
 
-    async def run(self, user_input: str, max_steps: int | None = None):
+    async def run(self, user_input: str):
         context = self._get_context()
         await context.add_message(Message(role="user", content=user_input))
 
@@ -58,12 +66,20 @@ class Soul:
         vis_task = asyncio.create_task(self._visualization_loop(event_queue))
         try:
             event_queue.put_nowait(RunBegin())
-            await self._agent_loop(context, event_queue, max_steps)
+            await self._agent_loop(context, event_queue)
+        except asyncio.CancelledError:
+            # the run is cancelled, propagate the cancellation
+            # TODO: maybe need to manipulate the context to add some notes
+            raise
         finally:
             event_queue.put_nowait(RunEnd())
             await vis_task  # RunEnd should break the visualization loop
 
     async def _visualization_loop(self, event_queue: EventQueue):
+        """
+        A loop to consume agent events and visualize the agent behavior.
+        This loop never raise any exception.
+        """
         # expect a RunBegin
         assert isinstance(await event_queue.get(), RunBegin)
         # expect a StepBegin
@@ -75,7 +91,7 @@ class Soul:
                 event = await event_queue.get()
 
             with StepLiveView(self.context_usage) as step:
-                # step visualization loop
+                # visualization loop for one step
                 while True:
                     match event:
                         case TextPart(text=text):
@@ -94,30 +110,44 @@ class Soul:
                         case _:
                             break  # break the step loop
                     event = await event_queue.get()
-                # cleanup the step live view before next step
-                step.finish()
 
-            # step end or run end
+                # cleanup the step live view
+                if isinstance(event, StepCancelled):
+                    step.cancel()
+                else:
+                    step.finish()
+
+            if isinstance(event, StepCancelled):
+                # for StepCancelled, the visualization loop should end immediately
+                break
+
+            assert isinstance(event, StepBegin | RunEnd), "expect a StepBegin or RunEnd"
             if isinstance(event, StepBegin):
                 # start a new step
                 continue
-            assert isinstance(event, RunEnd)
-            break
+            else:
+                # end the run
+                break
 
     async def _agent_loop(
         self,
         context: LinearContext,
         event_queue: EventQueue,
-        max_steps: int | None = None,
     ):
+        """The main agent loop for one run."""
         n_steps = 0
         while True:
             event_queue.put_nowait(StepBegin(n_steps))
-            finished = await self._step(context, event_queue)
+            try:
+                finished = await self._step(context, event_queue)
+            except asyncio.CancelledError:
+                event_queue.put_nowait(StepCancelled())
+                # break the agent loop
+                raise
             n_steps += 1
             if finished:
                 return
-            if max_steps is not None and n_steps > max_steps:
+            if n_steps > MAX_STEPS:
                 # TODO: print some warning
                 return
 

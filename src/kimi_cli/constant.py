@@ -1,0 +1,2 @@
+MAX_CONTEXT_SIZE = 200_000  # unit: tokens
+MAX_STEPS = 30

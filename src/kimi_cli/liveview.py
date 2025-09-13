@@ -154,3 +154,11 @@ class StepLiveView:
                 # this should not happen, but just in case
                 view.finish("")
         self._live.update(self._compose())
+
+    def cancel(self):
+        if not self._tool_calls:
+            return
+        for view in self._tool_calls.values():
+            if not view.finished:
+                view.finish(ToolError("Cancelled"))
+        self._live.update(self._compose())
