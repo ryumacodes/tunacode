@@ -113,7 +113,7 @@ class Soul:
 
                 # cleanup the step live view
                 if isinstance(event, StepCancelled):
-                    step.cancel()
+                    step.interrupt()
                 else:
                     step.finish()
 

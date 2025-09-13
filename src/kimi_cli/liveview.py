@@ -90,7 +90,7 @@ def _extract_detail(lexer: streamingjson.Lexer, tool_name: str) -> str:
 
 class StepLiveView:
     def __init__(self, context_usage: float):
-        self._text = Text("")
+        self._line_buffer = Text("")
         self._tool_calls: dict[str, _ToolCallDisplay] = {}
         self._last_tool_call: _ToolCallDisplay | None = None
         self._context_usage_text: Text | None = Text(
@@ -107,22 +107,29 @@ class StepLiveView:
 
     def _compose(self) -> RenderableType:
         sections = []
-        if self._text:
-            sections.append(self._text)
+        if self._line_buffer:
+            sections.append(self._line_buffer)
         for view in self._tool_calls.values():
             sections.append(view.renderable)
         sections.append(self._context_usage_text)
         return Group(*sections)
 
+    def _push_out(self, text: Text | str):
+        """
+        Push the text out of the live view to the console.
+        After this, the printed line will not be changed further.
+        """
+        console.print(text)
+
     def append_text(self, text: str):
-        if not self._text:
-            self._text = Text(text)
-            # update the whole display
+        lines = text.split("\n")
+        prev_is_empty = not self._line_buffer
+        for line in lines[:-1]:
+            self._push_out(self._line_buffer + line)
+            self._line_buffer.plain = ""
+        self._line_buffer.append(lines[-1])
+        if (prev_is_empty and self._line_buffer) or (not prev_is_empty and not self._line_buffer):
             self._live.update(self._compose())
-        else:
-            # only update the Text
-            self._text.append(text)
-            # TODO: print to console once a `\n` is encountered
 
     def append_tool_call(self, tool_call: ToolCall):
         self._tool_calls[tool_call.id] = _ToolCallDisplay(tool_call)
@@ -147,17 +154,19 @@ class StepLiveView:
         self._context_usage_text.plain = f"context: {usage:.1%}"
 
     def finish(self):
-        if not self._tool_calls:
-            return
+        line_buffer = self._line_buffer
+        self._line_buffer = Text("")
         for view in self._tool_calls.values():
             if not view.finished:
                 # this should not happen, but just in case
                 view.finish("")
         self._live.update(self._compose())
+        self._push_out(line_buffer)
 
-    def cancel(self):
-        if not self._tool_calls:
-            return
+    def interrupt(self):
+        self._line_buffer = Text("")
+        # FIXME: Due to a strange bug of `rich`, when the display is interrupted by the user,
+        # the line buffer will be duplicated, so let's just clear one of them.
         for view in self._tool_calls.values():
             if not view.finished:
                 view.finish(ToolError("Cancelled"))
