@@ -159,7 +159,7 @@ def kimi(
         toolset=toolset,
         context_storage=context_storage,
     )
-    app = App(soul)
+    app = App(soul, session_name=session_name)
 
     # switch to workspace directory
     original_cwd = Path.cwd()

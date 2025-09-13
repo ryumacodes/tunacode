@@ -15,14 +15,16 @@ from kimi_cli.soul import Soul
 _WELCOME_MESSAGE = """
 [bold]Welcome to {name}![/bold]
 
-[grey30]Model: {model} [/grey30]
-[grey30]Working directory: {work_dir} [/grey30]
+[grey30]Model: {model}[/grey30]
+[grey30]Working directory: {work_dir}[/grey30]
+[grey30]Session: {session_name}[/grey30]
 """.strip()
 
 
 class App:
-    def __init__(self, soul: Soul):
+    def __init__(self, soul: Soul, session_name: str):
         self.soul = soul
+        self.session_name = session_name
 
     def run(self, command: str | None = None):
         if command is not None:
@@ -48,7 +50,9 @@ class App:
             name=self.soul.name,
             model=self.soul.model,
             work_dir=Path.cwd().absolute(),
+            session_name=self.session_name,
         )
+
         console.print()
         console.print(
             Panel(
