@@ -175,3 +175,7 @@ def kimi(
 
 def main():
     kimi()
+
+
+if __name__ == "__main__":
+    main()
