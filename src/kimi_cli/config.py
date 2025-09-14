@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import BaseModel, Field, SecretStr, ValidationError, model_validator
+from pydantic import BaseModel, Field, SecretStr, ValidationError, field_serializer, model_validator
 
 
 class LLMProvider(BaseModel):
@@ -11,6 +11,10 @@ class LLMProvider(BaseModel):
     type: Literal["kimi", "openai_legacy"] = Field(..., description="Provider type")
     base_url: str = Field(..., description="API base URL")
     api_key: SecretStr = Field(..., description="API key")
+
+    @field_serializer("api_key", when_used="json")
+    def dump_secret(self, v: SecretStr):
+        return v.get_secret_value()
 
 
 class LLMModel(BaseModel):
@@ -73,7 +77,7 @@ def get_default_config() -> Config:
             "kimi": LLMProvider(
                 type="kimi",
                 base_url=DEFAULT_KIMI_BASE_URL,
-                api_key=SecretStr("<your-api-key>"),
+                api_key=SecretStr(""),
             ),
         },
     )
@@ -90,7 +94,7 @@ def load_config() -> Config:
     if not config_file.exists():
         config = get_default_config()
         with open(config_file, "w", encoding="utf-8") as f:
-            json.dump(config.model_dump(), f, indent=2)
+            f.write(config.model_dump_json(indent=2))
         return config
 
     try:
