@@ -8,7 +8,7 @@ The operating environment is not in a sandbox. Any action especially mutation yo
 
 ## Working Directory
 
-The current working directory is `${ENSOUL_WORK_DIR}`. This should also be considered as the project root if you are instructed to perform tasks on the project. You should prefer using absolute paths over relative paths, unless you are quite sure about what you are accessing.
+The current working directory is `${ENSOUL_WORK_DIR}`. This should also be considered as the project root if you are instructed to perform tasks on the project. Every file system operation will be relative to the working directory if you do not explicitly specify the absolute path.
 
 # Project Information
 

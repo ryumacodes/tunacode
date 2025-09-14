@@ -19,7 +19,7 @@ will be appended to the end of the returned string.
 - The tool call will return after the command is finished. You shall not use this tool \
   to execute an interactive command or a command that may run forever. For possibly long- \
   running commands, you shall set `timeout` argument to a reasonable value.
-- Always use absolute paths when referring to files and directories, to avoid ambiguity.
+- Avoid using `..` to access files or directories outside of the working directory.
 - Avoid modifying files outside of the working directory unless explicitly instructed to do so.
 - Never run commands that require superuser privileges unless explicitly instructed to do so.
 
@@ -36,10 +36,11 @@ will be appended to the end of the returned string.
 **Commands available:**
 - Shell environment: cd, pwd, export, unset, env
 - File system operations: ls, find, grep, cat, mkdir, rm, cp, mv, touch, chmod, chown
+- File viewing/editing: cat (can use >> to append), echo, head, tail, diff, patch
+- Text processing: awk, sed, sort, uniq, wc
 - System information/operations: ps, kill, top, df, free, uname, whoami, id, date
 - Package management: pip, uv, npm, yarn, bun, cargo
 - Network operations: curl, wget, ping, telnet, ssh
-- Text processing: awk, sed, sort, uniq, wc
 - Archive operations: tar, zip, unzip
 - Other: Other commands available in the shell environment. Check the existence of a command \
   by running `which <command>` before using it.
