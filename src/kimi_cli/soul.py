@@ -1,11 +1,12 @@
 import asyncio
+from pathlib import Path
 
 import kosong
 from kosong import StepResult
 from kosong.base.chat_provider import ChatProvider
 from kosong.base.message import ContentPart, Message, TextPart, ToolCall, ToolCallPart
 from kosong.context import LinearContext
-from kosong.context.linear import LinearStorage
+from kosong.context.linear import JsonlLinearStorage
 from kosong.tooling import ToolResult, Toolset
 
 from kimi_cli.console import console
@@ -30,13 +31,13 @@ class Soul:
         chat_provider: ChatProvider,
         system_prompt: str,
         toolset: Toolset,
-        context_storage: LinearStorage,
+        history_path: Path,
     ):
         self.name = name
         self._chat_provider = chat_provider
         self._system_prompt = system_prompt
         self._toolset = toolset
-        self._context_storage = context_storage
+        self._history_path = history_path
         self._context: LinearContext | None = None
         self._max_context_size: int = MAX_CONTEXT_SIZE  # unit: tokens
         self._context_size: int = 0  # unit: tokens
@@ -45,12 +46,13 @@ class Soul:
     def model(self) -> str:
         return self._chat_provider.model_name
 
-    def _get_context(self) -> LinearContext:
+    async def _get_context(self) -> LinearContext:
         if self._context is None:
+            context_storage = JsonlLinearStorage(self._history_path)
             self._context = LinearContext(
                 system_prompt=self._system_prompt,
                 toolset=self._toolset,
-                storage=self._context_storage,
+                storage=context_storage,
             )
         return self._context
 
@@ -59,7 +61,7 @@ class Soul:
         return self._context_size / self._max_context_size
 
     async def run(self, user_input: str):
-        context = self._get_context()
+        context = await self._get_context()
         await context.add_message(Message(role="user", content=user_input))
 
         event_queue = EventQueue()
@@ -172,7 +174,7 @@ class Soul:
         return not result.tool_calls
 
     async def _grow_context(self, result: StepResult, tool_results: list[ToolResult]):
-        context = self._get_context()
+        context = await self._get_context()
         await context.add_message(result.message)
         for tool_result in tool_results:
             for message in tool_result_to_messages(tool_result):

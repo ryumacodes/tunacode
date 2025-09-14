@@ -1,9 +1,9 @@
 import os
 import textwrap
+from hashlib import md5
 from pathlib import Path
 
 import click
-from kosong.context.linear import JsonlLinearStorage
 from pydantic import SecretStr
 
 from kimi_cli.agent import load_agent, load_agents_md, load_system_prompt, load_tools
@@ -16,7 +16,7 @@ from kimi_cli.config import (
     LLMProvider,
     load_config,
 )
-from kimi_cli.session import SessionManager
+from kimi_cli.metadata import MetadataManager
 from kimi_cli.soul import Soul
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
 
@@ -141,25 +141,26 @@ def kimi(
         if not command:
             raise click.BadArgumentUsage("Command cannot be empty")
 
-    session_manager = SessionManager()
+    metadata = MetadataManager()
     # use specified session if provided, otherwise use work directory session
     if session_name is not None:
-        session_name, history_file = session_manager.get_session_by_name(session_name)
-        echo(f"✓ Using specified session: {session_name}")
+        session = metadata.get_session_by_name(session_name)
+        echo(f"✓ Using specified session: {session.name}")
     else:
-        session_name, history_file = session_manager.get_session_for_work_dir(work_dir)
-        echo(f"✓ Using session: {session_name}")
-    echo(f"✓ Using history file: {history_file}")
+        session = metadata.get_session_by_name(md5(str(work_dir).encode()).hexdigest(), work_dir)
+        echo(f"✓ Using session for work directory: {session.name}")
 
-    context_storage = JsonlLinearStorage(history_file)
+    history_path = session.directory / "history.jsonl"
+    echo(f"✓ Using history file: {history_path}")
+
     soul = Soul(
         agent.name,
         chat_provider=create_chat_provider(provider, model),
         system_prompt=system_prompt,
         toolset=toolset,
-        context_storage=context_storage,
+        history_path=history_path,
     )
-    app = App(soul, session_name=session_name)
+    app = App(soul, session)
 
     # switch to workspace directory
     original_cwd = Path.cwd()

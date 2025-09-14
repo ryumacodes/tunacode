@@ -10,6 +10,7 @@ from rich.panel import Panel
 
 from kimi_cli.console import console
 from kimi_cli.metacmd import get_meta_command, get_meta_commands
+from kimi_cli.metadata import SessionMeta
 from kimi_cli.soul import Soul
 
 _WELCOME_MESSAGE = """
@@ -22,9 +23,9 @@ _WELCOME_MESSAGE = """
 
 
 class App:
-    def __init__(self, soul: Soul, session_name: str):
+    def __init__(self, soul: Soul, session: SessionMeta):
         self.soul = soul
-        self.session_name = session_name
+        self.session = session
 
     def run(self, command: str | None = None):
         if command is not None:
@@ -50,7 +51,7 @@ class App:
             name=self.soul.name,
             model=self.soul.model,
             work_dir=Path.cwd().absolute(),
-            session_name=self.session_name,
+            session_name=self.session.name,
         )
 
         console.print()
