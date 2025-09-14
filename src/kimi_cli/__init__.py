@@ -1,3 +1,4 @@
+import importlib.metadata
 import os
 import textwrap
 from hashlib import md5
@@ -22,6 +23,7 @@ from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_
 
 
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.version_option(importlib.metadata.version("ensoul"))
 @click.option(
     "--verbose",
     is_flag=True,
