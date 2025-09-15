@@ -1,12 +1,11 @@
 import asyncio
-from pathlib import Path
 
 import kosong
 from kosong import StepResult
 from kosong.base.chat_provider import ChatProvider
 from kosong.base.message import ContentPart, Message, TextPart, ToolCall, ToolCallPart
 from kosong.context import LinearContext
-from kosong.context.linear import JsonlLinearStorage
+from kosong.context.linear import LinearStorage
 from kosong.tooling import ToolResult, Toolset
 
 from kimi_cli.console import console
@@ -31,14 +30,17 @@ class Soul:
         chat_provider: ChatProvider,
         system_prompt: str,
         toolset: Toolset,
-        history_path: Path,
+        context_storage: LinearStorage,
     ):
         self.name = name
         self._chat_provider = chat_provider
         self._system_prompt = system_prompt
         self._toolset = toolset
-        self._history_path = history_path
-        self._context: LinearContext | None = None
+        self._context = LinearContext(
+            system_prompt=system_prompt,
+            toolset=toolset,
+            storage=context_storage,
+        )
         self._max_context_size: int = MAX_CONTEXT_SIZE  # unit: tokens
         self._context_size: int = 0  # unit: tokens
 
@@ -46,29 +48,18 @@ class Soul:
     def model(self) -> str:
         return self._chat_provider.model_name
 
-    async def _get_context(self) -> LinearContext:
-        if self._context is None:
-            context_storage = JsonlLinearStorage(self._history_path)
-            self._context = LinearContext(
-                system_prompt=self._system_prompt,
-                toolset=self._toolset,
-                storage=context_storage,
-            )
-        return self._context
-
     @property
     def context_usage(self) -> float:
         return self._context_size / self._max_context_size
 
     async def run(self, user_input: str):
-        context = await self._get_context()
-        await context.add_message(Message(role="user", content=user_input))
+        await self._context.add_message(Message(role="user", content=user_input))
 
         event_queue = EventQueue()
         vis_task = asyncio.create_task(self._visualization_loop(event_queue))
         try:
             event_queue.put_nowait(RunBegin())
-            await self._agent_loop(context, event_queue)
+            await self._agent_loop(self._context, event_queue)
         except asyncio.CancelledError:
             # the run is cancelled, propagate the cancellation
             # TODO: maybe need to manipulate the context to add some notes
@@ -174,8 +165,7 @@ class Soul:
         return not result.tool_calls
 
     async def _grow_context(self, result: StepResult, tool_results: list[ToolResult]):
-        context = await self._get_context()
-        await context.add_message(result.message)
+        await self._context.add_message(result.message)
         for tool_result in tool_results:
             for message in tool_result_to_messages(tool_result):
-                await context.add_message(message)
+                await self._context.add_message(message)

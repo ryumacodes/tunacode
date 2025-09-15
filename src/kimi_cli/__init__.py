@@ -1,3 +1,4 @@
+import asyncio
 import importlib.metadata
 import os
 import textwrap
@@ -5,6 +6,7 @@ from hashlib import md5
 from pathlib import Path
 
 import click
+from kosong.context.linear import JsonlLinearStorage
 from pydantic import SecretStr
 
 from kimi_cli.agent import load_agent, load_agents_md, load_system_prompt, load_tools
@@ -53,14 +55,6 @@ from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_
     help="Working directory for the agent (default: current directory)",
 )
 @click.option(
-    "--session",
-    "-s",
-    "session_name",
-    type=str,
-    default=None,
-    help="Session to use or create (default: session associated with work directory)",
-)
-@click.option(
     "--command",
     "-c",
     "--query",
@@ -70,13 +64,21 @@ from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_
     default=None,
     help="User query to the agent (default: interactive mode)",
 )
+@click.option(
+    "--continue",
+    "-C",
+    "continue_",
+    is_flag=True,
+    default=False,
+    help="Continue the previous session for the working directory (default: no)",
+)
 def kimi(
     verbose: bool,
     agent_path: Path,
     model_name: str | None,
     work_dir: Path,
-    session_name: str | None,
     command: str | None,
+    continue_: bool,
 ):
     """Kimi, your next CLI agent."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
@@ -144,23 +146,26 @@ def kimi(
             raise click.BadArgumentUsage("Command cannot be empty")
 
     metadata = MetadataManager()
-    # use specified session if provided, otherwise use work directory session
-    if session_name is not None:
-        session = metadata.get_session_by_name(session_name)
-        echo(f"✓ Using specified session: {session.name}")
-    else:
-        session = metadata.get_session_by_name(md5(str(work_dir).encode()).hexdigest(), work_dir)
-        echo(f"✓ Using session for work directory: {session.name}")
+    session = metadata.get_session_by_name(md5(str(work_dir).encode()).hexdigest(), work_dir)
+    echo(f"✓ Using session for work directory: {session.name}")
 
     history_path = session.directory / "history.jsonl"
     echo(f"✓ Using history file: {history_path}")
+    context_storage = JsonlLinearStorage(history_path)
+    if continue_:
+        # continue from the existing history file
+        asyncio.run(context_storage.restore())
+        echo(f"✓ Restored history from {history_path}")
+    else:
+        # remove the existing history file
+        history_path.unlink(missing_ok=True)
 
     soul = Soul(
         agent.name,
         chat_provider=create_chat_provider(provider, model),
         system_prompt=system_prompt,
         toolset=toolset,
-        history_path=history_path,
+        context_storage=context_storage,
     )
     app = App(soul, session)
 
