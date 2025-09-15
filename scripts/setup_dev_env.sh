@@ -285,10 +285,20 @@ fi
 
 # Install the package and dependencies
 if [ "$HATCH_AVAILABLE" = true ]; then
-    log "${BLUE}Installing TunaCode and dependencies via Hatch...${NC}"
-    # Hatch handles all dependencies automatically from pyproject.toml
-    # No need to install individual packages
-    log "${GREEN}✓${NC} Hatch will handle all dependencies from pyproject.toml"
+    log "${BLUE}Installing TunaCode and dependencies via UV (Hatch-managed)...${NC}"
+    # Use UV directly to avoid PEP 668 issues
+    if [ "$USE_UV" = true ]; then
+        if ! uv pip install -e ".[dev]" 2>&1 | tee -a "$LOG_FILE"; then
+            log "${RED}Failed to install TunaCode package${NC}"
+            cleanup_on_failure
+        fi
+    else
+        if ! pip install -e ".[dev]" 2>&1 | tee -a "$LOG_FILE"; then
+            log "${RED}Failed to install TunaCode package${NC}"
+            cleanup_on_failure
+        fi
+    fi
+    log "${GREEN}✓${NC} TunaCode and dependencies installed successfully"
 else
     # For non-Hatch installs, install critical dependency first
     log "${BLUE}Installing critical dependency: pydantic-ai...${NC}"
@@ -355,7 +365,8 @@ fi
 # Test that the tunacode command is available
 log "${BLUE}Verifying tunacode CLI installation...${NC}"
 if [ "$HATCH_AVAILABLE" = true ]; then
-    if hatch run tunacode --version &>/dev/null; then
+    # Use UV venv path instead of hatch run
+    if ".venv/bin/tunacode" --version &>/dev/null; then
         log "${GREEN}✓${NC} tunacode CLI is properly installed"
     else
         log "${RED}✗${NC} tunacode CLI not working properly"
@@ -373,7 +384,7 @@ fi
 # Final verification - run a simple test
 log "${BLUE}Running basic import test...${NC}"
 if [ "$HATCH_AVAILABLE" = true ]; then
-    if hatch run python -c "from tunacode.cli.main import app; print('TunaCode imports working')" 2>&1 | tee -a "$LOG_FILE"; then
+    if ".venv/bin/python" -c "from tunacode.cli.main import app; print('TunaCode imports working')" 2>&1 | tee -a "$LOG_FILE"; then
         log "${GREEN}✓${NC} Basic import test passed"
     else
         log "${RED}✗${NC} Basic import test failed"
@@ -410,8 +421,9 @@ fi
 
 # Show version info
 if [ "$HATCH_AVAILABLE" = true ]; then
-    log "\n${BLUE}Python:${NC} $(hatch run python --version)"
-    log "${BLUE}pydantic-ai:${NC} $(hatch run pip show pydantic-ai | grep Version | cut -d' ' -f2)"
+    log "\n${BLUE}Python:${NC} $(.venv/bin/python --version)"
+    log "${BLUE}pip:${NC} $(.venv/bin/pip --version | cut -d' ' -f2)"
+    log "${BLUE}pydantic-ai:${NC} $(.venv/bin/pip show pydantic-ai | grep Version | cut -d' ' -f2)"
 else
     log "\n${BLUE}Python:${NC} $("$VENV_DIR/bin/python" --version)"
     log "${BLUE}pip:${NC} $("$VENV_DIR/bin/pip" --version | cut -d' ' -f2)"
@@ -419,37 +431,26 @@ else
 fi
 
 # Show available commands
-if [ "$HATCH_AVAILABLE" = true ]; then
-    log "\n${GREEN}Available Hatch commands:${NC}"
-    log "  ${BLUE}hatch run lint${NC}      - Run linting and formatting (ruff)"
-    log "  ${BLUE}hatch run test${NC}      - Run test suite"
-    log "  ${BLUE}hatch run coverage${NC}  - Run tests with coverage"
-    log "  ${BLUE}hatch build${NC}         - Build distribution packages"
-    log "  ${BLUE}hatch run clean${NC}     - Clean build artifacts"
-else
-    log "\n${GREEN}Available commands:${NC}"
-    log "  ${BLUE}ruff check .${NC}        - Run linting"
-    log "  ${BLUE}ruff format .${NC}       - Format code"
-    log "  ${BLUE}pytest${NC}              - Run test suite"
-    log "  ${BLUE}python -m build${NC}     - Build distribution packages"
-fi
+log "\n${GREEN}Available commands:${NC}"
+log "  ${BLUE}source .venv/bin/activate && ruff check .${NC}        - Run linting"
+log "  ${BLUE}source .venv/bin/activate && ruff format .${NC}       - Format code"
+log "  ${BLUE}source .venv/bin/activate && pytest${NC}              - Run test suite"
+log "  ${BLUE}source .venv/bin/activate && python -m build${NC}     - Build distribution packages"
 
-if [ "$HATCH_AVAILABLE" != true ]; then
-    log "\n${YELLOW}Note:${NC} Activate the virtual environment with: ${GREEN}source venv/bin/activate${NC}"
-fi
+log "\n${YELLOW}Note:${NC} Activate the virtual environment with: ${GREEN}source .venv/bin/activate${NC}"
 
 log "\n${GREEN}Setup log saved to:${NC} $LOG_FILE"
 
 # Run a quick test to ensure everything works
 log "\n${BLUE}Running quick test suite verification...${NC}"
 if [ "$HATCH_AVAILABLE" = true ]; then
-    if cd "$PROJECT_ROOT" && hatch run pytest tests/test_import.py -v 2>&1 | tee -a "$LOG_FILE"; then
+    if cd "$PROJECT_ROOT" && ".venv/bin/python" -m pytest tests/test_security.py -v 2>&1 | tee -a "$LOG_FILE"; then
         log "${GREEN}✓${NC} Test framework is working correctly"
     else
         log "${YELLOW}⚠${NC} Test framework encountered issues - check the log"
     fi
 else
-    if cd "$PROJECT_ROOT" && "$VENV_DIR/bin/python" -m pytest tests/test_import.py -v 2>&1 | tee -a "$LOG_FILE"; then
+    if cd "$PROJECT_ROOT" && "$VENV_DIR/bin/python" -m pytest tests/test_security.py -v 2>&1 | tee -a "$LOG_FILE"; then
         log "${GREEN}✓${NC} Test framework is working correctly"
     else
         log "${YELLOW}⚠${NC} Test framework encountered issues - check the log"

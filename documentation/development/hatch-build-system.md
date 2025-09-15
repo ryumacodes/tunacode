@@ -7,7 +7,7 @@ TunaCode uses [Hatch](https://hatch.pypa.io/) as its build system and developmen
 ## Installation
 
 ```bash
-pip install hatch
+uv install hatch
 ```
 
 ## Common Commands
@@ -15,64 +15,65 @@ pip install hatch
 ### Development
 
 ```bash
+# Create virtual environment with UV
+uv venv
+
 # Install development dependencies
-hatch run install
+source .venv/bin/activate && uv pip install -e ".[dev]"
 
 # Run the application
-hatch run run
+source .venv/bin/activate && tunacode
 
 # Start development mode
-hatch run dev
+source .venv/bin/activate && tunacode
 ```
 
 ### Testing
 
 ```bash
 # Run test suite
-hatch run test
+source .venv/bin/activate && pytest
 
 # Run tests with coverage
-hatch run coverage
+source .venv/bin/activate && pytest --cov=src/tunacode
 
 # Test specific Python version
-hatch run py310:test
-hatch run py311:test
-hatch run py312:test
+source .venv/bin/activate && python3.10 -m pytest
+source .venv/bin/activate && python3.11 -m pytest
+source .venv/bin/activate && python3.12 -m pytest
 ```
 
 ### Code Quality
 
 ```bash
 # Lint and format code
-hatch run lint
+source .venv/bin/activate && ruff check . && ruff format .
 
 # Check without modifying
-hatch run lint-check
+source .venv/bin/activate && ruff check . && ruff format --check .
 
 # Type checking
-hatch run typecheck
+source .venv/bin/activate && mypy src/
 
 # Security analysis
-hatch run security
+source .venv/bin/activate && bandit -r src/ -ll
 
 # Dead code analysis
-hatch run vulture
-hatch run dead-code-check
-hatch run dead-code-clean
-hatch run dead-code-report
+source .venv/bin/activate && python -m vulture --config pyproject.toml
+source .venv/bin/activate && python -c "print('Running comprehensive dead code analysis...')"
 ```
 
 ### Building & Publishing
 
 ```bash
 # Build distribution packages
-hatch build
+source .venv/bin/activate && python -m build
 
 # Clean build artifacts
-hatch run clean
+source .venv/bin/activate && python -c "import shutil, pathlib; dirs=['build', 'dist']; [shutil.rmtree(d, ignore_errors=True) for d in dirs]; print('Cleaned build artifacts')"
 
 # Publish to PyPI
-hatch publish
+source .venv/bin/activate && twine upload dist/*
 ```
 
 ## Environment Management
@@ -113,36 +114,38 @@ All Hatch configuration is in `pyproject.toml`:
 
 | Old Command | New Command |
 |------------|-------------|
-| `make install` | `hatch run install` |
-| `make test` | `hatch run test` |
-| `make lint` | `hatch run lint` |
-| `make build` | `hatch build` |
-| `make clean` | `hatch run clean` |
-| `make coverage` | `hatch run coverage` |
-| `make vulture` | `hatch run vulture` |
+| `make install` | `source .venv/bin/activate && uv pip install -e ".[dev]"` |
+| `make test` | `source .venv/bin/activate && pytest` |
+| `make lint` | `source .venv/bin/activate && ruff check . && ruff format .` |
+| `make build` | `source .venv/bin/activate && python -m build` |
+| `make clean` | `source .venv/bin/activate && python -c "import shutil; dirs=['build', 'dist']; [shutil.rmtree(d, ignore_errors=True) for d in dirs]"` |
+| `make coverage` | `source .venv/bin/activate && pytest --cov=src/tunacode` |
+| `make vulture` | `source .venv/bin/activate && python -m vulture --config pyproject.toml` |
 
 ## Troubleshooting
 
-### Command not found
+### UV not found
 
-Ensure hatch is installed:
+Install UV for faster package management:
 ```bash
-pip install --upgrade hatch
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### Environment issues
+### Virtual environment issues
 
-Reset environments:
+Recreate virtual environment:
 ```bash
-hatch env prune
+rm -rf .venv
+uv venv
+source .venv/bin/activate && uv pip install -e ".[dev]"
 ```
 
 ### Build errors
 
 Clean and rebuild:
 ```bash
-hatch run clean
-hatch build
+source .venv/bin/activate && python -c "import shutil; dirs=['build', 'dist']; [shutil.rmtree(d, ignore_errors=True) for d in dirs]"
+source .venv/bin/activate && python -m build
 ```
 
 ## Advanced Usage

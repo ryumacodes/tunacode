@@ -6,6 +6,7 @@ and keep responsibilities focused.
 
 import json
 from pathlib import Path
+from typing import Dict, Optional
 
 from tunacode.constants import UI_COLORS
 from tunacode.exceptions import ConfigurationError
@@ -20,7 +21,7 @@ class ConfigWizard:
         self.state_manager = state_manager
         self.model_registry = model_registry
         self.config_file = config_file
-        self._wizard_selected_provider = None
+        self._wizard_selected_provider: Optional[Dict[str, str]] = None
 
     async def run_onboarding(self) -> None:
         """Run enhanced wizard-style onboarding process for new users."""

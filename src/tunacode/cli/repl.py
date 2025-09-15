@@ -320,7 +320,9 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
         if enable_streaming:
             await ui.spinner(False, state_manager.session.spinner, state_manager)
             state_manager.session.is_streaming_active = True
-            streaming_panel = ui.StreamingAgentPanel()
+            streaming_panel = ui.StreamingAgentPanel(
+                debug=bool(state_manager.session.show_thoughts)
+            )
             await streaming_panel.start()
             state_manager.session.streaming_panel = streaming_panel
 
@@ -337,6 +339,20 @@ async def process_request(text: str, state_manager: StateManager, output: bool =
                 await streaming_panel.stop()
                 state_manager.session.streaming_panel = None
                 state_manager.session.is_streaming_active = False
+                # Emit source-side streaming diagnostics if thoughts are enabled
+                if state_manager.session.show_thoughts:
+                    try:
+                        raw = getattr(state_manager.session, "_debug_raw_stream_accum", "") or ""
+                        events = getattr(state_manager.session, "_debug_events", []) or []
+                        raw_first5 = repr(raw[:5])
+                        await ui.muted(
+                            f"[debug] raw_stream_first5={raw_first5} total_len={len(raw)}"
+                        )
+                        for line in events:
+                            await ui.muted(line)
+                    except Exception:
+                        # Don't let diagnostics break normal flow
+                        pass
         else:
             res = await agent.process_request(
                 text,
