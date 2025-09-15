@@ -1,14 +1,14 @@
 import asyncio
+from collections.abc import Callable, Coroutine
 
 import kosong
 from kosong import StepResult
 from kosong.base.chat_provider import ChatProvider
-from kosong.base.message import ContentPart, Message, TextPart, ToolCall, ToolCallPart
+from kosong.base.message import Message
 from kosong.context import LinearContext
 from kosong.context.linear import LinearStorage
 from kosong.tooling import ToolResult, Toolset
 
-from kimi_cli.console import console
 from kimi_cli.constant import MAX_CONTEXT_SIZE, MAX_STEPS
 from kimi_cli.event import (
     ContextUsageUpdate,
@@ -18,11 +18,18 @@ from kimi_cli.event import (
     StepBegin,
     StepCancelled,
 )
-from kimi_cli.liveview import StepLiveView
 from kimi_cli.utils.message import tool_result_to_messages
+
+type VisualizeFn = Callable[[EventQueue], Coroutine[None, None, None]]
+"""
+An async function that consumes events from the event queue and visualizes the agent behavior.
+The function should never raise any exception.
+"""
 
 
 class Soul:
+    """The soul of Kimi CLI."""
+
     def __init__(
         self,
         name: str,
@@ -52,11 +59,11 @@ class Soul:
     def context_usage(self) -> float:
         return self._context_size / self._max_context_size
 
-    async def run(self, user_input: str):
+    async def run(self, user_input: str, visualize: VisualizeFn):
         await self._context.add_message(Message(role="user", content=user_input))
 
         event_queue = EventQueue()
-        vis_task = asyncio.create_task(self._visualization_loop(event_queue))
+        vis_task = asyncio.create_task(visualize(event_queue))
         try:
             event_queue.put_nowait(RunBegin())
             await self._agent_loop(self._context, event_queue)
@@ -67,60 +74,6 @@ class Soul:
         finally:
             event_queue.put_nowait(RunEnd())
             await vis_task  # RunEnd should break the visualization loop
-
-    async def _visualization_loop(self, event_queue: EventQueue):
-        """
-        A loop to consume agent events and visualize the agent behavior.
-        This loop never raise any exception.
-        """
-        # expect a RunBegin
-        assert isinstance(await event_queue.get(), RunBegin)
-        # expect a StepBegin
-        assert isinstance(await event_queue.get(), StepBegin)
-
-        while True:
-            # spin the moon at the beginning of each step
-            with console.status("", spinner="moon"):
-                event = await event_queue.get()
-
-            with StepLiveView(self.context_usage) as step:
-                # visualization loop for one step
-                while True:
-                    match event:
-                        case TextPart(text=text):
-                            step.append_text(text)
-                        case ContentPart():
-                            # TODO: support more content parts
-                            step.append_text(f"[{event.__class__.__name__}]")
-                        case ToolCall():
-                            step.append_tool_call(event)
-                        case ToolCallPart():
-                            step.append_tool_call_part(event)
-                        case ToolResult():
-                            step.append_tool_result(event)
-                        case ContextUsageUpdate(usage_percentage=usage):
-                            step.update_context_usage(usage)
-                        case _:
-                            break  # break the step loop
-                    event = await event_queue.get()
-
-                # cleanup the step live view
-                if isinstance(event, StepCancelled):
-                    step.interrupt()
-                else:
-                    step.finish()
-
-            if isinstance(event, StepCancelled):
-                # for StepCancelled, the visualization loop should end immediately
-                break
-
-            assert isinstance(event, StepBegin | RunEnd), "expect a StepBegin or RunEnd"
-            if isinstance(event, StepBegin):
-                # start a new step
-                continue
-            else:
-                # end the run
-                break
 
     async def _agent_loop(
         self,

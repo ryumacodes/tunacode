@@ -10,7 +10,7 @@ from rich.markup import escape
 from rich.spinner import Spinner
 from rich.text import Text
 
-from kimi_cli.console import console
+from kimi_cli.ui.tui.console import console
 from kimi_cli.utils.string import shorten_middle
 
 

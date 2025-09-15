@@ -2,16 +2,27 @@ import asyncio
 import getpass
 from pathlib import Path
 
+from kosong.base.message import ContentPart, TextPart, ToolCall, ToolCallPart
+from kosong.tooling import ToolResult
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.patch_stdout import patch_stdout
 from rich.panel import Panel
 
-from kimi_cli.console import console
-from kimi_cli.metacmd import get_meta_command, get_meta_commands
+from kimi_cli.event import (
+    ContextUsageUpdate,
+    EventQueue,
+    RunBegin,
+    RunEnd,
+    StepBegin,
+    StepCancelled,
+)
 from kimi_cli.metadata import SessionMeta
 from kimi_cli.soul import Soul
+from kimi_cli.ui.tui.console import console
+from kimi_cli.ui.tui.liveview import StepLiveView
+from kimi_cli.ui.tui.metacmd import get_meta_command, get_meta_commands
 
 _WELCOME_MESSAGE = """
 [bold]Welcome to {name}![/bold]
@@ -30,7 +41,7 @@ class App:
     def run(self, command: str | None = None):
         if command is not None:
             # run single command and exit
-            asyncio.run(self.soul.run(command))
+            asyncio.run(self.soul.run(command, self._visualize))
             return
 
         meta_command_completer = WordCompleter(
@@ -79,10 +90,64 @@ class App:
                 continue
 
             try:
-                asyncio.run(self.soul.run(user_input))
+                asyncio.run(self.soul.run(user_input, self._visualize))
             except KeyboardInterrupt:
                 console.print("[bold red]Interrupted by user[/bold red]")
                 continue
+
+    async def _visualize(self, event_queue: EventQueue):
+        """
+        A loop to consume agent events and visualize the agent behavior.
+        This loop never raise any exception.
+        """
+        # expect a RunBegin
+        assert isinstance(await event_queue.get(), RunBegin)
+        # expect a StepBegin
+        assert isinstance(await event_queue.get(), StepBegin)
+
+        while True:
+            # spin the moon at the beginning of each step
+            with console.status("", spinner="moon"):
+                event = await event_queue.get()
+
+            with StepLiveView(self.soul.context_usage) as step:
+                # visualization loop for one step
+                while True:
+                    match event:
+                        case TextPart(text=text):
+                            step.append_text(text)
+                        case ContentPart():
+                            # TODO: support more content parts
+                            step.append_text(f"[{event.__class__.__name__}]")
+                        case ToolCall():
+                            step.append_tool_call(event)
+                        case ToolCallPart():
+                            step.append_tool_call_part(event)
+                        case ToolResult():
+                            step.append_tool_result(event)
+                        case ContextUsageUpdate(usage_percentage=usage):
+                            step.update_context_usage(usage)
+                        case _:
+                            break  # break the step loop
+                    event = await event_queue.get()
+
+                # cleanup the step live view
+                if isinstance(event, StepCancelled):
+                    step.interrupt()
+                else:
+                    step.finish()
+
+            if isinstance(event, StepCancelled):
+                # for StepCancelled, the visualization loop should end immediately
+                break
+
+            assert isinstance(event, StepBegin | RunEnd), "expect a StepBegin or RunEnd"
+            if isinstance(event, StepBegin):
+                # start a new step
+                continue
+            else:
+                # end the run
+                break
 
     def _run_meta_command(self, command_str: str):
         parts = command_str.split(" ")

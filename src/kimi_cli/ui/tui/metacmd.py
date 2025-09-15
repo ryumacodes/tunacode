@@ -3,10 +3,10 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from rich.panel import Panel
 
-from kimi_cli.console import console
+from kimi_cli.ui.tui.console import console
 
 if TYPE_CHECKING:
-    from kimi_cli.app import App
+    from kimi_cli.ui.tui import App
 
 
 class MetaCommand(NamedTuple):

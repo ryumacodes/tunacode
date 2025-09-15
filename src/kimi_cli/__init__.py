@@ -10,7 +10,6 @@ from kosong.context.linear import JsonlLinearStorage
 from pydantic import SecretStr
 
 from kimi_cli.agent import load_agent, load_agents_md, load_system_prompt, load_tools
-from kimi_cli.app import App
 from kimi_cli.config import (
     DEFAULT_KIMI_BASE_URL,
     DEFAULT_KIMI_MODEL,
@@ -21,6 +20,7 @@ from kimi_cli.config import (
 )
 from kimi_cli.metadata import MetadataManager
 from kimi_cli.soul import Soul
+from kimi_cli.ui.tui import App
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
 
 
