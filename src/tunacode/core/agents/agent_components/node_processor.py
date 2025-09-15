@@ -209,11 +209,32 @@ async def _process_node(
         # Stream content to callback if provided
         # Use this as fallback when true token streaming is not available
         if streaming_callback and not STREAMING_AVAILABLE:
+            # Basic diagnostics for first-chunk behavior in fallback streaming
+            first_emitted = False
+            raw_accum = ""
             for part in node.model_response.parts:
                 if hasattr(part, "content") and isinstance(part.content, str):
-                    content = part.content.strip()
-                    if content and not content.startswith('{"thought"'):
-                        # Stream non-JSON content (actual response content)
+                    content = part.content
+                    # Only check for empty content and JSON thoughts, don't strip whitespace
+                    # as it may remove important leading spaces/characters
+                    if content and not content.lstrip().startswith('{"thought"'):
+                        if not first_emitted:
+                            try:
+                                import time as _t
+
+                                ts_ns = _t.perf_counter_ns()
+                            except Exception:
+                                ts_ns = 0
+                            # We cannot guarantee session access here; log via logger only
+                            logger.debug(
+                                "[src-fallback] first_chunk ts_ns=%s chunk_repr=%r len=%d",
+                                ts_ns,
+                                content[:5],
+                                len(content),
+                            )
+                            first_emitted = True
+                        raw_accum += content
+                        # Stream the original content without stripping
                         if streaming_callback:
                             await streaming_callback(content)
 

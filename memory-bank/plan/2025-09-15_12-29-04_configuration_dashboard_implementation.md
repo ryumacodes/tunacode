@@ -11,6 +11,18 @@ tags: [plan, configuration, dashboard, ui]
 ## Goal
 Create a startup dashboard that displays all TunaCode configuration options with clear visual indicators showing whether each setting is using a default value or a user-customized value. The dashboard will be terminal-based and integrated into the startup sequence to provide immediate visibility into the current configuration state.
 
+### Key User Experience Improvements
+Based on user feedback, the dashboard must address these specific usability issues:
+
+1. **Configuration Key Education**: Users don't understand what "keys" are - the dashboard must explain that configuration keys are setting names (like `default_model`, `max_retries`, etc.) that control how TunaCode behaves.
+
+2. **API Key Transparency**: Users need to know which API key they're using without compromising security. Instead of complete masking (••••••••), show partial keys (e.g., `sk-abc...xyz`) and clearly identify the service (OpenAI, Anthropic, etc.).
+
+3. **Clear Default vs Custom Organization**: Users need an organized, clean way to distinguish between:
+   - Default settings (unchanged from TunaCode defaults)
+   - Custom settings (modified by the user)
+   - Which tools/services are configured vs using defaults
+
 ## Scope & Assumptions
 
 ### In Scope
@@ -40,11 +52,16 @@ Create a startup dashboard that displays all TunaCode configuration options with
    - Terminal-based UI using Rich components
    - Real-time configuration state display
    - Visual indicators for default vs custom values
+   - **NEW**: Educational tooltips explaining what configuration keys are
+   - **NEW**: Improved API key display showing partial keys with service identification
+   - **NEW**: Clean organization separating default vs custom settings
 
 2. **Configuration Comparison Engine** (`src/tunacode/utils/config_comparator.py`)
    - Compares current config with defaults
    - Identifies customized settings
    - Provides metadata about configuration sources
+   - **NEW**: Service identification for API keys (OpenAI, Anthropic, etc.)
+   - **NEW**: Enhanced categorization of default vs custom tools
 
 3. **Startup Integration**
    - Modified startup sequence to include dashboard option
@@ -100,16 +117,19 @@ Create a startup dashboard that displays all TunaCode configuration options with
 - Error handling for edge cases
 - Performance optimization for large configurations
 
-### M4: Packaging & Deploy (Week 3)
+### M4: UX Improvements & Packaging (Week 3-4)
+- **NEW**: Implement configuration key education features
+- **NEW**: Add improved API key display with service identification
+- **NEW**: Create clean default vs custom organization
 - CLI integration for dashboard activation
 - Startup sequence integration
 - Configuration options for dashboard behavior
-- Documentation completion
 
-### M5: Observability & Docs (Week 4)
+### M5: Documentation & Final Polish (Week 4-5)
 - User feedback collection mechanism
 - Usage metrics integration
-- Advanced features (export, save states)
+- **NEW**: Complete user experience documentation
+- **NEW**: Configuration key glossary and help improvements
 - Final documentation and examples
 
 ## Work Breakdown (Tasks)
@@ -117,7 +137,7 @@ Create a startup dashboard that displays all TunaCode configuration options with
 ### T1: Configuration Comparison Engine
 **Summary**: Create utility to compare user config with defaults and identify customizations
 **Owner**: Developer
-**Estimate**: 3 days
+**Estimate**: 4 days (increased for new requirements)
 **Dependencies**: None
 **Target Milestone**: M1
 
@@ -127,6 +147,9 @@ Create a startup dashboard that displays all TunaCode configuration options with
 - Handles nested configuration structures
 - Provides metadata for each configuration item
 - Handles missing/invalid configurations gracefully
+- **NEW**: Identifies API key service providers (OpenAI, Anthropic, etc.)
+- **NEW**: Categorizes tools as default vs custom configured
+- **NEW**: Provides educational descriptions for configuration keys
 
 **Files/Interfaces**:
 - `src/tunacode/utils/config_comparator.py` (new)
@@ -134,9 +157,9 @@ Create a startup dashboard that displays all TunaCode configuration options with
 - `src/tunacode/utils/user_configuration.py` (read)
 
 ### T2: Dashboard UI Components
-**Summary**: Build terminal-based dashboard components using Rich
+**Summary**: Build terminal-based dashboard components using Rich with improved UX
 **Owner**: Developer
-**Estimate**: 4 days
+**Estimate**: 5 days (increased for new requirements)
 **Dependencies**: T1
 **Target Milestone**: M2
 
@@ -146,6 +169,10 @@ Create a startup dashboard that displays all TunaCode configuration options with
 - Supports keyboard navigation
 - Handles terminal resizing gracefully
 - Provides filtering and search functionality
+- **NEW**: Displays educational tooltips explaining what configuration keys are
+- **NEW**: Shows partial API keys with service identification (e.g., "OpenAI: sk-abc...xyz")
+- **NEW**: Clean separation of default vs custom settings in organized sections
+- **NEW**: Clearly indicates which tools are using defaults vs custom configuration
 
 **Files/Interfaces**:
 - `src/tunacode/ui/config_dashboard.py` (new)
@@ -208,7 +235,27 @@ Create a startup dashboard that displays all TunaCode configuration options with
 - `src/tunacode/configuration/defaults.py` (modify)
 - Documentation updates
 
-### T6: Documentation and Examples
+### T6: User Experience Improvements
+**Summary**: Implement specific UX improvements based on user feedback
+**Owner**: Developer
+**Estimate**: 3 days
+**Dependencies**: T2, T4
+**Target Milestone**: M4
+
+**Acceptance Tests**:
+- Configuration keys have clear explanations and examples
+- API keys show partial values with service identification
+- Dashboard clearly separates default vs custom settings
+- Users can easily identify which tools are configured vs default
+- Help section includes configuration key glossary
+- Service status indicators work correctly
+
+**Files/Interfaces**:
+- `src/tunacode/ui/config_dashboard.py` (modify)
+- `src/tunacode/utils/config_comparator.py` (modify)
+- `src/tunacode/configuration/key_descriptions.py` (new)
+
+### T7: Documentation and Examples
 **Summary**: Create user and developer documentation
 **Owner**: Technical Writer
 **Estimate**: 2 days
@@ -216,10 +263,11 @@ Create a startup dashboard that displays all TunaCode configuration options with
 **Target Milestone**: M5
 
 **Acceptance Tests**:
-- User guide covers all features
+- User guide covers all features including new UX improvements
 - Developer documentation includes API reference
 - Examples demonstrate common use cases
 - Integration with existing documentation
+- Configuration key explanations are documented
 
 **Files/Interfaces**:
 - `documentation/user/config-dashboard.md` (new)
@@ -286,8 +334,10 @@ Create a startup dashboard that displays all TunaCode configuration options with
 
 ### Secret Handling
 - No configuration values are logged or stored
-- API keys are masked in display (••••••••)
+- **UPDATED**: API keys show partial values for identification (e.g., "sk-abc...xyz") with service labels
+- Sensitive values beyond API keys remain fully masked (••••••••)
 - No sensitive data sent to external services
+- Service identification helps users understand which API keys are configured
 
 ### Access Control
 - Read-only access to configuration file
@@ -366,6 +416,32 @@ Create a startup dashboard that displays all TunaCode configuration options with
 - Rollback plan validated
 - Monitoring in place
 
+## User Feedback Implementation Details
+
+### Configuration Key Education
+**Problem**: Users don't understand what "keys" are
+**Solution**:
+- Add a "Configuration Keys Explained" section to the help panel
+- Include tooltips/descriptions for each configuration key
+- Show examples: "default_model (which AI model to use)", "max_retries (how many times to retry failed requests)"
+- Add a glossary of common configuration terms
+
+### API Key Transparency
+**Problem**: Users don't know which API key they're using and complete masking (••••••••) is unhelpful
+**Solution**:
+- Show partial API keys: `sk-abc...xyz` instead of `••••••••`
+- Add service identification: "OpenAI: sk-abc...xyz", "Anthropic: ant-api...xyz"
+- Include status indicators: ✅ Valid, ❌ Invalid, ⚠️ Not tested
+- Show which services are configured vs using defaults
+
+### Clean Default vs Custom Organization
+**Problem**: Users can't easily tell what they've changed vs what's default
+**Solution**:
+- Separate dashboard sections: "Default Settings" and "Your Customizations"
+- Use clear visual indicators: 🔧 Custom, 📋 Default
+- Add a summary: "You have customized 3 out of 15 available settings"
+- Group by functionality: "AI Models", "API Keys", "Behavior Settings", "Tool Configuration"
+
 ## Success Metrics
 
 ### Technical Metrics
@@ -379,6 +455,8 @@ Create a startup dashboard that displays all TunaCode configuration options with
 - Task completion rate >95%
 - Error rate <2%
 - Support ticket reduction for configuration issues
+- **NEW**: 90%+ of users understand what configuration keys are after viewing dashboard
+- **NEW**: 95%+ of users can identify which API keys they're using
 
 ### Business Metrics
 - Reduced configuration-related support requests

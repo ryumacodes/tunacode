@@ -48,6 +48,7 @@ from .agent_components import (
     parse_json_tool_calls,
     patch_tool_messages,
 )
+from .agent_components.streaming import stream_model_request_node
 
 # Import streaming types with fallback for older versions
 try:
@@ -174,43 +175,14 @@ async def process_request(
                 # Handle token-level streaming for model request nodes
                 Agent, _ = get_agent_tool()
                 if streaming_callback and STREAMING_AVAILABLE and Agent.is_model_request_node(node):
-                    # Gracefully handle streaming errors from LLM provider
-                    for attempt in range(2):  # simple retry once, then degrade gracefully
-                        try:
-                            async with node.stream(agent_run.ctx) as request_stream:
-                                async for event in request_stream:
-                                    if isinstance(event, PartDeltaEvent) and isinstance(
-                                        event.delta, TextPartDelta
-                                    ):
-                                        # Stream individual token deltas
-                                        if event.delta.content_delta and streaming_callback:
-                                            await streaming_callback(event.delta.content_delta)
-                            break  # successful streaming; exit retry loop
-                        except Exception as stream_err:
-                            # Log with context and optionally notify UI, then retry once
-                            logger.warning(
-                                "Streaming error (attempt %s/2) req=%s iter=%s: %s",
-                                attempt + 1,
-                                request_id,
-                                i,
-                                stream_err,
-                                exc_info=True,
-                            )
-                            if getattr(state_manager.session, "show_thoughts", False):
-                                from tunacode.ui import console as ui
-
-                                await ui.warning(
-                                    "⚠️ Streaming failed; retrying once then falling back"
-                                )
-                            # On second failure, degrade gracefully (no streaming)
-                            if attempt == 1:
-                                if getattr(state_manager.session, "show_thoughts", False):
-                                    from tunacode.ui import console as ui
-
-                                    await ui.muted(
-                                        "Switching to non-streaming processing for this node"
-                                    )
-                                break
+                    await stream_model_request_node(
+                        node,
+                        agent_run.ctx,
+                        state_manager,
+                        streaming_callback,
+                        request_id,
+                        i,
+                    )
 
                 empty_response, empty_reason = await _process_node(
                     node,
@@ -242,7 +214,7 @@ async def process_request(
                             from tunacode.ui import console as ui
 
                             await ui.warning(
-                                "\n⚠️ EMPTY RESPONSE FAILURE - AGGRESSIVE RETRY TRIGGERED"
+                                "\nEMPTY RESPONSE FAILURE - AGGRESSIVE RETRY TRIGGERED"
                             )
                             await ui.muted(f"   Reason: {empty_reason}")
                             await ui.muted(
@@ -297,7 +269,7 @@ NO MORE DESCRIPTIONS. Take ACTION or mark COMPLETE."""
                         from tunacode.ui import console as ui
 
                         await ui.warning(
-                            f"⚠️ NO PROGRESS: {unproductive_iterations} iterations without tool usage"
+                            f"NO PROGRESS: {unproductive_iterations} iterations without tool usage"
                         )
 
                     unproductive_iterations = 0
@@ -345,7 +317,7 @@ Otherwise, please provide specific guidance on what to do next."""
                         from tunacode.ui import console as ui
 
                         await ui.muted(
-                            "\n🤔 SEEKING CLARIFICATION: Asking user for guidance on task progress"
+                            "\nSEEKING CLARIFICATION: Asking user for guidance on task progress"
                         )
 
                     response_state.awaiting_user_guidance = True
@@ -381,7 +353,7 @@ Please let me know how to proceed."""
                         from tunacode.ui import console as ui
 
                         await ui.muted(
-                            f"\n📊 ITERATION LIMIT: Asking user for guidance at {max_iterations} iterations"
+                            f"\nITERATION LIMIT: Asking user for guidance at {max_iterations} iterations"
                         )
 
                     max_iterations += 5
@@ -408,7 +380,7 @@ Please let me know how to proceed."""
 
                 await ui.muted("\n" + "=" * 60)
                 await ui.muted(
-                    f"🚀 FINAL BATCH: Executing {len(buffered_tasks)} buffered read-only tools"
+                    f"FINAL BATCH: Executing {len(buffered_tasks)} buffered read-only tools"
                 )
                 await ui.muted("=" * 60)
 
@@ -435,7 +407,7 @@ Please let me know how to proceed."""
                 speedup = sequential_estimate / elapsed_time if elapsed_time > 0 else 1.0
 
                 await ui.muted(
-                    f"✅ Final batch completed in {elapsed_time:.0f}ms "
+                    f"Final batch completed in {elapsed_time:.0f}ms "
                     f"(~{speedup:.1f}x faster than sequential)\n"
                 )
 
@@ -501,6 +473,3 @@ Please let me know how to proceed."""
         )
         # Re-raise to be handled by caller
         raise
-
-
-1

@@ -60,13 +60,13 @@ cd tunacode
 # Quick setup (recommended)
 ./scripts/setup_dev_env.sh
 
-# Or manual setup
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -e ".[dev]"
+# Or manual setup with UV (recommended)
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -e ".[dev]"
 
 # Verify installation
-python -m tunacode --version
+tunacode --version
 ```
 
 See the [Hatch Build System Guide](documentation/development/hatch-build-system.md) for detailed instructions on the development environment.

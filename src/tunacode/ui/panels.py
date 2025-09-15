@@ -92,7 +92,7 @@ class StreamingAgentPanel:
     _dots_count: int
     _show_dots: bool
 
-    def __init__(self, bottom: int = 1):
+    def __init__(self, bottom: int = 1, debug: bool = False):
         self.bottom = bottom
         self.title = f"[bold {colors.primary}]●[/bold {colors.primary}] {APP_NAME}"
         self.content = ""
@@ -101,6 +101,24 @@ class StreamingAgentPanel:
         self._dots_task = None
         self._dots_count = 0
         self._show_dots = True  # Start with dots enabled for "Thinking..."
+        # Debug/diagnostic instrumentation (printed after stop to avoid Live interference)
+        self._debug_enabled = debug
+        self._debug_events: list[str] = []
+        self._update_count: int = 0
+        self._first_update_done: bool = False
+        self._dots_tick_count: int = 0
+        self._max_logged_dots: int = 10
+
+    def _log_debug(self, label: str, **data: Any) -> None:
+        if not self._debug_enabled:
+            return
+        try:
+            ts = time.perf_counter_ns()
+        except Exception:
+            ts = 0
+        payload = ", ".join(f"{k}={repr(v)}" for k, v in data.items()) if data else ""
+        line = f"[ui] {label} ts_ns={ts}{(' ' + payload) if payload else ''}"
+        self._debug_events.append(line)
 
     def _create_panel(self) -> Padding:
         """Create a Rich panel with current content."""
@@ -159,6 +177,14 @@ class StreamingAgentPanel:
             if current_time - self._last_update_time > delay_threshold:
                 self._show_dots = True
                 self._dots_count += 1
+                # Log only a few initial ticks to avoid noise
+                if (
+                    self._debug_enabled
+                    and not self.content
+                    and self._dots_tick_count < self._max_logged_dots
+                ):
+                    self._dots_tick_count += 1
+                    self._log_debug("dots_tick", n=self._dots_count)
                 if self.live:
                     self.live.update(self._create_panel())
             else:
@@ -173,6 +199,7 @@ class StreamingAgentPanel:
 
         self.live = Live(self._create_panel(), console=console, refresh_per_second=4)
         self.live.start()
+        self._log_debug("start")
         # For "Thinking...", set time in past to trigger dots immediately
         if not self.content:
             self._last_update_time = time.time() - 0.4  # Triggers dots on first cycle
@@ -188,44 +215,82 @@ class StreamingAgentPanel:
             content_chunk = ""
 
         # Filter out plan mode system prompts and tool definitions from streaming
-        if any(
-            phrase in str(content_chunk)
+        # Use more precise filtering to avoid false positives
+        content_str = str(content_chunk).strip()
+        if content_str and any(
+            content_str.startswith(phrase) or phrase in content_str
             for phrase in [
                 "🔧 PLAN MODE",
                 "TOOL EXECUTION ONLY",
                 "planning assistant that ONLY communicates",
                 "namespace functions {",
                 "namespace multi_tool_use {",
-                "You are trained on data up to",
             ]
         ):
             return
 
+        # Special handling for the training data phrase - only filter if it's a complete system message
+        if "You are trained on data up to" in content_str and len(content_str) > 50:
+            # Only filter if this looks like a complete system message, not user content
+            if (
+                content_str.startswith("You are trained on data up to")
+                or "The current date is" in content_str
+            ):
+                return
+
         # Ensure type safety for concatenation
-        self.content = (self.content or "") + str(content_chunk)
+        incoming = str(content_chunk)
+        # First-chunk diagnostics
+        is_first_chunk = (not self.content) and bool(incoming)
+        if is_first_chunk:
+            self._log_debug(
+                "first_chunk_received",
+                chunk_repr=incoming[:5],
+                chunk_len=len(incoming),
+            )
+        self.content = (self.content or "") + incoming
 
         # Reset the update timer when we get new content
         self._last_update_time = time.time()
-        self._show_dots = False  # Hide dots immediately when new content arrives
+        # Hide dots immediately when new content arrives
+        if self._show_dots:
+            self._log_debug("disable_dots_called")
+        self._show_dots = False
 
         if self.live:
+            # Log timing around the first two live.update() calls
+            self._update_count += 1
+            if self._update_count <= 2:
+                self._log_debug("live_update.start", update_index=self._update_count)
             self.live.update(self._create_panel())
+            if self._update_count <= 2:
+                self._log_debug("live_update.end", update_index=self._update_count)
 
     async def set_content(self, content: str):
         """Set the complete content (overwrites previous)."""
         # Filter out plan mode system prompts and tool definitions
-        if any(
-            phrase in str(content)
+        # Use more precise filtering to avoid false positives
+        content_str = str(content).strip()
+        if content_str and any(
+            content_str.startswith(phrase) or phrase in content_str
             for phrase in [
                 "🔧 PLAN MODE",
                 "TOOL EXECUTION ONLY",
                 "planning assistant that ONLY communicates",
                 "namespace functions {",
                 "namespace multi_tool_use {",
-                "You are trained on data up to",
             ]
         ):
             return
+
+        # Special handling for the training data phrase - only filter if it's a complete system message
+        if "You are trained on data up to" in content_str and len(content_str) > 50:
+            # Only filter if this looks like a complete system message, not user content
+            if (
+                content_str.startswith("You are trained on data up to")
+                or "The current date is" in content_str
+            ):
+                return
 
         self.content = content
         if self.live:
@@ -240,6 +305,8 @@ class StreamingAgentPanel:
                 await self._dots_task
             except asyncio.CancelledError:
                 pass
+            finally:
+                self._log_debug("dots_task_cancelled")
 
         if self.live:
             # Get the console before stopping the live display
@@ -262,6 +329,22 @@ class StreamingAgentPanel:
                 pass  # If we can't import, continue without the optimization
 
             self.live = None
+
+        # Emit debug diagnostics after Live has been stopped (to avoid interference)
+        if self._debug_enabled:
+            from .output import print as ui_print
+
+            # Summarize UI buffer state
+            ui_prefix = "[debug]"
+            ui_buffer_first5 = repr((self.content or "")[:5])
+            lines = [
+                f"{ui_prefix} ui_buffer_first5={ui_buffer_first5} total_len={len(self.content or '')}",
+            ]
+            # Include recorded event lines
+            lines.extend(self._debug_events)
+            # Flush lines to console
+            for line in lines:
+                await ui_print(line)
 
 
 async def agent_streaming(content_stream, bottom: int = 1):
