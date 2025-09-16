@@ -2,15 +2,16 @@ import importlib
 import inspect
 import string
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import yaml
+from kosong.base.chat_provider import ChatProvider
 from kosong.tooling import CallableTool, SimpleToolset, Toolset
 from pydantic import BaseModel, Field
 
 
-class Agent(BaseModel):
-    """Agent definition."""
+class AgentSpec(BaseModel):
+    """Agent specification."""
 
     name: str = Field(..., description="Agent name")
     system_prompt_path: Path = Field(..., description="System prompt path")
@@ -20,54 +21,78 @@ class Agent(BaseModel):
     tools: list[str] = Field(default_factory=list, description="Tools")
 
 
-def get_agents_dir() -> Path:
-    return Path(__file__).parent / "agents"
-
-
-def load_agent(agent_path: Path) -> Agent | None:
-    if not agent_path.is_file():
-        return None
-
-    with open(agent_path, encoding="utf-8") as f:
-        data: dict[str, Any] = yaml.safe_load(f)
-
-    version = data.get("version", 1)
-    if version != 1:
-        raise ValueError(f"Unsupported agent version: {version}")
-
-    agent_data = data.get("agent", {})
-    agent = Agent(**agent_data)
-    agent.system_prompt_path = agent_path.parent.joinpath(agent.system_prompt_path)
-    return agent
-
-
-def load_agent_by_name(agent_name: str) -> Agent | None:
-    agent_path = get_agents_dir() / agent_name / "agent.yaml"
-    if not agent_path.is_file():
-        return None
-    return load_agent(agent_path)
-
-
-class BuiltinSystemPromptArgs(BaseModel):
+class BuiltinSystemPromptArgs(NamedTuple):
     """Builtin system prompt arguments."""
 
     ENSOUL_WORK_DIR: Path
     ENSOUL_AGENTS_MD: str
 
 
-def load_system_prompt(agent: Agent, builtin_args: BuiltinSystemPromptArgs) -> str:
-    system_prompt = agent.system_prompt_path.read_text().strip()
-    return string.Template(system_prompt).substitute(
-        builtin_args.model_dump(), **agent.system_prompt_args
+class Agent(NamedTuple):
+    """The loaded agent."""
+
+    name: str
+    system_prompt: str
+    toolset: Toolset
+
+
+def get_agents_dir() -> Path:
+    return Path(__file__).parent / "agents"
+
+
+def load_agent(
+    agent_file: Path,
+    builtin_args: BuiltinSystemPromptArgs,
+    chat_provider: ChatProvider,
+) -> Agent:
+    """
+    Load agent from specification file.
+
+    Raises:
+        ValueError: If the agent spec is not valid.
+    """
+
+    assert agent_file.is_file(), "expect agent file to exist"
+    with open(agent_file, encoding="utf-8") as f:
+        data: dict[str, Any] = yaml.safe_load(f)
+
+    version = data.get("version", 1)
+    if version != 1:
+        raise ValueError(f"Unsupported agent spec version: {version}")
+
+    agent_spec = AgentSpec(**data.get("agent", {}))
+    agent_spec.system_prompt_path = agent_file.parent.joinpath(agent_spec.system_prompt_path)
+
+    system_prompt = _load_system_prompt(agent_spec, builtin_args)
+
+    tool_deps = {
+        BuiltinSystemPromptArgs: builtin_args,
+        ChatProvider: chat_provider,
+    }
+    toolset, bad_tools = _load_tools(agent_spec, tool_deps)
+    if bad_tools:
+        raise ValueError(f"Invalid tools: {bad_tools}")
+
+    return Agent(
+        name=agent_spec.name,
+        system_prompt=system_prompt,
+        toolset=toolset,
     )
 
 
-def load_tools(
-    agent: Agent, dependencies: dict[type[Any], Any] | None = None
+def _load_system_prompt(agent_spec: AgentSpec, builtin_args: BuiltinSystemPromptArgs) -> str:
+    system_prompt = agent_spec.system_prompt_path.read_text().strip()
+    return string.Template(system_prompt).substitute(
+        builtin_args._asdict(), **agent_spec.system_prompt_args
+    )
+
+
+def _load_tools(
+    agent_spec: AgentSpec, dependencies: dict[type[Any], Any] | None = None
 ) -> tuple[Toolset, list[str]]:
     toolset = SimpleToolset()
     bad_tools = []
-    for tool_path in agent.tools:
+    for tool_path in agent_spec.tools:
         tool = _load_tool(tool_path, dependencies or {})
         if tool:
             toolset += tool

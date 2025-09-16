@@ -7,8 +7,9 @@ from kosong.base.chat_provider import ChatProvider
 from kosong.base.message import Message
 from kosong.context import LinearContext
 from kosong.context.linear import LinearStorage
-from kosong.tooling import ToolResult, Toolset
+from kosong.tooling import ToolResult
 
+from kimi_cli.agent import Agent
 from kimi_cli.constant import MAX_CONTEXT_SIZE, MAX_STEPS
 from kimi_cli.event import (
     ContextUsageUpdate,
@@ -32,20 +33,16 @@ class Soul:
 
     def __init__(
         self,
-        name: str,
+        agent: Agent,
         *,
         chat_provider: ChatProvider,
-        system_prompt: str,
-        toolset: Toolset,
         context_storage: LinearStorage,
     ):
-        self.name = name
+        self.name = agent.name
         self._chat_provider = chat_provider
-        self._system_prompt = system_prompt
-        self._toolset = toolset
         self._context = LinearContext(
-            system_prompt=system_prompt,
-            toolset=toolset,
+            system_prompt=agent.system_prompt,
+            toolset=agent.toolset,
             storage=context_storage,
         )
         self._max_context_size: int = MAX_CONTEXT_SIZE  # unit: tokens

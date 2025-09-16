@@ -1,7 +1,7 @@
 version: 1
 agent:
   name: "Kimi Koder Subagent"
-  system_prompt_path: ../koder/system.md
+  system_prompt_path: ./system.md
   system_prompt_args:
     KODER_NAME: "Kimi Koder Subagent"
   tools:
