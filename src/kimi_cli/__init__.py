@@ -2,7 +2,6 @@ import asyncio
 import importlib.metadata
 import os
 import textwrap
-from hashlib import md5
 from pathlib import Path
 
 import click
@@ -18,7 +17,7 @@ from kimi_cli.config import (
     LLMProvider,
     load_config,
 )
-from kimi_cli.metadata import MetadataManager
+from kimi_cli.metadata import continue_session, new_session
 from kimi_cli.soul import Soul
 from kimi_cli.ui.tui import App
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
@@ -55,6 +54,14 @@ from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_
     help="Working directory for the agent (default: current directory)",
 )
 @click.option(
+    "--continue",
+    "-C",
+    "continue_",
+    is_flag=True,
+    default=False,
+    help="Continue the previous session for the working directory (default: no)",
+)
+@click.option(
     "--command",
     "-c",
     "--query",
@@ -64,21 +71,13 @@ from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_
     default=None,
     help="User query to the agent (default: interactive mode)",
 )
-@click.option(
-    "--continue",
-    "-C",
-    "continue_",
-    is_flag=True,
-    default=False,
-    help="Continue the previous session for the working directory (default: no)",
-)
 def kimi(
     verbose: bool,
     agent_path: Path,
     model_name: str | None,
     work_dir: Path,
-    command: str | None,
     continue_: bool,
+    command: str | None,
 ):
     """Kimi, your next CLI agent."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
@@ -145,20 +144,18 @@ def kimi(
         if not command:
             raise click.BadArgumentUsage("Command cannot be empty")
 
-    metadata = MetadataManager()
-    session = metadata.get_session_by_name(md5(str(work_dir).encode()).hexdigest(), work_dir)
-    echo(f"✓ Using session for work directory: {session.name}")
-
-    history_path = session.directory / "history.jsonl"
-    echo(f"✓ Using history file: {history_path}")
-    context_storage = JsonlLinearStorage(history_path)
     if continue_:
-        # continue from the existing history file
+        session = continue_session(work_dir)
+        if session is None:
+            raise click.ClickException("No previous session found for the working directory")
+        echo(f"✓ Continuing previous session: {session.id}")
+        context_storage = JsonlLinearStorage(session.history_file)
         asyncio.run(context_storage.restore())
-        echo(f"✓ Restored history from {history_path}")
+        echo(f"✓ Restored history from {session.history_file}")
     else:
-        # remove the existing history file
-        history_path.unlink(missing_ok=True)
+        session = new_session(work_dir)
+        echo(f"✓ Created new session: {session.id}")
+        context_storage = JsonlLinearStorage(session.history_file)
 
     soul = Soul(
         agent.name,

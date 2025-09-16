@@ -18,7 +18,7 @@ from kimi_cli.event import (
     StepBegin,
     StepCancelled,
 )
-from kimi_cli.metadata import SessionMeta
+from kimi_cli.metadata import Session
 from kimi_cli.soul import Soul
 from kimi_cli.ui.tui.console import console
 from kimi_cli.ui.tui.liveview import StepLiveView
@@ -29,12 +29,12 @@ _WELCOME_MESSAGE = """
 
 [grey30]Model: {model}[/grey30]
 [grey30]Working directory: {work_dir}[/grey30]
-[grey30]Session: {session_name}[/grey30]
+[grey30]Session: {session_id}[/grey30]
 """.strip()
 
 
 class App:
-    def __init__(self, soul: Soul, session: SessionMeta):
+    def __init__(self, soul: Soul, session: Session):
         self.soul = soul
         self.session = session
 
@@ -62,7 +62,7 @@ class App:
             name=self.soul.name,
             model=self.soul.model,
             work_dir=Path.cwd().absolute(),
-            session_name=self.session.name,
+            session_id=self.session.id,
         )
 
         console.print()
