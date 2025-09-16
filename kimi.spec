@@ -8,7 +8,7 @@ a = Analysis(
     ["src/kimi_cli/__init__.py"],
     pathex=[],
     binaries=[],
-    datas=[("src/kimi_cli/koder", "koder")],
+    datas=[("src/kimi_cli/agents", "agents")],
     hiddenimports=tools,
     hookspath=[],
     hooksconfig={},

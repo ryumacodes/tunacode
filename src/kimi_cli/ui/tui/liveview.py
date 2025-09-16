@@ -87,6 +87,10 @@ def _extract_detail(lexer: streamingjson.Lexer, tool_name: str) -> str:
             if not isinstance(curr_args, dict) or not curr_args.get("command"):
                 return ""
             return str(curr_args["command"])
+        case "task":
+            if not isinstance(curr_args, dict) or not curr_args.get("description"):
+                return ""
+            return str(curr_args["description"])
         case _:
             return "".join(lexer.json_content)
 

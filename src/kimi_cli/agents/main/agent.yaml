@@ -1,0 +1,9 @@
+version: 1
+agent:
+  name: "Kimi Koder"
+  system_prompt_path: ./system.md
+  system_prompt_args:
+    KODER_NAME: "Kimi Koder"
+  tools:
+    - "kimi_cli.tools.shell:Shell"
+    - "kimi_cli.tools.task:Task"

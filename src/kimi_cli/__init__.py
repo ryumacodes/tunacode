@@ -5,6 +5,7 @@ import textwrap
 from pathlib import Path
 
 import click
+from kosong.base.chat_provider import ChatProvider
 from kosong.context.linear import JsonlLinearStorage
 from pydantic import SecretStr
 
@@ -35,7 +36,7 @@ from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_
     "--agent",
     "agent_path",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
-    default=Path(__file__).parent / "koder" / "agent.yaml",
+    default=Path(__file__).parent / "agents" / "main" / "agent.yaml",
     help="Custom agent definition file (default: builtin Kimi Koder)",
 )
 @click.option(
@@ -117,6 +118,7 @@ def kimi(
 
     echo(f"✓ Using LLM provider: {provider}")
     echo(f"✓ Using LLM model: {model.model}")
+    chat_provider = create_chat_provider(provider, model)
 
     agent = load_agent(agent_path)
     echo(f"✓ Loaded agent: {agent.name}")
@@ -134,7 +136,10 @@ def kimi(
     )
     echo(f"✓ Loaded system prompt: {textwrap.shorten(system_prompt, width=100)}")
 
-    toolset, bad_tools = load_tools(agent)
+    tool_dependencies = {
+        ChatProvider: chat_provider,
+    }
+    toolset, bad_tools = load_tools(agent, tool_dependencies)
     if bad_tools:
         raise click.ClickException(f"Failed to load tools: {bad_tools}")
     echo(f"✓ Loaded tools: {[tool.name for tool in toolset.tools]}")
@@ -159,7 +164,7 @@ def kimi(
 
     soul = Soul(
         agent.name,
-        chat_provider=create_chat_provider(provider, model),
+        chat_provider=chat_provider,
         system_prompt=system_prompt,
         toolset=toolset,
         context_storage=context_storage,
