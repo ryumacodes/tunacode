@@ -20,7 +20,14 @@ class Agent(BaseModel):
     tools: list[str] = Field(default_factory=list, description="Tools")
 
 
-def load_agent(agent_path: Path) -> Agent:
+def get_agents_dir() -> Path:
+    return Path(__file__).parent / "agents"
+
+
+def load_agent(agent_path: Path) -> Agent | None:
+    if not agent_path.is_file():
+        return None
+
     with open(agent_path, encoding="utf-8") as f:
         data: dict[str, Any] = yaml.safe_load(f)
 
@@ -35,15 +42,24 @@ def load_agent(agent_path: Path) -> Agent:
 
 
 def load_agent_by_name(agent_name: str) -> Agent | None:
-    agent_path = Path(__file__).parent / "agents" / agent_name / "agent.yaml"
+    agent_path = get_agents_dir() / agent_name / "agent.yaml"
     if not agent_path.is_file():
         return None
     return load_agent(agent_path)
 
 
-def load_system_prompt(agent: Agent, builtin_args: dict[str, Any]) -> str:
+class BuiltinSystemPromptArgs(BaseModel):
+    """Builtin system prompt arguments."""
+
+    ENSOUL_WORK_DIR: Path
+    ENSOUL_AGENTS_MD: str
+
+
+def load_system_prompt(agent: Agent, builtin_args: BuiltinSystemPromptArgs) -> str:
     system_prompt = agent.system_prompt_path.read_text().strip()
-    return string.Template(system_prompt).substitute(builtin_args, **agent.system_prompt_args)
+    return string.Template(system_prompt).substitute(
+        builtin_args.model_dump(), **agent.system_prompt_args
+    )
 
 
 def load_tools(

@@ -16,3 +16,4 @@ Delegates a complex, self-contained task to a specialized subagent.
 
 **Available subagents:**
 - `explorer`: Use this subagent to survey the current project directory. It analyzes file and folder structures, identifies the tech stack (languages, frameworks, dependencies), and provides a high-level summary of the project's architecture and purpose. It is ideal for gaining initial understanding of a new codebase.
+- `coder`: Use this subagent to do general coding and code review. Especially useful for fixing compilation errors and refactoring code.
