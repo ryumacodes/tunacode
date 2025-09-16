@@ -49,7 +49,6 @@ class Soul:
             storage=context_storage,
         )
         self._max_context_size: int = MAX_CONTEXT_SIZE  # unit: tokens
-        self._context_size: int = 0  # unit: tokens
 
     @property
     def model(self) -> str:
@@ -57,7 +56,7 @@ class Soul:
 
     @property
     def context_usage(self) -> float:
-        return self._context_size / self._max_context_size
+        return self._context.token_count / self._max_context_size
 
     async def run(self, user_input: str, visualize: VisualizeFn):
         await self._context.add_message(Message(role="user", content=user_input))
@@ -107,7 +106,8 @@ class Soul:
             on_tool_result=event_queue.put_nowait,
         )
         if result.usage is not None:
-            self._context_size = result.usage.total
+            # mark the token count for the context before the step
+            await self._context.mark_token_count(result.usage.input)
             event_queue.put_nowait(ContextUsageUpdate(self.context_usage))
 
         # wait for all tool results (may be interrupted)
@@ -119,6 +119,10 @@ class Soul:
 
     async def _grow_context(self, result: StepResult, tool_results: list[ToolResult]):
         await self._context.add_message(result.message)
+        if result.usage is not None:
+            await self._context.mark_token_count(result.usage.total)
+
+        # token count of tool results are not available yet
         for tool_result in tool_results:
             for message in tool_result_to_messages(tool_result):
                 await self._context.add_message(message)
