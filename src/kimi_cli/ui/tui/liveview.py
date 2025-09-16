@@ -44,6 +44,7 @@ class _ToolCallDisplay:
         if self.finished:
             return
         self._lexer.append_string(args_part)
+        # TODO: don't extract detail if it's already stable
         new_detail = _extract_detail(self._lexer, self._tool_name)
         if new_detail and new_detail != self._detail:
             self._detail = new_detail

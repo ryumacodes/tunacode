@@ -101,6 +101,7 @@ async def _stream_subprocess(command: str, stdout_cb, stderr_cb, timeout: int) -
             else:
                 break
 
+    # FIXME: if the event loop is cancelled, an exception may be raised when the process finishes
     process = await asyncio.create_subprocess_shell(
         command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
