@@ -7,10 +7,10 @@ format:
 	$(RUFF) check --fix
 	$(RUFF) format
 
-lint:
+check:
 	$(RUFF) check
 	$(RUFF) format --check
 	$(PYRIGHT)
 
 test:
-	uv run pytest --doctest-modules
+	uv run pytest tests -vv
