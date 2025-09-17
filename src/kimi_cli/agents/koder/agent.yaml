@@ -7,3 +7,5 @@ agent:
   tools:
     - "kimi_cli.tools.shell:Shell"
     - "kimi_cli.tools.task:Task"
+    - "kimi_cli.tools.file:ReadFile"
+    - "kimi_cli.tools.file:WriteFile"
