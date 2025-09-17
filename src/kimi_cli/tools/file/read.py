@@ -56,7 +56,7 @@ class ReadFile(CallableTool):
         try:
             resolved_path = path.resolve()
             resolved_work_dir = self._work_dir.resolve()
-            
+
             # Ensure the path is within work directory
             if not str(resolved_path).startswith(str(resolved_work_dir)):
                 return ToolError(
@@ -72,7 +72,7 @@ class ReadFile(CallableTool):
     async def __call__(
         self,
         path: str,
-        line_offset: int | None = None,
+        line_offset: int = 1,
         n_lines: int | None = None,
     ) -> ToolReturnType:
         # TODO: checks:
@@ -89,7 +89,7 @@ class ReadFile(CallableTool):
                     "You must provide an absolute path to read a file.",
                     "Invalid path",
                 )
-            
+
             # Validate path safety
             path_error = self._validate_path(p)
             if path_error:
@@ -106,30 +106,32 @@ class ReadFile(CallableTool):
                     "Invalid path",
                 )
 
-            # Default behaviors
-            start_line = 1 if line_offset is None else max(1, int(line_offset))
+            start_line = max(1, int(line_offset))
             max_lines: int | None = None if n_lines is None else max(1, int(n_lines))
 
             # Read with streaming to support large files efficiently
             lines: list[str] = []
             async with aiofiles.open(p, encoding="utf-8", errors="replace") as f:
-                current_line_no = 1
+                current_line_no = 0
                 async for line in f:
+                    current_line_no += 1
                     if current_line_no < start_line:
                         continue
                     lines.append(line)
-                    current_line_no += 1
                     if max_lines is not None and len(lines) >= max_lines:
                         break
 
-            content = "".join(lines)
+            if len(lines) == 0:
+                return ToolOk(
+                    f"No lines read from {path}.",
+                )
 
             return ToolOk(
                 _TEMPLATE.format(
                     n_lines=len(lines),
                     path=path,
                     line_offset=start_line,
-                    content=content,
+                    content="".join(lines),
                 )
             )
         except Exception as e:
