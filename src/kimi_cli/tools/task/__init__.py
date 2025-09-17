@@ -3,10 +3,10 @@ from typing import override
 
 from kosong.base.chat_provider import ChatProvider
 from kosong.base.tool import ParametersType
-from kosong.context.linear import MemoryLinearStorage
 from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
 
 from kimi_cli.agent import Agent, BuiltinSystemPromptArgs, get_agents_dir, load_agent
+from kimi_cli.context import Context
 from kimi_cli.event import EventQueue, RunEnd, StepCancelled
 from kimi_cli.soul import Soul
 
@@ -52,11 +52,11 @@ class Task(CallableTool):
         if subagent_name not in self._subagents:
             return ToolError(f"Subagent not found: {subagent_name}", "Subagent not found")
         agent = self._subagents[subagent_name]
-        context_storage = MemoryLinearStorage()
+        context = Context()
         soul = Soul(
             agent,
             chat_provider=self._chat_provider,
-            context_storage=context_storage,
+            context=context,
         )
 
         async def _visualize(event_queue: EventQueue):
@@ -68,7 +68,7 @@ class Task(CallableTool):
         await soul.run(prompt, _visualize)
 
         # find the last assistant message
-        for message in reversed(context_storage.messages):
+        for message in reversed(context.history):
             if message.role == "assistant":
                 return ToolOk(message.content)
         return ToolError("No response from the subagent", "Invalid response")

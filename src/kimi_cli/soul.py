@@ -5,12 +5,11 @@ import kosong
 from kosong import StepResult
 from kosong.base.chat_provider import ChatProvider
 from kosong.base.message import Message
-from kosong.context import LinearContext
-from kosong.context.linear import LinearStorage
 from kosong.tooling import ToolResult
 
 from kimi_cli.agent import Agent
 from kimi_cli.constant import MAX_CONTEXT_SIZE, MAX_STEPS
+from kimi_cli.context import Context
 from kimi_cli.event import (
     ContextUsageUpdate,
     EventQueue,
@@ -36,16 +35,16 @@ class Soul:
         agent: Agent,
         *,
         chat_provider: ChatProvider,
-        context_storage: LinearStorage,
+        context: Context,
     ):
-        self.name = agent.name
+        self._agent = agent
         self._chat_provider = chat_provider
-        self._context = LinearContext(
-            system_prompt=agent.system_prompt,
-            toolset=agent.toolset,
-            storage=context_storage,
-        )
+        self._context = context
         self._max_context_size: int = MAX_CONTEXT_SIZE  # unit: tokens
+
+    @property
+    def name(self) -> str:
+        return self._agent.name
 
     @property
     def model(self) -> str:
@@ -56,13 +55,13 @@ class Soul:
         return self._context.token_count / self._max_context_size
 
     async def run(self, user_input: str, visualize: VisualizeFn):
-        await self._context.add_message(Message(role="user", content=user_input))
+        await self._context.append_message(Message(role="user", content=user_input))
 
         event_queue = EventQueue()
         vis_task = asyncio.create_task(visualize(event_queue))
         try:
             event_queue.put_nowait(RunBegin())
-            await self._agent_loop(self._context, event_queue)
+            await self._agent_loop(event_queue)
         except asyncio.CancelledError:
             # the run is cancelled, propagate the cancellation
             # TODO: maybe need to manipulate the context to add some notes
@@ -73,7 +72,6 @@ class Soul:
 
     async def _agent_loop(
         self,
-        context: LinearContext,
         event_queue: EventQueue,
     ):
         """The main agent loop for one run."""
@@ -81,7 +79,7 @@ class Soul:
         while True:
             event_queue.put_nowait(StepBegin(n_steps))
             try:
-                finished = await self._step(context, event_queue)
+                finished = await self._step(event_queue)
             except asyncio.CancelledError:
                 event_queue.put_nowait(StepCancelled())
                 # break the agent loop
@@ -93,18 +91,20 @@ class Soul:
                 # TODO: print some warning
                 return
 
-    async def _step(self, context: LinearContext, event_queue: EventQueue) -> bool:
+    async def _step(self, event_queue: EventQueue) -> bool:
         """Run an single step and return whether the run is finished."""
         # run an LLM step (may be interrupted)
         result = await kosong.step(
             self._chat_provider,
-            context,
+            self._agent.system_prompt,
+            self._agent.toolset,
+            self._context.history,
             on_message_part=event_queue.put_nowait,
             on_tool_result=event_queue.put_nowait,
         )
         if result.usage is not None:
             # mark the token count for the context before the step
-            await self._context.mark_token_count(result.usage.input)
+            await self._context.update_token_count(result.usage.input)
             event_queue.put_nowait(ContextUsageUpdate(self.context_usage))
 
         # wait for all tool results (may be interrupted)
@@ -115,11 +115,10 @@ class Soul:
         return not result.tool_calls
 
     async def _grow_context(self, result: StepResult, tool_results: list[ToolResult]):
-        await self._context.add_message(result.message)
+        await self._context.append_message(result.message)
         if result.usage is not None:
-            await self._context.mark_token_count(result.usage.total)
+            await self._context.update_token_count(result.usage.total)
 
         # token count of tool results are not available yet
         for tool_result in tool_results:
-            for message in tool_result_to_messages(tool_result):
-                await self._context.add_message(message)
+            await self._context.append_message(tool_result_to_messages(tool_result))

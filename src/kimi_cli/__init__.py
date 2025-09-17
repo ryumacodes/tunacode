@@ -5,7 +5,6 @@ import textwrap
 from pathlib import Path
 
 import click
-from kosong.context.linear import JsonlLinearStorage
 from pydantic import SecretStr
 
 from kimi_cli.agent import BuiltinSystemPromptArgs, get_agents_dir, load_agent, load_agents_md
@@ -17,6 +16,7 @@ from kimi_cli.config import (
     LLMProvider,
     load_config,
 )
+from kimi_cli.context import Context
 from kimi_cli.metadata import continue_session, new_session
 from kimi_cli.soul import Soul
 from kimi_cli.ui.tui import App
@@ -147,18 +147,18 @@ def kimi(
         if session is None:
             raise click.ClickException("No previous session found for the working directory")
         echo(f"✓ Continuing previous session: {session.id}")
-        context_storage = JsonlLinearStorage(session.history_file)
-        asyncio.run(context_storage.restore())
+        context = Context(session.history_file)
+        asyncio.run(context.restore())
         echo(f"✓ Restored history from {session.history_file}")
     else:
         session = new_session(work_dir)
         echo(f"✓ Created new session: {session.id}")
-        context_storage = JsonlLinearStorage(session.history_file)
+        context = Context(session.history_file)
 
     soul = Soul(
         agent,
         chat_provider=chat_provider,
-        context_storage=context_storage,
+        context=context,
     )
     app = App(soul, session)
 
