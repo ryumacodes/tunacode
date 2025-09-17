@@ -5,7 +5,27 @@ from pathlib import Path
 import pytest
 from kosong.tooling import ToolError, ToolOk
 
+from kimi_cli.agent import BuiltinSystemPromptArgs
 from kimi_cli.tools.file.read import ReadFile
+
+
+@pytest.fixture
+def read_file_tool(builtin_args: BuiltinSystemPromptArgs) -> ReadFile:
+    """Create a ReadFile tool instance."""
+    return ReadFile(builtin_args)
+
+
+@pytest.fixture
+def sample_file(temp_work_dir: Path) -> Path:
+    """Create a sample file with test content."""
+    file_path = temp_work_dir / "sample.txt"
+    content = """Line 1: Hello World
+Line 2: This is a test file
+Line 3: With multiple lines
+Line 4: For testing purposes
+Line 5: End of file"""
+    file_path.write_text(content)
+    return file_path
 
 
 @pytest.mark.asyncio

@@ -8,6 +8,12 @@ from kosong.tooling import ToolError, ToolOk
 from kimi_cli.tools.shell import Shell
 
 
+@pytest.fixture
+def shell_tool() -> Shell:
+    """Create a Shell tool instance."""
+    return Shell()
+
+
 @pytest.mark.asyncio
 async def test_simple_command(shell_tool: Shell):
     """Test executing a simple command."""

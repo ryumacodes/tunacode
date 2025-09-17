@@ -5,7 +5,14 @@ from pathlib import Path
 import pytest
 from kosong.tooling import ToolError, ToolOk
 
+from kimi_cli.agent import BuiltinSystemPromptArgs
 from kimi_cli.tools.file.write import WriteFile
+
+
+@pytest.fixture
+def write_file_tool(builtin_args: BuiltinSystemPromptArgs) -> WriteFile:
+    """Create a WriteFile tool instance."""
+    return WriteFile(builtin_args)
 
 
 @pytest.mark.asyncio
