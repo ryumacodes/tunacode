@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import streamingjson
 from kosong.base.message import ToolCall, ToolCallPart
@@ -33,7 +34,7 @@ class _ToolCallDisplay:
 
     @property
     def _detail_markup(self) -> str:
-        detail = shorten_middle(self._detail, width=50)
+        detail = shorten_middle(self._detail or "", width=50)
         return f"[grey50]: {escape(detail)}[/grey50]" if detail else ""
 
     @property
@@ -75,24 +76,47 @@ class _ToolCallDisplay:
         self.renderable = Group(*lines)
 
 
-def _extract_detail(lexer: streamingjson.Lexer, tool_name: str) -> str:
+def _extract_detail(lexer: streamingjson.Lexer, tool_name: str) -> str | None:
     try:
         curr_args: JsonType = json.loads(lexer.complete_json())
     except json.JSONDecodeError:
-        return ""
+        return None
     if not curr_args:
-        return ""
+        return None
     match tool_name:
         case "shell":
             if not isinstance(curr_args, dict) or not curr_args.get("command"):
-                return ""
+                return None
             return str(curr_args["command"])
         case "task":
             if not isinstance(curr_args, dict) or not curr_args.get("description"):
-                return ""
+                return None
             return str(curr_args["description"])
+        case "read_file":
+            if not isinstance(curr_args, dict) or not curr_args.get("path"):
+                return None
+            return _normalize_path(str(curr_args["path"]))
+        case "write_file":
+            if not isinstance(curr_args, dict) or not curr_args.get("path"):
+                return None
+            return _normalize_path(str(curr_args["path"]))
+        case "glob":
+            if not isinstance(curr_args, dict) or not curr_args.get("pattern"):
+                return None
+            detail = str(curr_args["pattern"])
+            if curr_args.get("directory"):
+                directory = _normalize_path(str(curr_args["directory"]))
+                detail += f" in {directory}"
+            return detail
         case _:
             return "".join(lexer.json_content)
+
+
+def _normalize_path(path: str) -> str:
+    cwd = str(Path.cwd().absolute())
+    if path.startswith(cwd):
+        path = path[len(cwd) :].lstrip("/\\")
+    return path
 
 
 class StepLiveView:
