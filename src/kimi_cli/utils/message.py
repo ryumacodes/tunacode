@@ -48,3 +48,10 @@ def tool_ok_to_message_content(result: ToolOk) -> list[ContentPart]:
             return [value]
         case _:
             return list(value)
+
+
+def message_extract_text(message: Message) -> str:
+    """Extract text from a message."""
+    if isinstance(message.content, str):
+        return message.content
+    return "\n".join(part.text for part in message.content if isinstance(part, TextPart))

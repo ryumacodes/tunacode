@@ -9,11 +9,26 @@ from kimi_cli.agent import Agent, BuiltinSystemPromptArgs, get_agents_dir, load_
 from kimi_cli.context import Context
 from kimi_cli.event import EventQueue, RunEnd, StepCancelled
 from kimi_cli.soul import Soul
+from kimi_cli.utils.message import message_extract_text
+
+# Maximum continuation attempts for task summary
+_MAX_CONTINUE = 1
+
+
+_CONTINUE_PROMPT = """
+Your previous response was too brief. Please provide a more comprehensive summary that includes:
+1. Specific technical details and implementations
+2. Complete code examples if relevant
+3. Detailed findings and analysis
+4. All important information that should be aware of by the caller
+
+Please expand with comprehensive details.
+""".strip()
 
 
 class Task(CallableTool):
     name: str = "task"
-    description: str = (Path(__file__).parent / "description.md").read_text()
+    description: str = (Path(__file__).parent / "task.md").read_text()
     parameters: ParametersType = {
         "type": "object",
         "properties": {
@@ -27,7 +42,11 @@ class Task(CallableTool):
             },
             "prompt": {
                 "type": "string",
-                "description": "The task for the subagent to perform",
+                "description": (
+                    "The task for the subagent to perform. "
+                    "This prompt should be accurate and specific to the task. "
+                    "Neccesary background should be provided in a concise manner."
+                ),
             },
         },
         "required": ["description", "subagent_name", "prompt"],
@@ -52,6 +71,14 @@ class Task(CallableTool):
         if subagent_name not in self._subagents:
             return ToolError(f"Subagent not found: {subagent_name}", "Subagent not found")
         agent = self._subagents[subagent_name]
+        try:
+            result = await self._run_subagent(agent, prompt)
+            return result
+        except Exception as e:
+            return ToolError(f"Failed to run subagent: {e}", "Failed to run subagent")
+
+    async def _run_subagent(self, agent: Agent, prompt: str) -> ToolReturnType:
+        """Run subagent with optional continuation for task summary."""
         context = Context()
         soul = Soul(
             agent,
@@ -67,8 +94,23 @@ class Task(CallableTool):
 
         await soul.run(prompt, _visualize)
 
-        # find the last assistant message
-        for message in reversed(context.history):
-            if message.role == "assistant":
-                return ToolOk(message.content)
-        return ToolError("No response from the subagent", "Invalid response")
+        _error_msg = (
+            "The subagent seemed not to run properly. Maybe you have to do the task yourself."
+        )
+
+        # Check if the subagent context is valid
+        if len(context.history) == 0 or context.history[-1].role != "assistant":
+            return ToolError(_error_msg, "Failed to run subagent")
+
+        final_response = message_extract_text(context.history[-1])
+
+        # Check if response is too brief, if so, run again with continuation prompt
+        n_attempts_remaining = _MAX_CONTINUE
+        if len(final_response) < 200 and n_attempts_remaining > 0:
+            await soul.run(_CONTINUE_PROMPT, _visualize)
+
+            if len(context.history) == 0 or context.history[-1].role != "assistant":
+                return ToolError(_error_msg, "Failed to run subagent")
+            final_response = message_extract_text(context.history[-1])
+
+        return ToolOk(final_response)
