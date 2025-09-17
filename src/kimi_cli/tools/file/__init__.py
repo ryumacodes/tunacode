@@ -4,7 +4,8 @@ class FileOpsWindow:
     pass
 
 
+from .glob import Glob  # noqa: E402
 from .read import ReadFile  # noqa: E402
 from .write import WriteFile  # noqa: E402
 
-__all__ = ("ReadFile", "WriteFile")
+__all__ = ("ReadFile", "WriteFile", "Glob")
