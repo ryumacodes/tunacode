@@ -66,7 +66,7 @@ async def test_glob_recursive_pattern_prohibited(glob_tool: Glob, test_files: Pa
     result = await glob_tool("**/*.py", str(test_files))
 
     assert isinstance(result, ToolError)
-    assert "starts with '**/' which is not allowed" in result.message
+    assert "starts with '**' which is not allowed" in result.message
     assert "Unsafe pattern" in result.brief
 
 
@@ -233,7 +233,7 @@ async def test_glob_wildcard_with_double_star_patterns(glob_tool: Glob, test_fil
     result = await glob_tool("**/main/*.py", str(test_files))
 
     assert isinstance(result, ToolError)
-    assert "starts with '**/' which is not allowed" in result.message
+    assert "starts with '**' which is not allowed" in result.message
 
     # Test pattern with ** not at the beginning
     result = await glob_tool("src/**/test_*.py", str(test_files))
@@ -258,4 +258,4 @@ async def test_glob_pattern_edge_cases(glob_tool: Glob, test_files: Path):
     # Test pattern that starts with **/
     result = await glob_tool("**/*.txt", str(test_files))
     assert isinstance(result, ToolError)
-    assert "starts with '**/' which is not allowed" in result.message
+    assert "starts with '**' which is not allowed" in result.message
