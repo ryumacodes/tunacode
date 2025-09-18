@@ -61,20 +61,29 @@ async def test_glob_multiple_matches(glob_tool: Glob, test_files: Path):
 
 
 @pytest.mark.asyncio
-async def test_glob_recursive_pattern(glob_tool: Glob, test_files: Path):
-    """Test recursive glob pattern using ** syntax."""
+async def test_glob_recursive_pattern_prohibited(glob_tool: Glob, test_files: Path):
+    """Test that recursive glob pattern starting with **/ is prohibited."""
     result = await glob_tool("**/*.py", str(test_files))
+
+    assert isinstance(result, ToolError)
+    assert "starts with '**/' which is not allowed" in result.message
+    assert "Unsafe pattern" in result.brief
+
+
+@pytest.mark.asyncio
+async def test_glob_safe_recursive_pattern(glob_tool: Glob, test_files: Path):
+    """Test safe recursive glob pattern that doesn't start with **/."""
+    result = await glob_tool("src/**/*.py", str(test_files))
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
-    assert "setup.py" in result.value
     assert "src/main.py" in result.value
     assert "src/utils.py" in result.value
     assert "src/main/app.py" in result.value
     assert "src/main/config.py" in result.value
     assert "src/test/test_app.py" in result.value
     assert "src/test/test_config.py" in result.value
-    assert "Found 7 matches" in result.value
+    assert "Found 6 matches" in result.value
 
 
 @pytest.mark.asyncio
@@ -94,20 +103,19 @@ async def test_glob_specific_directory(glob_tool: Glob, test_files: Path):
 async def test_glob_recursive_in_subdirectory(glob_tool: Glob, test_files: Path):
     """Test recursive glob in subdirectory."""
     src_dir = str(test_files / "src")
-    result = await glob_tool("**/*.py", src_dir)
+    result = await glob_tool("main/**/*.py", src_dir)
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
-    assert "main.py" in result.value
     assert "main/app.py" in result.value
-    assert "test/test_app.py" in result.value
-    assert "Found 6 matches" in result.value
+    assert "main/config.py" in result.value
+    assert "Found 2 matches" in result.value
 
 
 @pytest.mark.asyncio
 async def test_glob_test_files(glob_tool: Glob, test_files: Path):
     """Test glob pattern for test files."""
-    result = await glob_tool("**/*test*.py", str(test_files))
+    result = await glob_tool("src/**/*test*.py", str(test_files))
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -211,11 +219,43 @@ async def test_glob_character_class(glob_tool: Glob, temp_work_dir: Path):
 @pytest.mark.asyncio
 async def test_glob_complex_pattern(glob_tool: Glob, test_files: Path):
     """Test complex glob pattern combinations."""
-    result = await glob_tool("**/main/*.py", str(test_files))
+    result = await glob_tool("docs/**/main/*.py", str(test_files))
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
-    assert "src/main/app.py" in result.value
-    assert "src/main/config.py" in result.value
-    assert "src/main.py" not in result.value  # Should not match top level
-    assert "src/test/test_app.py" not in result.value  # Should not match test directory
+    # Should not match anything since there are no Python files in docs/main
+
+
+@pytest.mark.asyncio
+async def test_glob_wildcard_with_double_star_patterns(glob_tool: Glob, test_files: Path):
+    """Test various patterns with ** that are allowed."""
+    # Test pattern with ** in the middle
+    result = await glob_tool("**/main/*.py", str(test_files))
+
+    assert isinstance(result, ToolError)
+    assert "starts with '**/' which is not allowed" in result.message
+
+    # Test pattern with ** not at the beginning
+    result = await glob_tool("src/**/test_*.py", str(test_files))
+
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+    assert "src/test/test_app.py" in result.value
+    assert "src/test/test_config.py" in result.value
+
+
+@pytest.mark.asyncio
+async def test_glob_pattern_edge_cases(glob_tool: Glob, test_files: Path):
+    """Test edge cases for pattern validation."""
+    # Test pattern that has ** but not at the start
+    result = await glob_tool("src/**", str(test_files))
+    assert isinstance(result, ToolOk)
+
+    # Test pattern that starts with * but not **
+    result = await glob_tool("*.py", str(test_files))
+    assert isinstance(result, ToolOk)
+
+    # Test pattern that starts with **/
+    result = await glob_tool("**/*.txt", str(test_files))
+    assert isinstance(result, ToolError)
+    assert "starts with '**/' which is not allowed" in result.message

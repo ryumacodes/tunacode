@@ -42,6 +42,17 @@ class Glob(CallableTool):
         super().__init__(**kwargs)
         self._work_dir = builtin_args.ENSOUL_WORK_DIR
 
+    def _validate_pattern(self, pattern: str) -> ToolError | None:
+        """Validate that the pattern is safe to use."""
+        if pattern.startswith("**"):
+            return ToolError(
+                f"Pattern `{pattern}` starts with '**' which is not allowed. "
+                "This would recursively search all directories and may include large directories "
+                "like `node_modules`. Use more specific patterns like 'src/**/*.py' instead.",
+                "Unsafe pattern",
+            )
+        return None
+
     def _validate_directory(self, directory: Path) -> ToolError | None:
         """Validate that the directory is safe to search."""
         try:
@@ -67,6 +78,11 @@ class Glob(CallableTool):
         include_dirs: bool = True,
     ) -> ToolReturnType:
         try:
+            # Validate pattern safety
+            pattern_error = self._validate_pattern(pattern)
+            if pattern_error:
+                return pattern_error
+
             dir_path = Path(directory) if directory else self._work_dir
 
             if not dir_path.is_absolute():
