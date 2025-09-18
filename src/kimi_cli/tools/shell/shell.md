@@ -21,8 +21,8 @@ The stdout and stderr will be streamed to somewhere the user can see, and also r
 
 **Commands available:**
 - Shell environment: cd, pwd, export, unset, env
-- File system operations: ls, find, grep, cat, mkdir, rm, cp, mv, touch, chmod, chown
-- File viewing/editing: cat (can use >> to append), echo, head, tail, diff, patch
+- File system operations: ls, find, mkdir, rm, cp, mv, touch, chmod, chown
+- File viewing/editing: cat, grep, head, tail, diff, patch
 - Text processing: awk, sed, sort, uniq, wc
 - System information/operations: ps, kill, top, df, free, uname, whoami, id, date
 - Package management: pip, uv, npm, yarn, bun, cargo
