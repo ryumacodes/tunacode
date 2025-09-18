@@ -7,7 +7,13 @@ from pathlib import Path
 import click
 from pydantic import SecretStr
 
-from kimi_cli.agent import BuiltinSystemPromptArgs, get_agents_dir, load_agent, load_agents_md
+from kimi_cli.agent import (
+    AgentGlobals,
+    BuiltinSystemPromptArgs,
+    get_agents_dir,
+    load_agent,
+    load_agents_md,
+)
 from kimi_cli.config import (
     DEFAULT_KIMI_BASE_URL,
     DEFAULT_KIMI_MODEL,
@@ -17,6 +23,7 @@ from kimi_cli.config import (
     load_config,
 )
 from kimi_cli.context import Context
+from kimi_cli.denwarenji import DenwaRenji
 from kimi_cli.metadata import continue_session, new_session
 from kimi_cli.soul import Soul
 from kimi_cli.ui.tui import App
@@ -124,13 +131,17 @@ def kimi(
     if agents_md:
         echo(f"✓ Loaded agents.md: {textwrap.shorten(agents_md, width=100)}")
 
-    builtin_args = BuiltinSystemPromptArgs(
-        ENSOUL_WORK_DIR=work_dir,
-        ENSOUL_AGENTS_MD=agents_md,
+    agent_globals = AgentGlobals(
+        chat_provider=chat_provider,
+        builtin_args=BuiltinSystemPromptArgs(
+            ENSOUL_WORK_DIR=work_dir,
+            ENSOUL_AGENTS_MD=agents_md,
+        ),
+        denwa_renji=DenwaRenji(),
     )
 
     try:
-        agent = load_agent(agent_file, builtin_args, chat_provider)
+        agent = load_agent(agent_file, agent_globals)
     except ValueError as e:
         raise click.ClickException(f"Failed to load agent: {e}") from e
     echo(f"✓ Loaded agent: {agent.name}")

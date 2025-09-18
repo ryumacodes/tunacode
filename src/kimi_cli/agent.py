@@ -9,6 +9,8 @@ from kosong.base.chat_provider import ChatProvider
 from kosong.tooling import CallableTool, SimpleToolset, Toolset
 from pydantic import BaseModel, Field
 
+from kimi_cli.denwarenji import DenwaRenji
+
 
 class AgentSpec(BaseModel):
     """Agent specification."""
@@ -28,12 +30,21 @@ class BuiltinSystemPromptArgs(NamedTuple):
     ENSOUL_AGENTS_MD: str
 
 
+class AgentGlobals(NamedTuple):
+    """Agent globals."""
+
+    chat_provider: ChatProvider
+    builtin_args: BuiltinSystemPromptArgs
+    denwa_renji: DenwaRenji
+
+
 class Agent(NamedTuple):
     """The loaded agent."""
 
     name: str
     system_prompt: str
     toolset: Toolset
+    globals: AgentGlobals
 
 
 def get_agents_dir() -> Path:
@@ -42,8 +53,7 @@ def get_agents_dir() -> Path:
 
 def load_agent(
     agent_file: Path,
-    builtin_args: BuiltinSystemPromptArgs,
-    chat_provider: ChatProvider,
+    globals_: AgentGlobals,
 ) -> Agent:
     """
     Load agent from specification file.
@@ -63,11 +73,13 @@ def load_agent(
     agent_spec = AgentSpec(**data.get("agent", {}))
     agent_spec.system_prompt_path = agent_file.parent.joinpath(agent_spec.system_prompt_path)
 
-    system_prompt = _load_system_prompt(agent_spec, builtin_args)
+    system_prompt = _load_system_prompt(agent_spec, globals_.builtin_args)
 
     tool_deps = {
-        BuiltinSystemPromptArgs: builtin_args,
-        ChatProvider: chat_provider,
+        AgentGlobals: globals_,
+        ChatProvider: globals_.chat_provider,
+        BuiltinSystemPromptArgs: globals_.builtin_args,
+        DenwaRenji: globals_.denwa_renji,
     }
     toolset, bad_tools = _load_tools(agent_spec, tool_deps)
     if bad_tools:
@@ -77,6 +89,7 @@ def load_agent(
         name=agent_spec.name,
         system_prompt=system_prompt,
         toolset=toolset,
+        globals=globals_,
     )
 
 

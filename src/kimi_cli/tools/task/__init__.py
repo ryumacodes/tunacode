@@ -1,11 +1,10 @@
 from pathlib import Path
 from typing import override
 
-from kosong.base.chat_provider import ChatProvider
 from kosong.base.tool import ParametersType
 from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
 
-from kimi_cli.agent import Agent, BuiltinSystemPromptArgs, get_agents_dir, load_agent
+from kimi_cli.agent import Agent, AgentGlobals, get_agents_dir, load_agent
 from kimi_cli.context import Context
 from kimi_cli.event import EventQueue, RunEnd, StepCancelled
 from kimi_cli.soul import Soul
@@ -52,11 +51,9 @@ class Task(CallableTool):
         "required": ["description", "subagent_name", "prompt"],
     }
 
-    def __init__(
-        self, chat_provider: ChatProvider, builtin_args: BuiltinSystemPromptArgs, **kwargs
-    ):
+    def __init__(self, agent_globals: AgentGlobals, **kwargs):
         super().__init__(**kwargs)
-        self._chat_provider = chat_provider
+        self._chat_provider = agent_globals.chat_provider
         self._subagents: dict[str, Agent] = {}
 
         # load all subagents
@@ -64,7 +61,7 @@ class Task(CallableTool):
             "explorer": get_agents_dir() / "explorer" / "agent.yaml",
             "coder": get_agents_dir() / "koder" / "sub.yaml",
         }.items():
-            self._subagents[subagent_name] = load_agent(agent_file, builtin_args, chat_provider)
+            self._subagents[subagent_name] = load_agent(agent_file, agent_globals)
 
     @override
     async def __call__(self, description: str, subagent_name: str, prompt: str) -> ToolReturnType:
