@@ -1,0 +1,288 @@
+"""Tests for the grep tool."""
+
+import tempfile
+from pathlib import Path
+
+import pytest
+from kosong.tooling import ToolError, ToolOk
+
+from kimi_cli.tools.file.grep import Grep
+
+
+@pytest.fixture
+def grep_tool() -> Grep:
+    """Create a Grep tool instance."""
+    return Grep()
+
+
+@pytest.fixture
+def temp_test_files():
+    """Create temporary test files for grep testing."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create test files
+        test_file1 = Path(temp_dir) / "test1.py"
+        test_file1.write_text("""def hello_world():
+    print("Hello, World!")
+    return "hello"
+
+class TestClass:
+    def __init__(self):
+        self.message = "hello there"
+""")
+
+        test_file2 = Path(temp_dir) / "test2.js"
+        test_file2.write_text("""function helloWorld() {
+    console.log("Hello, World!");
+    return "hello";
+}
+
+class TestClass {
+    constructor() {
+        this.message = "hello there";
+    }
+}
+""")
+
+        test_file3 = Path(temp_dir) / "readme.txt"
+        test_file3.write_text("""This is a readme file.
+It contains some text.
+Hello world example is here.
+""")
+
+        # Create a subdirectory with files
+        subdir = Path(temp_dir) / "subdir"
+        subdir.mkdir()
+        subfile = subdir / "subtest.py"
+        subfile.write_text("def sub_hello():\n    return 'hello from subdir'\n")
+
+        yield temp_dir, [test_file1, test_file2, test_file3, subfile]
+
+
+@pytest.mark.asyncio
+async def test_grep_files_with_matches(grep_tool: Grep, temp_test_files):
+    """Test finding files that contain a pattern."""
+    temp_dir, test_files = temp_test_files
+
+    # Test basic pattern matching to catch "Hello" in readme.txt
+    result = await grep_tool("Hello", path=temp_dir, output_mode="files_with_matches")
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+
+    # Should find all test files that contain "hello" (case insensitive)
+    assert "test1.py" in result.value
+    assert "test2.js" in result.value
+    assert "readme.txt" in result.value
+
+
+@pytest.mark.asyncio
+async def test_grep_content_mode(grep_tool: Grep, temp_test_files):
+    """Test showing matching lines with content."""
+    temp_dir, test_files = temp_test_files
+
+    result = await grep_tool(
+        "hello", path=temp_dir, output_mode="content", line_number=True, ignore_case=True
+    )
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+
+    # Should show matching lines with line numbers
+    assert "hello" in result.value.lower()
+    assert ":" in result.value  # Line numbers should be present
+
+
+@pytest.mark.asyncio
+async def test_grep_case_insensitive(grep_tool: Grep, temp_test_files):
+    """Test case insensitive search."""
+    temp_dir, test_files = temp_test_files
+
+    result = await grep_tool(
+        "HELLO", path=temp_dir, output_mode="files_with_matches", ignore_case=True
+    )
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+
+    # Should find files with "hello" (lowercase)
+    assert "test1.py" in result.value
+
+
+@pytest.mark.asyncio
+async def test_grep_with_context(grep_tool: Grep, temp_test_files):
+    """Test showing context around matches."""
+    temp_dir, test_files = temp_test_files
+
+    result = await grep_tool(
+        "TestClass", path=temp_dir, output_mode="content", context=1, line_number=True
+    )
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+
+    # Should show context lines
+    lines = result.value.split("\n")
+    assert len(lines) > 2  # Should have more than just the matching line
+
+
+@pytest.mark.asyncio
+async def test_grep_count_matches(grep_tool: Grep, temp_test_files):
+    """Test counting matches."""
+    temp_dir, test_files = temp_test_files
+
+    result = await grep_tool("hello", path=temp_dir, output_mode="count_matches", ignore_case=True)
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+
+    # Should show count for each file
+    assert "test1.py" in result.value
+    assert "test2.js" in result.value
+
+
+@pytest.mark.asyncio
+async def test_grep_with_glob_pattern(grep_tool: Grep, temp_test_files):
+    """Test filtering files with glob pattern."""
+    temp_dir, test_files = temp_test_files
+
+    result = await grep_tool(
+        "hello", path=temp_dir, output_mode="files_with_matches", glob="*.py", ignore_case=True
+    )
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+
+    # Should only find Python files
+    assert "test1.py" in result.value
+    assert "subtest.py" in result.value
+    assert "test2.js" not in result.value
+    assert "readme.txt" not in result.value
+
+
+@pytest.mark.asyncio
+async def test_grep_with_type_filter(grep_tool: Grep, temp_test_files):
+    """Test filtering by file type."""
+    temp_dir, test_files = temp_test_files
+
+    result = await grep_tool(
+        "hello", path=temp_dir, output_mode="files_with_matches", type="py", ignore_case=True
+    )
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+
+    # Should only find Python files
+    assert "test1.py" in result.value
+    assert "subtest.py" in result.value
+    assert "test2.js" not in result.value
+    assert "readme.txt" not in result.value
+
+
+@pytest.mark.asyncio
+async def test_grep_head_limit(grep_tool: Grep, temp_test_files):
+    """Test limiting number of results."""
+    temp_dir, test_files = temp_test_files
+
+    result = await grep_tool(
+        "hello", path=temp_dir, output_mode="files_with_matches", head_limit=2, ignore_case=True
+    )
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+
+    # Should limit results to 2 files
+    lines = [
+        line for line in result.value.split("\n") if line.strip() and not line.startswith("...")
+    ]
+    assert len(lines) <= 2
+    assert "... (results truncated to 2 lines)" in result.value
+
+
+@pytest.mark.asyncio
+async def test_grep_multiline_mode(grep_tool: Grep):
+    """Test multiline pattern matching."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create a file with multiline content
+        test_file = Path(temp_dir) / "multiline.py"
+        test_file.write_text("""def function():
+    '''This is a
+    multiline docstring'''
+    pass
+""")
+
+        # Test multiline pattern
+        result = await grep_tool(
+            r"This is a\n    multiline", path=temp_dir, output_mode="content", multiline=True
+        )
+        assert isinstance(result, ToolOk)
+        assert isinstance(result.value, str)
+
+        # Should find the multiline pattern
+        assert "This is a" in result.value
+        assert "multiline" in result.value
+
+
+@pytest.mark.asyncio
+async def test_grep_no_matches(grep_tool: Grep):
+    """Test when no matches are found."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_file = Path(temp_dir) / "empty.py"
+        test_file.write_text("# This file has no matching content\n")
+
+        result = await grep_tool(
+            "nonexistent_pattern", path=temp_dir, output_mode="files_with_matches"
+        )
+        assert isinstance(result, ToolOk)
+        assert isinstance(result.value, str)
+
+        # Should return no matches message
+        assert "No matches found" in result.value
+
+
+@pytest.mark.asyncio
+async def test_grep_invalid_pattern(grep_tool: Grep):
+    """Test with invalid regex pattern."""
+    result = await grep_tool(
+        "[invalid",  # Invalid regex
+        path=".",
+        output_mode="files_with_matches",
+    )
+    # Should handle the error gracefully
+    assert isinstance(result, (ToolOk, ToolError))  # Either way should not crash
+
+
+@pytest.mark.asyncio
+async def test_grep_single_file(grep_tool: Grep):
+    """Test searching in a single file."""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
+        f.write("def test_function():\n    return 'hello world'\n")
+        f.flush()
+
+        result = await grep_tool("hello", path=f.name, output_mode="content", line_number=True)
+        assert isinstance(result, ToolOk)
+        assert isinstance(result.value, str)
+
+        assert "hello" in result.value
+        # For single file search, filename might not be in content output
+        # Let's just check that we got valid content
+        assert len(result.value.strip()) > 0
+
+
+@pytest.mark.asyncio
+async def test_grep_before_after_context(grep_tool: Grep, temp_test_files):
+    """Test before and after context separately."""
+    temp_dir, test_files = temp_test_files
+
+    # Test before context
+    result = await grep_tool(
+        "TestClass", path=temp_dir, output_mode="content", before_context=2, line_number=True
+    )
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+    assert "TestClass" in result.value
+    assert "}" in result.value
+    assert 'return "hello"' in result.value
+    assert "Hello, World!" not in result.value
+
+    # Test after context
+    result = await grep_tool(
+        "TestClass", path=temp_dir, output_mode="content", after_context=2, line_number=True
+    )
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.value, str)
+    assert "TestClass" in result.value
+    assert "constructor()" in result.value
+    assert "this.message" in result.value
+    assert "}" not in result.value

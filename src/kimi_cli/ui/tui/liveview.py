@@ -103,11 +103,11 @@ def _extract_detail(lexer: streamingjson.Lexer, tool_name: str) -> str | None:
         case "glob":
             if not isinstance(curr_args, dict) or not curr_args.get("pattern"):
                 return None
-            detail = str(curr_args["pattern"])
-            if curr_args.get("directory"):
-                directory = _normalize_path(str(curr_args["directory"]))
-                detail += f" in {directory}"
-            return detail
+            return str(curr_args["pattern"])
+        case "grep":
+            if not isinstance(curr_args, dict) or not curr_args.get("pattern"):
+                return None
+            return str(curr_args["pattern"])
         case _:
             return "".join(lexer.json_content)
 
