@@ -135,14 +135,14 @@ class MetaCommandCompleter(Completer):
 
 @meta_command(aliases=["quit"])
 def exit(app: "App", args: list[str]):
-    """Exit the application."""
+    """Exit the application"""
     # should be handled by `App`
     raise NotImplementedError
 
 
 @meta_command(aliases=["h", "?"])
 def help(app: "App", args: list[str]):
-    """Show help information."""
+    """Show help information"""
     console.print(
         Panel(
             f"Send message to {app.soul.name} to get things done!\n\n"
