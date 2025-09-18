@@ -5,7 +5,6 @@ from pathlib import Path
 from kosong.base.message import ContentPart, TextPart, ToolCall, ToolCallPart
 from kosong.tooling import ToolResult
 from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.patch_stdout import patch_stdout
 from rich.panel import Panel
@@ -22,7 +21,10 @@ from kimi_cli.metadata import Session
 from kimi_cli.soul import Soul
 from kimi_cli.ui.tui.console import console
 from kimi_cli.ui.tui.liveview import StepLiveView
-from kimi_cli.ui.tui.metacmd import get_meta_command, get_meta_commands
+from kimi_cli.ui.tui.metacmd import (
+    MetaCommandCompleter,
+    get_meta_command,
+)
 
 _WELCOME_MESSAGE = """
 [bold]Welcome to {name}![/bold]
@@ -44,17 +46,10 @@ class App:
             asyncio.run(self.soul.run(command, self._visualize))
             return
 
-        meta_command_completer = WordCompleter(
-            [f"/{command.name}" for command in get_meta_commands()],
-            meta_dict={f"/{command.name}": command.description for command in get_meta_commands()},
-            ignore_case=True,
-            match_middle=False,
-            sentence=True,
-        )
         session = PromptSession(
             message=FormattedText([("bold", f"{getpass.getuser()}✨ ")]),
             prompt_continuation=FormattedText([("fg:#4d4d4d", "... ")]),
-            completer=meta_command_completer,
+            completer=MetaCommandCompleter(),
             complete_while_typing=True,
         )
 
