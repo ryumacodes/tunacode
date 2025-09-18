@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import override
 
@@ -8,10 +9,22 @@ from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
 from kimi_cli.agent import BuiltinSystemPromptArgs
 
 _TEMPLATE = """\
-{n_lines} lines read from {path}, starting from line {line_offset}.
-Content:
+<system-message>{n_lines} lines read from {path}, starting from line {line_offset}.</system-message>
 {content}\
 """
+
+_MAX_LINES = 2000
+_MAX_LINE_LENGTH = 2000
+
+
+def _truncate_line(line: str, max_length: int = _MAX_LINE_LENGTH) -> str:
+    """Truncate a line if it exceeds max_length, preserving the beginning."""
+    if len(line) <= max_length:
+        return line
+    m = re.match(r"[\r\n]+$", line)
+    linebreak = m.group(0) if m else ""
+    end = "..." + linebreak
+    return line[: max_length - len(end)] + end
 
 
 class ReadFile(CallableTool):
@@ -35,11 +48,11 @@ class ReadFile(CallableTool):
             },
             "n_lines": {
                 "type": "number",
-                "default": None,
+                "default": _MAX_LINES,
                 "description": (
                     "The number of lines to read. "
-                    "By default read to the end of the file. "
-                    "Set this when the file is too large to read at once."
+                    f"By default read up to {_MAX_LINES} lines, which is the max allowed value. "
+                    "Set this value when the file is too large to read at once."
                 ),
             },
         },
@@ -50,64 +63,39 @@ class ReadFile(CallableTool):
         super().__init__(**kwargs)
         self._work_dir = builtin_args.ENSOUL_WORK_DIR
 
-    def _validate_path(self, path: Path) -> ToolError | None:
-        """Validate that the path is safe to read."""
-        # Check for path traversal attempts
-        try:
-            resolved_path = path.resolve()
-            resolved_work_dir = self._work_dir.resolve()
-
-            # Ensure the path is within work directory
-            if not str(resolved_path).startswith(str(resolved_work_dir)):
-                return ToolError(
-                    f"`{path}` is outside the working directory. "
-                    "You can only read files within the working directory.",
-                    "Path outside working directory",
-                )
-            return None
-        except Exception as e:
-            return ToolError(f"Invalid path: {e}", "Invalid path")
-
     @override
     async def __call__(
         self,
         path: str,
         line_offset: int = 1,
-        n_lines: int | None = None,
+        n_lines: int = _MAX_LINES,
     ) -> ToolReturnType:
         # TODO: checks:
         # - check if the path may contain secrets
         # - check if the file format is readable
-        # - check if the line_offset and n_lines are valid
-        # - check if there are lines that are too long
         try:
             p = Path(path)
 
             if not p.is_absolute():
                 return ToolError(
-                    f"`{path}` is not an absolute path. "
-                    "You must provide an absolute path to read a file.",
+                    f"<system-message>`{path}` is not an absolute path. "
+                    "You must provide an absolute path to read a file.</system-message>",
                     "Invalid path",
                 )
 
-            # Validate path safety
-            path_error = self._validate_path(p)
-            if path_error:
-                return path_error
-
             if not p.exists():
                 return ToolError(
-                    f"`{path}` does not exist.",
+                    f"<system-message>`{path}` does not exist.</system-message>",
                     "File not found",
                 )
             if not p.is_file():
                 return ToolError(
-                    f"`{path}` is not a file.",
+                    f"<system-message>`{path}` is not a file.</system-message>",
                     "Invalid path",
                 )
 
             start_line = max(1, int(line_offset))
-            max_lines: int | None = None if n_lines is None else max(1, int(n_lines))
+            max_lines: int = min(max(1, int(n_lines)), _MAX_LINES)
 
             # Read with streaming to support large files efficiently
             lines: list[str] = []
@@ -117,22 +105,31 @@ class ReadFile(CallableTool):
                     current_line_no += 1
                     if current_line_no < start_line:
                         continue
-                    lines.append(line)
-                    if max_lines is not None and len(lines) >= max_lines:
+                    lines.append(_truncate_line(line))
+                    if len(lines) >= max_lines:
                         break
 
             if len(lines) == 0:
-                return ToolOk(
-                    f"No lines read from {path}.",
-                )
+                return ToolOk(f"<system-message>No lines read from {path}.</system-message>")
+
+            # Format output with line numbers like `cat -n`
+            lines_with_no = []
+            for line_num, line in zip(
+                range(start_line, start_line + len(lines)), lines, strict=True
+            ):
+                # Use 6-digit line number width, right-aligned, with tab separator
+                lines_with_no.append(f"{line_num:6d}\t{line}")
 
             return ToolOk(
                 _TEMPLATE.format(
                     n_lines=len(lines),
                     path=path,
                     line_offset=start_line,
-                    content="".join(lines),
+                    content="".join(lines_with_no),
                 )
             )
         except Exception as e:
-            return ToolError(f"Failed to read {path}. Error: {e}", "Failed to read file")
+            return ToolError(
+                f"<system-message>Failed to read {path}. Error: {e}</system-message>",
+                "Failed to read file",
+            )
