@@ -109,17 +109,6 @@ async def test_environment_variables(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_working_directory_commands(shell_tool: Shell):
-    """Test commands that check working directory."""
-    result = await shell_tool("pwd")
-
-    assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "/Users/moonshot/OpenProjects/ensoul" in result.value
-    assert "(Exit code: 0)" in result.value
-
-
-@pytest.mark.asyncio
 async def test_file_operations(shell_tool: Shell, temp_work_dir: Path):
     """Test basic file operations."""
     # Create a test file
@@ -146,7 +135,7 @@ async def test_text_processing(shell_tool: Shell):
 @pytest.mark.asyncio
 async def test_multiple_pipes(shell_tool: Shell):
     """Test multiple pipes in one command."""
-    result = await shell_tool("echo '1\\n2\\n3' | grep '2' | wc -l")
+    result = await shell_tool("echo '1\n2\n3' | grep '2' | wc -l")
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
