@@ -1,11 +1,8 @@
-from __future__ import annotations
-
-from dataclasses import dataclass
 from importlib import resources
+from typing import NamedTuple
 
 
-@dataclass()
-class ReleaseEntry:
+class ReleaseEntry(NamedTuple):
     description: str
     entries: list[str]
 
