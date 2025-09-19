@@ -1,7 +1,8 @@
 import os
 
 from kosong.base.chat_provider import ChatProvider
-from kosong.chat_provider import Kimi, OpenAILegacy
+from kosong.chat_provider import ChaosChatProvider, Kimi, OpenAILegacy
+from kosong.chat_provider.chaos import ChaosConfig
 from pydantic import SecretStr
 
 from kimi_cli.config import LLMModel, LLMProvider
@@ -20,7 +21,7 @@ def augment_provider_with_env_vars(provider: LLMProvider):
             if api_key := os.getenv("OPENAI_API_KEY"):
                 provider.api_key = SecretStr(api_key)
         case _:
-            raise ValueError(f"Unsupported provider: {provider.type}")
+            pass
 
 
 def create_chat_provider(provider: LLMProvider, model: LLMModel) -> ChatProvider:
@@ -36,6 +37,16 @@ def create_chat_provider(provider: LLMProvider, model: LLMModel) -> ChatProvider
                 model=model.model,
                 base_url=provider.base_url,
                 api_key=provider.api_key.get_secret_value(),
+            )
+        case "_chaos":
+            return ChaosChatProvider(
+                model=model.model,
+                base_url=provider.base_url,
+                api_key=provider.api_key.get_secret_value(),
+                chaos_config=ChaosConfig(
+                    error_probability=0.6,
+                    error_types=[429],
+                ),
             )
         case _:
             raise ValueError(f"Unsupported provider: {provider.type}")

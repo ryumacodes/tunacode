@@ -8,7 +8,11 @@ from pydantic import BaseModel, Field, SecretStr, ValidationError, field_seriali
 class LLMProvider(BaseModel):
     """LLM provider configuration."""
 
-    type: Literal["kimi", "openai_legacy"] = Field(..., description="Provider type")
+    type: Literal[
+        "kimi",
+        "openai_legacy",
+        "_chaos",
+    ] = Field(..., description="Provider type")
     base_url: str = Field(..., description="API base URL")
     api_key: SecretStr = Field(..., description="API key")
 
