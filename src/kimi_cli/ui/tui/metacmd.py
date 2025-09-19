@@ -5,6 +5,7 @@ from prompt_toolkit.completion import Completer, Completion
 from rich.panel import Panel
 
 from kimi_cli.ui.tui.console import console
+from kimi_cli.utils.changelog import CHANGELOG, format_release_notes
 
 if TYPE_CHECKING:
     from kimi_cli.ui.tui import App
@@ -156,3 +157,10 @@ def help(app: "App", args: list[str]):
             padding=(1, 2),
         )
     )
+
+
+@meta_command(name="release-notes")
+def release_notes(app: "App", args: list[str]):
+    """Show release notes"""
+    text = format_release_notes(CHANGELOG)
+    console.print(Panel.fit(text, border_style="wheat4", title="Release Notes"))
