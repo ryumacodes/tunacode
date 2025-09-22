@@ -28,6 +28,15 @@ class LLMModel(BaseModel):
     model: str = Field(..., description="Model name")
 
 
+class LoopControl(BaseModel):
+    """Agent loop control configuration."""
+
+    max_steps: int = 30
+    """Maximum number of steps in one run"""
+    max_retry: int = 3
+    """Maximum number of retries for LLM errors"""
+
+
 class Config(BaseModel):
     """Main configuration structure."""
 
@@ -36,6 +45,7 @@ class Config(BaseModel):
     providers: dict[str, LLMProvider] = Field(
         default_factory=dict, description="List of LLM providers"
     )
+    loop_control: LoopControl = Field(default_factory=LoopControl, description="Agent loop control")
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:

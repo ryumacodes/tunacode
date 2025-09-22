@@ -170,6 +170,7 @@ def kimi(
         agent,
         chat_provider=chat_provider,
         context=context,
+        loop_control=config.loop_control,
     )
     app = App(soul, session)
 

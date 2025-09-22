@@ -11,7 +11,8 @@ from kosong.tooling import ToolResult
 from tenacity import retry_if_exception, stop_after_attempt, wait_exponential_jitter
 
 from kimi_cli.agent import Agent
-from kimi_cli.constant import MAX_CONTEXT_SIZE, MAX_RETRY_ATTEMPTS, MAX_STEPS
+from kimi_cli.config import LoopControl
+from kimi_cli.constant import MAX_CONTEXT_SIZE
 from kimi_cli.context import Context
 from kimi_cli.event import (
     ContextUsageUpdate,
@@ -39,11 +40,13 @@ class Soul:
         *,
         chat_provider: ChatProvider,
         context: Context,
+        loop_control: LoopControl,
     ):
         self._agent = agent
         self._chat_provider = chat_provider
         self._context = context
         self._max_context_size: int = MAX_CONTEXT_SIZE  # unit: tokens
+        self._loop_control = loop_control
 
     @property
     def name(self) -> str:
@@ -92,47 +95,50 @@ class Soul:
             n_steps += 1
             if finished:
                 return
-            if n_steps > MAX_STEPS:
+            if n_steps > self._loop_control.max_steps:
                 # TODO: print some warning
                 return
 
-    @staticmethod
-    def _is_retryable_error(exception: BaseException) -> bool:
-        return isinstance(exception, APIStatusError) and exception.status_code in (
-            429,  # Too Many Requests
-            500,  # Internal Server Error
-            502,  # Bad Gateway
-            503,  # Service Unavailable
-        )
-
-    @tenacity.retry(
-        retry=retry_if_exception(_is_retryable_error),
-        wait=wait_exponential_jitter(initial=0.3, max=5, jitter=0.5),
-        stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
-        reraise=True,
-    )
     async def _step(self, event_queue: EventQueue) -> bool:
         """Run an single step and return whether the run is finished."""
-        # run an LLM step (may be interrupted)
-        result = await kosong.step(
-            self._chat_provider,
-            self._agent.system_prompt,
-            self._agent.toolset,
-            self._context.history,
-            on_message_part=event_queue.put_nowait,
-            on_tool_result=event_queue.put_nowait,
+
+        def _is_retryable_error(exception: BaseException) -> bool:
+            return isinstance(exception, APIStatusError) and exception.status_code in (
+                429,  # Too Many Requests
+                500,  # Internal Server Error
+                502,  # Bad Gateway
+                503,  # Service Unavailable
+            )
+
+        @tenacity.retry(
+            retry=retry_if_exception(_is_retryable_error),
+            wait=wait_exponential_jitter(initial=0.3, max=5, jitter=0.5),
+            stop=stop_after_attempt(self._loop_control.max_retry),
+            reraise=True,
         )
-        if result.usage is not None:
-            # mark the token count for the context before the step
-            await self._context.update_token_count(result.usage.input)
-            event_queue.put_nowait(ContextUsageUpdate(self.context_usage))
+        async def _step_impl() -> bool:
+            # run an LLM step (may be interrupted)
+            result = await kosong.step(
+                self._chat_provider,
+                self._agent.system_prompt,
+                self._agent.toolset,
+                self._context.history,
+                on_message_part=event_queue.put_nowait,
+                on_tool_result=event_queue.put_nowait,
+            )
+            if result.usage is not None:
+                # mark the token count for the context before the step
+                await self._context.update_token_count(result.usage.input)
+                event_queue.put_nowait(ContextUsageUpdate(self.context_usage))
 
-        # wait for all tool results (may be interrupted)
-        results = await result.tool_results()
-        # shield the context manipulation from interruption
-        await asyncio.shield(self._grow_context(result, results))
+            # wait for all tool results (may be interrupted)
+            results = await result.tool_results()
+            # shield the context manipulation from interruption
+            await asyncio.shield(self._grow_context(result, results))
 
-        return not result.tool_calls
+            return not result.tool_calls
+
+        return await _step_impl()
 
     async def _grow_context(self, result: StepResult, tool_results: list[ToolResult]):
         await self._context.append_message(result.message)
