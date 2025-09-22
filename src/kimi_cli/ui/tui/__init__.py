@@ -73,8 +73,13 @@ class App:
         console.print()
 
         while True:
-            with patch_stdout():
-                user_input = str(session.prompt()).strip()
+            try:
+                with patch_stdout():
+                    user_input = str(session.prompt()).strip()
+            except KeyboardInterrupt:
+                console.print("[grey30]Tip: press Ctrl-D or send 'exit' to quit[/grey30]")
+                continue
+
             if not user_input:
                 continue
 
