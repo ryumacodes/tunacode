@@ -125,7 +125,7 @@ class Soul:
         @tenacity.retry(
             retry=retry_if_exception(_is_retryable_error),
             wait=wait_exponential_jitter(initial=0.3, max=5, jitter=0.5),
-            stop=stop_after_attempt(self._loop_control.max_retry_per_step),
+            stop=stop_after_attempt(self._loop_control.max_retries_per_step),
             reraise=True,
         )
         async def _step_impl() -> bool:

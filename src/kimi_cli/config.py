@@ -33,7 +33,7 @@ class LoopControl(BaseModel):
 
     max_steps_per_run: int = 50
     """Maximum number of steps in one run"""
-    max_retry_per_step: int = 3
+    max_retries_per_step: int = 3
     """Maximum number of retries in one step"""
 
 
