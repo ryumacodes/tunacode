@@ -15,6 +15,7 @@ Only write entries that are worth mentioning to users.
 
 - Added /release-notes command
 - Added retry for LLM API errors
+- Added loop control configuration, e.g. `{"loop_control": {"max_steps_per_run": 50, "max_retry_per_step": 3}}`
 
 ### Changed
 
