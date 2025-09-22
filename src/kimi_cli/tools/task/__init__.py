@@ -6,7 +6,7 @@ from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
 
 from kimi_cli.agent import Agent, AgentGlobals, get_agents_dir, load_agent
 from kimi_cli.context import Context
-from kimi_cli.event import EventQueue, RunEnd, StepCancelled
+from kimi_cli.event import EventQueue, RunEnd, StepInterrupted
 from kimi_cli.soul import Soul
 from kimi_cli.utils.message import message_extract_text
 
@@ -86,7 +86,7 @@ class Task(CallableTool):
         async def _visualize(event_queue: EventQueue):
             while True:
                 event = await event_queue.get()
-                if isinstance(event, StepCancelled | RunEnd):
+                if isinstance(event, StepInterrupted | RunEnd):
                     break
 
         await soul.run(prompt, _visualize)

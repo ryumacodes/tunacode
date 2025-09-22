@@ -44,8 +44,8 @@ def create_chat_provider(provider: LLMProvider, model: LLMModel) -> ChatProvider
                 base_url=provider.base_url,
                 api_key=provider.api_key.get_secret_value(),
                 chaos_config=ChaosConfig(
-                    error_probability=0.6,
-                    error_types=[429],
+                    error_probability=0.8,
+                    error_types=[429, 500, 503],
                 ),
             )
         case _:

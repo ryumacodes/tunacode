@@ -2,13 +2,16 @@ import asyncio
 from collections.abc import Callable, Coroutine
 
 import kosong
+import tenacity
 from kosong import StepResult
 from kosong.base.chat_provider import ChatProvider
 from kosong.base.message import Message
+from kosong.chat_provider import APIStatusError, ChatProviderError
 from kosong.tooling import ToolResult
+from tenacity import retry_if_exception, stop_after_attempt, wait_exponential_jitter
 
 from kimi_cli.agent import Agent
-from kimi_cli.constant import MAX_CONTEXT_SIZE, MAX_STEPS
+from kimi_cli.constant import MAX_CONTEXT_SIZE, MAX_RETRY_ATTEMPTS, MAX_STEPS
 from kimi_cli.context import Context
 from kimi_cli.event import (
     ContextUsageUpdate,
@@ -16,7 +19,7 @@ from kimi_cli.event import (
     RunBegin,
     RunEnd,
     StepBegin,
-    StepCancelled,
+    StepInterrupted,
 )
 from kimi_cli.utils.message import tool_result_to_messages
 
@@ -66,9 +69,11 @@ class Soul:
             # the run is cancelled, propagate the cancellation
             # TODO: maybe need to manipulate the context to add some notes
             raise
+        # other exceptions will also raise
         finally:
             event_queue.put_nowait(RunEnd())
             await vis_task  # RunEnd should break the visualization loop
+            # FIXME: add a timeout for vis_task
 
     async def _agent_loop(
         self,
@@ -80,8 +85,8 @@ class Soul:
             event_queue.put_nowait(StepBegin(n_steps))
             try:
                 finished = await self._step(event_queue)
-            except asyncio.CancelledError:
-                event_queue.put_nowait(StepCancelled())
+            except (ChatProviderError, asyncio.CancelledError):
+                event_queue.put_nowait(StepInterrupted())
                 # break the agent loop
                 raise
             n_steps += 1
@@ -91,6 +96,21 @@ class Soul:
                 # TODO: print some warning
                 return
 
+    @staticmethod
+    def _is_retryable_error(exception: BaseException) -> bool:
+        return isinstance(exception, APIStatusError) and exception.status_code in (
+            429,  # Too Many Requests
+            500,  # Internal Server Error
+            502,  # Bad Gateway
+            503,  # Service Unavailable
+        )
+
+    @tenacity.retry(
+        retry=retry_if_exception(_is_retryable_error),
+        wait=wait_exponential_jitter(initial=0.3, max=5, jitter=0.5),
+        stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
+        reraise=True,
+    )
     async def _step(self, event_queue: EventQueue) -> bool:
         """Run an single step and return whether the run is finished."""
         # run an LLM step (may be interrupted)

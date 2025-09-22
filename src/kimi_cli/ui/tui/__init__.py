@@ -3,6 +3,7 @@ import getpass
 from pathlib import Path
 
 from kosong.base.message import ContentPart, TextPart, ToolCall, ToolCallPart
+from kosong.chat_provider import ChatProviderError
 from kosong.tooling import ToolResult
 from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import FormattedText
@@ -15,7 +16,7 @@ from kimi_cli.event import (
     RunBegin,
     RunEnd,
     StepBegin,
-    StepCancelled,
+    StepInterrupted,
 )
 from kimi_cli.metadata import Session
 from kimi_cli.soul import Soul
@@ -89,6 +90,10 @@ class App:
             except KeyboardInterrupt:
                 console.print("[bold red]Interrupted by user[/bold red]")
                 continue
+            except ChatProviderError as e:
+                console.print(f"[bold red]LLM provider error: {e}[/bold red]")
+            except BaseException as e:
+                console.print(f"[bold red]Unknown error: {e}[/bold red]")
 
     async def _visualize(self, event_queue: EventQueue):
         """
@@ -127,13 +132,13 @@ class App:
                     event = await event_queue.get()
 
                 # cleanup the step live view
-                if isinstance(event, StepCancelled):
+                if isinstance(event, StepInterrupted):
                     step.interrupt()
                 else:
                     step.finish()
 
-            if isinstance(event, StepCancelled):
-                # for StepCancelled, the visualization loop should end immediately
+            if isinstance(event, StepInterrupted):
+                # for StepInterrupted, the visualization loop should end immediately
                 break
 
             assert isinstance(event, StepBegin | RunEnd), "expect a StepBegin or RunEnd"
