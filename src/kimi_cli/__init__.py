@@ -5,6 +5,7 @@ import textwrap
 from pathlib import Path
 
 import click
+from kosong.base.chat_provider import ChatProvider
 from pydantic import SecretStr
 
 from kimi_cli.agent import (
@@ -20,6 +21,7 @@ from kimi_cli.config import (
     ConfigError,
     LLMModel,
     LLMProvider,
+    LoopControl,
     load_config,
 )
 from kimi_cli.context import Context
@@ -29,7 +31,7 @@ from kimi_cli.soul import Soul
 from kimi_cli.ui.tui import App
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
 
-_DEFAULT_AGENT_FILE = get_agents_dir() / "koder" / "agent.yaml"
+DEFAULT_AGENT_FILE = get_agents_dir() / "koder" / "agent.yaml"
 
 
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
@@ -44,7 +46,7 @@ _DEFAULT_AGENT_FILE = get_agents_dir() / "koder" / "agent.yaml"
     "--agent",
     "agent_file",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
-    default=_DEFAULT_AGENT_FILE,
+    default=DEFAULT_AGENT_FILE,
     help="Custom agent specification file (default: builtin Kimi Koder)",
 )
 @click.option(
@@ -127,6 +129,30 @@ def kimi(
     echo(f"✓ Using LLM model: {model.model}")
     chat_provider = create_chat_provider(provider, model)
 
+    kimi_run(
+        chat_provider=chat_provider,
+        work_dir=work_dir,
+        continue_=continue_,
+        command=command,
+        agent_file=agent_file,
+        loop_control=config.loop_control,
+        verbose=verbose,
+    )
+
+
+def kimi_run(
+    *,
+    chat_provider: ChatProvider,
+    work_dir: Path,
+    continue_: bool = False,
+    command: str | None = None,
+    agent_file: Path = DEFAULT_AGENT_FILE,
+    loop_control: LoopControl | None = None,
+    verbose: bool = True,
+):
+    """Run Kimi CLI."""
+    echo = click.echo if verbose else lambda *args, **kwargs: None
+
     agents_md = load_agents_md(work_dir) or ""
     if agents_md:
         echo(f"✓ Loaded agents.md: {textwrap.shorten(agents_md, width=100)}")
@@ -139,11 +165,10 @@ def kimi(
         ),
         denwa_renji=DenwaRenji(),
     )
-
     try:
         agent = load_agent(agent_file, agent_globals)
     except ValueError as e:
-        raise click.ClickException(f"Failed to load agent: {e}") from e
+        raise click.BadParameter(f"Failed to load agent: {e}") from e
     echo(f"✓ Loaded agent: {agent.name}")
     echo(f"✓ Loaded system prompt: {textwrap.shorten(agent.system_prompt, width=100)}")
     echo(f"✓ Loaded tools: {[tool.name for tool in agent.toolset.tools]}")
@@ -170,18 +195,15 @@ def kimi(
         agent,
         chat_provider=chat_provider,
         context=context,
-        loop_control=config.loop_control,
+        loop_control=loop_control or LoopControl(),
     )
     app = App(soul, session)
 
-    # switch to workspace directory
     original_cwd = Path.cwd()
     os.chdir(work_dir)
-
     try:
         app.run(command)
     finally:
-        # restore original working directory
         os.chdir(original_cwd)
 
 
