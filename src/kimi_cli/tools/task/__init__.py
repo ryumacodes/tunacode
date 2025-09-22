@@ -5,9 +5,10 @@ from kosong.base.tool import ParametersType
 from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
 
 from kimi_cli.agent import Agent, AgentGlobals, get_agents_dir, load_agent
+from kimi_cli.config import LoopControl
 from kimi_cli.context import Context
 from kimi_cli.event import EventQueue, RunEnd, StepInterrupted
-from kimi_cli.soul import Soul
+from kimi_cli.soul import MaxStepsReached, Soul
 from kimi_cli.utils.message import message_extract_text
 
 # Maximum continuation attempts for task summary
@@ -81,6 +82,7 @@ class Task(CallableTool):
             agent,
             chat_provider=self._chat_provider,
             context=context,
+            loop_control=LoopControl(),  # use default loop control
         )
 
         async def _visualize(event_queue: EventQueue):
@@ -89,7 +91,16 @@ class Task(CallableTool):
                 if isinstance(event, StepInterrupted | RunEnd):
                     break
 
-        await soul.run(prompt, _visualize)
+        try:
+            await soul.run(prompt, _visualize)
+        except MaxStepsReached as e:
+            return ToolError(
+                (
+                    f"Max steps {e.n_steps} reached when running subagent. "
+                    "Please try splitting the task into smaller subtasks."
+                ),
+                "Max steps reached",
+            )
 
         _error_msg = (
             "The subagent seemed not to run properly. Maybe you have to do the task yourself."

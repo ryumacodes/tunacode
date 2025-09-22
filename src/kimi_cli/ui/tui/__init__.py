@@ -19,7 +19,7 @@ from kimi_cli.event import (
     StepInterrupted,
 )
 from kimi_cli.metadata import Session
-from kimi_cli.soul import Soul
+from kimi_cli.soul import MaxStepsReached, Soul
 from kimi_cli.ui.tui.console import console
 from kimi_cli.ui.tui.liveview import StepLiveView
 from kimi_cli.ui.tui.metacmd import (
@@ -87,11 +87,12 @@ class App:
 
             try:
                 asyncio.run(self.soul.run(user_input, self._visualize))
-            except KeyboardInterrupt:
-                console.print("[bold red]Interrupted by user[/bold red]")
-                continue
+            except MaxStepsReached as e:
+                console.print(f"[bold yellow]Max steps reached: {e.n_steps}[/bold yellow]")
             except ChatProviderError as e:
                 console.print(f"[bold red]LLM provider error: {e}[/bold red]")
+            except KeyboardInterrupt:
+                console.print("[bold red]Interrupted by user[/bold red]")
             except BaseException as e:
                 console.print(f"[bold red]Unknown error: {e}[/bold red]")
 

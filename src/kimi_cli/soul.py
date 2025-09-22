@@ -61,6 +61,19 @@ class Soul:
         return self._context.token_count / self._max_context_size
 
     async def run(self, user_input: str, visualize: VisualizeFn):
+        """
+        Run the agent with the given user input.
+
+        Args:
+            user_input (str): The user input to the agent.
+            visualize (VisualizeFn): The function to visualize the agent behavior.
+
+        Raises:
+            MaxStepsReached: When the maximum number of steps is reached.
+            ChatProviderError: When the LLM provider returns an error.
+            asyncio.CancelledError: When the run is cancelled by user.
+        """
+
         await self._context.append_message(Message(role="user", content=user_input))
 
         event_queue = EventQueue()
@@ -95,9 +108,8 @@ class Soul:
             n_steps += 1
             if finished:
                 return
-            if n_steps > self._loop_control.max_steps:
-                # TODO: print some warning
-                return
+            if n_steps >= self._loop_control.max_steps:
+                raise MaxStepsReached(n_steps)
 
     async def _step(self, event_queue: EventQueue) -> bool:
         """Run an single step and return whether the run is finished."""
@@ -148,3 +160,13 @@ class Soul:
         # token count of tool results are not available yet
         for tool_result in tool_results:
             await self._context.append_message(tool_result_to_messages(tool_result))
+
+
+class MaxStepsReached(Exception):
+    """Raised when the maximum number of steps is reached."""
+
+    n_steps: int
+    """The number of steps that have been taken."""
+
+    def __init__(self, n_steps: int):
+        self.n_steps = n_steps

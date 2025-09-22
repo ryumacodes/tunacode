@@ -31,7 +31,7 @@ class LLMModel(BaseModel):
 class LoopControl(BaseModel):
     """Agent loop control configuration."""
 
-    max_steps: int = 30
+    max_steps: int = 50
     """Maximum number of steps in one run"""
     max_retry: int = 3
     """Maximum number of retries for LLM errors"""
