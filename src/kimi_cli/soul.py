@@ -88,8 +88,8 @@ class Soul:
         # other exceptions will also raise
         finally:
             event_queue.put_nowait(RunEnd())
-            await vis_task  # RunEnd should break the visualization loop
-            # FIXME: add a timeout for vis_task
+            # RunEnd should break the visualization loop
+            await asyncio.wait_for(vis_task, timeout=0.5)
 
     async def _agent_loop(
         self,
