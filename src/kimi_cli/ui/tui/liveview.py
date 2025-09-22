@@ -1,16 +1,13 @@
-import json
-from pathlib import Path
-
 import streamingjson
 from kosong.base.message import ToolCall, ToolCallPart
 from kosong.tooling import ToolError, ToolOk, ToolResult, ToolReturnType
-from kosong.utils.typing import JsonType
 from rich.console import Group, RenderableType
 from rich.live import Live
 from rich.markup import escape
 from rich.spinner import Spinner
 from rich.text import Text
 
+from kimi_cli.tools import extract_subtitle
 from kimi_cli.ui.tui.console import console
 from kimi_cli.utils.string import shorten_middle
 
@@ -22,8 +19,8 @@ class _ToolCallDisplay:
         if tool_call.function.arguments is not None:
             self._lexer.append_string(tool_call.function.arguments)
 
-        self._headline_markup = f"Using [bold blue]{self._tool_name}[/bold blue]"
-        self._detail = _extract_detail(self._lexer, self._tool_name)
+        self._title_markup = f"Using [bold blue]{self._tool_name}[/bold blue]"
+        self._subtitle = extract_subtitle(self._lexer, self._tool_name)
         self._finished = False
         self._spinner = Spinner("dots", text=self._spinner_markup)
         self.renderable: RenderableType = Group(self._spinner)
@@ -33,22 +30,22 @@ class _ToolCallDisplay:
         return self._finished
 
     @property
-    def _detail_markup(self) -> str:
-        detail = shorten_middle(self._detail or "", width=50)
-        return f"[grey50]: {escape(detail)}[/grey50]" if detail else ""
+    def _spinner_markup(self) -> str:
+        return self._title_markup + self._subtitle_markup
 
     @property
-    def _spinner_markup(self) -> str:
-        return self._headline_markup + self._detail_markup
+    def _subtitle_markup(self) -> str:
+        detail = shorten_middle(self._subtitle or "", width=50)
+        return f"[grey50]: {escape(detail)}[/grey50]" if detail else ""
 
     def append_args_part(self, args_part: str):
         if self.finished:
             return
         self._lexer.append_string(args_part)
         # TODO: don't extract detail if it's already stable
-        new_detail = _extract_detail(self._lexer, self._tool_name)
-        if new_detail and new_detail != self._detail:
-            self._detail = new_detail
+        new_subtitle = extract_subtitle(self._lexer, self._tool_name)
+        if new_subtitle and new_subtitle != self._subtitle:
+            self._subtitle = new_subtitle
             self._spinner.update(text=self._spinner_markup)
 
     def finish(self, result: ToolReturnType):
@@ -64,7 +61,7 @@ class _ToolCallDisplay:
         )
         lines = [
             Text.from_markup(
-                f"{sign} Used [bold blue]{self._tool_name}[/bold blue]" + self._detail_markup
+                f"{sign} Used [bold blue]{self._tool_name}[/bold blue]" + self._subtitle_markup
             )
         ]
         if result.brief:
@@ -74,49 +71,6 @@ class _ToolCallDisplay:
                 )
             )
         self.renderable = Group(*lines)
-
-
-def _extract_detail(lexer: streamingjson.Lexer, tool_name: str) -> str | None:
-    try:
-        curr_args: JsonType = json.loads(lexer.complete_json())
-    except json.JSONDecodeError:
-        return None
-    if not curr_args:
-        return None
-    match tool_name:
-        case "shell":
-            if not isinstance(curr_args, dict) or not curr_args.get("command"):
-                return None
-            return str(curr_args["command"])
-        case "task":
-            if not isinstance(curr_args, dict) or not curr_args.get("description"):
-                return None
-            return str(curr_args["description"])
-        case "read_file":
-            if not isinstance(curr_args, dict) or not curr_args.get("path"):
-                return None
-            return _normalize_path(str(curr_args["path"]))
-        case "write_file":
-            if not isinstance(curr_args, dict) or not curr_args.get("path"):
-                return None
-            return _normalize_path(str(curr_args["path"]))
-        case "glob":
-            if not isinstance(curr_args, dict) or not curr_args.get("pattern"):
-                return None
-            return str(curr_args["pattern"])
-        case "grep":
-            if not isinstance(curr_args, dict) or not curr_args.get("pattern"):
-                return None
-            return str(curr_args["pattern"])
-        case _:
-            return "".join(lexer.json_content)
-
-
-def _normalize_path(path: str) -> str:
-    cwd = str(Path.cwd().absolute())
-    if path.startswith(cwd):
-        path = path[len(cwd) :].lstrip("/\\")
-    return path
 
 
 class StepLiveView:
