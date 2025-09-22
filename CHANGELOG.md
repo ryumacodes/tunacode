@@ -19,6 +19,7 @@ Only write entries that are worth mentioning to users.
 ### Changed
 
 - Better extreme cases handling in `read_file` tool
+- Prevent Ctrl-C from exiting the CLI, force the use of Ctrl-D or `exit` instead
 
 ## [v0.10.1] - 2025-09-18
 
