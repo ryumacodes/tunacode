@@ -44,7 +44,6 @@ class Agent(NamedTuple):
     name: str
     system_prompt: str
     toolset: Toolset
-    globals: AgentGlobals
 
 
 def get_agents_dir() -> Path:
@@ -89,7 +88,6 @@ def load_agent(
         name=agent_spec.name,
         system_prompt=system_prompt,
         toolset=toolset,
-        globals=globals_,
     )
 
 
