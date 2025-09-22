@@ -14,6 +14,11 @@ Only write entries that are worth mentioning to users.
 ### Added
 
 - Added /release-notes command
+- Added retry for LLM API errors
+
+### Changed
+
+- Better extreme cases handling in `read_file` tool
 
 ## [v0.10.1] - 2025-09-18
 
