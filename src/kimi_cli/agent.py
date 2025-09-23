@@ -116,7 +116,8 @@ def _load_tools(
         else:
             bad_tools.append(tool_path)
     logger.debug("Loaded tools: {tools}", tools=toolset.tools)
-    logger.error("Bad tools: {bad_tools}", bad_tools=bad_tools)
+    if bad_tools:
+        logger.error("Bad tools: {bad_tools}", bad_tools=bad_tools)
     return toolset, bad_tools
 
 
