@@ -36,10 +36,12 @@ class EventQueue:
         self._queue = asyncio.Queue()
 
     def put_nowait(self, event: Event):
-        logger.debug("Emitting event: {event}", event=event)
+        if not isinstance(event, ContentPart | ToolCallPart):
+            logger.debug("Emitting event: {event}", event=event)
         self._queue.put_nowait(event)
 
     async def get(self) -> Event:
         event = await self._queue.get()
-        logger.debug("Consuming event: {event}", event=event)
+        if not isinstance(event, ContentPart | ToolCallPart):
+            logger.debug("Consuming event: {event}", event=event)
         return event

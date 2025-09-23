@@ -26,7 +26,9 @@ from kimi_cli.config import (
 )
 from kimi_cli.context import Context
 from kimi_cli.denwarenji import DenwaRenji
+from kimi_cli.logging import logger
 from kimi_cli.metadata import Session, continue_session, new_session
+from kimi_cli.share import get_share_dir
 from kimi_cli.soul import Soul
 from kimi_cli.ui.tui import App
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
@@ -41,6 +43,12 @@ DEFAULT_AGENT_FILE = get_agents_dir() / "koder" / "agent.yaml"
     is_flag=True,
     default=False,
     help="Print verbose information (default: no)",
+)
+@click.option(
+    "--debug",
+    is_flag=True,
+    default=False,
+    help="Log debug information (default: no)",
 )
 @click.option(
     "--agent",
@@ -84,6 +92,7 @@ DEFAULT_AGENT_FILE = get_agents_dir() / "koder" / "agent.yaml"
 )
 def kimi(
     verbose: bool,
+    debug: bool,
     agent_file: Path,
     model_name: str | None,
     work_dir: Path,
@@ -92,6 +101,13 @@ def kimi(
 ):
     """Kimi, your next CLI agent."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
+
+    logger.add(
+        get_share_dir() / "logs" / "kimi.log",
+        level="DEBUG" if debug else "INFO",
+        rotation="06:00",
+        retention="10 days",
+    )
 
     work_dir = work_dir.absolute()
 
