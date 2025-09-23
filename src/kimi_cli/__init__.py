@@ -200,7 +200,14 @@ def kimi_run(
         context=context,
         loop_control=loop_control or LoopControl(),
     )
-    app = App(soul, session)
+    app = App(
+        soul,
+        welcome_info={
+            "Model": chat_provider.model_name,
+            "Working directory": str(work_dir),
+            "Session": session.id,
+        },
+    )
 
     original_cwd = Path.cwd()
     os.chdir(work_dir)

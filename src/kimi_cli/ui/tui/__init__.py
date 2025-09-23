@@ -1,6 +1,5 @@
 import asyncio
 import getpass
-from pathlib import Path
 
 from kosong.base.message import ContentPart, TextPart, ToolCall, ToolCallPart
 from kosong.chat_provider import ChatProviderError
@@ -18,7 +17,6 @@ from kimi_cli.event import (
     StepBegin,
     StepInterrupted,
 )
-from kimi_cli.metadata import Session
 from kimi_cli.soul import MaxStepsReached, Soul
 from kimi_cli.ui.tui.console import console
 from kimi_cli.ui.tui.liveview import StepLiveView
@@ -27,19 +25,11 @@ from kimi_cli.ui.tui.metacmd import (
     get_meta_command,
 )
 
-_WELCOME_MESSAGE = """
-[bold]Welcome to {name}![/bold]
-
-[grey30]Model: {model}[/grey30]
-[grey30]Working directory: {work_dir}[/grey30]
-[grey30]Session: {session_id}[/grey30]
-""".strip()
-
 
 class App:
-    def __init__(self, soul: Soul, session: Session):
+    def __init__(self, soul: Soul, welcome_info: dict[str, str]):
         self.soul = soul
-        self.session = session
+        self.welcome_info = welcome_info
 
     def run(self, command: str | None = None):
         if command is not None:
@@ -54,12 +44,11 @@ class App:
             complete_while_typing=True,
         )
 
-        welcome = _WELCOME_MESSAGE.format(
-            name=self.soul.name,
-            model=self.soul.model,
-            work_dir=Path.cwd().absolute(),
-            session_id=self.session.id,
-        )
+        welcome = f"[bold]Welcome to {self.soul.name}![/bold]"
+        if self.welcome_info:
+            welcome += "\n\n" + "\n".join(
+                f"[grey30]{key}: {value}[/grey30]" for key, value in self.welcome_info.items()
+            )
 
         console.print()
         console.print(
