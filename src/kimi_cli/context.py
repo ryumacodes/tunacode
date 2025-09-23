@@ -5,6 +5,8 @@ from pathlib import Path
 
 from kosong.base.message import Message
 
+from kimi_cli.logging import logger
+
 
 class Context:
     def __init__(self, file_backend: Path | None = None):
@@ -13,9 +15,12 @@ class Context:
         self._token_count: int = 0
 
     async def restore(self):
+        logger.debug("Restoring context from file: {file_backend}", file_backend=self._file_backend)
         if self._history:
-            raise RuntimeError("The storage is already modified")
+            logger.error("The context storage is already modified")
+            raise RuntimeError("The context storage is already modified")
         if not self._file_backend or not self._file_backend.exists():
+            logger.debug("No context file found, skipping restoration")
             return
 
         def _restore():
@@ -48,6 +53,7 @@ class Context:
         raise NotImplementedError("Pop checkpoint is not implemented")
 
     async def append_message(self, message: Message | Sequence[Message]):
+        logger.debug("Appending message(s) to context: {message}", message=message)
         messages = message if isinstance(message, Sequence) else [message]
         self._history.extend(messages)
 
@@ -61,6 +67,7 @@ class Context:
             await asyncio.to_thread(_append_to_file)
 
     async def update_token_count(self, token_count: int):
+        logger.debug("Updating token count in context: {token_count}", token_count=token_count)
         self._token_count = token_count
 
         def _append_token_count_to_file():

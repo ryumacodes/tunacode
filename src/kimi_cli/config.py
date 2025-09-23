@@ -4,6 +4,8 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, Field, SecretStr, ValidationError, field_serializer, model_validator
 
+from kimi_cli.logging import logger
+
 
 class LLMProvider(BaseModel):
     """LLM provider configuration."""
@@ -97,9 +99,11 @@ def load_config() -> Config:
         Validated Config object.
     """
     config_file = get_config_file()
+    logger.debug("Loading config from file: {file}", file=config_file)
 
     if not config_file.exists():
         config = get_default_config()
+        logger.debug("No config file found, creating default config: {config}", config=config)
         with open(config_file, "w", encoding="utf-8") as f:
             f.write(config.model_dump_json(indent=2))
         return config

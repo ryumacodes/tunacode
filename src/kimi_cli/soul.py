@@ -8,7 +8,7 @@ from kosong.base.chat_provider import ChatProvider
 from kosong.base.message import Message
 from kosong.chat_provider import APIStatusError, ChatProviderError
 from kosong.tooling import ToolResult
-from tenacity import retry_if_exception, stop_after_attempt, wait_exponential_jitter
+from tenacity import RetryCallState, retry_if_exception, stop_after_attempt, wait_exponential_jitter
 
 from kimi_cli.agent import Agent
 from kimi_cli.config import LoopControl
@@ -22,6 +22,7 @@ from kimi_cli.event import (
     StepBegin,
     StepInterrupted,
 )
+from kimi_cli.logging import logger
 from kimi_cli.utils.message import tool_result_to_messages
 
 type VisualizeFn = Callable[[EventQueue], Coroutine[None, None, None]]
@@ -75,8 +76,12 @@ class Soul:
         """
 
         await self._context.append_message(Message(role="user", content=user_input))
+        logger.debug("Appended user message to context")
 
         event_queue = EventQueue()
+        logger.debug(
+            "Starting visualization loop with visualize function: {visualize}", visualize=visualize
+        )
         vis_task = asyncio.create_task(visualize(event_queue))
         try:
             event_queue.put_nowait(RunBegin())
@@ -122,8 +127,18 @@ class Soul:
                 503,  # Service Unavailable
             )
 
+        def _retry_log(retry_state: RetryCallState):
+            logger.info(
+                "Retrying step for the {n} time. Waiting {sleep} seconds.",
+                n=retry_state.attempt_number,
+                sleep=retry_state.next_action.sleep
+                if retry_state.next_action is not None
+                else "unknown",
+            )
+
         @tenacity.retry(
             retry=retry_if_exception(_is_retryable_error),
+            before_sleep=_retry_log,
             wait=wait_exponential_jitter(initial=0.3, max=5, jitter=0.5),
             stop=stop_after_attempt(self._loop_control.max_retries_per_step),
             reraise=True,
@@ -138,6 +153,7 @@ class Soul:
                 on_message_part=event_queue.put_nowait,
                 on_tool_result=event_queue.put_nowait,
             )
+            logger.debug("Got step result: {result}", result=result)
             if result.usage is not None:
                 # mark the token count for the context before the step
                 await self._context.update_token_count(result.usage.input)
@@ -145,6 +161,7 @@ class Soul:
 
             # wait for all tool results (may be interrupted)
             results = await result.tool_results()
+            logger.debug("Got tool results: {results}", results=results)
             # shield the context manipulation from interruption
             await asyncio.shield(self._grow_context(result, results))
 
@@ -153,12 +170,14 @@ class Soul:
         return await _step_impl()
 
     async def _grow_context(self, result: StepResult, tool_results: list[ToolResult]):
+        logger.debug("Growing context with result: {result}", result=result)
         await self._context.append_message(result.message)
         if result.usage is not None:
             await self._context.update_token_count(result.usage.total)
 
         # token count of tool results are not available yet
         for tool_result in tool_results:
+            logger.debug("Appending tool result to context: {tool_result}", tool_result=tool_result)
             await self._context.append_message(tool_result_to_messages(tool_result))
 
 

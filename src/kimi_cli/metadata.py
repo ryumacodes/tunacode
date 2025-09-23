@@ -6,6 +6,7 @@ from typing import NamedTuple
 
 from pydantic import BaseModel, Field
 
+from kimi_cli.logging import logger
 from kimi_cli.share import get_share_dir
 
 
@@ -36,15 +37,20 @@ class Metadata(BaseModel):
 
 
 def _load_metadata() -> Metadata:
-    if not get_metadata_file().exists():
+    metadata_file = get_metadata_file()
+    logger.debug("Loading metadata from file: {file}", file=metadata_file)
+    if not metadata_file.exists():
+        logger.debug("No metadata file found, creating empty metadata")
         return Metadata()
-    with open(get_metadata_file(), encoding="utf-8") as f:
+    with open(metadata_file, encoding="utf-8") as f:
         data = json.load(f)
         return Metadata(**data)
 
 
 def _save_metadata(metadata: Metadata):
-    with open(get_metadata_file(), "w", encoding="utf-8") as f:
+    metadata_file = get_metadata_file()
+    logger.debug("Saving metadata to file: {file}", file=metadata_file)
+    with open(metadata_file, "w", encoding="utf-8") as f:
         json.dump(metadata.model_dump(), f, indent=2, ensure_ascii=False)
 
 
@@ -64,6 +70,7 @@ class Session(NamedTuple):
 
 def new_session(work_dir: Path) -> Session:
     """Create a new session for a work directory."""
+    logger.debug("Creating new session for work directory: {work_dir}", work_dir=work_dir)
     metadata = _load_metadata()
     work_dir_meta = next((wd for wd in metadata.work_dirs if wd.path == str(work_dir)), None)
     if work_dir_meta is None:
@@ -77,10 +84,17 @@ def new_session(work_dir: Path) -> Session:
 
 def continue_session(work_dir: Path) -> Session | None:
     """Get the last session for a work directory."""
+    logger.debug("Continuing session for work directory: {work_dir}", work_dir=work_dir)
     metadata = _load_metadata()
     work_dir_meta = next((wd for wd in metadata.work_dirs if wd.path == str(work_dir)), None)
     if work_dir_meta is None:
+        logger.debug("Work directory never been used")
         return None
     if work_dir_meta.last_session_id is None:
+        logger.debug("Work directory never had a session")
         return None
+    logger.debug(
+        "Found last session for work directory: {session_id}",
+        session_id=work_dir_meta.last_session_id,
+    )
     return Session(id=work_dir_meta.last_session_id, work_dir=work_dir_meta)

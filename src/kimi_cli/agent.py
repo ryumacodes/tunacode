@@ -10,6 +10,7 @@ from kosong.tooling import CallableTool, SimpleToolset, Toolset
 from pydantic import BaseModel, Field
 
 from kimi_cli.denwarenji import DenwaRenji
+from kimi_cli.logging import logger
 
 
 class AgentSpec(BaseModel):
@@ -93,6 +94,11 @@ def load_agent(
 
 def _load_system_prompt(agent_spec: AgentSpec, builtin_args: BuiltinSystemPromptArgs) -> str:
     system_prompt = agent_spec.system_prompt_path.read_text().strip()
+    logger.debug(
+        "Substituting system prompt with builtin args: {builtin_args}, spec args: {spec_args}",
+        builtin_args=builtin_args,
+        spec_args=agent_spec.system_prompt_args,
+    )
     return string.Template(system_prompt).substitute(
         builtin_args._asdict(), **agent_spec.system_prompt_args
     )
@@ -109,10 +115,13 @@ def _load_tools(
             toolset += tool
         else:
             bad_tools.append(tool_path)
+    logger.debug("Loaded tools: {tools}", tools=toolset.tools)
+    logger.error("Bad tools: {bad_tools}", bad_tools=bad_tools)
     return toolset, bad_tools
 
 
 def _load_tool(tool_path: str, dependencies: dict[type[Any], Any]) -> CallableTool | None:
+    logger.debug("Loading tool: {tool_path}", tool_path=tool_path)
     module_name, class_name = tool_path.rsplit(":", 1)
     try:
         module = importlib.import_module(module_name)
@@ -140,5 +149,7 @@ def load_agents_md(work_dir: Path) -> str | None:
     ]
     for path in paths:
         if path.is_file():
+            logger.debug("Loaded agents.md: {path}", path=path)
             return path.read_text().strip()
+    logger.debug("No AGENTS.md found")
     return None

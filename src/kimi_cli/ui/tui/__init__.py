@@ -17,6 +17,7 @@ from kimi_cli.event import (
     StepBegin,
     StepInterrupted,
 )
+from kimi_cli.logging import logger
 from kimi_cli.soul import MaxStepsReached, Soul
 from kimi_cli.ui.tui.console import console
 from kimi_cli.ui.tui.liveview import StepLiveView
@@ -34,6 +35,7 @@ class App:
     def run(self, command: str | None = None):
         if command is not None:
             # run single command and exit
+            logger.info("Running agent with command: {command}", command=command)
             asyncio.run(self.soul.run(command, self._visualize))
             return
 
@@ -66,31 +68,43 @@ class App:
                 with patch_stdout():
                     user_input = str(session.prompt()).strip()
             except KeyboardInterrupt:
+                logger.debug("Exiting by KeyboardInterrupt")
                 console.print("[grey30]Tip: press Ctrl-D or send 'exit' to quit[/grey30]")
                 continue
             except EOFError:
+                logger.debug("Exiting by EOF")
                 console.print("Bye!")
                 break
 
             if not user_input:
+                logger.debug("Got empty input, skipping")
                 continue
 
+            logger.debug("Got user input: {user_input}", user_input=user_input)
+
             if user_input in ["exit", "quit", "/exit", "/quit"]:
+                logger.debug("Exiting by meta command")
                 console.print("Bye!")
                 break
             if user_input.startswith("/"):
+                logger.debug("Running meta command: {user_input}", user_input=user_input)
                 self._run_meta_command(user_input[1:])
                 continue
 
             try:
+                logger.info("Running agent with user input: {user_input}", user_input=user_input)
                 asyncio.run(self.soul.run(user_input, self._visualize))
             except MaxStepsReached as e:
+                logger.warning("Max steps reached: {n_steps}", n_steps=e.n_steps)
                 console.print(f"[bold yellow]Max steps reached: {e.n_steps}[/bold yellow]")
             except ChatProviderError as e:
+                logger.error("LLM provider error: {error}", error=e)
                 console.print(f"[bold red]LLM provider error: {e}[/bold red]")
             except KeyboardInterrupt:
+                logger.error("Interrupted by user")
                 console.print("[bold red]Interrupted by user[/bold red]")
             except BaseException as e:
+                logger.error("Unknown error: {error}", error=e)
                 console.print(f"[bold red]Unknown error: {e}[/bold red]")
 
     async def _visualize(self, event_queue: EventQueue):
@@ -155,4 +169,9 @@ class App:
         if command is None:
             console.print(f"Meta command /{command_name} not found")
             return
+        logger.debug(
+            "Running meta command: {command_name} with args: {command_args}",
+            command_name=command_name,
+            command_args=command_args,
+        )
         command.func(self, command_args)
