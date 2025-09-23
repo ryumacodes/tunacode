@@ -26,7 +26,7 @@ from kimi_cli.config import (
 )
 from kimi_cli.context import Context
 from kimi_cli.denwarenji import DenwaRenji
-from kimi_cli.metadata import continue_session, new_session
+from kimi_cli.metadata import Session, continue_session, new_session
 from kimi_cli.soul import Soul
 from kimi_cli.ui.tui import App
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
@@ -129,9 +129,19 @@ def kimi(
     echo(f"✓ Using LLM model: {model.model}")
     chat_provider = create_chat_provider(provider, model)
 
+    if continue_:
+        session = continue_session(work_dir)
+        if session is None:
+            raise click.ClickException("No previous session found for the working directory")
+        echo(f"✓ Continuing previous session: {session.id}")
+    else:
+        session = new_session(work_dir)
+        echo(f"✓ Created new session: {session.id}")
+
     kimi_run(
         chat_provider=chat_provider,
         work_dir=work_dir,
+        session=session,
         continue_=continue_,
         command=command,
         agent_file=agent_file,
@@ -144,6 +154,7 @@ def kimi_run(
     *,
     chat_provider: ChatProvider,
     work_dir: Path,
+    session: Session,
     continue_: bool = False,
     command: str | None = None,
     agent_file: Path = DEFAULT_AGENT_FILE,
@@ -178,18 +189,10 @@ def kimi_run(
         if not command:
             raise click.BadArgumentUsage("Command cannot be empty")
 
+    context = Context(session.history_file)
     if continue_:
-        session = continue_session(work_dir)
-        if session is None:
-            raise click.ClickException("No previous session found for the working directory")
-        echo(f"✓ Continuing previous session: {session.id}")
-        context = Context(session.history_file)
         asyncio.run(context.restore())
         echo(f"✓ Restored history from {session.history_file}")
-    else:
-        session = new_session(work_dir)
-        echo(f"✓ Created new session: {session.id}")
-        context = Context(session.history_file)
 
     soul = Soul(
         agent,
