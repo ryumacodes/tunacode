@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING, NamedTuple, overload
 from prompt_toolkit.completion import Completer, Completion
 from rich.panel import Panel
 
-from kimi_cli.ui.tui.console import console
+from kimi_cli.ui.shell.console import console
 from kimi_cli.utils.changelog import CHANGELOG, format_release_notes
 
 if TYPE_CHECKING:
-    from kimi_cli.ui.tui import App
+    from kimi_cli.ui.shell import ShellApp
 
-type MetaCmdFunc = Callable[["App", list[str]], None]
+type MetaCmdFunc = Callable[["ShellApp", list[str]], None]
 
 
 class MetaCommand(NamedTuple):
@@ -135,14 +135,14 @@ class MetaCommandCompleter(Completer):
 
 
 @meta_command(aliases=["quit"])
-def exit(app: "App", args: list[str]):
+def exit(app: "ShellApp", args: list[str]):
     """Exit the application"""
     # should be handled by `App`
     raise NotImplementedError
 
 
 @meta_command(aliases=["h", "?"])
-def help(app: "App", args: list[str]):
+def help(app: "ShellApp", args: list[str]):
     """Show help information"""
     console.print(
         Panel(
@@ -160,7 +160,7 @@ def help(app: "App", args: list[str]):
 
 
 @meta_command(name="release-notes")
-def release_notes(app: "App", args: list[str]):
+def release_notes(app: "ShellApp", args: list[str]):
     """Show release notes"""
     text = format_release_notes(CHANGELOG)
     console.print(Panel.fit(text, border_style="wheat4", title="Release Notes"))

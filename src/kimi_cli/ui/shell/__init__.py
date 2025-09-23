@@ -19,15 +19,15 @@ from kimi_cli.event import (
 )
 from kimi_cli.logging import logger
 from kimi_cli.soul import MaxStepsReached, Soul
-from kimi_cli.ui.tui.console import console
-from kimi_cli.ui.tui.liveview import StepLiveView
-from kimi_cli.ui.tui.metacmd import (
+from kimi_cli.ui.shell.console import console
+from kimi_cli.ui.shell.liveview import StepLiveView
+from kimi_cli.ui.shell.metacmd import (
     MetaCommandCompleter,
     get_meta_command,
 )
 
 
-class App:
+class ShellApp:
     def __init__(self, soul: Soul, welcome_info: dict[str, str]):
         self.soul = soul
         self.welcome_info = welcome_info

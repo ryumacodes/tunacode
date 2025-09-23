@@ -24,19 +24,23 @@ def augment_provider_with_env_vars(provider: LLMProvider):
             pass
 
 
-def create_chat_provider(provider: LLMProvider, model: LLMModel) -> ChatProvider:
+def create_chat_provider(
+    provider: LLMProvider, model: LLMModel, stream: bool = True
+) -> ChatProvider:
     match provider.type:
         case "kimi":
             return Kimi(
                 model=model.model,
                 base_url=provider.base_url,
                 api_key=provider.api_key.get_secret_value(),
+                stream=stream,
             )
         case "openai_legacy":
             return OpenAILegacy(
                 model=model.model,
                 base_url=provider.base_url,
                 api_key=provider.api_key.get_secret_value(),
+                stream=stream,
             )
         case "_chaos":
             return ChaosChatProvider(

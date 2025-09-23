@@ -3,6 +3,7 @@ import importlib.metadata
 import os
 import textwrap
 from pathlib import Path
+from typing import Literal
 
 import click
 from kosong.base.chat_provider import ChatProvider
@@ -30,10 +31,13 @@ from kimi_cli.logging import logger
 from kimi_cli.metadata import Session, continue_session, new_session
 from kimi_cli.share import get_share_dir
 from kimi_cli.soul import Soul
-from kimi_cli.ui.tui import App
+from kimi_cli.ui.print import PrintApp
+from kimi_cli.ui.shell import ShellApp
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
 
 DEFAULT_AGENT_FILE = get_agents_dir() / "koder" / "agent.yaml"
+
+UIMode = Literal["shell", "print"]
 
 
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
@@ -90,6 +94,13 @@ DEFAULT_AGENT_FILE = get_agents_dir() / "koder" / "agent.yaml"
     default=None,
     help="User query to the agent (default: interactive mode)",
 )
+@click.option(
+    "--ui",
+    "ui",
+    type=click.Choice(["shell", "print"]),
+    default="shell",
+    help="UI mode to use (default: shell)",
+)
 def kimi(
     verbose: bool,
     debug: bool,
@@ -98,6 +109,7 @@ def kimi(
     work_dir: Path,
     continue_: bool,
     command: str | None,
+    ui: UIMode,
 ):
     """Kimi, your next CLI agent."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
@@ -143,7 +155,8 @@ def kimi(
 
     echo(f"✓ Using LLM provider: {provider}")
     echo(f"✓ Using LLM model: {model.model}")
-    chat_provider = create_chat_provider(provider, model)
+    stream = ui != "print"  # use non-streaming mode for print UI
+    chat_provider = create_chat_provider(provider, model, stream=stream)
 
     if continue_:
         session = continue_session(work_dir)
@@ -163,6 +176,7 @@ def kimi(
         agent_file=agent_file,
         loop_control=config.loop_control,
         verbose=verbose,
+        ui=ui,
     )
 
 
@@ -176,6 +190,7 @@ def kimi_run(
     agent_file: Path = DEFAULT_AGENT_FILE,
     loop_control: LoopControl | None = None,
     verbose: bool = True,
+    ui: UIMode = "shell",
 ):
     """Run Kimi CLI."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
@@ -203,7 +218,7 @@ def kimi_run(
     if command is not None:
         command = command.strip()
         if not command:
-            raise click.BadArgumentUsage("Command cannot be empty")
+            raise click.BadParameter("Command cannot be empty")
 
     context = Context(session.history_file)
     if continue_:
@@ -216,19 +231,28 @@ def kimi_run(
         context=context,
         loop_control=loop_control or LoopControl(),
     )
-    app = App(
-        soul,
-        welcome_info={
-            "Model": chat_provider.model_name,
-            "Working directory": str(work_dir),
-            "Session": session.id,
-        },
-    )
 
     original_cwd = Path.cwd()
     os.chdir(work_dir)
+
     try:
-        app.run(command)
+        if ui == "shell":
+            app = ShellApp(
+                soul,
+                welcome_info={
+                    "Model": chat_provider.model_name,
+                    "Working directory": str(work_dir),
+                    "Session": session.id,
+                },
+            )
+            app.run(command)
+        elif ui == "print":
+            if command is None:
+                raise click.BadParameter("Command is required for print UI")
+            app = PrintApp(soul)
+            app.run(command)
+        else:
+            raise click.BadParameter(f"Invalid UI mode: {ui}")
     finally:
         os.chdir(original_cwd)
 
