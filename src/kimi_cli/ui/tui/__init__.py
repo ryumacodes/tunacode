@@ -79,6 +79,9 @@ class App:
             except KeyboardInterrupt:
                 console.print("[grey30]Tip: press Ctrl-D or send 'exit' to quit[/grey30]")
                 continue
+            except EOFError:
+                console.print("Bye!")
+                break
 
             if not user_input:
                 continue
