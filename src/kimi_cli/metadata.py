@@ -6,12 +6,7 @@ from typing import NamedTuple
 
 from pydantic import BaseModel, Field
 
-
-def get_share_dir() -> Path:
-    """Get the shared directory path."""
-    share_dir = Path.home() / ".local" / "share" / "kimi"
-    share_dir.mkdir(parents=True, exist_ok=True)
-    return share_dir
+from kimi_cli.share import get_share_dir
 
 
 def get_metadata_file() -> Path:

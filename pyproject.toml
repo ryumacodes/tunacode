@@ -8,6 +8,7 @@ dependencies = [
     "aiofiles>=24.1.0",
     "click>=8.2.1",
     "kosong>=0.11.0",
+    "loguru>=0.7.3",
     "prompt-toolkit>=3.0.52",
     "pyyaml>=6.0.2",
     "rich>=14.1.0",
