@@ -19,7 +19,7 @@ class Plus(CallableTool):
 
     @override
     async def __call__(self, a: float, b: float) -> ToolReturnType:
-        return ToolOk(str(a + b))
+        return ToolOk(output=str(a + b))
 
 
 class Compare(CallableTool):
@@ -36,11 +36,11 @@ class Compare(CallableTool):
     @override
     async def __call__(self, a: float, b: float) -> ToolReturnType:
         if a > b:
-            return ToolOk("greater")
+            return ToolOk(output="greater")
         elif a < b:
-            return ToolOk("less")
+            return ToolOk(output="less")
         else:
-            return ToolOk("equal")
+            return ToolOk(output="equal")
 
 
 class Panic(CallableTool):

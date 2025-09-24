@@ -25,4 +25,4 @@ class DMail(CallableTool):
     @override
     async def __call__(self, message: str, step: int) -> ToolReturnType:
         await self._denwa_renji.send_dmail(message, step)
-        return ToolOk("El Psy Congroo")
+        return ToolOk(output="El Psy Congroo")

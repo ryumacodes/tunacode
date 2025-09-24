@@ -67,13 +67,19 @@ class Task(CallableTool):
     @override
     async def __call__(self, description: str, subagent_name: str, prompt: str) -> ToolReturnType:
         if subagent_name not in self._subagents:
-            return ToolError(f"Subagent not found: {subagent_name}", "Subagent not found")
+            return ToolError(
+                message=f"Subagent not found: {subagent_name}",
+                brief="Subagent not found",
+            )
         agent = self._subagents[subagent_name]
         try:
             result = await self._run_subagent(agent, prompt)
             return result
         except Exception as e:
-            return ToolError(f"Failed to run subagent: {e}", "Failed to run subagent")
+            return ToolError(
+                message=f"Failed to run subagent: {e}",
+                brief="Failed to run subagent",
+            )
 
     async def _run_subagent(self, agent: Agent, prompt: str) -> ToolReturnType:
         """Run subagent with optional continuation for task summary."""
@@ -95,11 +101,11 @@ class Task(CallableTool):
             await soul.run(prompt, _visualize)
         except MaxStepsReached as e:
             return ToolError(
-                (
+                message=(
                     f"Max steps {e.n_steps} reached when running subagent. "
                     "Please try splitting the task into smaller subtasks."
                 ),
-                "Max steps reached",
+                brief="Max steps reached",
             )
 
         _error_msg = (
@@ -108,7 +114,7 @@ class Task(CallableTool):
 
         # Check if the subagent context is valid
         if len(context.history) == 0 or context.history[-1].role != "assistant":
-            return ToolError(_error_msg, "Failed to run subagent")
+            return ToolError(message=_error_msg, brief="Failed to run subagent")
 
         final_response = message_extract_text(context.history[-1])
 
@@ -118,7 +124,7 @@ class Task(CallableTool):
             await soul.run(_CONTINUE_PROMPT, _visualize)
 
             if len(context.history) == 0 or context.history[-1].role != "assistant":
-                return ToolError(_error_msg, "Failed to run subagent")
+                return ToolError(message=_error_msg, brief="Failed to run subagent")
             final_response = message_extract_text(context.history[-1])
 
-        return ToolOk(final_response)
+        return ToolOk(output=final_response)

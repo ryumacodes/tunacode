@@ -44,9 +44,9 @@ async def test_glob_simple_pattern(glob_tool: Glob, test_files: Path):
     result = await glob_tool("*.py", str(test_files))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "setup.py" in result.value
-    assert "Found 1 matches" in result.value
+    assert isinstance(result.output, str)
+    assert "setup.py" in result.output
+    assert "Found 1 matches" in result.message
 
 
 @pytest.mark.asyncio
@@ -55,9 +55,9 @@ async def test_glob_multiple_matches(glob_tool: Glob, test_files: Path):
     result = await glob_tool("*.md", str(test_files))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "README.md" in result.value
-    assert "Found 1 matches" in result.value
+    assert isinstance(result.output, str)
+    assert "README.md" in result.output
+    assert "Found 1 matches" in result.message
 
 
 @pytest.mark.asyncio
@@ -76,14 +76,14 @@ async def test_glob_safe_recursive_pattern(glob_tool: Glob, test_files: Path):
     result = await glob_tool("src/**/*.py", str(test_files))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "src/main.py" in result.value
-    assert "src/utils.py" in result.value
-    assert "src/main/app.py" in result.value
-    assert "src/main/config.py" in result.value
-    assert "src/test/test_app.py" in result.value
-    assert "src/test/test_config.py" in result.value
-    assert "Found 6 matches" in result.value
+    assert isinstance(result.output, str)
+    assert "src/main.py" in result.output
+    assert "src/utils.py" in result.output
+    assert "src/main/app.py" in result.output
+    assert "src/main/config.py" in result.output
+    assert "src/test/test_app.py" in result.output
+    assert "src/test/test_config.py" in result.output
+    assert "Found 6 matches" in result.message
 
 
 @pytest.mark.asyncio
@@ -93,10 +93,10 @@ async def test_glob_specific_directory(glob_tool: Glob, test_files: Path):
     result = await glob_tool("*.py", src_dir)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "main.py" in result.value
-    assert "utils.py" in result.value
-    assert "Found 2 matches" in result.value
+    assert isinstance(result.output, str)
+    assert "main.py" in result.output
+    assert "utils.py" in result.output
+    assert "Found 2 matches" in result.message
 
 
 @pytest.mark.asyncio
@@ -106,10 +106,10 @@ async def test_glob_recursive_in_subdirectory(glob_tool: Glob, test_files: Path)
     result = await glob_tool("main/**/*.py", src_dir)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "main/app.py" in result.value
-    assert "main/config.py" in result.value
-    assert "Found 2 matches" in result.value
+    assert isinstance(result.output, str)
+    assert "main/app.py" in result.output
+    assert "main/config.py" in result.output
+    assert "Found 2 matches" in result.message
 
 
 @pytest.mark.asyncio
@@ -118,10 +118,10 @@ async def test_glob_test_files(glob_tool: Glob, test_files: Path):
     result = await glob_tool("src/**/*test*.py", str(test_files))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "src/test/test_app.py" in result.value
-    assert "src/test/test_config.py" in result.value
-    assert "Found 2 matches" in result.value
+    assert isinstance(result.output, str)
+    assert "src/test/test_app.py" in result.output
+    assert "src/test/test_config.py" in result.output
+    assert "Found 2 matches" in result.message
 
 
 @pytest.mark.asyncio
@@ -130,8 +130,8 @@ async def test_glob_no_matches(glob_tool: Glob, test_files: Path):
     result = await glob_tool("*.xyz", str(test_files))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "No files or directories found" in result.value
+    assert result.output == ""
+    assert "No files or directories found" in result.message
 
 
 @pytest.mark.asyncio
@@ -144,10 +144,10 @@ async def test_glob_exclude_directories(glob_tool: Glob, temp_work_dir: Path):
     result = await glob_tool("test_*", str(temp_work_dir), include_dirs=False)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "test_file.txt" in result.value
-    assert "test_dir" not in result.value
-    assert "Found 1 matches" in result.value
+    assert isinstance(result.output, str)
+    assert "test_file.txt" in result.output
+    assert "test_dir" not in result.output
+    assert "Found 1 matches" in result.message
 
 
 @pytest.mark.asyncio
@@ -196,7 +196,7 @@ async def test_glob_single_character_wildcard(glob_tool: Glob, test_files: Path)
     result = await glob_tool("?.md", str(test_files))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
+    assert result.output == ""
     # Should match single character .md files
 
 
@@ -210,10 +210,10 @@ async def test_glob_character_class(glob_tool: Glob, temp_work_dir: Path):
     result = await glob_tool("file[1-2].py", str(temp_work_dir))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "file1.py" in result.value
-    assert "file2.py" in result.value
-    assert "file3.txt" not in result.value
+    assert isinstance(result.output, str)
+    assert "file1.py" in result.output
+    assert "file2.py" in result.output
+    assert "file3.txt" not in result.output
 
 
 @pytest.mark.asyncio
@@ -222,7 +222,7 @@ async def test_glob_complex_pattern(glob_tool: Glob, test_files: Path):
     result = await glob_tool("docs/**/main/*.py", str(test_files))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
+    assert result.output == ""
     # Should not match anything since there are no Python files in docs/main
 
 
@@ -239,9 +239,9 @@ async def test_glob_wildcard_with_double_star_patterns(glob_tool: Glob, test_fil
     result = await glob_tool("src/**/test_*.py", str(test_files))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "src/test/test_app.py" in result.value
-    assert "src/test/test_config.py" in result.value
+    assert isinstance(result.output, str)
+    assert "src/test/test_app.py" in result.output
+    assert "src/test/test_config.py" in result.output
 
 
 @pytest.mark.asyncio

@@ -45,30 +45,33 @@ class Glob(CallableTool):
     def _validate_pattern(self, pattern: str) -> ToolError | None:
         """Validate that the pattern is safe to use."""
         if pattern.startswith("**"):
+            # TODO: give a `ls -la` result as the output
             return ToolError(
-                f"Pattern `{pattern}` starts with '**' which is not allowed. "
-                "This would recursively search all directories and may include large directories "
-                "like `node_modules`. Use more specific patterns like 'src/**/*.py' instead.",
-                "Unsafe pattern",
+                message=(
+                    f"Pattern `{pattern}` starts with '**' which is not allowed. "
+                    "This would recursively search all directories and may include large "
+                    "directories like `node_modules`. Use more specific patterns like "
+                    "'src/**/*.py' instead."
+                ),
+                brief="Unsafe pattern",
             )
         return None
 
     def _validate_directory(self, directory: Path) -> ToolError | None:
         """Validate that the directory is safe to search."""
-        try:
-            resolved_dir = directory.resolve()
-            resolved_work_dir = self._work_dir.resolve()
+        resolved_dir = directory.resolve()
+        resolved_work_dir = self._work_dir.resolve()
 
-            # Ensure the directory is within work directory
-            if not str(resolved_dir).startswith(str(resolved_work_dir)):
-                return ToolError(
+        # Ensure the directory is within work directory
+        if not str(resolved_dir).startswith(str(resolved_work_dir)):
+            return ToolError(
+                message=(
                     f"`{directory}` is outside the working directory. "
-                    "You can only search within the working directory.",
-                    "Directory outside working directory",
-                )
-            return None
-        except Exception as e:
-            return ToolError(f"Invalid directory: {e}", "Invalid directory")
+                    "You can only search within the working directory."
+                ),
+                brief="Directory outside working directory",
+            )
+        return None
 
     @override
     async def __call__(
@@ -87,9 +90,11 @@ class Glob(CallableTool):
 
             if not dir_path.is_absolute():
                 return ToolError(
-                    f"`{directory}` is not an absolute path. "
-                    "You must provide an absolute path to search.",
-                    "Invalid directory",
+                    message=(
+                        f"`{directory}` is not an absolute path. "
+                        "You must provide an absolute path to search."
+                    ),
+                    brief="Invalid directory",
                 )
 
             # Validate directory safety
@@ -99,13 +104,13 @@ class Glob(CallableTool):
 
             if not dir_path.exists():
                 return ToolError(
-                    f"`{directory}` does not exist.",
-                    "Directory not found",
+                    message=f"`{directory}` does not exist.",
+                    brief="Directory not found",
                 )
             if not dir_path.is_dir():
                 return ToolError(
-                    f"`{directory}` is not a directory.",
-                    "Invalid directory",
+                    message=f"`{directory}` is not a directory.",
+                    brief="Invalid directory",
                 )
 
             # Perform the glob search - users can use ** directly in pattern
@@ -120,12 +125,18 @@ class Glob(CallableTool):
 
             # Format results
             if not matches:
-                return ToolOk(f"No files or directories found matching pattern `{pattern}`.")
+                return ToolOk(
+                    output="",
+                    message=f"No files or directories found matching pattern `{pattern}`.",
+                )
 
-            result_lines = [f"Found {len(matches)} matches for pattern `{pattern}`:"]
-            result_lines.extend(f"  {p.relative_to(dir_path)}" for p in matches)
-
-            return ToolOk("\n".join(result_lines))
+            return ToolOk(
+                output="\n".join(str(p.relative_to(dir_path)) for p in matches),
+                message=f"Found {len(matches)} matches for pattern `{pattern}`.",
+            )
 
         except Exception as e:
-            return ToolError(f"Failed to search for pattern {pattern}. Error: {e}", "Glob failed")
+            return ToolError(
+                message=f"Failed to search for pattern {pattern}. Error: {e}",
+                brief="Glob failed",
+            )

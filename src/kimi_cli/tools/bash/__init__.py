@@ -40,15 +40,22 @@ class Bash(CallableTool):
 
         try:
             exitcode = await _stream_subprocess(command, stdout_cb, stderr_cb, timeout)
-            output_str = "".join(output) + f"\n(Exit code: {exitcode})"
             # TODO: truncate/compress the output if it is too long
-            if exitcode == 0:
-                return ToolOk(output_str)
-            return ToolError(output_str, f"Failed with exit code: {exitcode}")
-        except TimeoutError:
-            output.append(f"\n(Killed by timeout ({timeout}s))")
             output_str = "".join(output)
-            return ToolError(output_str, f"Killed by timeout ({timeout}s)")
+            if exitcode == 0:
+                return ToolOk(output=output_str, message="Command executed successfully.")
+            return ToolError(
+                output=output_str,
+                message=f"Command failed with exit code: {exitcode}",
+                brief=f"Failed with exit code: {exitcode}",
+            )
+        except TimeoutError:
+            output_str = "".join(output)
+            return ToolError(
+                output=output_str,
+                message=f"Command killed by timeout ({timeout}s)",
+                brief=f"Killed by timeout ({timeout}s)",
+            )
 
 
 async def _stream_subprocess(command: str, stdout_cb, stderr_cb, timeout: int) -> int:

@@ -167,11 +167,11 @@ class Grep(CallableTool):
                         output += f"\n... (results truncated to {head_limit} lines)"
 
             if not output:
-                return ToolOk("<system-message>No matches found</system-message>")
-            return ToolOk(output)
+                return ToolOk(output="", message="No matches found")
+            return ToolOk(output=output)
 
         except Exception as e:
             return ToolError(
-                f"<system-message>Failed to grep. Error: {str(e)}</system-message>",
-                "Failed to grep",
+                message=f"Failed to grep. Error: {str(e)}",
+                brief="Failed to grep",
             )

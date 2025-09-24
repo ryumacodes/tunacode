@@ -24,8 +24,7 @@ async def test_write_new_file(write_file_tool: WriteFile, temp_work_dir: Path):
     result = await write_file_tool(str(file_path), content)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "successfully overwritten" in result.value
+    assert "successfully overwritten" in result.message
     assert file_path.exists()
     assert file_path.read_text() == content
 
@@ -41,8 +40,7 @@ async def test_overwrite_existing_file(write_file_tool: WriteFile, temp_work_dir
     result = await write_file_tool(str(file_path), new_content)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "successfully overwritten" in result.value
+    assert "successfully overwritten" in result.message
     assert file_path.read_text() == new_content
 
 
@@ -57,8 +55,7 @@ async def test_append_to_file(write_file_tool: WriteFile, temp_work_dir: Path):
     result = await write_file_tool(str(file_path), append_content, mode="append")
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "successfully appended to" in result.value
+    assert "successfully appended to" in result.message
     expected_content = original_content + append_content
     assert file_path.read_text() == expected_content
 
@@ -72,7 +69,6 @@ async def test_write_unicode_content(write_file_tool: WriteFile, temp_work_dir: 
     result = await write_file_tool(str(file_path), content)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
     assert file_path.exists()
     assert file_path.read_text(encoding="utf-8") == content
 
@@ -86,7 +82,6 @@ async def test_write_empty_content(write_file_tool: WriteFile, temp_work_dir: Pa
     result = await write_file_tool(str(file_path), content)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
     assert file_path.exists()
     assert file_path.read_text() == ""
 
@@ -100,7 +95,6 @@ async def test_write_multiline_content(write_file_tool: WriteFile, temp_work_dir
     result = await write_file_tool(str(file_path), content)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
     assert file_path.read_text() == content
 
 
@@ -153,8 +147,7 @@ async def test_append_to_nonexistent_file(write_file_tool: WriteFile, temp_work_
     result = await write_file_tool(str(file_path), content, mode="append")
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "successfully appended to" in result.value
+    assert "successfully appended to" in result.message
     assert file_path.exists()
     assert file_path.read_text() == content
 
@@ -168,6 +161,5 @@ async def test_write_large_content(write_file_tool: WriteFile, temp_work_dir: Pa
     result = await write_file_tool(str(file_path), content)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
     assert file_path.exists()
     assert file_path.read_text() == content

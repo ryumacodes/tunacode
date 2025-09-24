@@ -41,7 +41,7 @@ def tool_result_to_messages(tool_result: ToolResult) -> list[Message]:
 
 def tool_ok_to_message_content(result: ToolOk) -> list[ContentPart]:
     """Convert a tool return value to a list of message content parts."""
-    match value := result.value:
+    match value := result.output:
         case str():
             return [TextPart(text=value)]
         case ContentPart():

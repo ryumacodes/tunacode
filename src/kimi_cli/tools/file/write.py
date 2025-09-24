@@ -36,20 +36,19 @@ class WriteFile(CallableTool):
     def _validate_path(self, path: Path) -> ToolError | None:
         """Validate that the path is safe to write."""
         # Check for path traversal attempts
-        try:
-            resolved_path = path.resolve()
-            resolved_work_dir = self._work_dir.resolve()
+        resolved_path = path.resolve()
+        resolved_work_dir = self._work_dir.resolve()
 
-            # Ensure the path is within work directory
-            if not str(resolved_path).startswith(str(resolved_work_dir)):
-                return ToolError(
+        # Ensure the path is within work directory
+        if not str(resolved_path).startswith(str(resolved_work_dir)):
+            return ToolError(
+                message=(
                     f"`{path}` is outside the working directory. "
-                    "You can only write files within the working directory.",
-                    "Path outside working directory",
-                )
-            return None
-        except Exception as e:
-            return ToolError(f"Invalid path: {e}", "Invalid path")
+                    "You can only write files within the working directory."
+                ),
+                brief="Path outside working directory",
+            )
+        return None
 
     @override
     async def __call__(self, path: str, content: str, mode: str = "overwrite") -> ToolReturnType:
@@ -61,9 +60,11 @@ class WriteFile(CallableTool):
 
             if not p.is_absolute():
                 return ToolError(
-                    f"`{path}` is not an absolute path. "
-                    "You must provide an absolute path to write a file.",
-                    "Invalid path",
+                    message=(
+                        f"`{path}` is not an absolute path. "
+                        "You must provide an absolute path to write a file."
+                    ),
+                    brief="Invalid path",
                 )
 
             # Validate path safety
@@ -73,15 +74,18 @@ class WriteFile(CallableTool):
 
             if not p.parent.exists():
                 return ToolError(
-                    f"`{path}` parent directory does not exist.",
-                    "Parent directory not found",
+                    message=f"`{path}` parent directory does not exist.",
+                    brief="Parent directory not found",
                 )
 
             # Validate mode parameter
             if mode not in ["overwrite", "append"]:
                 return ToolError(
-                    f"Invalid write mode: `{mode}`. Mode must be either 'overwrite' or 'append'.",
-                    "Invalid write mode",
+                    message=(
+                        f"Invalid write mode: `{mode}`. "
+                        "Mode must be either `overwrite` or `append`."
+                    ),
+                    brief="Invalid write mode",
                 )
 
             # Determine file mode for aiofiles
@@ -94,10 +98,15 @@ class WriteFile(CallableTool):
             # Get file info for success message
             file_size = p.stat().st_size
             action = "overwritten" if mode == "overwrite" else "appended to"
-
             return ToolOk(
-                f"File successfully {action}. Path: {path}. Current size: {file_size} bytes."
+                output="",
+                message=(
+                    f"File successfully {action}. Path: {path}. Current size: {file_size} bytes."
+                ),
             )
 
         except Exception as e:
-            return ToolError(f"Failed to write to {path}. Error: {e}", "Failed to write file")
+            return ToolError(
+                message=f"Failed to write to {path}. Error: {e}",
+                brief="Failed to write file",
+            )

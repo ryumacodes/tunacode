@@ -34,10 +34,10 @@ async def test_read_entire_file(read_file_tool: ReadFile, sample_file: Path):
     result = await read_file_tool(str(sample_file))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "5 lines read from" in result.value
-    assert "     1\tLine 1: Hello World" in result.value
-    assert "     5\tLine 5: End of file" in result.value
+    assert isinstance(result.output, str)
+    assert "5 lines read from" in result.message
+    assert "     1\tLine 1: Hello World" in result.output
+    assert "     5\tLine 5: End of file" in result.output
 
 
 @pytest.mark.asyncio
@@ -46,11 +46,11 @@ async def test_read_with_line_offset(read_file_tool: ReadFile, sample_file: Path
     result = await read_file_tool(str(sample_file), line_offset=3)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "3 lines read from" in result.value  # Lines 3, 4, 5
-    assert "     3\tLine 3: With multiple lines" in result.value
-    assert "Line 1" not in result.value  # First two lines should be skipped
-    assert "     5\tLine 5: End of file" in result.value
+    assert isinstance(result.output, str)
+    assert "3 lines read from" in result.message  # Lines 3, 4, 5
+    assert "     3\tLine 3: With multiple lines" in result.output
+    assert "Line 1" not in result.output  # First two lines should be skipped
+    assert "     5\tLine 5: End of file" in result.output
 
 
 @pytest.mark.asyncio
@@ -59,11 +59,11 @@ async def test_read_with_n_lines(read_file_tool: ReadFile, sample_file: Path):
     result = await read_file_tool(str(sample_file), n_lines=2)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "2 lines read from" in result.value
-    assert "     1\tLine 1: Hello World" in result.value
-    assert "     2\tLine 2: This is a test file" in result.value
-    assert "Line 3" not in result.value  # Should not include line 3
+    assert isinstance(result.output, str)
+    assert "2 lines read from" in result.message
+    assert "     1\tLine 1: Hello World" in result.output
+    assert "     2\tLine 2: This is a test file" in result.output
+    assert "Line 3" not in result.output  # Should not include line 3
 
 
 @pytest.mark.asyncio
@@ -72,12 +72,12 @@ async def test_read_with_line_offset_and_n_lines(read_file_tool: ReadFile, sampl
     result = await read_file_tool(str(sample_file), line_offset=2, n_lines=2)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "2 lines read from" in result.value
-    assert "     2\tLine 2: This is a test file" in result.value
-    assert "     3\tLine 3: With multiple lines" in result.value
-    assert "Line 1" not in result.value
-    assert "Line 4" not in result.value
+    assert isinstance(result.output, str)
+    assert "2 lines read from" in result.message
+    assert "     2\tLine 2: This is a test file" in result.output
+    assert "     3\tLine 3: With multiple lines" in result.output
+    assert "Line 1" not in result.output
+    assert "Line 4" not in result.output
 
 
 @pytest.mark.asyncio
@@ -117,8 +117,8 @@ async def test_read_empty_file(read_file_tool: ReadFile, temp_work_dir: Path):
     result = await read_file_tool(str(empty_file))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "No lines read from" in result.value
+    assert result.output == ""
+    assert "No lines read from" in result.message
 
 
 @pytest.mark.asyncio
@@ -127,8 +127,8 @@ async def test_read_line_offset_beyond_file_length(read_file_tool: ReadFile, sam
     result = await read_file_tool(str(sample_file), line_offset=10)
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "No lines read from" in result.value
+    assert result.output == ""
+    assert "No lines read from" in result.message
 
 
 @pytest.mark.asyncio
@@ -141,10 +141,10 @@ async def test_read_unicode_file(read_file_tool: ReadFile, temp_work_dir: Path):
     result = await read_file_tool(str(unicode_file))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "世界" in result.value
-    assert "🌍" in result.value
-    assert "café" in result.value
+    assert isinstance(result.output, str)
+    assert "世界" in result.output
+    assert "🌍" in result.output
+    assert "café" in result.output
 
 
 @pytest.mark.asyncio
@@ -153,24 +153,24 @@ async def test_read_edge_cases(read_file_tool: ReadFile, sample_file: Path):
     # Test reading from line 1 (should be same as default)
     result = await read_file_tool(str(sample_file), line_offset=1)
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "5 lines read from" in result.value
+    assert isinstance(result.output, str)
+    assert "5 lines read from" in result.message
 
     # Test reading from line 5 (last line)
     result = await read_file_tool(str(sample_file), line_offset=5)
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "1 lines read from" in result.value
-    assert "     5\tLine 5: End of file" in result.value
+    assert isinstance(result.output, str)
+    assert "1 lines read from" in result.message
+    assert "     5\tLine 5: End of file" in result.output
 
     # Test reading with offset and n_lines combined
     result = await read_file_tool(str(sample_file), line_offset=2, n_lines=1)
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "1 lines read from" in result.value
-    assert "     2\tLine 2: This is a test file" in result.value
-    assert "Line 1" not in result.value
-    assert "Line 3" not in result.value
+    assert isinstance(result.output, str)
+    assert "1 lines read from" in result.message
+    assert "     2\tLine 2: This is a test file" in result.output
+    assert "Line 1" not in result.output
+    assert "Line 3" not in result.output
 
 
 @pytest.mark.asyncio
@@ -184,12 +184,12 @@ async def test_long_line_truncation(read_file_tool: ReadFile, temp_work_dir: Pat
     result = await read_file_tool(str(long_line_file))
 
     assert isinstance(result, ToolOk)
-    assert isinstance(result.value, str)
-    assert "1 lines read from" in result.value
+    assert isinstance(result.output, str)
+    assert "1 lines read from" in result.message
     # Check that the line is truncated and ends with "..."
-    assert result.value.endswith("...")
+    assert result.output.endswith("...")
     # The total length should be exactly 2000 characters (accounting for line number prefix)
-    lines = result.value.split("\n")
+    lines = result.output.split("\n")
     content_line = [
         line for line in lines if line.strip() and not line.startswith("<system-message>")
     ][0]
