@@ -2,32 +2,29 @@ from pathlib import Path
 from typing import override
 
 import aiofiles
-from kosong.base.tool import ParametersType
-from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
+from kosong.tooling import CallableTool2, ToolError, ToolOk, ToolReturnType
+from pydantic import BaseModel, Field
 
 from kimi_cli.agent import BuiltinSystemPromptArgs
 
 
-class WriteFile(CallableTool):
+class Params(BaseModel):
+    path: str = Field(description="The absolute path to the file to write")
+    content: str = Field(description="The content to write to the file")
+    mode: str = Field(
+        description=(
+            "The mode to use to write to the file. "
+            "Two modes are supported: `overwrite` for overwriting the whole file and "
+            "`append` for appending to the end of an existing file."
+        ),
+        default="overwrite",
+    )
+
+
+class WriteFile(CallableTool2[Params]):
     name: str = "WriteFile"
     description: str = (Path(__file__).parent / "write.md").read_text()
-    parameters: ParametersType = {
-        "type": "object",
-        "properties": {
-            "path": {
-                "type": "string",
-                "description": "The absolute path to the file to write",
-            },
-            "content": {"type": "string", "description": "The content to write to the file"},
-            "mode": {
-                "type": "string",
-                "description": "The mode to use to write to the file",
-                "enum": ["overwrite", "append"],
-                "default": "overwrite",
-            },
-        },
-        "required": ["path", "content"],
-    }
+    params: type[Params] = Params
 
     def __init__(self, builtin_args: BuiltinSystemPromptArgs, **kwargs):
         super().__init__(**kwargs)
@@ -51,17 +48,17 @@ class WriteFile(CallableTool):
         return None
 
     @override
-    async def __call__(self, path: str, content: str, mode: str = "overwrite") -> ToolReturnType:
+    async def __call__(self, params: Params) -> ToolReturnType:
         # TODO: checks:
         # - check if the path may contain secrets
         # - check if the file format is writable
         try:
-            p = Path(path)
+            p = Path(params.path)
 
             if not p.is_absolute():
                 return ToolError(
                     message=(
-                        f"`{path}` is not an absolute path. "
+                        f"`{params.path}` is not an absolute path. "
                         "You must provide an absolute path to write a file."
                     ),
                     brief="Invalid path",
@@ -74,39 +71,40 @@ class WriteFile(CallableTool):
 
             if not p.parent.exists():
                 return ToolError(
-                    message=f"`{path}` parent directory does not exist.",
+                    message=f"`{params.path}` parent directory does not exist.",
                     brief="Parent directory not found",
                 )
 
             # Validate mode parameter
-            if mode not in ["overwrite", "append"]:
+            if params.mode not in ["overwrite", "append"]:
                 return ToolError(
                     message=(
-                        f"Invalid write mode: `{mode}`. "
+                        f"Invalid write mode: `{params.mode}`. "
                         "Mode must be either `overwrite` or `append`."
                     ),
                     brief="Invalid write mode",
                 )
 
             # Determine file mode for aiofiles
-            file_mode = "w" if mode == "overwrite" else "a"
+            file_mode = "w" if params.mode == "overwrite" else "a"
 
             # Write content to file
             async with aiofiles.open(p, mode=file_mode, encoding="utf-8") as f:
-                await f.write(content)
+                await f.write(params.content)
 
             # Get file info for success message
             file_size = p.stat().st_size
-            action = "overwritten" if mode == "overwrite" else "appended to"
+            action = "overwritten" if params.mode == "overwrite" else "appended to"
             return ToolOk(
                 output="",
                 message=(
-                    f"File successfully {action}. Path: {path}. Current size: {file_size} bytes."
+                    f"File successfully {action}. Path: {params.path}. "
+                    f"Current size: {file_size} bytes."
                 ),
             )
 
         except Exception as e:
             return ToolError(
-                message=f"Failed to write to {path}. Error: {e}",
+                message=f"Failed to write to {params.path}. Error: {e}",
                 brief="Failed to write file",
             )

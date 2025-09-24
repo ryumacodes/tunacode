@@ -1,154 +1,135 @@
 from pathlib import Path
+from typing import override
 
 import ripgrepy
-from kosong.base.tool import ParametersType
-from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
-
+from kosong.tooling import CallableTool2, ToolError, ToolOk, ToolReturnType
+from pydantic import BaseModel, Field
 
 # TODO: download ripgrep if not available
-class Grep(CallableTool):
+
+
+class Params(BaseModel):
+    pattern: str = Field(
+        description="The regular expression pattern to search for in file contents"
+    )
+    path: str = Field(
+        description=(
+            "File or directory to search in. Defaults to current working directory. "
+            "If specified, it must be an absolute path."
+        ),
+        default=".",
+    )
+    glob: str | None = Field(
+        description=(
+            "Glob pattern to filter files (e.g. `*.js`, `*.{ts,tsx}`). No filter by default."
+        ),
+        default=None,
+    )
+    output_mode: str = Field(
+        description=(
+            "`content`: Show matching lines (supports `before_context`, `after_context` "
+            " `context`, `line_number`, `head_limit`); "
+            "`files_with_matches`: Show file paths (supports `head_limit`); "
+            "`count_matches`: Show total number of matches. "
+            "Defaults to `files_with_matches`."
+        ),
+        default="files_with_matches",
+    )
+    before_context: int | None = Field(
+        description=(
+            "Number of lines to show before each match (the `-B` option). "
+            "Requires `output_mode` to be `content`."
+        ),
+        default=None,
+    )
+    after_context: int | None = Field(
+        description=(
+            "Number of lines to show after each match (the `-A` option). "
+            "Requires `output_mode` to be `content`."
+        ),
+        default=None,
+    )
+    context: int | None = Field(
+        description=(
+            "Number of lines to show before and after each match (the `-C` option). "
+            "Requires `output_mode` to be `content`."
+        ),
+        default=None,
+    )
+    line_number: bool = Field(
+        description=(
+            "Show line numbers in output (the `-n` option). Requires `output_mode` to be `content`."
+        ),
+        default=False,
+    )
+    ignore_case: bool = Field(
+        description="Case insensitive search (the `-i` option).",
+        default=False,
+    )
+    type: str | None = Field(
+        description=(
+            "File type to search. Examples: py, rust, js, ts, go, java, etc. "
+            "More efficient than `glob` for standard file types."
+        ),
+        default=None,
+    )
+    head_limit: int | None = Field(
+        description=(
+            "Limit output to first N lines, equivalent to `| head -N`. "
+            "Works across all output modes: content (limits output lines), "
+            "files_with_matches (limits file paths), count_matches (limits count entries). "
+            "By default, no limit is applied."
+        ),
+        default=None,
+    )
+    multiline: bool = Field(
+        description=(
+            "Enable multiline mode where `.` matches newlines and patterns can span "
+            "lines (the `-U` and `--multiline-dotall` options). "
+            "By default, multiline mode is disabled."
+        ),
+        default=False,
+    )
+
+
+class Grep(CallableTool2[Params]):
     name: str = "Grep"
     description: str = (Path(__file__).parent / "grep.md").read_text()
-    parameters: ParametersType = {
-        "type": "object",
-        "properties": {
-            "pattern": {
-                "type": "string",
-                "description": "The regular expression pattern to search for in file contents",
-            },
-            "path": {
-                "type": "string",
-                "description": (
-                    "File or directory to search in. Defaults to current working directory. "
-                    "If specified, it must be an absolute path."
-                ),
-            },
-            "glob": {
-                "type": "string",
-                "description": (
-                    "Glob pattern to filter files (e.g. `*.js`, `*.{ts,tsx}`). "
-                    "No filter by default."
-                ),
-            },
-            "output_mode": {
-                "type": "string",
-                "enum": ["content", "files_with_matches", "count_matches"],
-                "description": (
-                    "`content`: Show matching lines (supports `before_context`, `after_context` "
-                    " `context`, `line_number`, `head_limit`); "
-                    "`files_with_matches`: Show file paths (supports `head_limit`); "
-                    "`count_matches`: Show total number of matches. "
-                    "Defaults to `files_with_matches`."
-                ),
-            },
-            "before_context": {
-                "type": "number",
-                "description": (
-                    "Number of lines to show before each match (the `-B` option). "
-                    "Requires `output_mode` to be `content`."
-                ),
-            },
-            "after_context": {
-                "type": "number",
-                "description": (
-                    "Number of lines to show after each match (the `-A` option). "
-                    "Requires `output_mode` to be `content`."
-                ),
-            },
-            "context": {
-                "type": "number",
-                "description": (
-                    "Number of lines to show before and after each match (the `-C` option). "
-                    "Requires `output_mode` to be `content`."
-                ),
-            },
-            "line_number": {
-                "type": "boolean",
-                "description": (
-                    "Show line numbers in output (the `-n` option). "
-                    "Requires `output_mode` to be `content`."
-                ),
-            },
-            "ignore_case": {
-                "type": "boolean",
-                "description": "Case insensitive search (the `-i` option).",
-            },
-            "type": {
-                "type": "string",
-                "description": (
-                    "File type to search. Examples: py, rust, js, ts, go, java, etc. "
-                    "More efficient than `glob` for standard file types."
-                ),
-            },
-            "head_limit": {
-                "type": "number",
-                "description": (
-                    "Limit output to first N lines, equivalent to `| head -N`. "
-                    "Works across all output modes: content (limits output lines), "
-                    "files_with_matches (limits file paths), count_matches (limits count entries). "
-                    "By default, no limit is applied."
-                ),
-            },
-            "multiline": {
-                "type": "boolean",
-                "description": (
-                    "Enable multiline mode where `.` matches newlines and patterns can span "
-                    "lines (the `-U` and `--multiline-dotall` options). "
-                    "By default, multiline mode is disabled."
-                ),
-            },
-        },
-        "required": ["pattern"],
-    }
+    params: type[Params] = Params
 
-    async def __call__(
-        self,
-        pattern: str,
-        path: str = ".",
-        glob: str | None = None,
-        output_mode: str = "files_with_matches",
-        head_limit: int | None = None,
-        # Content display options
-        before_context: int | None = None,
-        after_context: int | None = None,
-        context: int | None = None,
-        line_number: bool = False,
-        # Search options
-        ignore_case: bool = False,
-        type: str | None = None,
-        multiline: bool = False,
-    ) -> ToolReturnType:
+    @override
+    async def __call__(self, params: Params) -> ToolReturnType:
         try:
             # Initialize ripgrep with pattern and path
-            rg = ripgrepy.Ripgrepy(pattern, path)
+            rg = ripgrepy.Ripgrepy(params.pattern, params.path)
 
             # Apply search options
-            if ignore_case:
+            if params.ignore_case:
                 rg = rg.ignore_case()
-            if multiline:
+            if params.multiline:
                 rg = rg.multiline().multiline_dotall()
 
             # Content display options (only for content mode)
-            if output_mode == "content":
-                if before_context is not None:
-                    rg = rg.before_context(before_context)
-                if after_context is not None:
-                    rg = rg.after_context(after_context)
-                if context is not None:
-                    rg = rg.context(context)
-                if line_number:
+            if params.output_mode == "content":
+                if params.before_context is not None:
+                    rg = rg.before_context(params.before_context)
+                if params.after_context is not None:
+                    rg = rg.after_context(params.after_context)
+                if params.context is not None:
+                    rg = rg.context(params.context)
+                if params.line_number:
                     rg = rg.line_number()
 
             # File filtering options
-            if glob:
-                rg = rg.glob(glob)
-            if type:
-                rg = rg.type_(type)
+            if params.glob:
+                rg = rg.glob(params.glob)
+            if params.type:
+                rg = rg.type_(params.type)
 
             # Set output mode
-            if output_mode == "files_with_matches":
+            if params.output_mode == "files_with_matches":
                 rg = rg.files_with_matches()
-            elif output_mode == "count_matches":
+            elif params.output_mode == "count_matches":
                 rg = rg.count_matches()
 
             # Execute search
@@ -158,13 +139,13 @@ class Grep(CallableTool):
             output = result.as_string
 
             # Apply head limit if specified
-            if head_limit is not None:
+            if params.head_limit is not None:
                 lines = output.split("\n")
-                if len(lines) > head_limit:
-                    lines = lines[:head_limit]
+                if len(lines) > params.head_limit:
+                    lines = lines[: params.head_limit]
                     output = "\n".join(lines)
-                    if output_mode in ["content", "files_with_matches", "count_matches"]:
-                        output += f"\n... (results truncated to {head_limit} lines)"
+                    if params.output_mode in ["content", "files_with_matches", "count_matches"]:
+                        output += f"\n... (results truncated to {params.head_limit} lines)"
 
             if not output:
                 return ToolOk(output="", message="No matches found")

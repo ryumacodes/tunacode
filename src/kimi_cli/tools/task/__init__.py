@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import override
 
-from kosong.base.tool import ParametersType
-from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
+from kosong.tooling import CallableTool2, ToolError, ToolOk, ToolReturnType
+from pydantic import BaseModel, Field
 
 from kimi_cli.agent import Agent, AgentGlobals, get_agents_dir, load_agent
 from kimi_cli.config import LoopControl
@@ -26,31 +26,24 @@ Please expand with comprehensive details.
 """.strip()
 
 
-class Task(CallableTool):
+class Params(BaseModel):
+    description: str = Field(description="A short (3-5 word) description of the task")
+    subagent_name: str = Field(
+        description="The name of the specialized subagent to use for this task"
+    )
+    prompt: str = Field(
+        description=(
+            "The task for the subagent to perform. "
+            "This prompt should be accurate and specific to the task. "
+            "Neccesary background should be provided in a concise manner."
+        )
+    )
+
+
+class Task(CallableTool2[Params]):
     name: str = "Task"
     description: str = (Path(__file__).parent / "task.md").read_text()
-    parameters: ParametersType = {
-        "type": "object",
-        "properties": {
-            "description": {
-                "type": "string",
-                "description": "A short (3-5 word) description of the task",
-            },
-            "subagent_name": {
-                "type": "string",
-                "description": "The name of the specialized subagent to use for this task",
-            },
-            "prompt": {
-                "type": "string",
-                "description": (
-                    "The task for the subagent to perform. "
-                    "This prompt should be accurate and specific to the task. "
-                    "Neccesary background should be provided in a concise manner."
-                ),
-            },
-        },
-        "required": ["description", "subagent_name", "prompt"],
-    }
+    params: type[Params] = Params
 
     def __init__(self, agent_globals: AgentGlobals, **kwargs):
         super().__init__(**kwargs)
@@ -65,15 +58,15 @@ class Task(CallableTool):
             self._subagents[subagent_name] = load_agent(agent_file, agent_globals)
 
     @override
-    async def __call__(self, description: str, subagent_name: str, prompt: str) -> ToolReturnType:
-        if subagent_name not in self._subagents:
+    async def __call__(self, params: Params) -> ToolReturnType:
+        if params.subagent_name not in self._subagents:
             return ToolError(
-                message=f"Subagent not found: {subagent_name}",
+                message=f"Subagent not found: {params.subagent_name}",
                 brief="Subagent not found",
             )
-        agent = self._subagents[subagent_name]
+        agent = self._subagents[params.subagent_name]
         try:
-            result = await self._run_subagent(agent, prompt)
+            result = await self._run_subagent(agent, params.prompt)
             return result
         except Exception as e:
             return ToolError(

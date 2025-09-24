@@ -6,7 +6,7 @@ import pytest
 from kosong.tooling import ToolError, ToolOk
 
 from kimi_cli.agent import BuiltinSystemPromptArgs
-from kimi_cli.tools.file.read import ReadFile
+from kimi_cli.tools.file.read import Params, ReadFile
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ Line 5: End of file"""
 @pytest.mark.asyncio
 async def test_read_entire_file(read_file_tool: ReadFile, sample_file: Path):
     """Test reading an entire file."""
-    result = await read_file_tool(str(sample_file))
+    result = await read_file_tool(Params(path=str(sample_file)))
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
@@ -43,7 +43,7 @@ async def test_read_entire_file(read_file_tool: ReadFile, sample_file: Path):
 @pytest.mark.asyncio
 async def test_read_with_line_offset(read_file_tool: ReadFile, sample_file: Path):
     """Test reading from a specific line offset."""
-    result = await read_file_tool(str(sample_file), line_offset=3)
+    result = await read_file_tool(Params(path=str(sample_file), line_offset=3))
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
@@ -56,7 +56,7 @@ async def test_read_with_line_offset(read_file_tool: ReadFile, sample_file: Path
 @pytest.mark.asyncio
 async def test_read_with_n_lines(read_file_tool: ReadFile, sample_file: Path):
     """Test reading a specific number of lines."""
-    result = await read_file_tool(str(sample_file), n_lines=2)
+    result = await read_file_tool(Params(path=str(sample_file), n_lines=2))
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
@@ -69,7 +69,7 @@ async def test_read_with_n_lines(read_file_tool: ReadFile, sample_file: Path):
 @pytest.mark.asyncio
 async def test_read_with_line_offset_and_n_lines(read_file_tool: ReadFile, sample_file: Path):
     """Test reading with both line offset and n_lines."""
-    result = await read_file_tool(str(sample_file), line_offset=2, n_lines=2)
+    result = await read_file_tool(Params(path=str(sample_file), line_offset=2, n_lines=2))
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
@@ -84,7 +84,7 @@ async def test_read_with_line_offset_and_n_lines(read_file_tool: ReadFile, sampl
 async def test_read_nonexistent_file(read_file_tool: ReadFile, temp_work_dir: Path):
     """Test reading a non-existent file."""
     nonexistent_file = temp_work_dir / "nonexistent.txt"
-    result = await read_file_tool(str(nonexistent_file))
+    result = await read_file_tool(Params(path=str(nonexistent_file)))
 
     assert isinstance(result, ToolError)
     assert "does not exist" in result.message
@@ -93,7 +93,7 @@ async def test_read_nonexistent_file(read_file_tool: ReadFile, temp_work_dir: Pa
 @pytest.mark.asyncio
 async def test_read_directory_instead_of_file(read_file_tool: ReadFile, temp_work_dir: Path):
     """Test attempting to read a directory."""
-    result = await read_file_tool(str(temp_work_dir))
+    result = await read_file_tool(Params(path=str(temp_work_dir)))
 
     assert isinstance(result, ToolError)
     assert "is not a file" in result.message
@@ -102,7 +102,7 @@ async def test_read_directory_instead_of_file(read_file_tool: ReadFile, temp_wor
 @pytest.mark.asyncio
 async def test_read_with_relative_path(read_file_tool: ReadFile):
     """Test reading with a relative path (should fail)."""
-    result = await read_file_tool("relative/path/file.txt")
+    result = await read_file_tool(Params(path="relative/path/file.txt"))
 
     assert isinstance(result, ToolError)
     assert "not an absolute path" in result.message
@@ -114,7 +114,7 @@ async def test_read_empty_file(read_file_tool: ReadFile, temp_work_dir: Path):
     empty_file = temp_work_dir / "empty.txt"
     empty_file.write_text("")
 
-    result = await read_file_tool(str(empty_file))
+    result = await read_file_tool(Params(path=str(empty_file)))
 
     assert isinstance(result, ToolOk)
     assert result.output == ""
@@ -124,7 +124,7 @@ async def test_read_empty_file(read_file_tool: ReadFile, temp_work_dir: Path):
 @pytest.mark.asyncio
 async def test_read_line_offset_beyond_file_length(read_file_tool: ReadFile, sample_file: Path):
     """Test reading with line offset beyond file length."""
-    result = await read_file_tool(str(sample_file), line_offset=10)
+    result = await read_file_tool(Params(path=str(sample_file), line_offset=10))
 
     assert isinstance(result, ToolOk)
     assert result.output == ""
@@ -138,7 +138,7 @@ async def test_read_unicode_file(read_file_tool: ReadFile, temp_work_dir: Path):
     content = "Hello 世界 🌍\nUnicode test: café, naïve, résumé"
     unicode_file.write_text(content, encoding="utf-8")
 
-    result = await read_file_tool(str(unicode_file))
+    result = await read_file_tool(Params(path=str(unicode_file)))
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
@@ -151,20 +151,20 @@ async def test_read_unicode_file(read_file_tool: ReadFile, temp_work_dir: Path):
 async def test_read_edge_cases(read_file_tool: ReadFile, sample_file: Path):
     """Test edge cases for line offset reading."""
     # Test reading from line 1 (should be same as default)
-    result = await read_file_tool(str(sample_file), line_offset=1)
+    result = await read_file_tool(Params(path=str(sample_file), line_offset=1))
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
     assert "5 lines read from" in result.message
 
     # Test reading from line 5 (last line)
-    result = await read_file_tool(str(sample_file), line_offset=5)
+    result = await read_file_tool(Params(path=str(sample_file), line_offset=5))
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
     assert "1 lines read from" in result.message
     assert "     5\tLine 5: End of file" in result.output
 
     # Test reading with offset and n_lines combined
-    result = await read_file_tool(str(sample_file), line_offset=2, n_lines=1)
+    result = await read_file_tool(Params(path=str(sample_file), line_offset=2, n_lines=1))
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
     assert "1 lines read from" in result.message
@@ -181,7 +181,7 @@ async def test_long_line_truncation(read_file_tool: ReadFile, temp_work_dir: Pat
     long_content = "A" * 2500 + " This should be truncated"
     long_line_file.write_text(long_content)
 
-    result = await read_file_tool(str(long_line_file))
+    result = await read_file_tool(Params(path=str(long_line_file)))
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)

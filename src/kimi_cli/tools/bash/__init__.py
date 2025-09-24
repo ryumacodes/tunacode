@@ -2,32 +2,28 @@ import asyncio
 from pathlib import Path
 from typing import override
 
-from kosong.base.tool import ParametersType
-from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
+from kosong.tooling import CallableTool2, ToolError, ToolOk, ToolReturnType
+from pydantic import BaseModel, Field
 
 
-class Bash(CallableTool):
+class Params(BaseModel):
+    command: str = Field(description="The bash command to execute.")
+    timeout: int = Field(
+        description=(
+            "The timeout in seconds for the command to execute. "
+            "If the command takes longer than this, it will be killed."
+        ),
+        default=60,
+    )
+
+
+class Bash(CallableTool2[Params]):
     name: str = "Bash"
     description: str = (Path(__file__).parent / "bash.md").read_text()
-    parameters: ParametersType = {
-        "type": "object",
-        "properties": {
-            "command": {
-                "type": "string",
-                "description": "The bash command to execute.",
-            },
-            "timeout": {
-                "type": "number",
-                "description": "The timeout in seconds for the command to execute. \
-                    If the command takes longer than this, it will be killed.",
-                "default": 60,
-            },
-        },
-        "required": ["command"],
-    }
+    params: type[Params] = Params
 
     @override
-    async def __call__(self, command: str, timeout: int = 60) -> ToolReturnType:
+    async def __call__(self, params) -> ToolReturnType:
         output = []
 
         def stdout_cb(line: bytes):
@@ -39,7 +35,9 @@ class Bash(CallableTool):
             output.append(line_str)
 
         try:
-            exitcode = await _stream_subprocess(command, stdout_cb, stderr_cb, timeout)
+            exitcode = await _stream_subprocess(
+                params.command, stdout_cb, stderr_cb, params.timeout
+            )
             # TODO: truncate/compress the output if it is too long
             output_str = "".join(output)
             if exitcode == 0:
@@ -53,8 +51,8 @@ class Bash(CallableTool):
             output_str = "".join(output)
             return ToolError(
                 output=output_str,
-                message=f"Command killed by timeout ({timeout}s)",
-                brief=f"Killed by timeout ({timeout}s)",
+                message=f"Command killed by timeout ({params.timeout}s)",
+                brief=f"Killed by timeout ({params.timeout}s)",
             )
 
 

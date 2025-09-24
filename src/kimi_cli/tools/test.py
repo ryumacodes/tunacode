@@ -1,59 +1,55 @@
 import asyncio
 from typing import override
 
-from kosong.base.tool import ParametersType
-from kosong.tooling import CallableTool, ToolOk, ToolReturnType
+from kosong.tooling import CallableTool2, ToolOk, ToolReturnType
+from pydantic import BaseModel
 
 
-class Plus(CallableTool):
+class PlusParams(BaseModel):
+    a: float
+    b: float
+
+
+class Plus(CallableTool2[PlusParams]):
     name: str = "plus"
     description: str = "Add two numbers"
-    parameters: ParametersType = {
-        "type": "object",
-        "properties": {
-            "a": {"type": "number"},
-            "b": {"type": "number"},
-        },
-        "required": ["a", "b"],
-    }
+    params: type[PlusParams] = PlusParams
 
     @override
-    async def __call__(self, a: float, b: float) -> ToolReturnType:
-        return ToolOk(output=str(a + b))
+    async def __call__(self, params: PlusParams) -> ToolReturnType:
+        return ToolOk(output=str(params.a + params.b))
 
 
-class Compare(CallableTool):
+class CompareParams(BaseModel):
+    a: float
+    b: float
+
+
+class Compare(CallableTool2[CompareParams]):
     name: str = "compare"
     description: str = "Compare two numbers"
-    parameters: ParametersType = {
-        "type": "object",
-        "properties": {
-            "a": {"type": "number"},
-            "b": {"type": "number"},
-        },
-    }
+    params: type[CompareParams] = CompareParams
 
     @override
-    async def __call__(self, a: float, b: float) -> ToolReturnType:
-        if a > b:
+    async def __call__(self, params: CompareParams) -> ToolReturnType:
+        if params.a > params.b:
             return ToolOk(output="greater")
-        elif a < b:
+        elif params.a < params.b:
             return ToolOk(output="less")
         else:
             return ToolOk(output="equal")
 
 
-class Panic(CallableTool):
+class PanicParams(BaseModel):
+    message: str
+
+
+class Panic(CallableTool2[PanicParams]):
     name: str = "panic"
     description: str = "Raise an exception to cause the tool call to fail."
-    parameters: ParametersType = {
-        "type": "object",
-        "properties": {
-            "message": {"type": "string"},
-        },
-    }
+    params: type[PanicParams] = PanicParams
 
     @override
-    async def __call__(self, message: str) -> ToolReturnType:
+    async def __call__(self, params: PanicParams) -> ToolReturnType:
         await asyncio.sleep(2)
-        raise Exception(f"panicked with a message with {len(message)} characters")
+        raise Exception(f"panicked with a message with {len(params.message)} characters")

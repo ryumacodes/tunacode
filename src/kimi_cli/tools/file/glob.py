@@ -3,40 +3,32 @@
 from pathlib import Path
 from typing import override
 
-from kosong.base.tool import ParametersType
-from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
+from kosong.tooling import CallableTool2, ToolError, ToolOk, ToolReturnType
+from pydantic import BaseModel, Field
 
 from kimi_cli.agent import BuiltinSystemPromptArgs
 
 
-class Glob(CallableTool):
+class Params(BaseModel):
+    pattern: str = Field(
+        description=(
+            "Glob pattern to match files/directories (e.g., `*.py`, `src/**/*.js`, `test_*.txt`)"
+        )
+    )
+    directory: str | None = Field(
+        description=("Absolute path to the directory to search in (defaults to working directory)"),
+        default=None,
+    )
+    include_dirs: bool = Field(
+        description="Whether to include directories in results",
+        default=True,
+    )
+
+
+class Glob(CallableTool2[Params]):
     name: str = "Glob"
     description: str = (Path(__file__).parent / "glob.md").read_text()
-    parameters: ParametersType = {
-        "type": "object",
-        "properties": {
-            "pattern": {
-                "type": "string",
-                "description": (
-                    "Glob pattern to match files/directories "
-                    "(e.g., `*.py`, `src/**/*.js`, `test_*.txt`)"
-                ),
-            },
-            "directory": {
-                "type": "string",
-                "description": (
-                    "Absolute path to the directory to search in (defaults to working directory)"
-                ),
-                "default": None,
-            },
-            "include_dirs": {
-                "type": "boolean",
-                "description": "Whether to include directories in results",
-                "default": True,
-            },
-        },
-        "required": ["pattern"],
-    }
+    params: type[Params] = Params
 
     def __init__(self, builtin_args: BuiltinSystemPromptArgs, **kwargs):
         super().__init__(**kwargs)
@@ -74,24 +66,19 @@ class Glob(CallableTool):
         return None
 
     @override
-    async def __call__(
-        self,
-        pattern: str,
-        directory: str | None = None,
-        include_dirs: bool = True,
-    ) -> ToolReturnType:
+    async def __call__(self, params: Params) -> ToolReturnType:
         try:
             # Validate pattern safety
-            pattern_error = self._validate_pattern(pattern)
+            pattern_error = self._validate_pattern(params.pattern)
             if pattern_error:
                 return pattern_error
 
-            dir_path = Path(directory) if directory else self._work_dir
+            dir_path = Path(params.directory) if params.directory else self._work_dir
 
             if not dir_path.is_absolute():
                 return ToolError(
                     message=(
-                        f"`{directory}` is not an absolute path. "
+                        f"`{params.directory}` is not an absolute path. "
                         "You must provide an absolute path to search."
                     ),
                     brief="Invalid directory",
@@ -104,20 +91,20 @@ class Glob(CallableTool):
 
             if not dir_path.exists():
                 return ToolError(
-                    message=f"`{directory}` does not exist.",
+                    message=f"`{params.directory}` does not exist.",
                     brief="Directory not found",
                 )
             if not dir_path.is_dir():
                 return ToolError(
-                    message=f"`{directory}` is not a directory.",
+                    message=f"`{params.directory}` is not a directory.",
                     brief="Invalid directory",
                 )
 
             # Perform the glob search - users can use ** directly in pattern
-            matches = list(dir_path.glob(pattern))
+            matches = list(dir_path.glob(params.pattern))
 
             # Filter out directories if not requested
-            if not include_dirs:
+            if not params.include_dirs:
                 matches = [p for p in matches if p.is_file()]
 
             # Sort for consistent output
@@ -127,16 +114,16 @@ class Glob(CallableTool):
             if not matches:
                 return ToolOk(
                     output="",
-                    message=f"No files or directories found matching pattern `{pattern}`.",
+                    message=f"No files or directories found matching pattern `{params.pattern}`.",
                 )
 
             return ToolOk(
                 output="\n".join(str(p.relative_to(dir_path)) for p in matches),
-                message=f"Found {len(matches)} matches for pattern `{pattern}`.",
+                message=f"Found {len(matches)} matches for pattern `{params.pattern}`.",
             )
 
         except Exception as e:
             return ToolError(
-                message=f"Failed to search for pattern {pattern}. Error: {e}",
+                message=f"Failed to search for pattern {params.pattern}. Error: {e}",
                 brief="Glob failed",
             )
