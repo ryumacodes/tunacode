@@ -1,4 +1,4 @@
-Delegates complex, self-contained tasks to specialized subagents for context isolation and focused problem-solving.
+Delegates self-contained tasks to specialized subagents for context isolation and focused problem-solving.
 
 **When to use:**
 - **Context isolation**: Offload lengthy debugging, compilation fixes, or multi-step problem-solving that would pollute your main context

@@ -19,7 +19,7 @@ class Glob(CallableTool):
                 "type": "string",
                 "description": (
                     "Glob pattern to match files/directories "
-                    "(e.g., '*.py', 'src/**/*.js', 'test_*.txt')"
+                    "(e.g., `*.py`, `src/**/*.js`, `test_*.txt`)"
                 ),
             },
             "directory": {
