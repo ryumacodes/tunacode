@@ -27,8 +27,7 @@ class Params(BaseModel):
     )
     output_mode: str = Field(
         description=(
-            "`content`: Show matching lines (supports `before_context`, `after_context` "
-            " `context`, `line_number`, `head_limit`); "
+            "`content`: Show matching lines (supports `-B`, `-A`, `-C`, `-n`, `head_limit`); "
             "`files_with_matches`: Show file paths (supports `head_limit`); "
             "`count_matches`: Show total number of matches. "
             "Defaults to `files_with_matches`."
@@ -36,6 +35,7 @@ class Params(BaseModel):
         default="files_with_matches",
     )
     before_context: int | None = Field(
+        alias="-B",
         description=(
             "Number of lines to show before each match (the `-B` option). "
             "Requires `output_mode` to be `content`."
@@ -43,6 +43,7 @@ class Params(BaseModel):
         default=None,
     )
     after_context: int | None = Field(
+        alias="-A",
         description=(
             "Number of lines to show after each match (the `-A` option). "
             "Requires `output_mode` to be `content`."
@@ -50,6 +51,7 @@ class Params(BaseModel):
         default=None,
     )
     context: int | None = Field(
+        alias="-C",
         description=(
             "Number of lines to show before and after each match (the `-C` option). "
             "Requires `output_mode` to be `content`."
@@ -57,12 +59,14 @@ class Params(BaseModel):
         default=None,
     )
     line_number: bool = Field(
+        alias="-n",
         description=(
             "Show line numbers in output (the `-n` option). Requires `output_mode` to be `content`."
         ),
         default=False,
     )
     ignore_case: bool = Field(
+        alias="-i",
         description="Case insensitive search (the `-i` option).",
         default=False,
     )

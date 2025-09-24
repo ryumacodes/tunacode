@@ -82,12 +82,14 @@ async def test_grep_content_mode(grep_tool: Grep, temp_test_files):
     temp_dir, test_files = temp_test_files
 
     result = await grep_tool(
-        Params(
-            pattern="hello",
-            path=temp_dir,
-            output_mode="content",
-            line_number=True,
-            ignore_case=True,
+        Params.model_validate(
+            {
+                "pattern": "hello",
+                "path": temp_dir,
+                "output_mode": "content",
+                "-n": True,
+                "-i": True,
+            }
         )
     )
     assert isinstance(result, ToolOk)
@@ -104,7 +106,14 @@ async def test_grep_case_insensitive(grep_tool: Grep, temp_test_files):
     temp_dir, test_files = temp_test_files
 
     result = await grep_tool(
-        Params(pattern="HELLO", path=temp_dir, output_mode="files_with_matches", ignore_case=True)
+        Params.model_validate(
+            {
+                "pattern": "HELLO",
+                "path": temp_dir,
+                "output_mode": "files_with_matches",
+                "-i": True,
+            }
+        )
     )
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
@@ -119,8 +128,14 @@ async def test_grep_with_context(grep_tool: Grep, temp_test_files):
     temp_dir, test_files = temp_test_files
 
     result = await grep_tool(
-        Params(
-            pattern="TestClass", path=temp_dir, output_mode="content", context=1, line_number=True
+        Params.model_validate(
+            {
+                "pattern": "TestClass",
+                "path": temp_dir,
+                "output_mode": "content",
+                "-C": 1,
+                "-n": True,
+            }
         )
     )
     assert isinstance(result, ToolOk)
@@ -137,7 +152,14 @@ async def test_grep_count_matches(grep_tool: Grep, temp_test_files):
     temp_dir, test_files = temp_test_files
 
     result = await grep_tool(
-        Params(pattern="hello", path=temp_dir, output_mode="count_matches", ignore_case=True)
+        Params.model_validate(
+            {
+                "pattern": "hello",
+                "path": temp_dir,
+                "output_mode": "count_matches",
+                "-i": True,
+            }
+        )
     )
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
@@ -153,12 +175,14 @@ async def test_grep_with_glob_pattern(grep_tool: Grep, temp_test_files):
     temp_dir, test_files = temp_test_files
 
     result = await grep_tool(
-        Params(
-            pattern="hello",
-            path=temp_dir,
-            output_mode="files_with_matches",
-            glob="*.py",
-            ignore_case=True,
+        Params.model_validate(
+            {
+                "pattern": "hello",
+                "path": temp_dir,
+                "output_mode": "files_with_matches",
+                "glob": "*.py",
+                "-i": True,
+            }
         )
     )
     assert isinstance(result, ToolOk)
@@ -177,12 +201,14 @@ async def test_grep_with_type_filter(grep_tool: Grep, temp_test_files):
     temp_dir, test_files = temp_test_files
 
     result = await grep_tool(
-        Params(
-            pattern="hello",
-            path=temp_dir,
-            output_mode="files_with_matches",
-            type="py",
-            ignore_case=True,
+        Params.model_validate(
+            {
+                "pattern": "hello",
+                "path": temp_dir,
+                "output_mode": "files_with_matches",
+                "type": "py",
+                "-i": True,
+            }
         )
     )
     assert isinstance(result, ToolOk)
@@ -201,12 +227,14 @@ async def test_grep_head_limit(grep_tool: Grep, temp_test_files):
     temp_dir, test_files = temp_test_files
 
     result = await grep_tool(
-        Params(
-            pattern="hello",
-            path=temp_dir,
-            output_mode="files_with_matches",
-            head_limit=2,
-            ignore_case=True,
+        Params.model_validate(
+            {
+                "pattern": "hello",
+                "path": temp_dir,
+                "output_mode": "files_with_matches",
+                "head_limit": 2,
+                "-i": True,
+            }
         )
     )
     assert isinstance(result, ToolOk)
@@ -280,7 +308,14 @@ async def test_grep_single_file(grep_tool: Grep):
         f.flush()
 
         result = await grep_tool(
-            Params(pattern="hello", path=f.name, output_mode="content", line_number=True)
+            Params.model_validate(
+                {
+                    "pattern": "hello",
+                    "path": f.name,
+                    "output_mode": "content",
+                    "-n": True,
+                }
+            )
         )
         assert isinstance(result, ToolOk)
         assert isinstance(result.output, str)
@@ -298,12 +333,14 @@ async def test_grep_before_after_context(grep_tool: Grep, temp_test_files):
 
     # Test before context
     result = await grep_tool(
-        Params(
-            pattern="TestClass",
-            path=temp_dir,
-            output_mode="content",
-            before_context=2,
-            line_number=True,
+        Params.model_validate(
+            {
+                "pattern": "TestClass",
+                "path": temp_dir,
+                "output_mode": "content",
+                "-B": 2,
+                "-n": True,
+            }
         )
     )
     assert isinstance(result, ToolOk)
@@ -315,12 +352,14 @@ async def test_grep_before_after_context(grep_tool: Grep, temp_test_files):
 
     # Test after context
     result = await grep_tool(
-        Params(
-            pattern="TestClass",
-            path=temp_dir,
-            output_mode="content",
-            after_context=2,
-            line_number=True,
+        Params.model_validate(
+            {
+                "pattern": "TestClass",
+                "path": temp_dir,
+                "output_mode": "content",
+                "-A": 2,
+                "-n": True,
+            }
         )
     )
     assert isinstance(result, ToolOk)
