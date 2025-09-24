@@ -20,5 +20,7 @@ def temp_work_dir() -> Generator[Path]:
 def builtin_args(temp_work_dir: Path) -> BuiltinSystemPromptArgs:
     """Create builtin arguments with temporary work directory."""
     return BuiltinSystemPromptArgs(
-        ENSOUL_WORK_DIR=temp_work_dir, ENSOUL_AGENTS_MD="Test agents content"
+        ENSOUL_WORK_DIR=temp_work_dir,
+        ENSOUL_WORK_DIR_LS="Test ls content",
+        ENSOUL_AGENTS_MD="Test agents content",
     )

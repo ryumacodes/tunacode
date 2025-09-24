@@ -18,7 +18,15 @@ The operating environment is not in a sandbox. Any action especially mutation yo
 
 ## Working Directory
 
-The current working directory is `${ENSOUL_WORK_DIR}`. This should also be considered as the project root if you are instructed to perform tasks on the project. Every file system operation will be relative to the working directory if you do not explicitly specify the absolute path. Tools may require absolute paths for some parameters, if so, you should strictly follow the requirements.
+The current working directory is `${ENSOUL_WORK_DIR}`. This should be considered as the project root if you are instructed to perform tasks on the project. Every file system operation will be relative to the working directory if you do not explicitly specify the absolute path. Tools may require absolute paths for some parameters, if so, you should strictly follow the requirements.
+
+The `ls -la` output of current working directory is:
+
+```
+${ENSOUL_WORK_DIR_LS}
+```
+
+Use this as your basic understanding of the project structure.
 
 # Project Information
 

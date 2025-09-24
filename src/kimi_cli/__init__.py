@@ -1,6 +1,7 @@
 import asyncio
 import importlib.metadata
 import os
+import subprocess
 import textwrap
 from pathlib import Path
 from typing import Literal
@@ -197,6 +198,7 @@ def kimi_run(
     """Run Kimi CLI."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
 
+    ls = subprocess.run(["ls", "-la"], capture_output=True, text=True)
     agents_md = load_agents_md(work_dir) or ""
     if agents_md:
         echo(f"✓ Loaded agents.md: {textwrap.shorten(agents_md, width=100)}")
@@ -205,6 +207,7 @@ def kimi_run(
         chat_provider=chat_provider,
         builtin_args=BuiltinSystemPromptArgs(
             ENSOUL_WORK_DIR=work_dir,
+            ENSOUL_WORK_DIR_LS=ls.stdout,
             ENSOUL_AGENTS_MD=agents_md,
         ),
         denwa_renji=DenwaRenji(),
