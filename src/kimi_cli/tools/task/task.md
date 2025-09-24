@@ -2,12 +2,11 @@ Delegates self-contained tasks to specialized subagents for context isolation an
 
 **When to use:**
 - **Context isolation**: Offload lengthy debugging, compilation fixes, or multi-step problem-solving that would pollute your main context
-- **Complex analysis**: Tasks requiring deep exploration, investigation, or iterative problem-solving
-- **Independent expertise**: Work that benefits from specialized agent focus without ongoing supervision
+- **Complex analysis**: Tasks requiring deep exploration, investigation, or iterative problem-solving, of which only the final result rather than the entire process matters to you
 
 **When NOT to use:**
 - Simple single-tool operations (use direct tools instead)
-- Tasks requiring continuous interaction or real-time monitoring
+- Tasks that may require your entire context as background information
 - Actions that need immediate feedback or course-correction
 
 **Key Benefits:**
