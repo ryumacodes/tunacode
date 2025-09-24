@@ -35,13 +35,15 @@ from kimi_cli.ui.print import PrintApp
 from kimi_cli.ui.shell import ShellApp
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
 
+__version__ = importlib.metadata.version("ensoul")
+
 DEFAULT_AGENT_FILE = get_agents_dir() / "koder" / "agent.yaml"
 
 UIMode = Literal["shell", "print"]
 
 
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
-@click.version_option(importlib.metadata.version("ensoul"))
+@click.version_option(__version__)
 @click.option(
     "--verbose",
     is_flag=True,

@@ -5,6 +5,7 @@ from kosong.chat_provider import ChaosChatProvider, Kimi, OpenAILegacy
 from kosong.chat_provider.chaos import ChaosConfig
 from pydantic import SecretStr
 
+import kimi_cli
 from kimi_cli.config import LLMModel, LLMProvider
 
 
@@ -34,6 +35,9 @@ def create_chat_provider(
                 base_url=provider.base_url,
                 api_key=provider.api_key.get_secret_value(),
                 stream=stream,
+                default_headers={
+                    "User-Agent": f"KimiCLI/{kimi_cli.__version__}",
+                },
             )
         case "openai_legacy":
             return OpenAILegacy(
