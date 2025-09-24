@@ -27,7 +27,7 @@ Please expand with comprehensive details.
 
 
 class Task(CallableTool):
-    name: str = "task"
+    name: str = "Task"
     description: str = (Path(__file__).parent / "task.md").read_text()
     parameters: ParametersType = {
         "type": "object",

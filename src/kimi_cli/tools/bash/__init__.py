@@ -6,15 +6,15 @@ from kosong.base.tool import ParametersType
 from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
 
 
-class Shell(CallableTool):
-    name: str = "shell"
-    description: str = (Path(__file__).parent / "shell.md").read_text()
+class Bash(CallableTool):
+    name: str = "Bash"
+    description: str = (Path(__file__).parent / "bash.md").read_text()
     parameters: ParametersType = {
         "type": "object",
         "properties": {
             "command": {
                 "type": "string",
-                "description": "The shell command to execute.",
+                "description": "The bash command to execute.",
             },
             "timeout": {
                 "type": "number",

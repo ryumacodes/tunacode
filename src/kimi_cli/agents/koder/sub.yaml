@@ -29,7 +29,7 @@ agent:
 
       You operate in an isolated context - your detailed problem-solving process won't affect the main conversation. Focus on providing comprehensive solutions that can be directly used.
   tools:
-    - "kimi_cli.tools.shell:Shell"
+    - "kimi_cli.tools.bash:Bash"
     - "kimi_cli.tools.file:ReadFile"
     - "kimi_cli.tools.file:WriteFile"
     - "kimi_cli.tools.file:Glob"

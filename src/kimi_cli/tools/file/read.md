@@ -8,5 +8,5 @@ Read content from a file.
 - Content will be returned after a <system-message> tag.
 - Content will be returned with a line number before each line like `cat -n` format.
 - You have the ability to spawn multiple tool calls in one response. It is highly encouraged to read multiple files with parallel tool calls.
-- Can only read files, not directories. To list directories, use `ls` command via the `bash` tool.
+- Can only read files, not directories. To list directories, use `ls` command via the Bash tool.
 - If the file doesn't exist or path is invalid, an error will be returned.

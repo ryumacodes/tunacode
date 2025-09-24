@@ -8,7 +8,7 @@ from kimi_cli.denwarenji import DenwaRenji
 
 
 class DMail(CallableTool):
-    name: str = "dmail"
+    name: str = "DMail"
     description: str = (Path(__file__).parent / "dmail.md").read_text()
     parameters: ParametersType = {
         "type": "object",

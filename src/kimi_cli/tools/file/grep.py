@@ -7,7 +7,7 @@ from kosong.tooling import CallableTool, ToolError, ToolOk, ToolReturnType
 
 # TODO: download ripgrep if not available
 class Grep(CallableTool):
-    name: str = "grep"
+    name: str = "Grep"
     description: str = (Path(__file__).parent / "grep.md").read_text()
     parameters: ParametersType = {
         "type": "object",

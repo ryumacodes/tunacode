@@ -5,19 +5,19 @@ from pathlib import Path
 import pytest
 from kosong.tooling import ToolError, ToolOk
 
-from kimi_cli.tools.shell import Shell
+from kimi_cli.tools.bash import Bash
 
 
 @pytest.fixture
-def shell_tool() -> Shell:
+def bash_tool() -> Bash:
     """Create a Shell tool instance."""
-    return Shell()
+    return Bash()
 
 
 @pytest.mark.asyncio
-async def test_simple_command(shell_tool: Shell):
+async def test_simple_command(bash_tool: Bash):
     """Test executing a simple command."""
-    result = await shell_tool("echo 'Hello World'")
+    result = await bash_tool("echo 'Hello World'")
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -26,9 +26,9 @@ async def test_simple_command(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_command_with_error(shell_tool: Shell):
+async def test_command_with_error(bash_tool: Bash):
     """Test executing a command that returns an error."""
-    result = await shell_tool("ls /nonexistent/directory")
+    result = await bash_tool("ls /nonexistent/directory")
 
     assert isinstance(result, ToolError)
     assert "Failed with exit code" in result.brief
@@ -36,9 +36,9 @@ async def test_command_with_error(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_command_chaining(shell_tool: Shell):
+async def test_command_chaining(bash_tool: Bash):
     """Test command chaining with &&."""
-    result = await shell_tool("echo 'First' && echo 'Second'")
+    result = await bash_tool("echo 'First' && echo 'Second'")
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -47,9 +47,9 @@ async def test_command_chaining(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_command_sequential(shell_tool: Shell):
+async def test_command_sequential(bash_tool: Bash):
     """Test sequential command execution with ;."""
-    result = await shell_tool("echo 'One'; echo 'Two'")
+    result = await bash_tool("echo 'One'; echo 'Two'")
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -58,9 +58,9 @@ async def test_command_sequential(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_command_conditional(shell_tool: Shell):
+async def test_command_conditional(bash_tool: Bash):
     """Test conditional command execution with ||."""
-    result = await shell_tool("false || echo 'Success'")
+    result = await bash_tool("false || echo 'Success'")
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -68,9 +68,9 @@ async def test_command_conditional(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_command_pipe(shell_tool: Shell):
+async def test_command_pipe(bash_tool: Bash):
     """Test command piping."""
-    result = await shell_tool("echo 'Hello World' | wc -w")
+    result = await bash_tool("echo 'Hello World' | wc -w")
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -79,9 +79,9 @@ async def test_command_pipe(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_command_with_timeout(shell_tool: Shell):
+async def test_command_with_timeout(bash_tool: Bash):
     """Test command execution with timeout."""
-    result = await shell_tool("sleep 0.1", timeout=1)
+    result = await bash_tool("sleep 0.1", timeout=1)
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -89,9 +89,9 @@ async def test_command_with_timeout(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_command_timeout_expires(shell_tool: Shell):
+async def test_command_timeout_expires(bash_tool: Bash):
     """Test command that times out."""
-    result = await shell_tool("sleep 2", timeout=1)
+    result = await bash_tool("sleep 2", timeout=1)
 
     assert isinstance(result, ToolError)
     assert "Killed by timeout" in result.brief
@@ -99,9 +99,9 @@ async def test_command_timeout_expires(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_environment_variables(shell_tool: Shell):
+async def test_environment_variables(bash_tool: Bash):
     """Test setting and using environment variables."""
-    result = await shell_tool("export TEST_VAR='test_value' && echo $TEST_VAR")
+    result = await bash_tool("export TEST_VAR='test_value' && echo $TEST_VAR")
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -109,23 +109,23 @@ async def test_environment_variables(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_file_operations(shell_tool: Shell, temp_work_dir: Path):
+async def test_file_operations(bash_tool: Bash, temp_work_dir: Path):
     """Test basic file operations."""
     # Create a test file
-    result = await shell_tool(f"echo 'Test content' > {temp_work_dir}/test_file.txt")
+    result = await bash_tool(f"echo 'Test content' > {temp_work_dir}/test_file.txt")
     assert isinstance(result, ToolOk)
 
     # Read the file
-    result = await shell_tool(f"cat {temp_work_dir}/test_file.txt")
+    result = await bash_tool(f"cat {temp_work_dir}/test_file.txt")
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
     assert "Test content" in result.value
 
 
 @pytest.mark.asyncio
-async def test_text_processing(shell_tool: Shell):
+async def test_text_processing(bash_tool: Bash):
     """Test text processing commands."""
-    result = await shell_tool("echo 'apple banana cherry' | sed 's/banana/orange/'")
+    result = await bash_tool("echo 'apple banana cherry' | sed 's/banana/orange/'")
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -133,9 +133,9 @@ async def test_text_processing(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_multiple_pipes(shell_tool: Shell):
+async def test_multiple_pipes(bash_tool: Bash):
     """Test multiple pipes in one command."""
-    result = await shell_tool("echo '1\n2\n3' | grep '2' | wc -l")
+    result = await bash_tool("echo '1\n2\n3' | grep '2' | wc -l")
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -143,9 +143,9 @@ async def test_multiple_pipes(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_command_substitution(shell_tool: Shell):
+async def test_command_substitution(bash_tool: Bash):
     """Test command substitution with a portable command."""
-    result = await shell_tool('echo "Result: $(echo hello)"')
+    result = await bash_tool('echo "Result: $(echo hello)"')
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -153,9 +153,9 @@ async def test_command_substitution(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_arithmetic_substitution(shell_tool: Shell):
+async def test_arithmetic_substitution(bash_tool: Bash):
     """Test arithmetic substitution - more portable than date command."""
-    result = await shell_tool('echo "Answer: $((2 + 2))"')
+    result = await bash_tool('echo "Answer: $((2 + 2))"')
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)
@@ -163,9 +163,9 @@ async def test_arithmetic_substitution(shell_tool: Shell):
 
 
 @pytest.mark.asyncio
-async def test_very_long_output(shell_tool: Shell):
+async def test_very_long_output(bash_tool: Bash):
     """Test command that produces very long output."""
-    result = await shell_tool("seq 1 100 | head -50")
+    result = await bash_tool("seq 1 100 | head -50")
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.value, str)

@@ -9,7 +9,7 @@ from kimi_cli.agent import BuiltinSystemPromptArgs
 
 
 class WriteFile(CallableTool):
-    name: str = "write_file"
+    name: str = "WriteFile"
     description: str = (Path(__file__).parent / "write.md").read_text()
     parameters: ParametersType = {
         "type": "object",

@@ -28,7 +28,7 @@ def _truncate_line(line: str, max_length: int = _MAX_LINE_LENGTH) -> str:
 
 
 class ReadFile(CallableTool):
-    name: str = "read_file"
+    name: str = "ReadFile"
     description: str = (Path(__file__).parent / "read.md").read_text()
     parameters: ParametersType = {
         "type": "object",

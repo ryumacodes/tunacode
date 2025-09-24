@@ -10,7 +10,7 @@ from kimi_cli.agent import BuiltinSystemPromptArgs
 
 
 class Glob(CallableTool):
-    name: str = "glob"
+    name: str = "Glob"
     description: str = (Path(__file__).parent / "glob.md").read_text()
     parameters: ParametersType = {
         "type": "object",
