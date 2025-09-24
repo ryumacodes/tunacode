@@ -9,6 +9,17 @@ Internal builds may append content to the Unreleased section.
 Only write entries that are worth mentioning to users.
 -->
 
+## [0.12.0] - 2025-09-24
+
+### Added
+
+- Add `print` UI mode, which can be used via `--ui print` option
+- Add logging and `--debug` option
+
+### Changed
+
+- Catch EOF error for better experience
+
 ## [0.11.1] - 2025-09-22
 
 ### Changed
