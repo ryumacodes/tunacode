@@ -15,6 +15,10 @@ Only write entries that are worth mentioning to users.
 
 - Add `StrReplaceFile` tool
 
+### Improved
+
+- Emphasize the use of the same language as the user
+
 ## [0.13.0] - 2025-09-25
 
 ### Added
