@@ -9,7 +9,6 @@ from rich.text import Text
 
 from kimi_cli.tools import extract_subtitle
 from kimi_cli.ui.shell.console import console
-from kimi_cli.utils.string import shorten_middle
 
 
 class _ToolCallDisplay:
@@ -35,8 +34,8 @@ class _ToolCallDisplay:
 
     @property
     def _subtitle_markup(self) -> str:
-        detail = shorten_middle(self._subtitle or "", width=50)
-        return f"[grey50]: {escape(detail)}[/grey50]" if detail else ""
+        subtitle = self._subtitle
+        return f"[grey50]: {escape(subtitle)}[/grey50]" if subtitle else ""
 
     def append_args_part(self, args_part: str):
         if self.finished:
