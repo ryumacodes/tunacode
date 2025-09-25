@@ -16,30 +16,6 @@ def extract_subtitle(lexer: streamingjson.Lexer, tool_name: str) -> str | None:
         return None
     subtitle: str = ""
     match tool_name:
-        case "Bash":
-            if not isinstance(curr_args, dict) or not curr_args.get("command"):
-                return None
-            subtitle = str(curr_args["command"])
-        case "Task":
-            if not isinstance(curr_args, dict) or not curr_args.get("description"):
-                return None
-            subtitle = str(curr_args["description"])
-        case "ReadFile":
-            if not isinstance(curr_args, dict) or not curr_args.get("path"):
-                return None
-            subtitle = _normalize_path(str(curr_args["path"]))
-        case "WriteFile":
-            if not isinstance(curr_args, dict) or not curr_args.get("path"):
-                return None
-            subtitle = _normalize_path(str(curr_args["path"]))
-        case "Glob":
-            if not isinstance(curr_args, dict) or not curr_args.get("pattern"):
-                return None
-            subtitle = str(curr_args["pattern"])
-        case "Grep":
-            if not isinstance(curr_args, dict) or not curr_args.get("pattern"):
-                return None
-            subtitle = str(curr_args["pattern"])
         case "SetTodoList":
             if not isinstance(curr_args, dict) or not curr_args.get("todos"):
                 return None
@@ -53,6 +29,34 @@ def extract_subtitle(lexer: streamingjson.Lexer, tool_name: str) -> str | None:
                     subtitle += f" [{todo['status']}]"
                 subtitle += "\n"
             return "\n" + subtitle.strip()
+        case "Bash":
+            if not isinstance(curr_args, dict) or not curr_args.get("command"):
+                return None
+            subtitle = str(curr_args["command"])
+        case "Task":
+            if not isinstance(curr_args, dict) or not curr_args.get("description"):
+                return None
+            subtitle = str(curr_args["description"])
+        case "ReadFile":
+            if not isinstance(curr_args, dict) or not curr_args.get("path"):
+                return None
+            subtitle = _normalize_path(str(curr_args["path"]))
+        case "Glob":
+            if not isinstance(curr_args, dict) or not curr_args.get("pattern"):
+                return None
+            subtitle = str(curr_args["pattern"])
+        case "Grep":
+            if not isinstance(curr_args, dict) or not curr_args.get("pattern"):
+                return None
+            subtitle = str(curr_args["pattern"])
+        case "WriteFile":
+            if not isinstance(curr_args, dict) or not curr_args.get("path"):
+                return None
+            subtitle = _normalize_path(str(curr_args["path"]))
+        case "StrReplaceFile":
+            if not isinstance(curr_args, dict) or not curr_args.get("path"):
+                return None
+            subtitle = _normalize_path(str(curr_args["path"]))
         case _:
             subtitle = "".join(lexer.json_content)
     if tool_name not in ["SetTodoList"]:
