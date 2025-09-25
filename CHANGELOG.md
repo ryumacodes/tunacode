@@ -9,6 +9,18 @@ Internal builds may append content to the Unreleased section.
 Only write entries that are worth mentioning to users.
 -->
 
+## [unreleased]
+
+### Added
+
+- Add `SetTodoList` tool
+- Add `User-Agent` in LLM API calls
+
+### Improved
+
+- Better system prompt and tool description
+- Better error messages for LLM
+
 ## [0.12.0] - 2025-09-24
 
 ### Added
