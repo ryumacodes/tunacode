@@ -5,7 +5,7 @@ from kosong.tooling import ToolError, ToolOk, ToolResult
 
 from kimi_cli.utils.message import (
     message_extract_text,
-    system_message,
+    system,
     tool_ok_to_message_content,
     tool_result_to_messages,
 )
@@ -14,7 +14,7 @@ from kimi_cli.utils.message import (
 def test_system_message_creation():
     """Test that system messages are properly formatted."""
     message = "Test message"
-    result = system_message(message)
+    result = system(message)
 
     assert isinstance(result, TextPart)
     assert result.text == f"<system>{message}</system>"
@@ -98,7 +98,7 @@ def test_tool_error_result():
     assert message.tool_call_id == "call_123"
     assert isinstance(message.content, list)
     assert len(message.content) == 2  # System message + error output
-    assert message.content[0] == system_message("Error occurred")
+    assert message.content[0] == system("Error occurred")
     assert message.content[1] == TextPart(text="Error details")
 
 
@@ -115,7 +115,7 @@ def test_tool_error_without_output():
     assert message.role == "tool"
     assert isinstance(message.content, list)
     assert len(message.content) == 1  # Only system message
-    assert message.content[0] == system_message("Error occurred")
+    assert message.content[0] == system("Error occurred")
 
 
 def test_tool_ok_with_text_only():
@@ -133,7 +133,7 @@ def test_tool_ok_with_text_only():
     assert isinstance(message.content, list)
     # Should have system message from ToolOk + text output
     assert len(message.content) == 2
-    assert message.content[0] == system_message("Done")
+    assert message.content[0] == system("Done")
     assert message.content[1] == TextPart(text="Simple output")
 
 
