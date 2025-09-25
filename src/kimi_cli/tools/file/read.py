@@ -95,7 +95,7 @@ class ReadFile(CallableTool2[Params]):
                         break
 
             if len(lines) == 0:
-                return ToolOk(output="", message=f"No lines read from {params.path}.")
+                return ToolOk(output="", message="No lines read from file.")
 
             # Format output with line numbers like `cat -n`
             lines_with_no = []
@@ -108,9 +108,7 @@ class ReadFile(CallableTool2[Params]):
             # TODO: add message for EOF
             return ToolOk(
                 output="\n".join(lines_with_no),
-                message=(
-                    f"{len(lines)} lines read from {params.path}, starting from line {start_line}."
-                ),
+                message=(f"{len(lines)} lines read from file, starting from line {start_line}."),
             )
         except Exception as e:
             return ToolError(

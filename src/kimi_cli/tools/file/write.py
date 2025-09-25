@@ -97,10 +97,7 @@ class WriteFile(CallableTool2[Params]):
             action = "overwritten" if params.mode == "overwrite" else "appended to"
             return ToolOk(
                 output="",
-                message=(
-                    f"File successfully {action}. Path: {params.path}. "
-                    f"Current size: {file_size} bytes."
-                ),
+                message=(f"File successfully {action}. Current size: {file_size} bytes."),
             )
 
         except Exception as e:
