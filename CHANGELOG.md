@@ -9,6 +9,16 @@ Internal builds may append content to the Unreleased section.
 Only write entries that are worth mentioning to users.
 -->
 
+## [0.16.0] - 2025-09-26
+
+### Tools
+
+- Add `SendDMail` tool (disabled in Kimi Koder, can be enabled in custom agent)
+
+### SDK
+
+- Session history file can be specified via `_history_file` parameter when creating a new session
+
 ## [0.15.0] - 2025-09-26
 
 - Improve tool robustness
