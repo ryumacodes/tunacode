@@ -10,12 +10,6 @@ from kimi_cli.tools.file.grep import Grep, Params
 
 
 @pytest.fixture
-def grep_tool() -> Grep:
-    """Create a Grep tool instance."""
-    return Grep()
-
-
-@pytest.fixture
 def temp_test_files():
     """Create temporary test files for grep testing."""
     with tempfile.TemporaryDirectory() as temp_dir:

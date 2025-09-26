@@ -5,14 +5,7 @@ from pathlib import Path
 import pytest
 from kosong.tooling import ToolError, ToolOk
 
-from kimi_cli.agent import BuiltinSystemPromptArgs
 from kimi_cli.tools.file.read import MAX_BYTES, MAX_LINE_LENGTH, MAX_LINES, Params, ReadFile
-
-
-@pytest.fixture
-def read_file_tool(builtin_args: BuiltinSystemPromptArgs) -> ReadFile:
-    """Create a ReadFile tool instance."""
-    return ReadFile(builtin_args)
 
 
 @pytest.fixture

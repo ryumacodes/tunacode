@@ -7,6 +7,13 @@ from pathlib import Path
 import pytest
 
 from kimi_cli.agent import BuiltinSystemPromptArgs
+from kimi_cli.tools.bash import Bash
+from kimi_cli.tools.file.glob import Glob
+from kimi_cli.tools.file.grep import Grep
+from kimi_cli.tools.file.read import ReadFile
+from kimi_cli.tools.file.replace import StrReplaceFile
+from kimi_cli.tools.file.write import WriteFile
+from kimi_cli.tools.todo import SetTodoList
 
 
 @pytest.fixture
@@ -24,3 +31,45 @@ def builtin_args(temp_work_dir: Path) -> BuiltinSystemPromptArgs:
         ENSOUL_WORK_DIR_LS="Test ls content",
         ENSOUL_AGENTS_MD="Test agents content",
     )
+
+
+@pytest.fixture
+def set_todo_list_tool() -> SetTodoList:
+    """Create a SetTodoList tool instance."""
+    return SetTodoList()
+
+
+@pytest.fixture
+def bash_tool() -> Bash:
+    """Create a Shell tool instance."""
+    return Bash()
+
+
+@pytest.fixture
+def read_file_tool(builtin_args: BuiltinSystemPromptArgs) -> ReadFile:
+    """Create a ReadFile tool instance."""
+    return ReadFile(builtin_args)
+
+
+@pytest.fixture
+def glob_tool(builtin_args: BuiltinSystemPromptArgs) -> Glob:
+    """Create a Glob tool instance."""
+    return Glob(builtin_args)
+
+
+@pytest.fixture
+def grep_tool() -> Grep:
+    """Create a Grep tool instance."""
+    return Grep()
+
+
+@pytest.fixture
+def write_file_tool(builtin_args: BuiltinSystemPromptArgs) -> WriteFile:
+    """Create a WriteFile tool instance."""
+    return WriteFile(builtin_args)
+
+
+@pytest.fixture
+def str_replace_file_tool(builtin_args: BuiltinSystemPromptArgs) -> StrReplaceFile:
+    """Create a StrReplaceFile tool instance."""
+    return StrReplaceFile(builtin_args)

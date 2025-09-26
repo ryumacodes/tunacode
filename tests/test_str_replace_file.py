@@ -5,14 +5,7 @@ from pathlib import Path
 import pytest
 from kosong.tooling import ToolError, ToolOk
 
-from kimi_cli.agent import BuiltinSystemPromptArgs
 from kimi_cli.tools.file.replace import Edit, Params, StrReplaceFile
-
-
-@pytest.fixture
-def str_replace_file_tool(builtin_args: BuiltinSystemPromptArgs) -> StrReplaceFile:
-    """Create a StrReplaceFile tool instance."""
-    return StrReplaceFile(builtin_args)
 
 
 @pytest.mark.asyncio

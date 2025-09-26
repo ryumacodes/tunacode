@@ -8,12 +8,6 @@ from kosong.tooling import ToolError, ToolOk
 from kimi_cli.tools.bash import MAX_OUTPUT_LENGTH, Bash, Params
 
 
-@pytest.fixture
-def bash_tool() -> Bash:
-    """Create a Shell tool instance."""
-    return Bash()
-
-
 @pytest.mark.asyncio
 async def test_simple_command(bash_tool: Bash):
     """Test executing a simple command."""

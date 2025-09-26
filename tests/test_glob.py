@@ -5,14 +5,7 @@ from pathlib import Path
 import pytest
 from kosong.tooling import ToolError, ToolOk
 
-from kimi_cli.agent import BuiltinSystemPromptArgs
 from kimi_cli.tools.file.glob import MAX_MATCHES, Glob, Params
-
-
-@pytest.fixture
-def glob_tool(builtin_args: BuiltinSystemPromptArgs) -> Glob:
-    """Create a Glob tool instance."""
-    return Glob(builtin_args)
 
 
 @pytest.fixture
