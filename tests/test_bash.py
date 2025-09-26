@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from kosong.tooling import ToolError, ToolOk
 
-from kimi_cli.tools.bash import Bash, Params
+from kimi_cli.tools.bash import MAX_OUTPUT_LENGTH, Bash, Params
 
 
 @pytest.fixture
@@ -134,7 +134,7 @@ async def test_text_processing(bash_tool: Bash):
 @pytest.mark.asyncio
 async def test_multiple_pipes(bash_tool: Bash):
     """Test multiple pipes in one command."""
-    result = await bash_tool(Params(command="echo '1\n2\n3' | grep '2' | wc -l"))
+    result = await bash_tool(Params(command="echo -e '1\\n2\\n3' | grep '2' | wc -l"))
 
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
@@ -171,3 +171,53 @@ async def test_very_long_output(bash_tool: Bash):
     assert "1" in result.output
     assert "50" in result.output
     assert "100" not in result.output  # Should not contain 100
+
+
+@pytest.mark.asyncio
+async def test_output_truncation_on_success(bash_tool: Bash):
+    """Test that very long output gets truncated on successful command."""
+    # Generate output longer than MAX_OUTPUT_LENGTH
+    oversize_length = MAX_OUTPUT_LENGTH + 1000
+    result = await bash_tool(Params(command=f"python3 -c \"print('X' * {oversize_length})\""))
+
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.output, str)
+    # Check if output was truncated (it should be)
+    if len(result.output) > MAX_OUTPUT_LENGTH:
+        assert result.output.endswith("...")
+        assert f"Output truncated to {MAX_OUTPUT_LENGTH} characters" in result.message
+    assert "Command executed successfully" in result.message
+
+
+@pytest.mark.asyncio
+async def test_output_truncation_on_failure(bash_tool: Bash):
+    """Test that very long output gets truncated even when command fails."""
+    # Generate long output with a command that will fail
+    result = await bash_tool(
+        Params(command="python3 -c \"import sys; print('ERROR_' * 8000); sys.exit(1)\"")
+    )
+
+    assert isinstance(result, ToolError)
+    assert isinstance(result.output, str)
+    # Check if output was truncated
+    if len(result.output) > MAX_OUTPUT_LENGTH:
+        assert result.output.endswith("...")
+        assert f"Output truncated to {MAX_OUTPUT_LENGTH} characters" in result.message
+    assert "Command failed with exit code: 1" in result.message
+
+
+@pytest.mark.asyncio
+async def test_timeout_parameter_validation_bounds(bash_tool: Bash):
+    """Test timeout parameter validation (bounds checking)."""
+    # Test timeout < 1 (should fail validation)
+    with pytest.raises(ValueError, match="timeout"):
+        Params(command="echo test", timeout=0)
+
+    with pytest.raises(ValueError, match="timeout"):
+        Params(command="echo test", timeout=-1)
+
+    # Test timeout > MAX_TIMEOUT (should fail validation)
+    from kimi_cli.tools.bash import MAX_TIMEOUT
+
+    with pytest.raises(ValueError, match="timeout"):
+        Params(command="echo test", timeout=MAX_TIMEOUT + 1)

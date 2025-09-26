@@ -5,6 +5,9 @@ from typing import override
 from kosong.tooling import CallableTool2, ToolError, ToolOk, ToolReturnType
 from pydantic import BaseModel, Field
 
+MAX_TIMEOUT = 5 * 60
+MAX_OUTPUT_LENGTH = 50_000
+
 
 class Params(BaseModel):
     command: str = Field(description="The bash command to execute.")
@@ -14,6 +17,8 @@ class Params(BaseModel):
             "If the command takes longer than this, it will be killed."
         ),
         default=60,
+        ge=1,
+        le=MAX_TIMEOUT,
     )
 
 
@@ -40,11 +45,19 @@ class Bash(CallableTool2[Params]):
             )
             # TODO: truncate/compress the output if it is too long
             output_str = "".join(output)
+            message = (
+                "Command executed successfully."
+                if exitcode == 0
+                else f"Command failed with exit code: {exitcode}."
+            )
+            if len(output_str) > MAX_OUTPUT_LENGTH:
+                output_str = output_str[:MAX_OUTPUT_LENGTH] + "..."
+                message += f" Output truncated to {MAX_OUTPUT_LENGTH} characters."
             if exitcode == 0:
-                return ToolOk(output=output_str, message="Command executed successfully.")
+                return ToolOk(output=output_str, message=message)
             return ToolError(
                 output=output_str,
-                message=f"Command failed with exit code: {exitcode}",
+                message=message,
                 brief=f"Failed with exit code: {exitcode}",
             )
         except TimeoutError:
