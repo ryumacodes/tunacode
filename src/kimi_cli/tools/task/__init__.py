@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 from typing import override
 
@@ -11,6 +10,7 @@ from kimi_cli.context import Context
 from kimi_cli.event import EventQueue, RunEnd, StepInterrupted
 from kimi_cli.soul import MaxStepsReached, Soul
 from kimi_cli.utils.message import message_extract_text
+from kimi_cli.utils.path import next_available_rotation
 
 # Maximum continuation attempts for task summary
 _MAX_CONTINUE = 1
@@ -59,31 +59,16 @@ class Task(CallableTool2[Params]):
         }.items():
             self._subagents[subagent_name] = load_agent(agent_file, agent_globals)
 
-    def _get_subagent_history_file(self) -> Path:
+    async def _get_subagent_history_file(self) -> Path:
         """Generate a unique history file path for subagent."""
-        base_history_file = self._session.history_file
-        base_name = base_history_file.stem  # Get filename without extension
-        subagent_base_name = f"{base_name}-sub"
-
-        # Find existing subagent files with the pattern base-sub-N.jsonl
-        pattern = re.compile(rf"^{re.escape(subagent_base_name)}-(\d+)\.jsonl$")
-        max_num = 0
-
-        if base_history_file.parent.exists():
-            for file in base_history_file.parent.iterdir():
-                if not file.is_file():
-                    continue
-                if match := pattern.match(file.name):
-                    num = int(match.group(1))
-                    max_num = max(max_num, num)
-
-        # Use the next available number
-        next_num = max_num + 1
-        subagent_history_file = base_history_file.parent / f"{subagent_base_name}-{next_num}.jsonl"
-
-        # Create the file if it doesn't exist
-        subagent_history_file.touch(exist_ok=True)
-        return subagent_history_file
+        main_history_file = self._session.history_file
+        subagent_base_name = f"{main_history_file.stem}_sub"
+        main_history_file.parent.mkdir(parents=True, exist_ok=True)  # just in case
+        sub_history_file = await next_available_rotation(
+            main_history_file.parent / f"{subagent_base_name}{main_history_file.suffix}"
+        )
+        assert sub_history_file is not None
+        return sub_history_file
 
     @override
     async def __call__(self, params: Params) -> ToolReturnType:
@@ -104,7 +89,7 @@ class Task(CallableTool2[Params]):
 
     async def _run_subagent(self, agent: Agent, prompt: str) -> ToolReturnType:
         """Run subagent with optional continuation for task summary."""
-        subagent_history_file = self._get_subagent_history_file()
+        subagent_history_file = await self._get_subagent_history_file()
         context = Context(file_backend=subagent_history_file)
         soul = Soul(
             agent,
