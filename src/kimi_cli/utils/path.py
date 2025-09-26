@@ -14,6 +14,7 @@ async def next_available_rotation(path: Path) -> Path | None:
     suffix = path.suffix
     pattern = re.compile(rf"^{re.escape(base_name)}_(\d+){re.escape(suffix)}$")
     max_num = 0
+    # FIXME: protect from race condition
     for p in await aiofiles.os.listdir(path.parent):
         if m := pattern.match(p):
             max_num = max(max_num, int(m.group(1)))
