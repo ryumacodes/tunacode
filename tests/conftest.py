@@ -7,7 +7,9 @@ from pathlib import Path
 import pytest
 
 from kimi_cli.agent import BuiltinSystemPromptArgs
+from kimi_cli.denwarenji import DenwaRenji
 from kimi_cli.tools.bash import Bash
+from kimi_cli.tools.dmail import SendDMail
 from kimi_cli.tools.file.glob import Glob
 from kimi_cli.tools.file.grep import Grep
 from kimi_cli.tools.file.read import ReadFile
@@ -31,6 +33,18 @@ def builtin_args(temp_work_dir: Path) -> BuiltinSystemPromptArgs:
         ENSOUL_WORK_DIR_LS="Test ls content",
         ENSOUL_AGENTS_MD="Test agents content",
     )
+
+
+@pytest.fixture
+def denwa_renji() -> DenwaRenji:
+    """Create a DenwaRenji instance."""
+    return DenwaRenji()
+
+
+@pytest.fixture
+def send_dmail_tool(denwa_renji: DenwaRenji) -> SendDMail:
+    """Create a SendDMail tool instance."""
+    return SendDMail(denwa_renji)
 
 
 @pytest.fixture

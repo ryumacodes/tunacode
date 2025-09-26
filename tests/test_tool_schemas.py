@@ -3,12 +3,31 @@
 from inline_snapshot import snapshot
 
 from kimi_cli.tools.bash import Bash
+from kimi_cli.tools.dmail import SendDMail
 from kimi_cli.tools.file.glob import Glob
 from kimi_cli.tools.file.grep import Grep
 from kimi_cli.tools.file.read import ReadFile
 from kimi_cli.tools.file.replace import StrReplaceFile
 from kimi_cli.tools.file.write import WriteFile
 from kimi_cli.tools.todo import SetTodoList
+
+
+def test_send_dmail_params_schema(send_dmail_tool: SendDMail):
+    """Test the schema of SendDMail tool parameters."""
+    assert send_dmail_tool.base.parameters == snapshot(
+        {
+            "properties": {
+                "message": {"description": "The message to send.", "type": "string"},
+                "checkpoint_id": {
+                    "description": "The checkpoint to send the message back to.",
+                    "minimum": 0,
+                    "type": "integer",
+                },
+            },
+            "required": ["message", "checkpoint_id"],
+            "type": "object",
+        }
+    )
 
 
 def test_set_todo_list_params_schema(set_todo_list_tool: SetTodoList):

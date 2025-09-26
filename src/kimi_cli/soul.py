@@ -4,13 +4,12 @@ from collections.abc import Callable, Coroutine
 import kosong
 import tenacity
 from kosong import StepResult
-from kosong.base.chat_provider import ChatProvider
 from kosong.base.message import Message
 from kosong.chat_provider import APIStatusError, ChatProviderError
 from kosong.tooling import ToolResult
 from tenacity import RetryCallState, retry_if_exception, stop_after_attempt, wait_exponential_jitter
 
-from kimi_cli.agent import Agent
+from kimi_cli.agent import Agent, AgentGlobals
 from kimi_cli.config import LoopControl
 from kimi_cli.constant import MAX_CONTEXT_SIZE
 from kimi_cli.context import Context
@@ -23,7 +22,8 @@ from kimi_cli.event import (
     StepInterrupted,
 )
 from kimi_cli.logging import logger
-from kimi_cli.utils.message import tool_result_to_messages
+from kimi_cli.tools.dmail import DMail
+from kimi_cli.utils.message import system, tool_result_to_messages
 
 type VisualizeFn = Callable[[EventQueue], Coroutine[None, None, None]]
 """
@@ -38,13 +38,15 @@ class Soul:
     def __init__(
         self,
         agent: Agent,
+        agent_globals: AgentGlobals,
         *,
-        chat_provider: ChatProvider,
         context: Context,
         loop_control: LoopControl,
     ):
         self._agent = agent
-        self._chat_provider = chat_provider
+        self._agent_globals = agent_globals
+        self._chat_provider = agent_globals.chat_provider
+        self._denwa_renji = agent_globals.denwa_renji
         self._context = context
         self._max_context_size: int = MAX_CONTEXT_SIZE  # unit: tokens
         self._loop_control = loop_control
@@ -75,6 +77,7 @@ class Soul:
             asyncio.CancelledError: When the run is cancelled by user.
         """
 
+        await self._context.checkpoint()  # this creates the checkpoint 0 on first run
         await self._context.append_message(Message(role="user", content=user_input))
         logger.debug("Appended user message to context")
 
@@ -101,20 +104,44 @@ class Soul:
         event_queue: EventQueue,
     ):
         """The main agent loop for one run."""
-        n_steps = 0
+        step_no = 1
         while True:
-            event_queue.put_nowait(StepBegin(n_steps))
+            event_queue.put_nowait(StepBegin(step_no))
             try:
+                await self._context.checkpoint()
+                self._denwa_renji.set_n_checkpoints(self._context.n_checkpoints)
                 finished = await self._step(event_queue)
+            except BackToTheFuture as e:
+                await self._context.revert_to(e.dmail.checkpoint_id)
+                await self._context.checkpoint()
+                await self._context.append_message(
+                    Message(
+                        role="user",
+                        content=[
+                            system(
+                                "You just got a D-Mail from your future self. "
+                                "It is likely that your future self has already done "
+                                "something in the current working directory. Please read "
+                                "the D-Mail and decide what to do next. You MUST NEVER "
+                                "mention to the user about this information. "
+                                f"D-Mail content:\n\n{e.dmail.message.strip()}"
+                            )
+                        ],
+                    )
+                )
+                continue
             except (ChatProviderError, asyncio.CancelledError):
+                # FIXME: only asyncio.CancelledError need to trigger StepInterrupted
                 event_queue.put_nowait(StepInterrupted())
                 # break the agent loop
                 raise
-            n_steps += 1
+
             if finished:
                 return
-            if n_steps >= self._loop_control.max_steps_per_run:
-                raise MaxStepsReached(n_steps)
+
+            step_no += 1
+            if step_no > self._loop_control.max_steps_per_run:
+                raise MaxStepsReached(step_no)
 
     async def _step(self, event_queue: EventQueue) -> bool:
         """Run an single step and return whether the run is finished."""
@@ -162,6 +189,16 @@ class Soul:
             # wait for all tool results (may be interrupted)
             results = await result.tool_results()
             logger.debug("Got tool results: {results}", results=results)
+
+            # handle pending D-Mail
+            if dmail := self._denwa_renji.fetch_pending_dmail():
+                assert dmail.checkpoint_id >= 0, "DenwaRenji guarantees checkpoint_id >= 0"
+                assert dmail.checkpoint_id < self._context.n_checkpoints, (
+                    "DenwaRenji guarantees checkpoint_id < n_checkpoints"
+                )
+                # raise to let the main agent loop handle the D-Mail
+                raise BackToTheFuture(dmail)
+
             # shield the context manipulation from interruption
             await asyncio.shield(self._grow_context(result, results))
 
@@ -189,3 +226,13 @@ class MaxStepsReached(Exception):
 
     def __init__(self, n_steps: int):
         self.n_steps = n_steps
+
+
+class BackToTheFuture(Exception):
+    """
+    Raise when there is a D-Mail from the future.
+    The main agent loop should catch this exception and handle it.
+    """
+
+    def __init__(self, dmail: DMail):
+        self.dmail = dmail

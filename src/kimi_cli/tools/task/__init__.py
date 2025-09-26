@@ -48,7 +48,7 @@ class Task(CallableTool2[Params]):
 
     def __init__(self, agent_globals: AgentGlobals, **kwargs):
         super().__init__(**kwargs)
-        self._chat_provider = agent_globals.chat_provider
+        self._agent_globals = agent_globals
         self._session = agent_globals.session
         self._subagents: dict[str, Agent] = {}
 
@@ -93,7 +93,7 @@ class Task(CallableTool2[Params]):
         context = Context(file_backend=subagent_history_file)
         soul = Soul(
             agent,
-            chat_provider=self._chat_provider,
+            agent_globals=self._agent_globals,
             context=context,
             loop_control=LoopControl(),  # use default loop control
         )

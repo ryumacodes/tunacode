@@ -234,7 +234,7 @@ def kimi_run(
 
     soul = Soul(
         agent,
-        chat_provider=chat_provider,
+        agent_globals,
         context=context,
         loop_control=loop_control or LoopControl(),
     )
