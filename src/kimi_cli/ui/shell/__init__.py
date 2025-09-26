@@ -94,17 +94,17 @@ class ShellApp:
             try:
                 logger.info("Running agent with user input: {user_input}", user_input=user_input)
                 asyncio.run(self.soul.run(user_input, self._visualize))
+            except ChatProviderError as e:
+                logger.exception("LLM provider error:")
+                console.print(f"[bold red]LLM provider error: {e}[/bold red]")
             except MaxStepsReached as e:
                 logger.warning("Max steps reached: {n_steps}", n_steps=e.n_steps)
                 console.print(f"[bold yellow]Max steps reached: {e.n_steps}[/bold yellow]")
-            except ChatProviderError as e:
-                logger.error("LLM provider error: {error}", error=e)
-                console.print(f"[bold red]LLM provider error: {e}[/bold red]")
             except KeyboardInterrupt:
                 logger.error("Interrupted by user")
                 console.print("[bold red]Interrupted by user[/bold red]")
             except BaseException as e:
-                logger.error("Unknown error: {error}", error=e)
+                logger.exception("Unknown error:")
                 console.print(f"[bold red]Unknown error: {e}[/bold red]")
 
     async def _visualize(self, event_queue: EventQueue):
