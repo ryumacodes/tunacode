@@ -3,47 +3,57 @@
 from pathlib import Path
 from typing import override
 
+import aiofiles.os
 from kosong.tooling import CallableTool2, ToolError, ToolOk, ToolReturnType
 from pydantic import BaseModel, Field
 
 from kimi_cli.agent import BuiltinSystemPromptArgs
+from kimi_cli.tools.utils import load_desc
+
+MAX_MATCHES = 1000
 
 
 class Params(BaseModel):
-    pattern: str = Field(
-        description=(
-            "Glob pattern to match files/directories (e.g., `*.py`, `src/**/*.js`, `test_*.txt`)"
-        )
-    )
+    pattern: str = Field(description=("Glob pattern to match files/directories."))
     directory: str | None = Field(
-        description=("Absolute path to the directory to search in (defaults to working directory)"),
+        description=(
+            "Absolute path to the directory to search in (defaults to working directory)."
+        ),
         default=None,
     )
     include_dirs: bool = Field(
-        description="Whether to include directories in results",
+        description="Whether to include directories in results.",
         default=True,
     )
 
 
 class Glob(CallableTool2[Params]):
     name: str = "Glob"
-    description: str = (Path(__file__).parent / "glob.md").read_text()
+    description: str = load_desc(
+        Path(__file__).parent / "glob.md",
+        {
+            "MAX_MATCHES": str(MAX_MATCHES),
+        },
+    )
     params: type[Params] = Params
 
     def __init__(self, builtin_args: BuiltinSystemPromptArgs, **kwargs):
         super().__init__(**kwargs)
         self._work_dir = builtin_args.ENSOUL_WORK_DIR
 
-    def _validate_pattern(self, pattern: str) -> ToolError | None:
+    async def _validate_pattern(self, pattern: str) -> ToolError | None:
         """Validate that the pattern is safe to use."""
         if pattern.startswith("**"):
             # TODO: give a `ls -la` result as the output
+            ls_result = await aiofiles.os.listdir(self._work_dir)
             return ToolError(
+                output="\n".join(ls_result),
                 message=(
                     f"Pattern `{pattern}` starts with '**' which is not allowed. "
                     "This would recursively search all directories and may include large "
-                    "directories like `node_modules`. Use more specific patterns like "
-                    "'src/**/*.py' instead."
+                    "directories like `node_modules`. Use more specific patterns instead. "
+                    "For your convenience, a list of all files and directories in the "
+                    "top level of the working directory is provided below."
                 ),
                 brief="Unsafe pattern",
             )
@@ -69,7 +79,7 @@ class Glob(CallableTool2[Params]):
     async def __call__(self, params: Params) -> ToolReturnType:
         try:
             # Validate pattern safety
-            pattern_error = self._validate_pattern(params.pattern)
+            pattern_error = await self._validate_pattern(params.pattern)
             if pattern_error:
                 return pattern_error
 
@@ -110,16 +120,22 @@ class Glob(CallableTool2[Params]):
             # Sort for consistent output
             matches.sort()
 
-            # Format results
-            if not matches:
-                return ToolOk(
-                    output="",
-                    message=f"No files or directories found matching pattern `{params.pattern}`.",
+            # Limit matches
+            message = (
+                f"Found {len(matches)} matches for pattern `{params.pattern}`."
+                if len(matches) > 0
+                else "No matches found for pattern `{params.pattern}`."
+            )
+            if len(matches) > MAX_MATCHES:
+                matches = matches[:MAX_MATCHES]
+                message += (
+                    f" Only the first {MAX_MATCHES} matches are returned. "
+                    "You may want to use a more specific pattern."
                 )
 
             return ToolOk(
                 output="\n".join(str(p.relative_to(dir_path)) for p in matches),
-                message=f"Found {len(matches)} matches for pattern `{params.pattern}`.",
+                message=message,
             )
 
         except Exception as e:

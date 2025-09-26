@@ -6,7 +6,7 @@ import pytest
 from kosong.tooling import ToolError, ToolOk
 
 from kimi_cli.agent import BuiltinSystemPromptArgs
-from kimi_cli.tools.file.glob import Glob, Params
+from kimi_cli.tools.file.glob import MAX_MATCHES, Glob, Params
 
 
 @pytest.fixture
@@ -131,7 +131,7 @@ async def test_glob_no_matches(glob_tool: Glob, test_files: Path):
 
     assert isinstance(result, ToolOk)
     assert result.output == ""
-    assert "No files or directories found" in result.message
+    assert "No matches found" in result.message
 
 
 @pytest.mark.asyncio
@@ -200,6 +200,63 @@ async def test_glob_single_character_wildcard(glob_tool: Glob, test_files: Path)
     assert isinstance(result, ToolOk)
     assert result.output == ""
     # Should match single character .md files
+
+
+@pytest.mark.asyncio
+async def test_glob_max_matches_limit(glob_tool: Glob, temp_work_dir: Path):
+    """Test that glob respects the MAX_MATCHES limit."""
+    # Create more than MAX_MATCHES files
+    for i in range(MAX_MATCHES + 50):
+        (temp_work_dir / f"file_{i}.txt").write_text(f"content {i}")
+
+    result = await glob_tool(Params(pattern="*.txt", directory=str(temp_work_dir)))
+
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.output, str)
+    # Should only return MAX_MATCHES results
+    output_lines = [line for line in result.output.split("\n") if line.strip()]
+    assert len(output_lines) == MAX_MATCHES
+    # Should contain warning message
+    assert f"Only the first {MAX_MATCHES} matches are returned" in result.message
+
+
+@pytest.mark.asyncio
+async def test_glob_enhanced_double_star_validation(glob_tool: Glob, temp_work_dir: Path):
+    """Test enhanced ** pattern validation with directory listing."""
+    # Create some top-level files and directories for listing
+    (temp_work_dir / "file1.txt").write_text("content1")
+    (temp_work_dir / "file2.py").write_text("content2")
+    (temp_work_dir / "src").mkdir()
+    (temp_work_dir / "docs").mkdir()
+
+    result = await glob_tool(Params(pattern="**/*.txt", directory=str(temp_work_dir)))
+
+    assert isinstance(result, ToolError)
+    assert "starts with '**' which is not allowed" in result.message
+    assert "Use more specific patterns instead" in result.message
+    # Should include directory listing
+    assert "file1.txt" in result.output
+    assert "file2.py" in result.output
+    assert "src" in result.output
+    assert "docs" in result.output
+
+
+@pytest.mark.asyncio
+async def test_glob_exactly_max_matches(glob_tool: Glob, temp_work_dir: Path):
+    """Test behavior when exactly MAX_MATCHES files are found."""
+    # Create exactly MAX_MATCHES files
+    for i in range(MAX_MATCHES):
+        (temp_work_dir / f"test_{i}.py").write_text(f"code {i}")
+
+    result = await glob_tool(Params(pattern="*.py", directory=str(temp_work_dir)))
+
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.output, str)
+    output_lines = [line for line in result.output.split("\n") if line.strip()]
+    assert len(output_lines) == MAX_MATCHES
+    # Should NOT contain warning message since we have exactly MAX_MATCHES
+    assert "Only the first" not in result.message
+    assert f"Found {MAX_MATCHES} matches" in result.message
 
 
 @pytest.mark.asyncio
