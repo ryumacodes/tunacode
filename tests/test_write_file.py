@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from kosong.tooling import ToolError, ToolOk
+from pydantic import ValidationError
 
 from kimi_cli.tools.file.write import Params, WriteFile
 
@@ -127,10 +128,8 @@ async def test_write_with_invalid_mode(write_file_tool: WriteFile, temp_work_dir
     """Test writing with an invalid mode."""
     file_path = temp_work_dir / "test.txt"
 
-    result = await write_file_tool(Params(path=str(file_path), content="content", mode="invalid"))
-
-    assert isinstance(result, ToolError)
-    assert "Invalid write mode" in result.message
+    with pytest.raises(ValidationError):
+        await write_file_tool(Params(path=str(file_path), content="content", mode="invalid"))  # pyright: ignore[reportArgumentType]
 
 
 @pytest.mark.asyncio

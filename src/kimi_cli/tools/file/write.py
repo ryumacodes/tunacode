@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import override
+from typing import Literal, override
 
 import aiofiles
 from kosong.tooling import CallableTool2, ToolError, ToolOk, ToolReturnType
@@ -11,7 +11,7 @@ from kimi_cli.agent import BuiltinSystemPromptArgs
 class Params(BaseModel):
     path: str = Field(description="The absolute path to the file to write")
     content: str = Field(description="The content to write to the file")
-    mode: str = Field(
+    mode: Literal["overwrite", "append"] = Field(
         description=(
             "The mode to use to write to the file. "
             "Two modes are supported: `overwrite` for overwriting the whole file and "

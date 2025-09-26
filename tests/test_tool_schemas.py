@@ -210,6 +210,7 @@ def test_write_file_params_schema(write_file_tool: WriteFile):
                 "mode": {
                     "default": "overwrite",
                     "description": "The mode to use to write to the file. Two modes are supported: `overwrite` for overwriting the whole file and `append` for appending to the end of an existing file.",
+                    "enum": ["overwrite", "append"],
                     "type": "string",
                 },
             },
