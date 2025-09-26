@@ -9,6 +9,10 @@ Internal builds may append content to the Unreleased section.
 Only write entries that are worth mentioning to users.
 -->
 
+## [Unreleased]
+
+- Improve tool robustness
+
 ## [0.14.0] - 2025-09-25
 
 ### Added
