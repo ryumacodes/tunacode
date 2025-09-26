@@ -190,6 +190,9 @@ class Soul:
             results = await result.tool_results()
             logger.debug("Got tool results: {results}", results=results)
 
+            # shield the context manipulation from interruption
+            await asyncio.shield(self._grow_context(result, results))
+
             # handle pending D-Mail
             if dmail := self._denwa_renji.fetch_pending_dmail():
                 assert dmail.checkpoint_id >= 0, "DenwaRenji guarantees checkpoint_id >= 0"
@@ -198,9 +201,6 @@ class Soul:
                 )
                 # raise to let the main agent loop handle the D-Mail
                 raise BackToTheFuture(dmail)
-
-            # shield the context manipulation from interruption
-            await asyncio.shield(self._grow_context(result, results))
 
             return not result.tool_calls
 
