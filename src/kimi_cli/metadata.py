@@ -59,32 +59,37 @@ class Session(NamedTuple):
 
     id: str
     work_dir: WorkDirMeta
-
-    @property
-    def history_file(self) -> Path:
-        path = self.work_dir.sessions_dir / f"{self.id}.jsonl"
-        if not path.exists():
-            path.touch()
-        return path
+    history_file: Path
 
 
-def new_session(work_dir: Path) -> Session:
+def new_session(work_dir: Path, _history_file: Path | None = None) -> Session:
     """Create a new session for a work directory."""
     logger.debug("Creating new session for work directory: {work_dir}", work_dir=work_dir)
+
     metadata = _load_metadata()
     work_dir_meta = next((wd for wd in metadata.work_dirs if wd.path == str(work_dir)), None)
     if work_dir_meta is None:
         work_dir_meta = WorkDirMeta(path=str(work_dir))
         metadata.work_dirs.append(work_dir_meta)
+
     session_id = str(uuid.uuid4())
-    work_dir_meta.last_session_id = session_id
+    if _history_file is None:
+        history_file = work_dir_meta.sessions_dir / f"{session_id}.jsonl"
+        work_dir_meta.last_session_id = session_id
+    else:
+        logger.warning("Using provided history file: {history_file}", history_file=_history_file)
+        assert _history_file.parent.exists() and _history_file.is_file()
+        history_file = _history_file
+    history_file.touch()
+
     _save_metadata(metadata)
-    return Session(id=session_id, work_dir=work_dir_meta)
+    return Session(id=session_id, work_dir=work_dir_meta, history_file=history_file)
 
 
 def continue_session(work_dir: Path) -> Session | None:
     """Get the last session for a work directory."""
     logger.debug("Continuing session for work directory: {work_dir}", work_dir=work_dir)
+
     metadata = _load_metadata()
     work_dir_meta = next((wd for wd in metadata.work_dirs if wd.path == str(work_dir)), None)
     if work_dir_meta is None:
@@ -93,8 +98,11 @@ def continue_session(work_dir: Path) -> Session | None:
     if work_dir_meta.last_session_id is None:
         logger.debug("Work directory never had a session")
         return None
+
     logger.debug(
         "Found last session for work directory: {session_id}",
         session_id=work_dir_meta.last_session_id,
     )
-    return Session(id=work_dir_meta.last_session_id, work_dir=work_dir_meta)
+    session_id = work_dir_meta.last_session_id
+    history_file = work_dir_meta.sessions_dir / f"{session_id}.jsonl"
+    return Session(id=session_id, work_dir=work_dir_meta, history_file=history_file)
