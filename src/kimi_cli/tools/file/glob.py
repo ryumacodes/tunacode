@@ -1,5 +1,6 @@
 """Glob tool implementation."""
 
+import asyncio
 from pathlib import Path
 from typing import override
 
@@ -110,8 +111,11 @@ class Glob(CallableTool2[Params]):
                     brief="Invalid directory",
                 )
 
+            def _glob(pattern: str) -> list[Path]:
+                return list(dir_path.glob(pattern))
+
             # Perform the glob search - users can use ** directly in pattern
-            matches = list(dir_path.glob(params.pattern))
+            matches = await asyncio.to_thread(_glob, params.pattern)
 
             # Filter out directories if not requested
             if not params.include_dirs:
