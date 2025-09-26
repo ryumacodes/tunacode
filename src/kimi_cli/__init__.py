@@ -169,6 +169,7 @@ def kimi(
     else:
         session = new_session(work_dir)
         echo(f"✓ Created new session: {session.id}")
+    echo(f"✓ Session history file: {session.history_file}")
 
     kimi_run(
         chat_provider=chat_provider,
@@ -211,6 +212,7 @@ def kimi_run(
             ENSOUL_AGENTS_MD=agents_md,
         ),
         denwa_renji=DenwaRenji(),
+        session=session,
     )
     try:
         agent = load_agent(agent_file, agent_globals)

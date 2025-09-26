@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from kimi_cli.denwarenji import DenwaRenji
 from kimi_cli.logging import logger
+from kimi_cli.metadata import Session
 
 
 class AgentSpec(BaseModel):
@@ -41,6 +42,7 @@ class AgentGlobals(NamedTuple):
     chat_provider: ChatProvider
     builtin_args: BuiltinSystemPromptArgs
     denwa_renji: DenwaRenji
+    session: Session
 
 
 class Agent(NamedTuple):
@@ -83,6 +85,7 @@ def load_agent(
         AgentGlobals: globals_,
         ChatProvider: globals_.chat_provider,
         BuiltinSystemPromptArgs: globals_.builtin_args,
+        Session: globals_.session,
         DenwaRenji: globals_.denwa_renji,
     }
     toolset, bad_tools = _load_tools(agent_spec, tool_deps)

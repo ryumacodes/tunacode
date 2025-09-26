@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import override
 
@@ -48,6 +49,7 @@ class Task(CallableTool2[Params]):
     def __init__(self, agent_globals: AgentGlobals, **kwargs):
         super().__init__(**kwargs)
         self._chat_provider = agent_globals.chat_provider
+        self._session = agent_globals.session
         self._subagents: dict[str, Agent] = {}
 
         # load all subagents
@@ -56,6 +58,32 @@ class Task(CallableTool2[Params]):
             "coder": get_agents_dir() / "koder" / "sub.yaml",
         }.items():
             self._subagents[subagent_name] = load_agent(agent_file, agent_globals)
+
+    def _get_subagent_history_file(self) -> Path:
+        """Generate a unique history file path for subagent."""
+        base_history_file = self._session.history_file
+        base_name = base_history_file.stem  # Get filename without extension
+        subagent_base_name = f"{base_name}-sub"
+
+        # Find existing subagent files with the pattern base-sub-N.jsonl
+        pattern = re.compile(rf"^{re.escape(subagent_base_name)}-(\d+)\.jsonl$")
+        max_num = 0
+
+        if base_history_file.parent.exists():
+            for file in base_history_file.parent.iterdir():
+                if not file.is_file():
+                    continue
+                if match := pattern.match(file.name):
+                    num = int(match.group(1))
+                    max_num = max(max_num, num)
+
+        # Use the next available number
+        next_num = max_num + 1
+        subagent_history_file = base_history_file.parent / f"{subagent_base_name}-{next_num}.jsonl"
+
+        # Create the file if it doesn't exist
+        subagent_history_file.touch(exist_ok=True)
+        return subagent_history_file
 
     @override
     async def __call__(self, params: Params) -> ToolReturnType:
@@ -76,7 +104,8 @@ class Task(CallableTool2[Params]):
 
     async def _run_subagent(self, agent: Agent, prompt: str) -> ToolReturnType:
         """Run subagent with optional continuation for task summary."""
-        context = Context()
+        subagent_history_file = self._get_subagent_history_file()
+        context = Context(file_backend=subagent_history_file)
         soul = Soul(
             agent,
             chat_provider=self._chat_provider,
