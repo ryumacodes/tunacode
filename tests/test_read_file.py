@@ -6,7 +6,7 @@ import pytest
 from kosong.tooling import ToolError, ToolOk
 
 from kimi_cli.agent import BuiltinSystemPromptArgs
-from kimi_cli.tools.file.read import Params, ReadFile
+from kimi_cli.tools.file.read import MAX_BYTES, MAX_LINE_LENGTH, MAX_LINES, Params, ReadFile
 
 
 @pytest.fixture
@@ -174,25 +174,102 @@ async def test_read_edge_cases(read_file_tool: ReadFile, sample_file: Path):
 
 
 @pytest.mark.asyncio
-async def test_long_line_truncation(read_file_tool: ReadFile, temp_work_dir: Path):
-    """Test that long lines are truncated properly."""
-    long_line_file = temp_work_dir / "long_line.txt"
-    # Create a line longer than 2000 characters
+async def test_line_truncation_and_messaging(read_file_tool: ReadFile, temp_work_dir: Path):
+    """Test line truncation functionality and messaging."""
+
+    # Test single long line truncation
+    single_line_file = temp_work_dir / "single_long_line.txt"
     long_content = "A" * 2500 + " This should be truncated"
-    long_line_file.write_text(long_content)
+    single_line_file.write_text(long_content)
 
-    result = await read_file_tool(Params(path=str(long_line_file)))
-
+    result = await read_file_tool(Params(path=str(single_line_file)))
     assert isinstance(result, ToolOk)
     assert isinstance(result.output, str)
     assert "1 lines read from" in result.message
     # Check that the line is truncated and ends with "..."
     assert result.output.endswith("...")
-    # The total length should be exactly 2000 characters (accounting for line number prefix)
+
+    # Verify exact length after truncation (accounting for line number prefix)
     lines = result.output.split("\n")
-    content_line = [
-        line for line in lines if line.strip() and not line.startswith("<system-message>")
-    ][0]
-    # Extract just the content part after the tab
+    content_line = [line for line in lines if line.strip()][0]
     actual_content = content_line.split("\t", 1)[1] if "\t" in content_line else content_line
-    assert len(actual_content) == 2000
+    assert len(actual_content) == MAX_LINE_LENGTH
+
+    # Test multiple long lines with truncation messaging
+    multi_line_file = temp_work_dir / "multi_truncation_test.txt"
+    long_line_1 = "A" * 2500
+    long_line_2 = "B" * 3000
+    normal_line = "Short line"
+    content = f"{long_line_1}\n{normal_line}\n{long_line_2}"
+    multi_line_file.write_text(content)
+
+    result = await read_file_tool(Params(path=str(multi_line_file)))
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.output, str)
+    assert "Lines [1, 3] were truncated" in result.message
+
+    # Verify truncation actually happened for specific lines
+    lines = result.output.split("\n")
+    contents = [line.split("\t", 1)[1] if "\t" in line else line for line in lines if line.strip()]
+    assert contents[0].endswith("...")  # First line truncated
+    assert contents[1] == "Short line"  # Second line not truncated
+    assert contents[2].endswith("...")  # Third line truncated
+
+
+@pytest.mark.asyncio
+async def test_parameter_validation_line_offset(read_file_tool: ReadFile, sample_file: Path):
+    """Test that line_offset parameter validation works correctly."""
+    # Test line_offset < 1 should be rejected by Pydantic validation
+    with pytest.raises(ValueError, match="line_offset"):
+        Params(path=str(sample_file), line_offset=0)
+
+    with pytest.raises(ValueError, match="line_offset"):
+        Params(path=str(sample_file), line_offset=-1)
+
+
+@pytest.mark.asyncio
+async def test_parameter_validation_n_lines(read_file_tool: ReadFile, sample_file: Path):
+    """Test that n_lines parameter validation works correctly."""
+    # Test n_lines < 1 should be rejected by Pydantic validation
+    with pytest.raises(ValueError, match="n_lines"):
+        Params(path=str(sample_file), n_lines=0)
+
+    with pytest.raises(ValueError, match="n_lines"):
+        Params(path=str(sample_file), n_lines=-1)
+
+
+@pytest.mark.asyncio
+async def test_max_lines_boundary(read_file_tool: ReadFile, temp_work_dir: Path):
+    """Test that reading respects the MAX_LINES boundary."""
+    # Create a file with more than MAX_LINES lines
+    large_file = temp_work_dir / "large_file.txt"
+    content = "\n".join([f"Line {i}" for i in range(1, MAX_LINES + 10)])
+    large_file.write_text(content)
+
+    # Request more than MAX_LINES to trigger the boundary check
+    result = await read_file_tool(Params(path=str(large_file), n_lines=MAX_LINES + 5))
+
+    assert isinstance(result, ToolOk)
+    assert isinstance(result.output, str)
+    # Should read MAX_LINES lines, not the full file
+    assert f"Max {MAX_LINES} lines reached" in result.message
+    # Count actual lines in output (accounting for line numbers)
+    output_lines = [line for line in result.output.split("\n") if line.strip()]
+    assert len(output_lines) == MAX_LINES
+
+
+@pytest.mark.asyncio
+async def test_max_bytes_boundary(read_file_tool: ReadFile, temp_work_dir: Path):
+    """Test that reading respects the MAX_BYTES boundary."""
+    # Create a file that exceeds MAX_BYTES
+    large_file = temp_work_dir / "large_bytes.txt"
+    # Create content that will exceed 100KB but stay under MAX_LINES
+    line_content = "A" * 1000  # 1000 characters per line
+    num_lines = (MAX_BYTES // 1000) + 5  # Enough to exceed MAX_BYTES
+    content = "\n".join([line_content] * num_lines)
+    large_file.write_text(content)
+
+    result = await read_file_tool(Params(path=str(large_file)))
+
+    assert isinstance(result, ToolOk)
+    assert f"Max {MAX_BYTES} bytes reached" in result.message
