@@ -2,6 +2,7 @@ import asyncio
 import importlib.metadata
 import os
 import subprocess
+import sys
 import textwrap
 from pathlib import Path
 from typing import Literal
@@ -171,7 +172,7 @@ def kimi(
         echo(f"✓ Created new session: {session.id}")
     echo(f"✓ Session history file: {session.history_file}")
 
-    kimi_run(
+    succeeded = kimi_run(
         chat_provider=chat_provider,
         work_dir=work_dir,
         session=session,
@@ -182,6 +183,8 @@ def kimi(
         verbose=verbose,
         ui=ui,
     )
+    if not succeeded:
+        sys.exit(1)
 
 
 def kimi_run(
@@ -195,7 +198,7 @@ def kimi_run(
     loop_control: LoopControl | None = None,
     verbose: bool = True,
     ui: UIMode = "shell",
-):
+) -> bool:
     """Run Kimi CLI."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
 
@@ -221,6 +224,9 @@ def kimi_run(
     echo(f"✓ Loaded agent: {agent.name}")
     echo(f"✓ Loaded system prompt: {textwrap.shorten(agent.system_prompt, width=100)}")
     echo(f"✓ Loaded tools: {[tool.name for tool in agent.toolset.tools]}")
+
+    if ui == "print" and command is None:
+        raise click.BadParameter("Command is required for print UI")
 
     if command is not None:
         command = command.strip()
@@ -252,14 +258,12 @@ def kimi_run(
                     "Session": session.id,
                 },
             )
-            app.run(command)
         elif ui == "print":
-            if command is None:
-                raise click.BadParameter("Command is required for print UI")
             app = PrintApp(soul)
-            app.run(command)
         else:
             raise click.BadParameter(f"Invalid UI mode: {ui}")
+
+        return app.run(command)
     finally:
         os.chdir(original_cwd)
 

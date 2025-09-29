@@ -1,5 +1,6 @@
 import asyncio
 import getpass
+from typing import override
 
 from kosong.base.message import ContentPart, TextPart, ToolCall, ToolCallPart
 from kosong.chat_provider import ChatProviderError
@@ -19,6 +20,7 @@ from kimi_cli.event import (
 )
 from kimi_cli.logging import logger
 from kimi_cli.soul import MaxStepsReached, Soul
+from kimi_cli.ui import BaseApp
 from kimi_cli.ui.shell.console import console
 from kimi_cli.ui.shell.liveview import StepLiveView
 from kimi_cli.ui.shell.metacmd import (
@@ -27,17 +29,17 @@ from kimi_cli.ui.shell.metacmd import (
 )
 
 
-class ShellApp:
+class ShellApp(BaseApp):
     def __init__(self, soul: Soul, welcome_info: dict[str, str]):
         self.soul = soul
         self.welcome_info = welcome_info
 
-    def run(self, command: str | None = None):
+    @override
+    def run(self, command: str | None = None) -> bool:
         if command is not None:
             # run single command and exit
             logger.info("Running agent with command: {command}", command=command)
-            asyncio.run(self.soul.run(command, self._visualize))
-            return
+            return self._soul_run(command)
 
         session = PromptSession(
             message=FormattedText([("bold", f"{getpass.getuser()}✨ ")]),
@@ -91,21 +93,29 @@ class ShellApp:
                 self._run_meta_command(user_input[1:])
                 continue
 
-            try:
-                logger.info("Running agent with user input: {user_input}", user_input=user_input)
-                asyncio.run(self.soul.run(user_input, self._visualize))
-            except ChatProviderError as e:
-                logger.exception("LLM provider error:")
-                console.print(f"[bold red]LLM provider error: {e}[/bold red]")
-            except MaxStepsReached as e:
-                logger.warning("Max steps reached: {n_steps}", n_steps=e.n_steps)
-                console.print(f"[bold yellow]Max steps reached: {e.n_steps}[/bold yellow]")
-            except KeyboardInterrupt:
-                logger.error("Interrupted by user")
-                console.print("[bold red]Interrupted by user[/bold red]")
-            except BaseException as e:
-                logger.exception("Unknown error:")
-                console.print(f"[bold red]Unknown error: {e}[/bold red]")
+            logger.info("Running agent with user input: {user_input}", user_input=user_input)
+            self._soul_run(user_input)
+
+        return True
+
+    def _soul_run(self, user_input: str) -> bool:
+        """Run the soul with the given user input and return whether the run is successful."""
+        try:
+            asyncio.run(self.soul.run(user_input, self._visualize))
+            return True
+        except ChatProviderError as e:
+            logger.exception("LLM provider error:")
+            console.print(f"[bold red]LLM provider error: {e}[/bold red]")
+        except MaxStepsReached as e:
+            logger.warning("Max steps reached: {n_steps}", n_steps=e.n_steps)
+            console.print(f"[bold yellow]Max steps reached: {e.n_steps}[/bold yellow]")
+        except KeyboardInterrupt:
+            logger.error("Interrupted by user")
+            console.print("[bold red]Interrupted by user[/bold red]")
+        except BaseException as e:
+            logger.exception("Unknown error:")
+            console.print(f"[bold red]Unknown error: {e}[/bold red]")
+        return False
 
     async def _visualize(self, event_queue: EventQueue):
         """

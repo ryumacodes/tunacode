@@ -72,8 +72,8 @@ class Soul:
             visualize (VisualizeFn): The function to visualize the agent behavior.
 
         Raises:
-            MaxStepsReached: When the maximum number of steps is reached.
             ChatProviderError: When the LLM provider returns an error.
+            MaxStepsReached: When the maximum number of steps is reached.
             asyncio.CancelledError: When the run is cancelled by user.
         """
 
