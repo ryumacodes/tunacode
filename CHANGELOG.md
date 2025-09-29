@@ -9,6 +9,16 @@ Internal builds may append content to the Unreleased section.
 Only write entries that are worth mentioning to users.
 -->
 
+## [Unreleased]
+
+### Added
+
+- Support `max_context_size` in LLM model configurations to configure the maximum context size (in tokens)
+
+### Improved
+
+- Improve `ReadFile` tool description
+
 ## [0.17] - 2025-09-29
 
 ### Fixed
