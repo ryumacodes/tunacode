@@ -78,7 +78,9 @@ def new_session(work_dir: Path, _history_file: Path | None = None) -> Session:
         work_dir_meta.last_session_id = session_id
     else:
         logger.warning("Using provided history file: {history_file}", history_file=_history_file)
-        assert _history_file.parent.exists() and _history_file.is_file()
+        assert _history_file.parent.exists()
+        if _history_file.exists():
+            assert _history_file.is_file()
         history_file = _history_file
     history_file.touch()
 
