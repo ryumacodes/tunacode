@@ -165,12 +165,21 @@ def kimi(
     if continue_:
         session = continue_session(work_dir)
         if session is None:
-            raise click.ClickException("No previous session found for the working directory")
+            raise click.BadOptionUsage(
+                "--continue", "No previous session found for the working directory"
+            )
         echo(f"✓ Continuing previous session: {session.id}")
     else:
         session = new_session(work_dir)
         echo(f"✓ Created new session: {session.id}")
     echo(f"✓ Session history file: {session.history_file}")
+
+    if command is None and not sys.stdin.isatty():
+        command = sys.stdin.read().strip()
+        echo(f"✓ Read command from stdin: {command}")
+
+    if ui == "print" and command is None:
+        raise click.BadOptionUsage("--ui", "Command is required for print UI")
 
     succeeded = kimi_run(
         llm=llm,
@@ -224,9 +233,6 @@ def kimi_run(
     echo(f"✓ Loaded agent: {agent.name}")
     echo(f"✓ Loaded system prompt: {textwrap.shorten(agent.system_prompt, width=100)}")
     echo(f"✓ Loaded tools: {[tool.name for tool in agent.toolset.tools]}")
-
-    if ui == "print" and command is None:
-        raise click.BadParameter("Command is required for print UI")
 
     if command is not None:
         command = command.strip()
