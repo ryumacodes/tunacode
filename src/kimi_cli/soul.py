@@ -141,7 +141,7 @@ class Soul:
 
             step_no += 1
             if step_no > self._loop_control.max_steps_per_run:
-                raise MaxStepsReached(step_no)
+                raise MaxStepsReached(self._loop_control.max_steps_per_run)
 
     async def _step(self, event_queue: EventQueue) -> bool:
         """Run an single step and return whether the run is finished."""
