@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Literal
 
 import click
-from kosong.base.chat_provider import ChatProvider
 from pydantic import SecretStr
 
 from kimi_cli.agent import (
@@ -29,13 +28,14 @@ from kimi_cli.config import (
 )
 from kimi_cli.context import Context
 from kimi_cli.denwarenji import DenwaRenji
+from kimi_cli.llm import LLM
 from kimi_cli.logging import logger
 from kimi_cli.metadata import Session, continue_session, new_session
 from kimi_cli.share import get_share_dir
 from kimi_cli.soul import Soul
 from kimi_cli.ui.print import PrintApp
 from kimi_cli.ui.shell import ShellApp
-from kimi_cli.utils.provider import augment_provider_with_env_vars, create_chat_provider
+from kimi_cli.utils.provider import augment_provider_with_env_vars, create_llm
 
 __version__ = importlib.metadata.version("ensoul")
 
@@ -158,9 +158,9 @@ def kimi(
         raise click.ClickException("API key is not set")
 
     echo(f"✓ Using LLM provider: {provider}")
-    echo(f"✓ Using LLM model: {model.model}")
+    echo(f"✓ Using LLM model: {model}")
     stream = ui != "print"  # use non-streaming mode for print UI
-    chat_provider = create_chat_provider(provider, model, stream=stream)
+    llm = create_llm(provider, model, stream=stream)
 
     if continue_:
         session = continue_session(work_dir)
@@ -173,7 +173,7 @@ def kimi(
     echo(f"✓ Session history file: {session.history_file}")
 
     succeeded = kimi_run(
-        chat_provider=chat_provider,
+        llm=llm,
         work_dir=work_dir,
         session=session,
         continue_=continue_,
@@ -189,7 +189,7 @@ def kimi(
 
 def kimi_run(
     *,
-    chat_provider: ChatProvider,
+    llm: LLM,
     work_dir: Path,
     session: Session,
     continue_: bool = False,
@@ -208,7 +208,7 @@ def kimi_run(
         echo(f"✓ Loaded agents.md: {textwrap.shorten(agents_md, width=100)}")
 
     agent_globals = AgentGlobals(
-        chat_provider=chat_provider,
+        llm=llm,
         builtin_args=BuiltinSystemPromptArgs(
             ENSOUL_WORK_DIR=work_dir,
             ENSOUL_WORK_DIR_LS=ls.stdout,
@@ -253,7 +253,7 @@ def kimi_run(
             app = ShellApp(
                 soul,
                 welcome_info={
-                    "Model": chat_provider.model_name,
+                    "Model": llm.chat_provider.model_name,
                     "Working directory": str(work_dir),
                     "Session": session.id,
                 },

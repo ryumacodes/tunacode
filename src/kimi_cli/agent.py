@@ -10,6 +10,7 @@ from kosong.tooling import CallableTool, SimpleToolset, Toolset
 from pydantic import BaseModel, Field
 
 from kimi_cli.denwarenji import DenwaRenji
+from kimi_cli.llm import LLM
 from kimi_cli.logging import logger
 from kimi_cli.metadata import Session
 
@@ -39,7 +40,7 @@ class BuiltinSystemPromptArgs(NamedTuple):
 class AgentGlobals(NamedTuple):
     """Agent globals."""
 
-    chat_provider: ChatProvider
+    llm: LLM
     builtin_args: BuiltinSystemPromptArgs
     denwa_renji: DenwaRenji
     session: Session
@@ -83,7 +84,8 @@ def load_agent(
 
     tool_deps = {
         AgentGlobals: globals_,
-        ChatProvider: globals_.chat_provider,
+        LLM: globals_.llm,
+        ChatProvider: globals_.llm.chat_provider,
         BuiltinSystemPromptArgs: globals_.builtin_args,
         Session: globals_.session,
         DenwaRenji: globals_.denwa_renji,

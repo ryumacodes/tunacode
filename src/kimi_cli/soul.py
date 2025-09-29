@@ -16,7 +16,6 @@ from tenacity import RetryCallState, retry_if_exception, stop_after_attempt, wai
 
 from kimi_cli.agent import Agent, AgentGlobals
 from kimi_cli.config import LoopControl
-from kimi_cli.constant import MAX_CONTEXT_SIZE
 from kimi_cli.context import Context
 from kimi_cli.event import (
     ContextUsageUpdate,
@@ -48,12 +47,21 @@ class Soul:
         context: Context,
         loop_control: LoopControl,
     ):
+        """
+        Initialize the soul.
+
+        Args:
+            agent (Agent): The agent to run.
+            agent_globals (AgentGlobals): Global states and parameters.
+            context (Context): The context of the agent.
+            loop_control (LoopControl): The control parameters for the agent loop.
+        """
         self._agent = agent
         self._agent_globals = agent_globals
-        self._chat_provider = agent_globals.chat_provider
+        self._chat_provider = agent_globals.llm.chat_provider
+        self._max_context_size = agent_globals.llm.max_context_size  # unit: tokens
         self._denwa_renji = agent_globals.denwa_renji
         self._context = context
-        self._max_context_size: int = MAX_CONTEXT_SIZE  # unit: tokens
         self._loop_control = loop_control
 
     @property

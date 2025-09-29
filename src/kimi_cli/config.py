@@ -28,6 +28,10 @@ class LLMModel(BaseModel):
 
     provider: str = Field(..., description="Provider name")
     model: str = Field(..., description="Model name")
+    max_context_size: int = Field(
+        default=200_000, description="Maximum context size (unit: tokens)"
+    )
+    # TODO: derive a default `max_context_size` according to model name
 
 
 class LoopControl(BaseModel):

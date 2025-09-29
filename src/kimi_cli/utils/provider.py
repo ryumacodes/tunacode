@@ -1,12 +1,12 @@
 import os
 
-from kosong.base.chat_provider import ChatProvider
 from kosong.chat_provider import ChaosChatProvider, Kimi, OpenAILegacy
 from kosong.chat_provider.chaos import ChaosConfig
 from pydantic import SecretStr
 
 import kimi_cli
 from kimi_cli.config import LLMModel, LLMProvider
+from kimi_cli.llm import LLM
 
 
 def augment_provider_with_env_vars(provider: LLMProvider):
@@ -25,12 +25,10 @@ def augment_provider_with_env_vars(provider: LLMProvider):
             pass
 
 
-def create_chat_provider(
-    provider: LLMProvider, model: LLMModel, stream: bool = True
-) -> ChatProvider:
+def create_llm(provider: LLMProvider, model: LLMModel, stream: bool = True) -> LLM:
     match provider.type:
         case "kimi":
-            return Kimi(
+            chat_provider = Kimi(
                 model=model.model,
                 base_url=provider.base_url,
                 api_key=provider.api_key.get_secret_value(),
@@ -40,14 +38,14 @@ def create_chat_provider(
                 },
             )
         case "openai_legacy":
-            return OpenAILegacy(
+            chat_provider = OpenAILegacy(
                 model=model.model,
                 base_url=provider.base_url,
                 api_key=provider.api_key.get_secret_value(),
                 stream=stream,
             )
         case "_chaos":
-            return ChaosChatProvider(
+            chat_provider = ChaosChatProvider(
                 model=model.model,
                 base_url=provider.base_url,
                 api_key=provider.api_key.get_secret_value(),
@@ -58,3 +56,5 @@ def create_chat_provider(
             )
         case _:
             raise ValueError(f"Unsupported provider: {provider.type}")
+
+    return LLM(chat_provider=chat_provider, max_context_size=model.max_context_size)
