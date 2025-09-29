@@ -5,9 +5,11 @@ from kosong.tooling import CallableTool2, ToolError, ToolOk, ToolReturnType
 
 from kimi_cli.denwarenji import DenwaRenji, DenwaRenjiError, DMail
 
+NAME = "SendDMail"
+
 
 class SendDMail(CallableTool2):
-    name: str = "SendDMail"
+    name: str = NAME
     description: str = (Path(__file__).parent / "dmail.md").read_text()
     params: type[DMail] = DMail
 

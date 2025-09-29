@@ -26,6 +26,7 @@ from kimi_cli.event import (
     StepInterrupted,
 )
 from kimi_cli.logging import logger
+from kimi_cli.tools.dmail import NAME as SendDMail_NAME
 from kimi_cli.tools.dmail import DMail
 from kimi_cli.utils.message import system, tool_result_to_messages
 
@@ -64,6 +65,13 @@ class Soul:
         self._context = context
         self._loop_control = loop_control
 
+        for tool in agent.toolset.tools:
+            if tool.name == SendDMail_NAME:
+                self._checkpoint_with_user_message = True
+                break
+        else:
+            self._checkpoint_with_user_message = False
+
     @property
     def name(self) -> str:
         return self._agent.name
@@ -75,6 +83,9 @@ class Soul:
     @property
     def context_usage(self) -> float:
         return self._context.token_count / self._max_context_size
+
+    async def _checkpoint(self):
+        await self._context.checkpoint(self._checkpoint_with_user_message)
 
     async def run(self, user_input: str, visualize: VisualizeFn):
         """
@@ -90,7 +101,7 @@ class Soul:
             asyncio.CancelledError: When the run is cancelled by user.
         """
 
-        await self._context.checkpoint()  # this creates the checkpoint 0 on first run
+        await self._checkpoint()  # this creates the checkpoint 0 on first run
         await self._context.append_message(Message(role="user", content=user_input))
         logger.debug("Appended user message to context")
 
@@ -121,12 +132,12 @@ class Soul:
         while True:
             event_queue.put_nowait(StepBegin(step_no))
             try:
-                await self._context.checkpoint()
+                await self._checkpoint()
                 self._denwa_renji.set_n_checkpoints(self._context.n_checkpoints)
                 finished = await self._step(event_queue)
             except BackToTheFuture as e:
                 await self._context.revert_to(e.dmail.checkpoint_id)
-                await self._context.checkpoint()
+                await self._checkpoint()
                 await self._context.append_message(
                     Message(
                         role="user",

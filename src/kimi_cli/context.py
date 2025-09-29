@@ -54,16 +54,17 @@ class Context:
     def n_checkpoints(self) -> int:
         return self._next_checkpoint_id
 
-    async def checkpoint(self):
+    async def checkpoint(self, add_user_message: bool):
         checkpoint_id = self._next_checkpoint_id
         self._next_checkpoint_id += 1
         logger.debug("Checkpointing, ID: {id}", id=checkpoint_id)
 
         async with aiofiles.open(self._file_backend, "a", encoding="utf-8") as f:
             await f.write(json.dumps({"role": "_checkpoint", "id": checkpoint_id}) + "\n")
-        await self.append_message(
-            Message(role="user", content=[system(f"CHECKPOINT {checkpoint_id}")])
-        )
+        if add_user_message:
+            await self.append_message(
+                Message(role="user", content=[system(f"CHECKPOINT {checkpoint_id}")])
+            )
 
     async def revert_to(self, checkpoint_id: int):
         """
@@ -72,7 +73,7 @@ class Context:
         removed from the context. File backend will be rotated.
 
         Args:
-            checkpoint_id (int): The ID of the checkpoint to revert to.
+            checkpoint_id (int): The ID of the checkpoint to revert to. 0 is the first checkpoint.
 
         Raises:
             ValueError: When the checkpoint does not exist.
