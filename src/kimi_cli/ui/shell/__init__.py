@@ -53,6 +53,7 @@ class ShellApp(BaseApp):
             welcome += "\n\n" + "\n".join(
                 f"[grey30]{key}: {value}[/grey30]" for key, value in self.welcome_info.items()
             )
+        welcome += "\n\n" + "[grey30]Send /help for help information.[/grey30]"
 
         console.print()
         console.print(
