@@ -33,7 +33,7 @@ from kimi_cli.logging import logger
 from kimi_cli.metadata import Session, continue_session, new_session
 from kimi_cli.share import get_share_dir
 from kimi_cli.soul import Soul
-from kimi_cli.ui.print import PrintApp
+from kimi_cli.ui.print import InputFormat, PrintApp
 from kimi_cli.ui.shell import ShellApp
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_llm
 
@@ -50,20 +50,20 @@ UIMode = Literal["shell", "print"]
     "--verbose",
     is_flag=True,
     default=False,
-    help="Print verbose information (default: no)",
+    help="Print verbose information. Default: no.",
 )
 @click.option(
     "--debug",
     is_flag=True,
     default=False,
-    help="Log debug information (default: no)",
+    help="Log debug information. Default: no.",
 )
 @click.option(
     "--agent",
     "agent_file",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
     default=DEFAULT_AGENT_FILE,
-    help="Custom agent specification file (default: builtin Kimi Koder)",
+    help="Custom agent specification file. Default: builtin Kimi Koder.",
 )
 @click.option(
     "--model",
@@ -71,14 +71,14 @@ UIMode = Literal["shell", "print"]
     "model_name",
     type=str,
     default=None,
-    help="LLM model to use (default: default model set in config file)",
+    help="LLM model to use. Default: default model set in config file.",
 )
 @click.option(
     "--work-dir",
     "-w",
     type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
     default=Path.cwd(),
-    help="Working directory for the agent (default: current directory)",
+    help="Working directory for the agent. Default: current directory.",
 )
 @click.option(
     "--continue",
@@ -86,7 +86,7 @@ UIMode = Literal["shell", "print"]
     "continue_",
     is_flag=True,
     default=False,
-    help="Continue the previous session for the working directory (default: no)",
+    help="Continue the previous session for the working directory. Default: no.",
 )
 @click.option(
     "--command",
@@ -96,14 +96,23 @@ UIMode = Literal["shell", "print"]
     "command",
     type=str,
     default=None,
-    help="User query to the agent (default: interactive mode)",
+    help="User query to the agent. Default: prompt and read from stdin.",
 )
 @click.option(
     "--ui",
     "ui",
     type=click.Choice(["shell", "print"]),
     default="shell",
-    help="UI mode to use (default: shell)",
+    help="UI mode to use. Default: shell.",
+)
+@click.option(
+    "--input-format",
+    type=click.Choice(["text", "stream-json"]),
+    default="text",
+    help=(
+        "Input format to use. Default: text. This only matters when piping input from stdin, "
+        "and must be used with `--ui print`."
+    ),
 )
 def kimi(
     verbose: bool,
@@ -114,6 +123,7 @@ def kimi(
     continue_: bool,
     command: str | None,
     ui: UIMode,
+    input_format: InputFormat,
 ):
     """Kimi, your next CLI agent."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
@@ -174,12 +184,10 @@ def kimi(
         echo(f"✓ Created new session: {session.id}")
     echo(f"✓ Session history file: {session.history_file}")
 
-    if command is None and not sys.stdin.isatty():
-        command = sys.stdin.read().strip()
-        echo(f"✓ Read command from stdin: {command}")
-
-    if ui == "print" and command is None:
-        raise click.BadOptionUsage("--ui", "Command is required for print UI")
+    if input_format == "stream-json" and ui != "print":
+        raise click.BadOptionUsage(
+            "--input-format", "Stream JSON input is only supported for print UI"
+        )
 
     succeeded = kimi_run(
         llm=llm,
@@ -191,6 +199,7 @@ def kimi(
         loop_control=config.loop_control,
         verbose=verbose,
         ui=ui,
+        input_format=input_format,
     )
     if not succeeded:
         sys.exit(1)
@@ -207,6 +216,7 @@ def kimi_run(
     loop_control: LoopControl | None = None,
     verbose: bool = True,
     ui: UIMode = "shell",
+    input_format: InputFormat = "text",
 ) -> bool:
     """Run Kimi CLI."""
     echo = click.echo if verbose else lambda *args, **kwargs: None
@@ -256,6 +266,10 @@ def kimi_run(
 
     try:
         if ui == "shell":
+            if command is None and not sys.stdin.isatty() and input_format == "text":
+                command = sys.stdin.read().strip()
+                echo(f"✓ Read command from stdin: {command}")
+
             app = ShellApp(
                 soul,
                 welcome_info={
@@ -265,7 +279,7 @@ def kimi_run(
                 },
             )
         elif ui == "print":
-            app = PrintApp(soul)
+            app = PrintApp(soul, input_format)
         else:
             raise click.BadParameter(f"Invalid UI mode: {ui}")
 
