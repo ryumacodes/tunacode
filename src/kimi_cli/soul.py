@@ -5,7 +5,12 @@ import kosong
 import tenacity
 from kosong import StepResult
 from kosong.base.message import Message
-from kosong.chat_provider import APIStatusError, ChatProviderError
+from kosong.chat_provider import (
+    APIConnectionError,
+    APIStatusError,
+    APITimeoutError,
+    ChatProviderError,
+)
 from kosong.tooling import ToolResult
 from tenacity import RetryCallState, retry_if_exception, stop_after_attempt, wait_exponential_jitter
 
@@ -146,6 +151,8 @@ class Soul:
         """Run an single step and return whether the run is finished."""
 
         def _is_retryable_error(exception: BaseException) -> bool:
+            if isinstance(exception, (APIConnectionError, APITimeoutError)):
+                return True
             return isinstance(exception, APIStatusError) and exception.status_code in (
                 429,  # Too Many Requests
                 500,  # Internal Server Error
