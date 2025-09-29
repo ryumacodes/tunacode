@@ -9,6 +9,19 @@ Internal builds may append content to the Unreleased section.
 Only write entries that are worth mentioning to users.
 -->
 
+## [0.17] - 2025-09-29
+
+### Fixed
+
+- Fix step count in error message when exceeded max steps
+- Fix history file assertion error in `kimi_run`
+- Fix error handling in print mode and single command shell mode
+- Add retry for LLM API connection errors and timeout errors
+
+### Changed
+
+- Increase default max-steps-per-run to 100
+
 ## [0.16.0] - 2025-09-26
 
 ### Tools
