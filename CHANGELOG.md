@@ -9,6 +9,17 @@ Internal builds may append content to the Unreleased section.
 Only write entries that are worth mentioning to users.
 -->
 
+## [unreleased]
+
+### Added
+
+- Support piped stdin for print UI
+- Support `--input-format=stream-json` for piped JSON input
+
+### Fixed
+
+- Do not include `CHECKPOINT` messages in the context when `SendDMail` is not enabled
+
 ## [0.18] - 2025-09-29
 
 ### Added
