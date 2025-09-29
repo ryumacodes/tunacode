@@ -131,7 +131,6 @@ class Soul:
                 )
                 continue
             except (ChatProviderError, asyncio.CancelledError):
-                # FIXME: only asyncio.CancelledError need to trigger StepInterrupted
                 event_queue.put_nowait(StepInterrupted())
                 # break the agent loop
                 raise

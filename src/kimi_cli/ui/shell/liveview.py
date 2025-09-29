@@ -154,5 +154,5 @@ class StepLiveView:
         # the line buffer will be duplicated, so let's just clear one of them.
         for view in self._tool_calls.values():
             if not view.finished:
-                view.finish(ToolError(message="", brief="Cancelled"))
+                view.finish(ToolError(message="", brief="Interrupted"))
         self._live.update(self._compose())
