@@ -1,6 +1,6 @@
 [project]
 name = "ensoul"
-version = "0.17"
+version = "0.18"
 description = "Ensoul is your next CLI agent."
 readme = "README.md"
 requires-python = ">=3.13"
