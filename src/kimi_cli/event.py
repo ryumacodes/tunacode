@@ -7,11 +7,11 @@ from kosong.tooling import ToolResult
 from kimi_cli.logging import logger
 
 
-class RunBegin:
+class RunBegin(NamedTuple):
     pass
 
 
-class RunEnd:
+class RunEnd(NamedTuple):
     pass
 
 
@@ -19,7 +19,7 @@ class StepBegin(NamedTuple):
     n: int
 
 
-class StepInterrupted:
+class StepInterrupted(NamedTuple):
     pass
 
 
