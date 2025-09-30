@@ -111,7 +111,7 @@ class ShellApp(BaseApp):
             logger.warning("Max steps reached: {n_steps}", n_steps=e.n_steps)
             console.print(f"[bold yellow]Max steps reached: {e.n_steps}[/bold yellow]")
         except KeyboardInterrupt:
-            logger.error("Interrupted by user")
+            logger.info("Interrupted by user")
             console.print("[bold red]Interrupted by user[/bold red]")
         except BaseException as e:
             logger.exception("Unknown error:")
