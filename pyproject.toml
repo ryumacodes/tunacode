@@ -5,6 +5,7 @@ description = "Ensoul is your next CLI agent."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "agent-client-protocol>=0.3.0",
     "aiofiles>=24.1.0",
     "click>=8.2.1",
     "kosong>=0.13.0",

@@ -33,6 +33,7 @@ from kimi_cli.logging import logger
 from kimi_cli.metadata import Session, continue_session, new_session
 from kimi_cli.share import get_share_dir
 from kimi_cli.soul import Soul
+from kimi_cli.ui.acp import ACPServer
 from kimi_cli.ui.print import InputFormat, PrintApp
 from kimi_cli.ui.shell import ShellApp
 from kimi_cli.utils.provider import augment_provider_with_env_vars, create_llm
@@ -41,7 +42,7 @@ __version__ = importlib.metadata.version("ensoul")
 
 DEFAULT_AGENT_FILE = get_agents_dir() / "koder" / "agent.yaml"
 
-UIMode = Literal["shell", "print"]
+UIMode = Literal["shell", "print", "acp"]
 
 
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
@@ -101,7 +102,7 @@ UIMode = Literal["shell", "print"]
 @click.option(
     "--ui",
     "ui",
-    type=click.Choice(["shell", "print"]),
+    type=click.Choice(["shell", "print", "acp"]),
     default="shell",
     help="UI mode to use. Default: shell.",
 )
@@ -169,7 +170,7 @@ def kimi(
 
     echo(f"✓ Using LLM provider: {provider}")
     echo(f"✓ Using LLM model: {model}")
-    stream = ui != "print"  # use non-streaming mode for print UI
+    stream = ui != "print"  # use non-streaming mode only for print UI
     llm = create_llm(provider, model, stream=stream)
 
     if continue_:
@@ -280,6 +281,8 @@ def kimi_run(
             )
         elif ui == "print":
             app = PrintApp(soul, input_format)
+        elif ui == "acp":
+            app = ACPServer(soul)
         else:
             raise click.BadParameter(f"Invalid UI mode: {ui}")
 
