@@ -89,9 +89,7 @@ def _coerce_request_delay(state_manager: StateManager) -> float:
     request_delay = float(request_delay_raw)
 
     if request_delay < 0.0 or request_delay > 60.0:
-        raise ValueError(
-            f"request_delay must be between 0.0 and 60.0 seconds, got {request_delay}"
-        )
+        raise ValueError(f"request_delay must be between 0.0 and 60.0 seconds, got {request_delay}")
 
     return request_delay
 

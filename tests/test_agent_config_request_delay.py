@@ -90,14 +90,14 @@ def test_http_client_uses_retry_transport_by_default(
 @pytest.mark.parametrize(
     "delay_value,should_raise",
     [
-        (0.0, False),      # Valid: minimum
-        (30.0, False),     # Valid: middle
-        (60.0, False),     # Valid: maximum
-        (-1.0, True),      # Invalid: negative
-        (61.0, True),      # Invalid: exceeds max
-        (100.0, True),     # Invalid: way over
+        (0.0, False),  # Valid: minimum
+        (30.0, False),  # Valid: middle
+        (60.0, False),  # Valid: maximum
+        (-1.0, True),  # Invalid: negative
+        (61.0, True),  # Invalid: exceeds max
+        (100.0, True),  # Invalid: way over
     ],
-    )
+)
 def test_request_delay_validation(
     state_manager: StateManager, delay_value: float, should_raise: bool
 ) -> None:
