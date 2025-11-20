@@ -1,8 +1,9 @@
 """Agent configuration and creation utilities."""
 
 import asyncio
+import math
 from pathlib import Path
-from typing import Awaitable, Callable, Dict, Tuple
+from typing import Any, Awaitable, Callable, Dict, Tuple
 
 from httpx import AsyncClient, HTTPStatusError, Request
 from pydantic_ai import Agent
@@ -13,6 +14,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.retries import AsyncTenacityTransport, RetryConfig, wait_retry_after
 from tenacity import retry_if_exception_type, stop_after_attempt
 
+from tunacode.constants import UI_THINKING_MESSAGE
 from tunacode.core.agents.delegation_tools import create_research_codebase_tool
 from tunacode.core.logging.logger import get_logger
 from tunacode.core.state import StateManager
@@ -26,6 +28,7 @@ from tunacode.tools.run_command import run_command
 from tunacode.tools.update_file import update_file
 from tunacode.tools.write_file import write_file
 from tunacode.types import ModelName, PydanticAgent
+from tunacode.ui import console as ui
 
 logger = get_logger(__name__)
 
@@ -37,17 +40,88 @@ _TUNACODE_CACHE: Dict[str, Tuple[str, float]] = {}
 _AGENT_CACHE: Dict[ModelName, PydanticAgent] = {}
 _AGENT_CACHE_VERSION: Dict[ModelName, int] = {}
 
+REQUEST_DELAY_MESSAGE_PREFIX = "Respecting request delay"
+
+
+def _format_request_delay_message(seconds_remaining: float) -> str:
+    safe_remaining = max(0.0, seconds_remaining)
+    return f"{REQUEST_DELAY_MESSAGE_PREFIX}: {safe_remaining:.1f}s remaining"
+
+
+async def _publish_delay_message(message: str, state_manager: StateManager) -> None:
+    """Best-effort spinner update; UI failures must not block requests."""
+    spinner = getattr(state_manager.session, "spinner", None)
+    streaming_panel = getattr(state_manager.session, "streaming_panel", None)
+    try:
+        if spinner:
+            await ui.update_spinner_message(message, state_manager)
+            return
+
+        if streaming_panel:
+            if message == UI_THINKING_MESSAGE:
+                await streaming_panel.clear_status_message()
+            else:
+                await streaming_panel.set_status_message(message)
+    except Exception:
+        logger.debug("Request delay UI update failed (non-fatal)", exc_info=True)
+
+
+async def _sleep_with_countdown(
+    total_delay: float, countdown_steps: int, state_manager: StateManager
+) -> None:
+    """Sleep while surfacing a countdown via the spinner."""
+    delay_per_step = total_delay / countdown_steps
+    remaining = total_delay
+    await _publish_delay_message(_format_request_delay_message(remaining), state_manager)
+
+    for _ in range(countdown_steps):
+        await asyncio.sleep(delay_per_step)
+        remaining = max(0.0, remaining - delay_per_step)
+        await _publish_delay_message(_format_request_delay_message(remaining), state_manager)
+
+    await _publish_delay_message(UI_THINKING_MESSAGE, state_manager)
+
+
+def _coerce_request_delay(state_manager: StateManager) -> float:
+    """Return validated request_delay from config."""
+    settings = state_manager.session.user_config.get("settings", {})
+    request_delay_raw = settings.get("request_delay", 0.0)
+    request_delay = float(request_delay_raw)
+
+    if request_delay < 0.0 or request_delay > 60.0:
+        raise ValueError(
+            f"request_delay must be between 0.0 and 60.0 seconds, got {request_delay}"
+        )
+
+    return request_delay
+
+
+def _compute_agent_version(
+    settings: Dict[str, Any], request_delay: float, mcp_servers: dict
+) -> int:
+    """Compute a hash representing agent-defining configuration."""
+    return hash(
+        (
+            str(settings.get("max_retries", 3)),
+            str(settings.get("tool_strict_validation", False)),
+            str(request_delay),
+            str(mcp_servers),
+        )
+    )
+
 
 def _build_request_hooks(
-    request_delay: float,
+    request_delay: float, state_manager: StateManager
 ) -> Dict[str, list[Callable[[Request], Awaitable[None]]]]:
     """Return httpx event hooks enforcing a fixed pre-request delay."""
     if request_delay <= 0:
         # Reason: avoid overhead when no throttling requested
         return {}
 
+    countdown_steps = max(int(math.ceil(request_delay)), 1)
+
     async def _delay_before_request(_: Request) -> None:
-        await asyncio.sleep(request_delay)
+        await _sleep_with_countdown(request_delay, countdown_steps, state_manager)
 
     return {"request": [_delay_before_request]}
 
@@ -210,30 +284,30 @@ def _create_model_with_retry(
 
 def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
     """Get existing agent or create new one for the specified model."""
-    import logging
-
-    logger = logging.getLogger(__name__)
+    request_delay = _coerce_request_delay(state_manager)
+    settings = state_manager.session.user_config.get("settings", {})
+    mcp_servers_config = state_manager.session.user_config.get("mcpServers", {})
+    agent_version = _compute_agent_version(settings, request_delay, mcp_servers_config)
 
     # Check session-level cache first (for backward compatibility with tests)
-    if model in state_manager.session.agents:
+    session_agent = state_manager.session.agents.get(model)
+    session_version = state_manager.session.agent_versions.get(model)
+    if session_agent and session_version == agent_version:
         logger.debug(f"Using session-cached agent for model {model}")
-        return state_manager.session.agents[model]
+        return session_agent
+    if session_agent and session_version != agent_version:
+        logger.debug(f"Session cache invalidated for model {model} due to config change")
+        del state_manager.session.agents[model]
+        state_manager.session.agent_versions.pop(model, None)
 
     # Check module-level cache
     if model in _AGENT_CACHE:
         # Verify cache is still valid (check for config changes)
-        settings = state_manager.session.user_config.get("settings", {})
-        current_version = hash(
-            (
-                str(settings.get("max_retries", 3)),
-                str(settings.get("tool_strict_validation", False)),
-                # Note: request_delay excluded from cache key (runtime behavior, not agent-defining)
-                str(state_manager.session.user_config.get("mcpServers", {})),
-            )
-        )
-        if _AGENT_CACHE_VERSION.get(model) == current_version:
+        cached_version = _AGENT_CACHE_VERSION.get(model)
+        if cached_version == agent_version:
             logger.debug(f"Using module-cached agent for model {model}")
             state_manager.session.agents[model] = _AGENT_CACHE[model]
+            state_manager.session.agent_versions[model] = agent_version
             return _AGENT_CACHE[model]
         else:
             logger.debug(f"Cache invalidated for model {model} due to config change")
@@ -242,7 +316,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
 
     if model not in _AGENT_CACHE:
         logger.debug(f"Creating new agent for model {model}")
-        max_retries = state_manager.session.user_config.get("settings", {}).get("max_retries", 3)
+        max_retries = settings.get("max_retries", 3)
 
         # Lazy import Agent and Tool
         Agent, Tool = get_agent_tool()
@@ -256,9 +330,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
 
         # Get tool strict validation setting from config (default to False for backward
         # compatibility)
-        tool_strict_validation = state_manager.session.user_config.get("settings", {}).get(
-            "tool_strict_validation", False
-        )
+        tool_strict_validation = settings.get("tool_strict_validation", False)
 
         # Create tool list
         tools_list = [
@@ -295,16 +367,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             ),
             validate_response=lambda r: r.raise_for_status(),
         )
-        request_delay_raw = state_manager.session.user_config.get("settings", {}).get(
-            "request_delay", 0.0
-        )
-        request_delay = float(request_delay_raw)
-
-        if not (0.0 <= request_delay <= 60.0):
-            raise ValueError(
-                f"request_delay must be between 0.0 and 60.0 seconds, got {request_delay}"
-            )
-        event_hooks = _build_request_hooks(request_delay)
+        event_hooks = _build_request_hooks(request_delay, state_manager)
         http_client = AsyncClient(transport=transport, event_hooks=event_hooks)
 
         # Create model instance with retry-enabled HTTP client
@@ -324,18 +387,8 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
 
         # Store in both caches
         _AGENT_CACHE[model] = agent
-        _AGENT_CACHE_VERSION[model] = hash(
-            (
-                str(state_manager.session.user_config.get("settings", {}).get("max_retries", 3)),
-                str(
-                    state_manager.session.user_config.get("settings", {}).get(
-                        "tool_strict_validation", False
-                    )
-                ),
-                # Note: request_delay excluded from cache key (runtime behavior, not agent-defining)
-                str(state_manager.session.user_config.get("mcpServers", {})),
-            )
-        )
+        _AGENT_CACHE_VERSION[model] = agent_version
+        state_manager.session.agent_versions[model] = agent_version
         state_manager.session.agents[model] = agent
 
     return _AGENT_CACHE[model]

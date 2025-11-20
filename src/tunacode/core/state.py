@@ -35,6 +35,7 @@ class SessionState:
     agents: dict[str, Any] = field(
         default_factory=dict
     )  # Keep as dict[str, Any] for agent instances
+    agent_versions: dict[str, int] = field(default_factory=dict)
     messages: MessageHistory = field(default_factory=list)
     total_cost: float = 0.0
     # Keep session default in sync with configuration default

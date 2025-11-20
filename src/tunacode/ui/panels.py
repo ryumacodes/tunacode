@@ -140,6 +140,7 @@ class StreamingAgentPanel:
     _dots_count: int
     _show_dots: bool
     _lock: asyncio.Lock
+    status_message: str
 
     def __init__(self, bottom: int = 1, debug: bool = False):
         self.bottom = bottom
@@ -158,6 +159,7 @@ class StreamingAgentPanel:
         self._first_update_done: bool = False
         self._dots_tick_count: int = 0
         self._max_logged_dots: int = 10
+        self.status_message = ""
 
     def _log_debug(self, label: str, **data: Any) -> None:
         if not self._debug_enabled:
@@ -176,27 +178,26 @@ class StreamingAgentPanel:
 
         rich = get_rich_components()
 
+        status_block = f"[dim]{self.status_message}[/dim]" if self.status_message else ""
+
         # Show "Thinking..." only when no content has arrived yet
         if not self.content:
-            # Apply dots animation to "Thinking..." message too
             thinking_msg = UI_THINKING_MESSAGE
             if self._show_dots:
-                # Remove the existing ... from the message and add animated dots
                 base_msg = thinking_msg.replace("...", "")
                 dots_patterns = ["", ".", "..", "..."]
                 dots = dots_patterns[self._dots_count % len(dots_patterns)]
                 thinking_msg = base_msg + dots
-            content_renderable: RenderableContent = rich["Text"].from_markup(thinking_msg)
+            combined = "\n\n".join(part for part in (status_block, thinking_msg) if part)
+            content_renderable = rich["Text"].from_markup(combined)
         else:
-            # Once we have content, show it with optional dots animation
             display_content = self.content
-            # Add animated dots if we're waiting for more content
             if self._show_dots:
-                # Cycle through: "", ".", "..", "..."
                 dots_patterns = ["", ".", "..", "..."]
                 dots = dots_patterns[self._dots_count % len(dots_patterns)]
                 display_content = self.content.rstrip() + dots
-            content_renderable = rich["Markdown"](display_content)
+            combined = "\n\n".join(part for part in (status_block, display_content) if part)
+            content_renderable = rich["Markdown"](combined)
         panel_obj = rich["Panel"](
             rich["Padding"](content_renderable, (0, 1, 0, 1)),
             title=f"[bold]{self.title}[/bold]",
@@ -319,6 +320,20 @@ class StreamingAgentPanel:
                 self.live.update(self._create_panel())
                 if self._update_count <= 2:
                     self._log_debug("live_update.end", update_index=self._update_count)
+
+    async def set_status_message(self, message: str) -> None:
+        """Overlay a status message without changing streamed content."""
+        async with self._lock:
+            self.status_message = message
+            if self.live:
+                self.live.update(self._create_panel())
+
+    async def clear_status_message(self) -> None:
+        """Remove the status overlay."""
+        async with self._lock:
+            self.status_message = ""
+            if self.live:
+                self.live.update(self._create_panel())
 
     async def set_content(self, content: str):
         """Set the complete content (overwrites previous)."""

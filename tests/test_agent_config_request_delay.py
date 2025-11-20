@@ -97,7 +97,7 @@ def test_http_client_uses_retry_transport_by_default(
         (61.0, True),      # Invalid: exceeds max
         (100.0, True),     # Invalid: way over
     ],
-)
+    )
 def test_request_delay_validation(
     state_manager: StateManager, delay_value: float, should_raise: bool
 ) -> None:
@@ -110,3 +110,123 @@ def test_request_delay_validation(
     else:
         # Should not raise
         ac.get_or_create_agent("openai:gpt-4", state_manager)
+
+
+def test_request_delay_change_invalidation(
+    monkeypatch: pytest.MonkeyPatch, state_manager: StateManager
+) -> None:
+    """Changing request_delay should rebuild the agent to apply new hooks."""
+    captured_event_hooks: list[dict] = []
+
+    class RecordingAsyncClient(httpx.AsyncClient):
+        def __init__(self, *args, **kwargs):
+            captured_event_hooks.append(kwargs.get("event_hooks") or {})
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(ac, "AsyncClient", RecordingAsyncClient)
+
+    state_manager.session.user_config["settings"]["request_delay"] = 0.0
+    ac.get_or_create_agent("openai:gpt-4.1", state_manager)
+
+    state_manager.session.user_config["settings"]["request_delay"] = 1.0
+    ac.get_or_create_agent("openai:gpt-4.1", state_manager)
+
+    assert len(captured_event_hooks) == 2
+    assert captured_event_hooks[0].get("request") in (None, [])
+
+    updated_request_hooks = captured_event_hooks[1].get("request")
+    assert updated_request_hooks, "Expected rebuilt agent to include request delay hook"
+
+
+@pytest.mark.asyncio
+async def test_request_delay_countdown_updates_spinner(
+    monkeypatch: pytest.MonkeyPatch, state_manager: StateManager
+) -> None:
+    """Request delay should surface countdown messaging and restore spinner message."""
+    state_manager.session.user_config["settings"]["request_delay"] = 1.2
+    captured_hooks: dict = {}
+
+    class RecordingAsyncClient(httpx.AsyncClient):
+        def __init__(self, *args, **kwargs):
+            captured_hooks.update(kwargs.get("event_hooks") or {})
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(ac, "AsyncClient", RecordingAsyncClient)
+
+    messages: list[str] = []
+
+    async def fake_update_spinner_message(message: str, _state_manager: StateManager) -> None:
+        messages.append(message)
+
+    state_manager.session.spinner = object()
+    monkeypatch.setattr(ac.ui, "update_spinner_message", fake_update_spinner_message)
+
+    sleep_calls: list[float] = []
+
+    async def fake_sleep(duration: float) -> None:
+        sleep_calls.append(duration)
+
+    monkeypatch.setattr(ac.asyncio, "sleep", fake_sleep)
+
+    ac.get_or_create_agent("openai:gpt-4.1", state_manager)
+
+    request_hooks = captured_hooks.get("request")
+    assert request_hooks, "Expected request hooks for configured delay"
+    hook = request_hooks[0]
+
+    await hook(httpx.Request("GET", "http://example.com"))
+
+    assert messages, "Countdown should publish spinner updates"
+    assert messages[-1] == ac.UI_THINKING_MESSAGE
+    assert sum(sleep_calls) == pytest.approx(1.2)
+
+
+@pytest.mark.asyncio
+async def test_request_delay_countdown_updates_streaming_panel(
+    monkeypatch: pytest.MonkeyPatch, state_manager: StateManager
+) -> None:
+    """Countdown should surface via streaming panel when spinner is absent."""
+    state_manager.session.user_config["settings"]["request_delay"] = 0.6
+    captured_hooks: dict = {}
+
+    class RecordingAsyncClient(httpx.AsyncClient):
+        def __init__(self, *args, **kwargs):
+            captured_hooks.update(kwargs.get("event_hooks") or {})
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(ac, "AsyncClient", RecordingAsyncClient)
+
+    class StubPanel:
+        def __init__(self) -> None:
+            self.status_messages: list[str] = []
+            self.clears = 0
+
+        async def set_status_message(self, message: str) -> None:
+            self.status_messages.append(message)
+
+        async def clear_status_message(self) -> None:
+            self.clears += 1
+
+    panel = StubPanel()
+    state_manager.session.streaming_panel = panel
+    state_manager.session.spinner = None
+
+    sleep_calls: list[float] = []
+
+    async def fake_sleep(duration: float) -> None:
+        sleep_calls.append(duration)
+
+    monkeypatch.setattr(ac.asyncio, "sleep", fake_sleep)
+
+    ac.get_or_create_agent("openai:gpt-4.1", state_manager)
+
+    request_hooks = captured_hooks.get("request")
+    assert request_hooks, "Expected request hooks for configured delay"
+    hook = request_hooks[0]
+
+    await hook(httpx.Request("GET", "http://example.com"))
+
+    assert panel.status_messages, "Countdown should update streaming panel"
+    assert panel.status_messages[0].startswith(ac.REQUEST_DELAY_MESSAGE_PREFIX)
+    assert panel.clears == 1
+    assert sum(sleep_calls) == pytest.approx(0.6)
