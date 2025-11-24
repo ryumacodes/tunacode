@@ -15,9 +15,11 @@ while IFS= read -r -d '' file; do
 
     # Skip glob.py and grep.py as they contain necessary prompt injection implementation
     # Skip main.py in agents dir as it was recently refactored
+    # Skip prompt files as they can be lengthy for comprehensive system instructions
     if [[ "$file" == *"/src/tunacode/tools/glob.py" ]] || \
        [[ "$file" == *"/src/tunacode/tools/grep.py" ]] || \
-       [[ "$file" == *"/src/tunacode/core/agents/main.py" ]]; then
+       [[ "$file" == *"/src/tunacode/core/agents/main.py" ]] || \
+       [[ "$file" == *"/src/tunacode/prompts/"*".xml" ]]; then
         continue
     fi
 
