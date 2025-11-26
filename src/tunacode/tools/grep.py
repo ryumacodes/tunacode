@@ -31,8 +31,8 @@ from tunacode.tools.grep_components import (
 )
 from tunacode.tools.grep_components.result_formatter import ResultFormatter
 from tunacode.tools.xml_helper import load_parameters_schema_from_xml, load_prompt_from_xml
-from tunacode.utils.ripgrep import RipgrepExecutor
-from tunacode.utils.ripgrep import metrics as ripgrep_metrics
+from tunacode.tools_utils.ripgrep import RipgrepExecutor
+from tunacode.tools_utils.ripgrep import metrics as ripgrep_metrics
 
 logger = logging.getLogger(__name__)
 

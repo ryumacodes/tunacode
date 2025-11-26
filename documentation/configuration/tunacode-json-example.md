@@ -32,7 +32,6 @@ The actual configuration file should be located at:
         "context_window_size": 200000,
         "enable_streaming": true,
         "ripgrep": {
-            "use_bundled": false,
             "timeout": 10,
             "max_buffer_size": 1048576,
             "max_results": 100,
@@ -78,7 +77,6 @@ Configure API keys and endpoints for different AI providers:
 - `enable_streaming`: Enable streaming responses (default: true)
 
 **Ripgrep Configuration:**
-- `use_bundled`: Use bundled ripgrep binary (default: false)
 - `timeout`: Ripgrep timeout in seconds (default: 10)
 - `max_buffer_size`: Maximum buffer size in bytes (default: 1048576)
 - `max_results`: Maximum search results (default: 100)

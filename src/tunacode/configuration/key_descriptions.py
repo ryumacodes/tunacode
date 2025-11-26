@@ -170,13 +170,6 @@ CONFIG_KEY_DESCRIPTIONS: Dict[str, KeyDescription] = {
         category="User Experience",
     ),
     # Ripgrep settings
-    "settings.ripgrep.use_bundled": KeyDescription(
-        name="ripgrep.use_bundled",
-        description="Use TunaCode's built-in ripgrep instead of system version",
-        example=False,
-        help_text="Usually false is better - uses your system's ripgrep which may be newer/faster.",
-        category="Search Settings",
-    ),
     "settings.ripgrep.timeout": KeyDescription(
         name="ripgrep.timeout",
         description="How long to wait for search results (seconds)",

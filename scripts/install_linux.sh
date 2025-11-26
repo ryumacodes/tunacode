@@ -500,7 +500,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
         "fallback_verbosity": "normal",
         "context_window_size": 200000,
         "ripgrep": {
-            "use_bundled": false,
             "timeout": 10,
             "max_buffer_size": 1048576,
             "max_results": 100,

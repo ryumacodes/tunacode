@@ -16,6 +16,7 @@ from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
+from tunacode.tools_utils.text_match import replace
 from tunacode.types import ToolResult
 
 logger = logging.getLogger(__name__)
@@ -139,22 +140,21 @@ class UpdateFileTool(FileBasedTool):
         with open(filepath, "r", encoding="utf-8") as f:
             original = f.read()
 
-        if target not in original:
-            # Provide context to help the LLM find the target
-            context_lines = 10
+        try:
+            new_content = replace(original, target, patch, replace_all=False)
+        except ValueError as e:
+            # Provide context to help the LLM understand what went wrong
+            error_msg = str(e)
             lines = original.splitlines()
-            snippet = "\n".join(lines[:context_lines])
-            # Use ModelRetry to guide the LLM
+            # For small files, show more context
+            preview_lines = min(20, len(lines))
+            snippet = "\n".join(lines[:preview_lines])
             raise ModelRetry(
-                f"Target block not found in '{filepath}'. "
-                "Ensure the `target` argument exactly matches the content you want to replace. "
-                f"File starts with:\n---\n{snippet}\n---"
+                f"{error_msg}\n\n"
+                f"File '{filepath}' preview ({preview_lines} lines):\n---\n{snippet}\n---"
             )
 
-        new_content = original.replace(target, patch, 1)  # Replace only the first occurrence
-
         if original == new_content:
-            # This could happen if target and patch are identical
             raise ModelRetry(
                 f"Update target found, but replacement resulted in no changes to '{filepath}'. "
                 "Was the `target` identical to the `patch`? Please check the file content."

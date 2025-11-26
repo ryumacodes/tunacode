@@ -47,7 +47,6 @@ Replace the contents of your `tunacode.json` with this template:
         "context_window_size": 200000,
         "enable_streaming": true,
         "ripgrep": {
-            "use_bundled": false,
             "timeout": 10,
             "max_buffer_size": 1048576,
             "max_results": 100,

@@ -28,7 +28,6 @@ DEFAULT_USER_CONFIG: UserConfig = {
         "context_window_size": 200000,
         "enable_streaming": True,  # Always enable streaming
         "ripgrep": {
-            "use_bundled": False,  # Use system ripgrep binary
             "timeout": 10,  # Search timeout in seconds
             "max_buffer_size": 1048576,  # 1MB max output buffer
             "max_results": 100,  # Maximum results per search
