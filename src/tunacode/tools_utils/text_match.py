@@ -306,6 +306,9 @@ def replace(content: str, old_string: str, new_string: str, replace_all: bool = 
         ValueError: If no match found after trying all strategies
         ValueError: If multiple matches found and replace_all is False
     """
+    if old_string == "":
+        raise ValueError("old_string cannot be empty; handle file overwrite separately")
+
     if old_string == new_string:
         raise ValueError("old_string and new_string must be different")
 
