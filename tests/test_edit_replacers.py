@@ -276,3 +276,23 @@ class TestRealWorldScenarios:
 
         result = replace(content, find, replacement)
         assert "DEBUG = True" in result
+
+
+class TestBugFixes:
+    """Tests for bug fixes."""
+
+    def test_empty_old_string_raises(self):
+        with pytest.raises(ValueError, match="cannot be empty"):
+            replace("content", "", "new")
+
+    def test_crlf_line_trimmed(self):
+        content = "line1\r\nline2\r\nline3"
+        find = "line1\nline2"
+        results = list(line_trimmed_replacer(content, find))
+        assert len(results) == 1
+        assert results[0] == "line1\r\nline2"
+
+    def test_replace_all_fuzzy_raises(self):
+        content = "  foo\n  bar"
+        with pytest.raises(ValueError, match="replace_all=True only allowed"):
+            replace(content, "foo\nbar", "baz", replace_all=True)

@@ -66,7 +66,8 @@ def line_trimmed_replacer(content: str, find: str) -> Generator[str, None, None]
     Compares trimmed versions of each line but yields the original
     content with its actual whitespace preserved.
     """
-    original_lines = content.split("\n")
+    # Use splitlines(keepends=True) to handle both \n and \r\n correctly
+    original_lines = content.splitlines(keepends=True)
     search_lines = find.split("\n")
 
     # Remove trailing empty line if present (common from copy-paste)
@@ -88,18 +89,9 @@ def line_trimmed_replacer(content: str, find: str) -> Generator[str, None, None]
                 break
 
         if matches:
-            # Calculate the actual substring positions
-            match_start_index = 0
-            for k in range(i):
-                match_start_index += len(original_lines[k]) + 1  # +1 for newline
-
-            match_end_index = match_start_index
-            for k in range(len(search_lines)):
-                match_end_index += len(original_lines[i + k])
-                if k < len(search_lines) - 1:
-                    match_end_index += 1  # Add newline except for last line
-
-            yield content[match_start_index:match_end_index]
+            # Join the matched lines and strip trailing line ending
+            matched_block = "".join(original_lines[i : i + len(search_lines)])
+            yield matched_block.rstrip("\r\n")
 
 
 def indentation_flexible_replacer(content: str, find: str) -> Generator[str, None, None]:
@@ -139,16 +131,18 @@ def indentation_flexible_replacer(content: str, find: str) -> Generator[str, Non
 
         return "\n".join(result_lines)
 
-    normalized_find = remove_indentation(find)
     content_lines = content.split("\n")
     find_lines = find.split("\n")
 
-    # Remove trailing empty line if present
+    # Remove trailing empty line if present (MUST happen before normalization)
     if find_lines and find_lines[-1] == "":
         find_lines.pop()
 
     if not find_lines:
         return
+
+    # Normalize find AFTER trimming trailing empty line
+    normalized_find = remove_indentation("\n".join(find_lines))
 
     for i in range(len(content_lines) - len(find_lines) + 1):
         block = "\n".join(content_lines[i : i + len(find_lines)])
@@ -164,7 +158,8 @@ def block_anchor_replacer(content: str, find: str) -> Generator[str, None, None]
     2. Uses Levenshtein distance to score middle line similarity
     3. Returns best match if similarity exceeds threshold
     """
-    original_lines = content.split("\n")
+    # Use splitlines(keepends=True) to handle both \n and \r\n correctly
+    original_lines = content.splitlines(keepends=True)
     search_lines = find.split("\n")
 
     # Need at least 3 lines for anchor matching to make sense
@@ -197,6 +192,10 @@ def block_anchor_replacer(content: str, find: str) -> Generator[str, None, None]
     if not candidates:
         return
 
+    def yield_block(start: int, end: int) -> str:
+        """Join lines from start to end (inclusive) and strip trailing line ending."""
+        return "".join(original_lines[start : end + 1]).rstrip("\r\n")
+
     # Handle single candidate (use relaxed threshold)
     if len(candidates) == 1:
         start_line, end_line = candidates[0]
@@ -224,14 +223,7 @@ def block_anchor_replacer(content: str, find: str) -> Generator[str, None, None]
             similarity = 1.0
 
         if similarity >= SINGLE_CANDIDATE_SIMILARITY_THRESHOLD:
-            match_start_index = sum(len(original_lines[k]) + 1 for k in range(start_line))
-            match_end_index = match_start_index
-            for k in range(start_line, end_line + 1):
-                match_end_index += len(original_lines[k])
-                if k < end_line:
-                    match_end_index += 1
-
-            yield content[match_start_index:match_end_index]
+            yield yield_block(start_line, end_line)
         return
 
     # Multiple candidates - find best match
@@ -267,14 +259,7 @@ def block_anchor_replacer(content: str, find: str) -> Generator[str, None, None]
     # Check threshold for multiple candidates
     if max_similarity >= MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD and best_match:
         start_line, end_line = best_match
-        match_start_index = sum(len(original_lines[k]) + 1 for k in range(start_line))
-        match_end_index = match_start_index
-        for k in range(start_line, end_line + 1):
-            match_end_index += len(original_lines[k])
-            if k < end_line:
-                match_end_index += 1
-
-        yield content[match_start_index:match_end_index]
+        yield yield_block(start_line, end_line)
 
 
 # Ordered list of replacers from strict to fuzzy
@@ -313,14 +298,21 @@ def replace(content: str, old_string: str, new_string: str, replace_all: bool = 
         raise ValueError("old_string and new_string must be different")
 
     found_multiple = False
+    found_fuzzy_match_for_replace_all = False
 
-    for replacer in REPLACERS:
+    for replacer_idx, replacer in enumerate(REPLACERS):
+        is_exact_match = replacer_idx == 0  # simple_replacer is exact
+
         for search in replacer(content, old_string):
             index = content.find(search)
             if index == -1:
                 continue
 
             if replace_all:
+                if not is_exact_match:
+                    # Fuzzy match with replace_all is risky - track but don't use
+                    found_fuzzy_match_for_replace_all = True
+                    continue
                 return content.replace(search, new_string)
 
             # Check for uniqueness - only replace if single occurrence
@@ -330,6 +322,12 @@ def replace(content: str, old_string: str, new_string: str, replace_all: bool = 
                 continue  # Try next replacer for potentially more specific match
 
             return content[:index] + new_string + content[index + len(search) :]
+
+    if found_fuzzy_match_for_replace_all:
+        raise ValueError(
+            "replace_all=True only allowed with exact matches. "
+            "Fuzzy matching found a match but replace_all is risky for non-exact matches."
+        )
 
     if found_multiple:
         raise ValueError(
