@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "tunacode-cli"
 
-version = "0.0.78.14"
+version = "0.0.78.15"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11,<3.14"
 license = {text = "MIT"}
 authors = [
     { name = "larock22", email = "noreply@github.com" },
@@ -18,7 +18,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -26,8 +25,8 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    "typer>=0.9.0,<0.10.0",
-    "click>=8.3.1,<9.0.0",
+    "typer>=0.15.0",
+    "click>=8.1.0,<8.2.0",
     "prompt_toolkit>=3.0.52,<4.0.0",
     "pydantic>=2.12.4,<3.0.0",
     "pydantic-ai>=1.18.0,<2.0.0",
@@ -174,7 +173,7 @@ typecheck = "mypy src/"
 security = "bandit -r src/ -ll"
 
 # Version management
-version = "0.0.78.14"
+version = "0.0.78.15"
 
 # Release workflow
 release = [
@@ -259,9 +258,6 @@ check = [
     "mypy src/",
     "bandit -r src/ -ll",
 ]
-
-[tool.hatch.envs.py310]
-python = "3.10"
 
 [tool.hatch.envs.py311]
 python = "3.11"

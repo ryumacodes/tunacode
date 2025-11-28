@@ -16,7 +16,6 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
-from textual.containers import Vertical
 
 from tunacode.constants import UI_COLORS
 from tunacode.utils.config_comparator import (
@@ -490,7 +489,7 @@ class ConfigDashboard:
 
         glossary = get_configuration_glossary()
 
-        content = Vertical(Text(help_text.strip()), Text(""), Text(glossary))
+        content = Group(Text(help_text.strip()), Text(""), Text(glossary))
 
         return Panel(content, title="Help & Glossary", box=ROUNDED, border_style=colors.border)
 
