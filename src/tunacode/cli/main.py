@@ -16,7 +16,6 @@ from tunacode.core.tool_handler import ToolHandler
 from tunacode.exceptions import UserAbortError
 from tunacode.setup import setup
 from tunacode.ui import console as ui
-from tunacode.ui.config_dashboard import show_config_dashboard
 from tunacode.utils.system import check_for_updates
 
 app_settings = ApplicationSettings()
@@ -59,9 +58,6 @@ def main(
     wizard: bool = typer.Option(
         False, "--wizard", help="Run interactive setup wizard for guided configuration."
     ),
-    show_config: bool = typer.Option(
-        False, "--show-config", help="Show configuration dashboard and exit."
-    ),
     baseurl: str = typer.Option(
         None, "--baseurl", help="API base URL (e.g., https://openrouter.ai/api/v1)"
     ),
@@ -79,11 +75,6 @@ def main(
     async def async_main():
         if version:
             await ui.version()
-            return
-
-        if show_config:
-            await ui.banner()
-            show_config_dashboard()
             return
 
         await ui.banner()
