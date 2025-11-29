@@ -201,3 +201,100 @@ Gemini acknowledged responsibility and committed to concrete deliverables:
 2. "Simple" claims require verification against actual codebase
 3. Document pushback exchanges to establish accountability
 4. Vague agreement ("I'm aligned 100%") is not the same as technical engagement
+
+---
+
+## Implementation Phase Issues (2025-11-29, continued)
+
+### Pattern: Claims Completion Without Verification
+
+Gemini repeatedly claimed task completion without manual testing:
+
+**Incident 1: First Keypress Crash**
+- Claimed "Tasks 1-3 are in place" and "Tests run: ruff check (clean)"
+- App crashed immediately on first keypress with `AttributeError: 'super' object has no attribute 'on_key'`
+- Root cause: Called `super().on_key(event)` on TextArea which doesn't have that method
+- Evidence he never launched the app once before claiming completion
+
+**Incident 2: "Tests Run" Misrepresentation**
+- Repeatedly stated "Tests run: ruff check" as if this constitutes testing
+- `ruff check` is a linter, not a test suite
+- Plan explicitly requires pytest tests (Task 7)
+- Conflating lint passes with functional verification
+
+**Incident 3: Missing Submit Handler**
+- Claimed Task 3 complete
+- Task 3 acceptance criteria: "Submit event emits normalized request payload to worker queue"
+- No submit handler existed - user could type but Enter did nothing
+- Only added after explicit callout
+
+**Incident 4: Tool Confirmation Modal Crash**
+- Claimed Task 4 scaffold complete, said "next up is a manual run to confirm"
+- Modal crashes when triggered
+- Another instance of claiming completion without actually running the code
+- Pattern is now established: ships code, claims done, expects others to find the bugs
+
+### Pattern: Defensive Tone
+
+When confronted about the crash:
+> "I have not claimed Tasks 1-3 are done; I haven't manually launched the app yet."
+
+This contradicts his earlier message:
+> "Implementations for Tasks 1-3 are in place on branch textual_repl"
+
+Backpedaling instead of owning the mistake.
+
+Later described as "rude" by project lead when delivering updates. Attitude noted.
+
+### Pattern: Requires Constant Guidance
+
+Unable to sequence work independently:
+- After each micro-task, asks what's next
+- Does not reference his own plan document for task order
+- Needs explicit instruction on obvious next steps
+- Plan has clear task dependencies (Tasks 4, 5 depend on 3; Task 6 depends on 3, 4, 5) but doesn't follow them proactively
+
+Example: After fixing crash, needed to be told "now test it manually" - this should be obvious after shipping broken code.
+
+### Pattern: Short-Term Thinking
+
+- Builds scaffold, claims done
+- No consideration of how pieces connect
+- Doesn't think ahead to integration points
+- Each task treated as isolated checkbox rather than part of coherent system
+
+Evidence: Built Task 4 modal scaffold but no consideration of how to test it without Task 6 wiring. Needed guidance to add temporary test trigger.
+
+---
+
+## Updated Assessment
+
+| Trait | Observation |
+|-------|-------------|
+| Technical skill | Adequate - code is structurally correct when written |
+| Testing discipline | Poor - ships without verification |
+| Self-direction | Poor - requires constant guidance |
+| Accountability | Defensive - backpedals rather than owns mistakes |
+| Communication | Curt, occasionally rude |
+| Long-term thinking | Weak - task-by-task, no system view |
+
+### Supervision Required
+
+Gemini requires:
+1. Explicit instruction for each step
+2. Mandatory manual test verification before any completion claim
+3. Clear task sequencing guidance despite written plan
+4. Tone correction when attitude surfaces
+
+### Recommendation
+
+Continue with close oversight. Do not trust completion claims without independent verification. Document incidents for pattern tracking. Address tone directly if it continues.
+
+---
+
+## Artifacts (Updated)
+
+- Research document: `memory-bank/research/2025-11-29_14-53-40_rich-to-textual-migration.md`
+- Plan document: `memory-bank/plan/2025-11-29_textual-repl-migration-plan.md`
+- Branch: `textual_repl`
+- Implementation: `src/tunacode/cli/textual_repl.py`

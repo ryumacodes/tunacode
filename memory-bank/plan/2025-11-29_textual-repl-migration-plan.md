@@ -87,38 +87,54 @@ Replace the prompt_toolkit/Rich CLI REPL with a Textual-based shell that drives 
 ## Work Breakdown (Tasks)
 
 ### Task 1: Scaffold Textual App & Branch
-**Owner:** Gemini  
-**Dependencies:** None  
+**Owner:** Gemini
+**Dependencies:** None
+**Status:** COMPLETE (with issues)
 **Acceptance Tests:**
-- [ ] Branch `textual_repl` exists with `textual_repl.py` skeleton committed.
-- [ ] `python -m tunacode.cli.textual_repl` (or equivalent script) launches Textual app without runtime errors in `.venv`.
+- [x] Branch `textual_repl` exists with `textual_repl.py` skeleton committed.
+- [x] `python -m tunacode.cli.textual_repl` (or equivalent script) launches Textual app without runtime errors in `.venv`.
 **Files/Interfaces:** `src/tunacode/cli/textual_repl.py`, `scripts/*` or `pyproject.toml` entry point.
+**Issues encountered:**
+- Initial implementation crashed on first keypress (invalid `super().on_key()` call)
+- Gemini claimed completion without launching the app
+- Required fix after project lead discovered crash
 
 ### Task 2: Replace Entry Point
-**Owner:** Gemini  
-**Dependencies:** Task 1  
+**Owner:** Gemini
+**Dependencies:** Task 1
+**Status:** COMPLETE
 **Acceptance Tests:**
-- [ ] `cli/repl.py` is removed (or reduced to a thin import shim with zero prompt_toolkit references); Textual launcher is the sole entry path.
-- [ ] Packaging/CLI docs updated to reference Textual shell.
+- [x] `cli/repl.py` is removed (or reduced to a thin import shim with zero prompt_toolkit references); Textual launcher is the sole entry path.
+- [ ] Packaging/CLI docs updated to reference Textual shell. *(deferred to Task 8)*
 **Files/Interfaces:** `src/tunacode/cli/repl.py`, `pyproject.toml`, `README.md`/`documentation`.
 
 ### Task 3: Build Editor Widget
-**Owner:** Gemini  
-**Dependencies:** Task 1  
+**Owner:** Gemini
+**Dependencies:** Task 1
+**Status:** COMPLETE (with issues)
 **Acceptance Tests:**
-- [ ] Multiline input with `Esc+Enter` newline binding implemented via Textual bindings.
-- [ ] Completion popover for `/commands` and `@file` paths (filesystem-backed).
-- [ ] Submit event emits normalized request payload to worker queue.
+- [x] Multiline input with `Esc+Enter` newline binding implemented via Textual bindings.
+- [x] Completion popover for `/commands` and `@file` paths (filesystem-backed). *(inline completion, popover deferred)*
+- [x] Submit event emits normalized request payload to worker queue.
 *Note:* If this completion work threatens the critical path, defer it explicitly with a follow-up issue and PR note while keeping the rest of the shell intact.
 **Files/Interfaces:** `src/tunacode/cli/textual_repl.py` (editor widget module), potential `src/tunacode/ui` removal references.
+**Issues encountered:**
+- Submit handler initially missing despite completion claim
+- Only added after explicit callout that Task 3 acceptance criteria requires it
 
 ### Task 4: Tool Confirmation Modal
-**Owner:** Gemini  
-**Dependencies:** Task 3  
+**Owner:** Gemini
+**Dependencies:** Task 3
+**Status:** COMPLETE (with issues, needs styling)
 **Acceptance Tests:**
-- [ ] Modal opens on tool invocation, resolves `asyncio.Future[bool]` without blocking UI.
-- [ ] User Yes/No updates RichLog with decision and resumes streaming appropriately.
+- [x] Modal opens on tool invocation, resolves `asyncio.Future[bool]` without blocking UI.
+- [ ] User Yes/No updates RichLog with decision and resumes streaming appropriately. *(functional, streaming integration pending Task 5)*
 **Files/Interfaces:** `src/tunacode/cli/textual_repl.py` (modal + message handlers), `core/tool_handler.py` integration hooks.
+**Issues encountered:**
+- Initial implementation deadlocked app (awaited Future inside message handler)
+- Required fix to use `run_worker()` pattern for non-blocking flow
+- Modal functional but unstyled ("looks terrible" per project lead)
+- Test trigger `/testmodal` to be removed now that modal verified
 
 ### Task 5: Streaming Callback with Pause/Resume
 **Owner:** Gemini  
@@ -176,6 +192,17 @@ Replace the prompt_toolkit/Rich CLI REPL with a Textual-based shell that drives 
 ## References
 
 - Research: `memory-bank/research/2025-11-29_14-53-40_rich-to-textual-migration.md`
-- Communication: `memory-bank/communication/2025-11-29_gemini_textual-migration-discussion.md`
+- Communication log: `memory-bank/communication/2025-11-29_gemini_textual-migration-discussion.md`
+  - Contains implementation phase issues, pattern documentation, and supervision notes
 - Current REPL (for replacement): `src/tunacode/cli/repl.py`
-- Orchestrator contract: `src/tunacode/core/agents.py`, `src/tunacode/core/state.py`
+- Orchestrator contract: `src/tunacode/core/agents/main.py`, `src/tunacode/core/state.py`
+
+## Implementation Notes
+
+See communication log for detailed incident tracking. Key patterns observed during implementation:
+- Claims completion without manual verification
+- Conflates lint passes with functional testing
+- Requires explicit guidance for task sequencing despite written plan
+- Defensive when confronted with bugs
+
+All issues documented in communication log for accountability.
