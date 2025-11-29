@@ -1,0 +1,190 @@
+"""Textual widgets for TunaCode REPL.
+
+Contains reusable UI widgets:
+- ResourceBar: Top status bar showing model, tokens, cost
+- Editor: Multiline input with Tab completions and Esc+Enter newlines
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING, Iterable, Optional
+
+from rich.text import Text
+from textual.binding import Binding
+from textual.events import Key
+from textual.message import Message
+from textual.widgets import Static, TextArea
+
+if TYPE_CHECKING:
+    pass
+
+
+def _gather_command_names() -> list[str]:
+    """Gather all registered command names for completion."""
+    from tunacode.cli.commands.registry import CommandRegistry
+
+    registry = CommandRegistry()
+    registry.register_all_default_commands()
+    return registry.get_command_names()
+
+
+def _complete_paths(prefix: str) -> list[str]:
+    """Complete file paths for @-references."""
+    base = Path(prefix).expanduser()
+    search_root = base.parent if base.parent != Path(".") else Path.cwd()
+    stem = base.name
+    candidates: list[str] = []
+    try:
+        for entry in search_root.iterdir():
+            if entry.name.startswith(stem):
+                if prefix.startswith("/"):
+                    candidate = str(entry)
+                else:
+                    candidate = entry.name if search_root == Path.cwd() else str(entry)
+                suffix = "/" if entry.is_dir() else ""
+                candidates.append(candidate + suffix)
+    except (FileNotFoundError, PermissionError):
+        return []
+    return sorted(candidates)
+
+
+def _replace_token(text: str, start: int, end: int, replacement: str) -> str:
+    """Replace a token in text at the given position."""
+    return text[:start] + replacement + text[end:]
+
+
+class EditorCompletionsAvailable(Message):
+    """Notify the app when multiple completions are available."""
+
+    def __init__(self, *, candidates: Iterable[str]) -> None:
+        super().__init__()
+        self.candidates = list(candidates)
+
+
+class EditorSubmitRequested(Message):
+    """Submit event for the current editor content."""
+
+    def __init__(self, *, text: str, raw_text: str) -> None:
+        super().__init__()
+        self.text = text
+        self.raw_text = raw_text
+
+
+class ResourceBar(Static):
+    """Top bar showing resources: tokens, model, cost."""
+
+    def __init__(self) -> None:
+        super().__init__("")
+        self._tokens: int = 0
+        self._max_tokens: int = 200000
+        self._model: str = "---"
+        self._cost: float = 0.0
+        self._session_cost: float = 0.0
+
+    def on_mount(self) -> None:
+        self._refresh_display()
+
+    def update_stats(
+        self,
+        *,
+        tokens: int | None = None,
+        max_tokens: int | None = None,
+        model: str | None = None,
+        cost: float | None = None,
+        session_cost: float | None = None,
+    ) -> None:
+        if tokens is not None:
+            self._tokens = tokens
+        if max_tokens is not None:
+            self._max_tokens = max_tokens
+        if model is not None:
+            self._model = model
+        if cost is not None:
+            self._cost = cost
+        if session_cost is not None:
+            self._session_cost = session_cost
+        self._refresh_display()
+
+    def _refresh_display(self) -> None:
+        content = Text.assemble(
+            ("Model: ", "dim"),
+            (self._model, "cyan"),
+        )
+        self.update(content)
+
+
+class Editor(TextArea):
+    """Multiline editor with Esc+Enter newline binding, Tab completions, and submit on Enter."""
+
+    BINDINGS = [
+        Binding("tab", "complete", "Complete", show=False),
+        Binding("enter", "submit", "Submit", show=False),
+    ]
+
+    def __init__(self, *, language: Optional[str] = None) -> None:
+        super().__init__(language=language, placeholder="Enter a request...")
+        self._awaiting_escape_enter: bool = False
+        self._command_names: list[str] = _gather_command_names()
+
+    def action_complete(self) -> None:
+        prefix, start, end = self._current_token()
+        if prefix is None:
+            return
+        if prefix.startswith("/"):
+            candidates = [c for c in self._command_names if c.startswith(prefix)]
+        elif prefix.startswith("@"):
+            candidates = [f"@{c}" for c in _complete_paths(prefix[1:])]
+        else:
+            candidates = []
+
+        if not candidates:
+            return
+
+        replacement = candidates[0]
+        self.text = _replace_token(self.text, start, end, replacement)
+        cursor_row, _ = self.cursor_location
+        self.move_cursor((cursor_row, start + len(replacement)))
+
+        if len(candidates) > 1:
+            # Surface alternatives in the log for now; future UI will show a popover.
+            self.post_message(EditorCompletionsAvailable(candidates=candidates))
+
+    def action_submit(self) -> None:
+        text = self.text.strip()
+        if not text:
+            return
+
+        self.post_message(EditorSubmitRequested(text=text, raw_text=self.text))
+        self.text = ""
+
+    def _current_token(self) -> tuple[Optional[str], int, int]:
+        cursor_row, cursor_col = self.cursor_location
+        lines = self.text.splitlines()
+        if cursor_row >= len(lines):
+            return None, cursor_col, cursor_col
+        line = lines[cursor_row]
+        left = line.rfind(" ", 0, cursor_col) + 1
+        token = line[left:cursor_col]
+        if not token:
+            return None, left, left
+        return token, left, left + len(token)
+
+    async def on_key(self, event: Key) -> None:
+        if event.key == "escape":
+            self._awaiting_escape_enter = True
+            event.stop()
+            return
+        if event.key == "enter" and self._awaiting_escape_enter:
+            self._awaiting_escape_enter = False
+            event.stop()
+            self.insert("\n")
+            return
+        if event.key == "enter":
+            self._awaiting_escape_enter = False
+            event.stop()
+            self.action_submit()
+            return
+
+        self._awaiting_escape_enter = False
+        self._on_key(event)
