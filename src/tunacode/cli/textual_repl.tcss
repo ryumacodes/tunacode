@@ -1,0 +1,79 @@
+/* TunaCode Textual REPL Stylesheet */
+
+/* ResourceBar - top status bar */
+ResourceBar {
+    width: 100%;
+    height: 3;
+    background: #162332;
+    color: #00d7ff;
+    padding: 0 1;
+    border-bottom: solid #2d4461;
+}
+
+/* Main body container */
+#body {
+    height: 1fr;
+}
+
+/* Chat history log */
+RichLog {
+    height: 1fr;
+    background: $surface;
+    border: solid $border;
+    padding: 1;
+    scrollbar-gutter: stable;
+}
+
+/* Streaming output display */
+#streaming-output {
+    width: 100%;
+    height: auto;
+    max-height: 30%;
+    padding: 0 1;
+    background: $surface;
+    border: solid $border;
+}
+
+/* Editor input area */
+Editor {
+    height: 5;
+    background: $background;
+    border: solid $accent;
+    padding: 0 1;
+}
+
+/* Tool Confirmation Modal */
+ToolConfirmationModal {
+    align: center middle;
+}
+
+#modal-body {
+    width: 60;
+    height: auto;
+    border: thick $primary;
+    background: $surface;
+    padding: 1 2;
+}
+
+#modal-body Label {
+    margin-bottom: 1;
+}
+
+#modal-body Checkbox {
+    margin-top: 1;
+}
+
+#tool-title {
+    text-style: bold;
+    color: $primary;
+    margin-bottom: 1;
+}
+
+#actions {
+    margin-top: 1;
+    align: center middle;
+}
+
+#actions Button {
+    margin: 0 1;
+}

@@ -22,9 +22,11 @@ from textual.containers import Horizontal, Vertical
 from textual.events import Key
 from textual.message import Message
 from textual.screen import ModalScreen
+from textual.theme import Theme
 from textual.widgets import Button, Checkbox, Footer, Header, Label, RichLog, Static, TextArea
 
 from tunacode.cli.commands.registry import CommandRegistry
+from tunacode.constants import UI_COLORS
 from tunacode.core.agents.main import process_request
 from tunacode.core.tool_handler import ToolHandler
 from tunacode.types import (
@@ -67,23 +69,16 @@ def _replace_token(text: str, start: int, end: int, replacement: str) -> str:
 class ResourceBar(Static):
     """Top bar showing resources: tokens, model, cost."""
 
-    DEFAULT_CSS = """
-    ResourceBar {
-        dock: top;
-        height: 1;
-        background: $surface;
-        color: $text-muted;
-        padding: 0 1;
-    }
-    """
-
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__("")
         self._tokens: int = 0
         self._max_tokens: int = 200000
         self._model: str = "---"
         self._cost: float = 0.0
         self._session_cost: float = 0.0
+
+    def on_mount(self) -> None:
+        self._refresh_display()
 
     def update_stats(
         self,
@@ -104,27 +99,14 @@ class ResourceBar(Static):
             self._cost = cost
         if session_cost is not None:
             self._session_cost = session_cost
-        self.refresh()
+        self._refresh_display()
 
-    def render(self) -> Text:
-        # TODO: Add back when usage tracking is wired up
-        # pct = (self._tokens / self._max_tokens * 100) if self._max_tokens else 0
-        # color = "green" if pct < 50 else "yellow" if pct < 80 else "red"
-
-        return Text.assemble(
-            ("TunaCode", "bold cyan"),
-            (" | ", "dim"),
+    def _refresh_display(self) -> None:
+        content = Text.assemble(
             ("Model: ", "dim"),
             (self._model, "cyan"),
-            # TODO: Add back when usage tracking is wired up
-            # (" | Tokens: ", "dim"),
-            # (f"{self._tokens:,}/{self._max_tokens:,}", color),
-            # (f" ({pct:.0f}%)", color),
-            # (" | Cost: ", "dim"),
-            # (f"${self._cost:.4f}", "green"),
-            # (" | Session: ", "dim"),
-            # (f"${self._session_cost:.4f}", "green"),
         )
+        self.update(content)
 
 
 class Editor(TextArea):
@@ -236,10 +218,38 @@ class ToolConfirmationResult(Message):
         self.response = response
 
 
+THEME_NAME = "tunacode"
+
+
+def _build_tunacode_theme() -> Theme:
+    palette = UI_COLORS
+    custom_variables = {
+        "text-muted": palette["muted"],
+        "border": palette["border"],
+        "border-light": palette["border_light"],
+    }
+    return Theme(
+        name=THEME_NAME,
+        primary=palette["primary"],
+        secondary=palette["accent"],
+        accent=palette["primary_light"],
+        background=palette["background"],
+        surface=palette["surface"],
+        panel=palette["border_light"],
+        success=palette["success"],
+        warning=palette["warning"],
+        error=palette["error"],
+        boost=palette["primary_dark"],
+        foreground=palette["primary_light"],
+        variables=custom_variables,
+    )
+
+
 class TextualReplApp(App[None]):
     """Minimal Textual shell that will host orchestrator wiring and tool UI."""
 
-    CSS_PATH = None
+    TITLE = "TunaCode"
+    CSS_PATH = "textual_repl.tcss"
 
     BINDINGS = [
         Binding("ctrl+p", "toggle_pause", "Pause/Resume Stream", priority=True),
@@ -248,7 +258,7 @@ class TextualReplApp(App[None]):
     def __init__(self, *, state_manager: StateManager) -> None:
         super().__init__()
         self.state_manager: StateManager = state_manager
-        self.rich_log: RichLog = RichLog()
+        self.rich_log: RichLog = RichLog(wrap=True, markup=False, highlight=False, auto_scroll=True)
         self.editor: Editor = Editor()
         self.resource_bar: ResourceBar = ResourceBar()
         self.request_queue: asyncio.Queue[str] = asyncio.Queue()
@@ -258,7 +268,7 @@ class TextualReplApp(App[None]):
         self._streaming_paused: bool = False
         self._stream_buffer: list[str] = []
         self.current_stream_text: str = ""
-        self.streaming_output: Static = Static("", id="streaming-output")
+        self.streaming_output: Static = Static(self._render_stream_text(""), id="streaming-output")
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -267,6 +277,11 @@ class TextualReplApp(App[None]):
         yield Footer()
 
     def on_mount(self) -> None:
+        # Register custom TunaCode theme using UI_COLORS palette
+        tunacode_theme = _build_tunacode_theme()
+        self.register_theme(tunacode_theme)
+        self.theme = THEME_NAME
+
         self.set_focus(self.editor)
         self.run_worker(self._request_worker, exclusive=False)
         self._update_resource_bar()
@@ -278,14 +293,15 @@ class TextualReplApp(App[None]):
             try:
                 await self._process_request(request)
             except Exception as e:
-                self.rich_log.write(f"[red]Error: {e}[/red]")
+                error_message = Text(f"Error: {e}", style="red")
+                self.rich_log.write(error_message)
             finally:
                 self.request_queue.task_done()
 
     async def _process_request(self, message: str) -> None:
         """Delegate request to the real orchestrator."""
         self.current_stream_text = ""
-        self.streaming_output.update("")
+        self._update_streaming_output()
 
         try:
             model_name = self.state_manager.session.current_model or "openai/gpt-4o"
@@ -299,7 +315,8 @@ class TextualReplApp(App[None]):
             )
         except Exception as e:
             # Ensure errors surface visibly
-            self.rich_log.write(f"[bold red]Processing Error: {e}[/bold red]")
+            processing_error = Text(f"Processing Error: {e}", style="bold red")
+            self.rich_log.write(processing_error)
             raise  # Re-raise to be caught by worker loop logging
         finally:
             # Commit the streamed response to the persistent log
@@ -308,7 +325,7 @@ class TextualReplApp(App[None]):
 
             # Reset the streaming display
             self.current_stream_text = ""
-            self.streaming_output.update("")
+            self._update_streaming_output()
 
             # Update resource bar with latest stats
             self._update_resource_bar()
@@ -347,7 +364,7 @@ class TextualReplApp(App[None]):
             self._stream_buffer.append(chunk)
         else:
             self.current_stream_text += chunk
-            self.streaming_output.update(self.current_stream_text)
+            self._update_streaming_output()
             # Optional: Scroll to keep streaming output in view if needed
             # self.rich_log.scroll_end() # Not needed as this is outside log
 
@@ -375,7 +392,7 @@ class TextualReplApp(App[None]):
         if self._stream_buffer:
             buffered_text = "".join(self._stream_buffer)
             self.current_stream_text += buffered_text
-            self.streaming_output.update(self.current_stream_text)
+            self._update_streaming_output()
             self._stream_buffer.clear()
 
     def _update_resource_bar(self) -> None:
@@ -391,6 +408,13 @@ class TextualReplApp(App[None]):
             cost=last_usage.get("cost", 0.0),
             session_cost=usage.get("cost", 0.0),
         )
+
+    def _render_stream_text(self, content: str) -> Text:
+        return Text(content, overflow="fold", no_wrap=False)
+
+    def _update_streaming_output(self) -> None:
+        stream_renderable = self._render_stream_text(self.current_stream_text)
+        self.streaming_output.update(stream_renderable)
 
 
 async def run_textual_repl(state_manager: StateManager) -> None:
