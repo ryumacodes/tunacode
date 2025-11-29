@@ -1,133 +1,190 @@
-# Research - Rich to Textual Migration Mapping
+# Research - Rich to Textual Migration
 
 **Date:** 2025-11-29
+**Last Updated:** 2025-11-29
 **Owner:** claude
 **Phase:** Research
-**Git Commit:** dfe97b4
+**Git Commit:** 2eac952
 
 ## Goal
 
-Map all Rich library imports and usage patterns across the codebase to prepare for migration to Textual.
+Evaluate migration from Rich to Textual for the UI layer.
 
-## Findings
+## Key Insight: Replacement, Not Migration
 
-### Files with Rich Imports (7 active source files)
+This is NOT a component-by-component migration. It's a full UI layer replacement.
 
-| File | Rich Components Used |
-|------|---------------------|
-| `src/tunacode/ui/panels.py` | Markdown, Padding, Pretty, Table, Text, ROUNDED, Live, Panel |
-| `src/tunacode/ui/tool_ui.py` | ROUNDED, Markdown, Padding, Panel |
-| `src/tunacode/ui/output.py` | Padding, Console |
-| `src/tunacode/ui/console.py` | Console, Markdown |
-| `src/tunacode/ui/utils.py` | Console |
-| `src/tunacode/core/logging/handlers.py` | Console, Text |
-| `src/tunacode/utils/diff_utils.py` | Text |
+We don't need to:
+- Map Rich components to Textual equivalents
+- Keep lazy-loading workarounds
+- Maintain Rich console proxies
+- Convert Rich.Live to Textual reactive
+- Port the StreamingAgentPanel
+- Preserve async/sync wrapper patterns
+- Keep run_in_terminal() hacks
+- Migrate UI_COLORS dict
 
-### Rich Component Usage Summary
+Textual already provides:
+- Input widgets (replaces prompt_toolkit)
+- RichLog widget (accepts Rich renderables directly)
+- Built-in reactive updates
+- Built-in layouts and containers
+- Built-in CSS theming
+- Built-in async event loop
+- Built-in widget lifecycle
 
-| Component | File Count | Primary Usage |
-|-----------|------------|---------------|
-| Console | 4 | Core output, lazy-loaded proxy pattern |
-| Text | 4 | Styled text, diff rendering, logging |
-| Panel | 2 | Content containers with borders |
-| Padding | 3 | Spacing around content |
-| Markdown | 3 | Rendering markdown content |
-| Table | 1 | Help commands display |
-| Live | 1 | Streaming updates |
-| Pretty | 1 | Object inspection |
-| ROUNDED | 2 | Box style constant |
+## Scope Analysis
 
-### Current Dependency Versions
+### What to Keep (Orchestrator Layer)
+
+| File | Reason |
+|------|--------|
+| `core/agents.py` | Agent logic, process_request() |
+| `core/state.py` | State management |
+| `core/tool_handler.py` | Tool execution |
+| Tool implementations | Business logic |
+
+### What to Replace (UI Layer)
+
+| File | Reason |
+|------|--------|
+| `ui/panels.py` | StreamingAgentPanel - replaced by RichLog |
+| `ui/tool_ui.py` | Panel rendering - Textual widgets |
+| `ui/output.py` | Console abstraction - not needed |
+| `ui/console.py` | Lazy console - not needed |
+| `ui/utils.py` | Console utilities - not needed |
+| `ui/input.py` | prompt_toolkit input - Textual Input widget |
+| `ui/decorators.py` | async/sync wrappers - Textual event model |
+| `cli/repl.py` | REPL loop - becomes Textual App |
+
+### REPL Coupling Analysis
+
+`cli/repl.py` has direct coupling to prompt_toolkit + Rich that requires rewriting:
+
+| Line | Coupling Point |
+|------|----------------|
+| 10 | `from prompt_toolkit.application import run_in_terminal` |
+| 11 | `from prompt_toolkit.application.current import get_app` |
+| 277, 402 | `run_in_terminal()` calls |
+| 351 | `await ui.multiline_input(...)` |
+| 412 | `get_app().create_background_task(...)` |
+| 184-201 | `StreamingAgentPanel` integration |
+| 394, 398, 431 | Direct `ui.console.print()` calls |
+
+## Orchestrator Interface (Unchanged)
+
+The key interface stays the same:
+
+```python
+res = await agent.process_request(
+    text,
+    model,
+    state_manager,
+    tool_callback=...,
+    streaming_callback=lambda content: ...,  # <-- Textual hooks here
+)
+```
+
+The `streaming_callback` is all Textual needs:
+- Current: `streaming_panel.update(content)`
+- Textual: `rich_log.write(content)`
+
+## Migration Path
+
+```
+1. Keep orchestrator logic exactly the same
+2. Delete ui/ entirely
+3. Rewrite cli/repl.py as a Textual App
+4. Wire:
+   - Input widget submit -> worker calls orchestrator
+   - Orchestrator streaming_callback -> RichLog.write()
+5. Delete prompt_toolkit dependency
+```
+
+## Files with Rich Imports (Reference Only)
+
+For completeness, these are the 7 files currently using Rich:
+
+| File | Components |
+|------|------------|
+| `ui/panels.py` | Markdown, Padding, Pretty, Table, Text, ROUNDED, Live, Panel |
+| `ui/tool_ui.py` | ROUNDED, Markdown, Padding, Panel |
+| `ui/output.py` | Padding, Console |
+| `ui/console.py` | Console, Markdown |
+| `ui/utils.py` | Console |
+| `core/logging/handlers.py` | Console, Text |
+| `utils/diff_utils.py` | Text |
+
+Note: `diff_utils.py` returns Rich Text objects which RichLog accepts directly - may not need changes.
+
+## Dependencies
 
 From `pyproject.toml`:
-- Rich: `>=14.2.0,<15.0.0` (line 34)
-- Textual: `textual` (line 37, no version constraint)
-- Textual Dev: `textual-dev` (line 51, dev dependency)
+- Rich: `>=14.2.0,<15.0.0`
+- Textual: `textual` (already installed)
+- Textual Dev: `textual-dev` (dev dependency)
 
-## Key Patterns / Solutions Found
+---
 
-### 1. Lazy Loading Pattern
-- `ui/console.py:89-96` - `_LazyConsole` proxy defers Rich import until first access
-- `ui/panels.py:52-78` - `get_rich_components()` caches imports on demand
-- **Relevance:** Can retain this pattern during migration
+## Maintainer Discussion
 
-### 2. Console Abstraction Layer
-- `ui/console.py` - Centralized `get_console()` function
-- `ui/output.py` - Duplicate `_LazyConsole` wrapper
-- **Relevance:** Natural migration point - swap implementation behind interface
+### Context
 
-### 3. Async/Sync Wrapper Pattern
-- `ui/decorators.py:14-59` - `@create_sync_wrapper` decorator
-- Applied to `print()`, `panel()` functions
-- **Relevance:** May need rethinking with Textual's message-based architecture
+Initial research framed this as a component-by-component migration with complexity ratings per file. Another maintainer correctly identified this as over-engineering.
 
-### 4. Prompt Toolkit Integration (NOT Rich)
-- `ui/input.py` - Uses prompt_toolkit, NOT Rich for input
-- `ui/output.py:70` - Wraps Rich prints in `run_in_terminal()`
-- **Relevance:** Input already separate from Rich - migration only affects output
+### Response to Maintainer
 
-### 5. Centralized Color Management
-- `UI_COLORS` dictionary accessed via `DotDict(UI_COLORS)`
-- Used in: `output.py`, `panels.py`
-- **Relevance:** Convert to Textual CSS themes
+You're right about the mental model - it's a replacement, not a migration.
 
-### 6. Streaming Panel Architecture
-- `ui/panels.py:131-432` - `StreamingAgentPanel` class
-- Uses `Rich.Live` with `refresh_per_second=4`
-- Animated dots, async content updates, lock-based thread safety
-- **Relevance:** Most complex migration - needs Textual reactive equivalent
+But the scope is slightly bigger than just `ui/`. Checked `cli/repl.py` and it has direct coupling:
 
-## Migration Complexity by File
+```
+- prompt_toolkit.application.run_in_terminal (lines 10, 277, 402)
+- prompt_toolkit.application.current.get_app (lines 11, 412)
+- ui.multiline_input (line 351)
+- StreamingAgentPanel (lines 184-201)
+- direct ui.console.print() calls (lines 394, 398, 431)
+```
 
-### High Complexity (require significant redesign)
-| File | Reason |
-|------|--------|
-| `panels.py` | StreamingAgentPanel with Live updates, animation tasks |
+So the actual scope is:
 
-### Medium Complexity (component swaps)
-| File | Reason |
-|------|--------|
-| `tool_ui.py` | Panel/Markdown rendering - Textual has equivalents |
-| `output.py` | Console abstraction - can swap implementation |
-| `console.py` | Console wrapper - needs Textual console equivalent |
+| Keep | Replace |
+|------|---------|
+| `core/agents.py` | `ui/*` (7 files) |
+| `core/state.py` | `cli/repl.py` |
+| `core/tool_handler.py` | |
+| Tool implementations | |
 
-### Low Complexity (simple replacements)
-| File | Reason |
-|------|--------|
-| `handlers.py` | Logging - can use Textual Log widget |
-| `diff_utils.py` | Text styling - Textual supports Rich Text |
-| `utils.py` | Simple Console usage |
+The orchestrator interface stays clean:
 
-## Knowledge Gaps
+```python
+res = await agent.process_request(
+    text,
+    model,
+    state_manager,
+    tool_callback=...,
+    streaming_callback=lambda content: ...,  # <-- this is the hook
+)
+```
 
-1. **Performance comparison**: No benchmarks for Rich.Live vs Textual reactive updates
-2. **Spinner equivalents**: Need to identify Textual LoadingIndicator patterns
-3. **Test coverage**: No UI tests exist - need to establish baseline before migration
+That `streaming_callback` is all Textual needs. Instead of `streaming_panel.update(content)`, it becomes `rich_log.write(content)`.
 
-## Recommended Migration Strategy
+So yes - delete `ui/` + rewrite `cli/repl.py` as a Textual App. Orchestrator untouched.
 
-### Phase 1 - Foundation
-- Create Textual console abstraction matching existing interface
-- Implement Textual equivalents for Panel, Table components
-- Keep Rich as fallback during transition
+The minimal Textual shell you mentioned would be helpful - specifically how the REPL loop translates to Textual's event model (Input widget submit -> worker calls orchestrator -> worker posts to RichLog).
 
-### Phase 2 - Output Layer
-- Migrate `output.py` and `console.py` to use Textual
-- Convert `tool_ui.py` panel rendering
-- Update color system to Textual CSS
+---
 
-### Phase 3 - Complex Components
-- Convert `StreamingAgentPanel` to Textual widget with reactive updates
-- Replace `Rich.Live` with Textual's built-in refresh
+## Next Steps
 
-### Phase 4 - Cleanup
-- Remove Rich dependency
-- Delete lazy-loading workarounds
-- Consolidate duplicate abstractions
+1. Get minimal Textual App shell from maintainer
+2. Verify orchestrator interface compatibility
+3. Delete `ui/` and rewrite `cli/repl.py`
+4. Wire streaming_callback to RichLog
+5. Remove prompt_toolkit dependency
 
 ## References
 
-- `src/tunacode/ui/panels.py` - StreamingAgentPanel implementation
-- `src/tunacode/ui/console.py` - Console abstraction layer
-- `src/tunacode/ui/output.py` - Output functions and spinner
+- `src/tunacode/cli/repl.py` - Current REPL implementation (to be replaced)
+- `src/tunacode/core/agents.py` - Orchestrator (unchanged)
 - `pyproject.toml:34-37` - Dependency versions
