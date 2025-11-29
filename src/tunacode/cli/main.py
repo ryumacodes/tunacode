@@ -9,7 +9,7 @@ import logging
 
 import typer
 
-from tunacode.cli.repl import repl
+from tunacode.cli.textual_repl import run_textual_repl
 from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.state import StateManager
 from tunacode.core.tool_handler import ToolHandler
@@ -77,8 +77,6 @@ def main(
             await ui.version()
             return
 
-        await ui.banner()
-
         # Start update check in background
         update_task = asyncio.create_task(asyncio.to_thread(check_for_updates), name="update_check")
         update_task.add_done_callback(_handle_background_task_error)
@@ -98,7 +96,7 @@ def main(
             tool_handler = ToolHandler(state_manager)
             state_manager.set_tool_handler(tool_handler)
 
-            await repl(state_manager)
+            await run_textual_repl(state_manager)
         except (KeyboardInterrupt, UserAbortError):
             update_task.cancel()
             return
