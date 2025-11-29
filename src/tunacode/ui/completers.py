@@ -518,3 +518,73 @@ def create_completer(
         completers.append(ModelCompleter(models_registry))
 
     return merge_completers(completers)
+
+
+# ============================================================================
+# Textual-compatible completion helpers (synchronous, list-based)
+# ============================================================================
+
+
+def get_command_names(command_registry: Optional["CommandRegistry"] = None) -> List[str]:
+    """Get all registered command names for Textual completion.
+
+    Args:
+        command_registry: Optional registry instance. If None, creates and
+            registers default commands.
+
+    Returns:
+        List of command names (e.g., ["/help", "/clear", "/model", ...])
+    """
+    if command_registry is None:
+        from tunacode.cli.commands.registry import CommandRegistry
+
+        command_registry = CommandRegistry()
+        command_registry.register_all_default_commands()
+    return command_registry.get_command_names()
+
+
+def textual_complete_paths(prefix: str) -> List[str]:
+    """Complete file paths for @-references in Textual Editor.
+
+    This is a simplified, synchronous path completer for use in Textual widgets.
+    Unlike FileReferenceCompleter, it returns a simple list of matches.
+
+    Args:
+        prefix: The path prefix to complete (without @ symbol)
+
+    Returns:
+        Sorted list of matching paths with trailing / for directories
+    """
+    from pathlib import Path
+
+    base = Path(prefix).expanduser()
+    search_root = base.parent if base.parent != Path(".") else Path.cwd()
+    stem = base.name
+    candidates: List[str] = []
+    try:
+        for entry in search_root.iterdir():
+            if entry.name.startswith(stem):
+                if prefix.startswith("/"):
+                    candidate = str(entry)
+                else:
+                    candidate = entry.name if search_root == Path.cwd() else str(entry)
+                suffix = "/" if entry.is_dir() else ""
+                candidates.append(candidate + suffix)
+    except (FileNotFoundError, PermissionError):
+        return []
+    return sorted(candidates)
+
+
+def replace_token(text: str, start: int, end: int, replacement: str) -> str:
+    """Replace a token in text at the given position.
+
+    Args:
+        text: The original text
+        start: Start index of token to replace
+        end: End index of token to replace
+        replacement: The replacement string
+
+    Returns:
+        Text with token replaced
+    """
+    return text[:start] + replacement + text[end:]

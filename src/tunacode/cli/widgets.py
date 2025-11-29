@@ -7,8 +7,7 @@ Contains reusable UI widgets:
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Optional
+from typing import Iterable, Optional
 
 from rich.text import Text
 from textual.binding import Binding
@@ -16,42 +15,7 @@ from textual.events import Key
 from textual.message import Message
 from textual.widgets import Static, TextArea
 
-if TYPE_CHECKING:
-    pass
-
-
-def _gather_command_names() -> list[str]:
-    """Gather all registered command names for completion."""
-    from tunacode.cli.commands.registry import CommandRegistry
-
-    registry = CommandRegistry()
-    registry.register_all_default_commands()
-    return registry.get_command_names()
-
-
-def _complete_paths(prefix: str) -> list[str]:
-    """Complete file paths for @-references."""
-    base = Path(prefix).expanduser()
-    search_root = base.parent if base.parent != Path(".") else Path.cwd()
-    stem = base.name
-    candidates: list[str] = []
-    try:
-        for entry in search_root.iterdir():
-            if entry.name.startswith(stem):
-                if prefix.startswith("/"):
-                    candidate = str(entry)
-                else:
-                    candidate = entry.name if search_root == Path.cwd() else str(entry)
-                suffix = "/" if entry.is_dir() else ""
-                candidates.append(candidate + suffix)
-    except (FileNotFoundError, PermissionError):
-        return []
-    return sorted(candidates)
-
-
-def _replace_token(text: str, start: int, end: int, replacement: str) -> str:
-    """Replace a token in text at the given position."""
-    return text[:start] + replacement + text[end:]
+from tunacode.ui.completers import get_command_names, replace_token, textual_complete_paths
 
 
 class EditorCompletionsAvailable(Message):
@@ -125,7 +89,7 @@ class Editor(TextArea):
     def __init__(self, *, language: Optional[str] = None) -> None:
         super().__init__(language=language, placeholder="Enter a request...")
         self._awaiting_escape_enter: bool = False
-        self._command_names: list[str] = _gather_command_names()
+        self._command_names: list[str] = get_command_names()
 
     def action_complete(self) -> None:
         prefix, start, end = self._current_token()
@@ -134,7 +98,7 @@ class Editor(TextArea):
         if prefix.startswith("/"):
             candidates = [c for c in self._command_names if c.startswith(prefix)]
         elif prefix.startswith("@"):
-            candidates = [f"@{c}" for c in _complete_paths(prefix[1:])]
+            candidates = [f"@{c}" for c in textual_complete_paths(prefix[1:])]
         else:
             candidates = []
 
@@ -142,7 +106,7 @@ class Editor(TextArea):
             return
 
         replacement = candidates[0]
-        self.text = _replace_token(self.text, start, end, replacement)
+        self.text = replace_token(self.text, start, end, replacement)
         cursor_row, _ = self.cursor_location
         self.move_cursor((cursor_row, start + len(replacement)))
 
