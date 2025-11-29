@@ -4,10 +4,10 @@
 ResourceBar {
     width: 100%;
     height: 3;
-    background: #162332;
-    color: #00d7ff;
+    background: $surface;
+    color: $primary;
     padding: 0 1;
-    border-bottom: solid #2d4461;
+    border-bottom: solid $border;
 }
 
 /* Main body container */
