@@ -65,8 +65,8 @@ cd tunacode
 ./scripts/setup_dev_env.sh
 
 # Or manual setup with UV (recommended)
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv venv .venv
+source .venv/bin/activate
 uv pip install -e ".[dev]"
 
 # Alternative: traditional setup
