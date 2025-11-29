@@ -182,7 +182,7 @@ class Editor(TextArea):
             return
 
         self._awaiting_escape_enter = False
-        await self._on_key(event)
+        self._on_key(event)
 
 
 class EditorCompletionsAvailable(Message):
@@ -457,8 +457,9 @@ class ToolConfirmationModal(ModalScreen[None]):
 
 def build_textual_tool_callback(app: TextualReplApp, state_manager: StateManager):
     """Create a tool callback using the Textual confirmation flow."""
+    from typing import Any
 
-    async def _callback(part, _node=None):
+    async def _callback(part: Any, _node: Any = None) -> None:
         tool_handler = state_manager.tool_handler or ToolHandler(state_manager)
         state_manager.set_tool_handler(tool_handler)
 
