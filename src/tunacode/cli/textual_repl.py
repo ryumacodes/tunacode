@@ -55,7 +55,7 @@ def _complete_paths(prefix: str) -> list[str]:
                     candidate = entry.name if search_root == Path.cwd() else str(entry)
                 suffix = "/" if entry.is_dir() else ""
                 candidates.append(candidate + suffix)
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError):
         return []
     return sorted(candidates)
 
