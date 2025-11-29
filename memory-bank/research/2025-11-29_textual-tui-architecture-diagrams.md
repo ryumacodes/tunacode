@@ -288,7 +288,49 @@ graph TB
     style Theme fill:#0ea5e9,stroke:#00d7ff
 ```
 
-## 7. Binding Architecture
+## 7. Current vs Target File Architecture
+
+```mermaid
+flowchart LR
+    subgraph Current["Current: Junk Drawer"]
+        TR[textual_repl.py<br/>478 lines]
+        TR --> C1[Theme builder]
+        TR --> C2[Path completion]
+        TR --> C3[Command names]
+        TR --> C4[ResourceBar]
+        TR --> C5[Editor]
+        TR --> C6[Modal]
+        TR --> C7[Messages]
+        TR --> C8[App]
+        TR --> C9[Callback factory]
+    end
+
+    subgraph Target["Target: Separated Concerns"]
+        direction TB
+        subgraph Constants["constants.py"]
+            T1[UI_COLORS]
+            T2[build_tunacode_theme]
+        end
+        subgraph CLI["cli/"]
+            T3[widgets.py<br/>ResourceBar, Editor]
+            T4[screens.py<br/>ToolConfirmationModal]
+            T5[textual_repl.py<br/>App + Messages only]
+        end
+        subgraph Core["core/"]
+            T6[tool_handler.py<br/>+ callback factory]
+        end
+        subgraph UI["ui/"]
+            T7[completers.py<br/>consolidated]
+        end
+    end
+
+    Current -->|refactor| Target
+
+    style TR fill:#dc2626,stroke:#fff,color:#fff
+    style T5 fill:#059669,stroke:#fff,color:#fff
+```
+
+## 8. Binding Architecture
 
 ```mermaid
 flowchart TB

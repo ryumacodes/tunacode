@@ -491,6 +491,69 @@ pending_confirmation                                                            
 - `memory-bank/plan/2025-11-29_textual-repl-migration-plan.md` - Task breakdown and status
 - `memory-bank/communication/2025-11-29_gemini_textual-migration-discussion.md` - Implementation notes
 
+## Architectural Concerns
+
+### Current State: Junk Drawer
+
+`textual_repl.py` mixes four distinct concerns in one file:
+
+| Concern | What's There | Problem |
+|---------|-------------|---------|
+| **Presentation** | ResourceBar, Editor, Modal, theme builder | Theme builder should be near UI_COLORS |
+| **Infrastructure** | `_complete_paths()`, `_gather_command_names()` | Duplicates existing completers.py logic |
+| **Wiring** | `build_textual_tool_callback()` | Orchestrator glue, not UI |
+| **App Shell** | TextualReplApp, messages, entry point | This is the only thing that belongs here |
+
+### Misplaced Components
+
+| Component | Current Location | Conceptual Home |
+|-----------|-----------------|-----------------|
+| `_build_tunacode_theme()` | textual_repl.py:221-245 | constants.py or dedicated theme.py |
+| `_gather_command_names()` | textual_repl.py:40-43 | CommandRegistry or cli/completers |
+| `_complete_paths()` | textual_repl.py:46-62 | ui/completers.py (already has FileReferenceCompleter) |
+| `_replace_token()` | textual_repl.py:65-66 | String utility or inline in Editor |
+| `build_textual_tool_callback()` | textual_repl.py:458-477 | core/tool_handler.py or cli/wiring.py |
+| `ToolConfirmationModal` | textual_repl.py:426-455 | cli/modals.py or cli/screens.py |
+
+### Target Architecture
+
+```
+src/tunacode/
+├── constants.py
+│   └── UI_COLORS + build_tunacode_theme()  # Theme lives with palette
+│
+├── cli/
+│   ├── textual_repl.py      # App shell only: TextualReplApp, messages, entry
+│   ├── screens.py           # ToolConfirmationModal and future screens
+│   ├── widgets.py           # ResourceBar, Editor (reusable components)
+│   └── completers.py        # Path/command completion (consolidate with ui/)
+│
+├── core/
+│   └── tool_handler.py      # Add textual callback builder here
+```
+
+### Consolidation Opportunities
+
+1. **Completers**: `ui/completers.py` already has `CommandCompleter`, `FileReferenceCompleter`. The `_complete_paths()` and `_gather_command_names()` in textual_repl.py duplicate this.
+
+2. **Theme**: `UI_COLORS` in constants.py is the source of truth. The theme builder should be adjacent, not buried in the REPL.
+
+3. **Widgets**: ResourceBar and Editor are reusable. They don't need the app context to function.
+
+4. **Screens/Modals**: ToolConfirmationModal is a self-contained screen. Future modals (help, model selector, etc.) would join it.
+
+### Migration Path
+
+Phase 1: Extract theme to constants.py or theme.py
+Phase 2: Move ToolConfirmationModal to screens.py
+Phase 3: Move ResourceBar, Editor to widgets.py
+Phase 4: Consolidate completion logic with existing completers
+Phase 5: Move callback factory to tool_handler.py
+
+Each phase keeps the app functional - no big bang refactor.
+
+---
+
 ## Appendix: Complete UI_COLORS to Theme Variable Mapping
 
 | UI_COLORS Key | Theme Property | CSS Variable |
