@@ -22,11 +22,10 @@ from textual.containers import Horizontal, Vertical
 from textual.events import Key
 from textual.message import Message
 from textual.screen import ModalScreen
-from textual.theme import Theme
 from textual.widgets import Button, Checkbox, Footer, Header, Label, RichLog, Static, TextArea
 
 from tunacode.cli.commands.registry import CommandRegistry
-from tunacode.constants import UI_COLORS
+from tunacode.constants import THEME_NAME, build_tunacode_theme
 from tunacode.core.agents.main import process_request
 from tunacode.core.tool_handler import ToolHandler
 from tunacode.types import (
@@ -218,33 +217,6 @@ class ToolConfirmationResult(Message):
         self.response = response
 
 
-THEME_NAME = "tunacode"
-
-
-def _build_tunacode_theme() -> Theme:
-    palette = UI_COLORS
-    custom_variables = {
-        "text-muted": palette["muted"],
-        "border": palette["border"],
-        "border-light": palette["border_light"],
-    }
-    return Theme(
-        name=THEME_NAME,
-        primary=palette["primary"],
-        secondary=palette["accent"],
-        accent=palette["primary_light"],
-        background=palette["background"],
-        surface=palette["surface"],
-        panel=palette["border_light"],
-        success=palette["success"],
-        warning=palette["warning"],
-        error=palette["error"],
-        boost=palette["primary_dark"],
-        foreground=palette["primary_light"],
-        variables=custom_variables,
-    )
-
-
 class TextualReplApp(App[None]):
     """Minimal Textual shell that will host orchestrator wiring and tool UI."""
 
@@ -278,7 +250,7 @@ class TextualReplApp(App[None]):
 
     def on_mount(self) -> None:
         # Register custom TunaCode theme using UI_COLORS palette
-        tunacode_theme = _build_tunacode_theme()
+        tunacode_theme = build_tunacode_theme()
         self.register_theme(tunacode_theme)
         self.theme = THEME_NAME
 

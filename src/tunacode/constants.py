@@ -181,3 +181,38 @@ MSG_FILE_SIZE_LIMIT = " Please specify a smaller file or use other tools to proc
 JSON_PARSE_MAX_RETRIES = 10
 JSON_PARSE_BASE_DELAY = 0.1  # Initial delay in seconds
 JSON_PARSE_MAX_DELAY = 5.0  # Maximum delay in seconds
+
+
+# Textual TUI Theme
+THEME_NAME = "tunacode"
+
+
+def build_tunacode_theme():
+    """Build and return the TunaCode Textual theme.
+
+    Uses UI_COLORS palette to create a consistent cyan-branded theme.
+    Import Theme lazily to avoid import cycles and allow non-TUI usage.
+    """
+    from textual.theme import Theme
+
+    palette = UI_COLORS
+    custom_variables = {
+        "text-muted": palette["muted"],
+        "border": palette["border"],
+        "border-light": palette["border_light"],
+    }
+    return Theme(
+        name=THEME_NAME,
+        primary=palette["primary"],
+        secondary=palette["accent"],
+        accent=palette["primary_light"],
+        background=palette["background"],
+        surface=palette["surface"],
+        panel=palette["border_light"],
+        success=palette["success"],
+        warning=palette["warning"],
+        error=palette["error"],
+        boost=palette["primary_dark"],
+        foreground=palette["primary_light"],
+        variables=custom_variables,
+    )
