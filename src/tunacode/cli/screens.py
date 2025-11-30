@@ -17,6 +17,10 @@ from textual.widgets import Button, Checkbox, Label
 if TYPE_CHECKING:
     from tunacode.types import ToolConfirmationRequest, ToolConfirmationResponse
 
+# Button IDs for modal actions
+BUTTON_ID_YES = "yes"
+BUTTON_ID_NO = "no"
+
 
 class ToolConfirmationResult(Message):
     """Result of a tool confirmation modal."""
@@ -40,8 +44,8 @@ class ToolConfirmationModal(ModalScreen[None]):
             Label(f"Args: {self.request.args}"),
             self.skip_future,
             Horizontal(
-                Button("Yes", id="yes", variant="success"),
-                Button("No", id="no", variant="error"),
+                Button("Yes", id=BUTTON_ID_YES, variant="success"),
+                Button("No", id=BUTTON_ID_NO, variant="error"),
                 id="actions",
             ),
             id="modal-body",
@@ -50,7 +54,7 @@ class ToolConfirmationModal(ModalScreen[None]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         from tunacode.types import ToolConfirmationResponse
 
-        approved = event.button.id == "yes"
+        approved = event.button.id == BUTTON_ID_YES
         response = ToolConfirmationResponse(
             approved=approved,
             skip_future=self.skip_future.value,

@@ -1,6 +1,6 @@
 """Output and display functions for TunaCode UI."""
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from prompt_toolkit.application import run_in_terminal
 from rich.padding import Padding
@@ -25,6 +25,8 @@ if TYPE_CHECKING:
     from rich.console import Console
 
 _console: Optional["Console"] = None
+OutputSink = Callable[[Any, dict[str, Any]], None]
+_output_sink: Optional[OutputSink] = None
 
 
 def get_console() -> "Console":
@@ -66,7 +68,12 @@ BANNER = """[bold cyan]
 
 @create_sync_wrapper
 async def print(message, **kwargs) -> None:
-    """Print a message to the console."""
+    """Print a message to the console or active output sink."""
+    sink = _output_sink
+    if sink is not None:
+        # Route output to the registered sink (e.g., Textual RichLog) when present.
+        sink(message, dict(kwargs))
+        return
     await run_in_terminal(lambda: console.print(message, **kwargs))
 
 
@@ -186,6 +193,18 @@ async def update_spinner_message(message: str, state_manager: StateManager = Non
         if hasattr(spinner_obj, "update"):
             # Rich's Status object supports update method
             await run_in_terminal(lambda: spinner_obj.update(message))
+
+
+def register_output_sink(sink: OutputSink) -> None:
+    """Register a sink to receive UI output instead of the default console."""
+    global _output_sink
+    _output_sink = sink
+
+
+def clear_output_sink() -> None:
+    """Clear any registered output sink and revert to console output."""
+    global _output_sink
+    _output_sink = None
 
 
 def get_context_window_display(total_tokens: int, max_tokens: int) -> str:

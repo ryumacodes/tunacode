@@ -7,7 +7,9 @@ The app composes widgets from cli/widgets.py and screens from cli/screens.py.
 from __future__ import annotations
 
 import asyncio
+from typing import Any, cast
 
+from rich.console import RenderableType
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -34,6 +36,7 @@ from tunacode.types import (
     ToolConfirmationRequest,
     ToolConfirmationResponse,
 )
+from tunacode.ui.output import clear_output_sink, register_output_sink
 
 
 class ShowToolConfirmationModal(Message):
@@ -85,6 +88,7 @@ class TextualReplApp(App[None]):
         self.register_theme(tunacode_theme)
         self.theme = THEME_NAME
 
+        self._install_output_sink()
         self.set_focus(self.editor)
         self.run_worker(self._request_worker, exclusive=False)
         self._update_resource_bar()
@@ -228,17 +232,57 @@ class TextualReplApp(App[None]):
         stream_renderable = self._render_stream_text(self.current_stream_text)
         self.streaming_output.update(stream_renderable)
 
+    def _install_output_sink(self) -> None:
+        """Route legacy console output into the Textual RichLog."""
+
+        def _log_to_rich_log(renderable: object, options: dict[str, Any]) -> None:
+            content = self._coerce_renderable_for_log(renderable, options)
+            log_kwargs = self._extract_log_kwargs(options)
+
+            self.rich_log.write(content, **log_kwargs)
+
+        register_output_sink(_log_to_rich_log)
+
+    def _coerce_renderable_for_log(
+        self, renderable: object, options: dict[str, Any]
+    ) -> RenderableType:
+        """Translate console renderables to a RichLog-friendly form."""
+        style = options.get("style")
+        markup_enabled = bool(options.get("markup", True))
+
+        if isinstance(renderable, Text):
+            text_renderable = renderable.copy()
+            if style:
+                text_renderable.stylize(style)
+            return text_renderable
+
+        if isinstance(renderable, str):
+            text_renderable = (
+                Text.from_markup(renderable) if markup_enabled else Text(renderable)
+            )
+            if style:
+                text_renderable.stylize(style)
+            return text_renderable
+
+        return cast(RenderableType, renderable)
+
+    def _extract_log_kwargs(self, options: dict[str, Any]) -> dict[str, Any]:
+        """Filter kwargs supported by RichLog.write to avoid TypeErrors."""
+        allowed_keys = ("width", "expand", "shrink", "scroll_end", "animate")
+        return {key: options[key] for key in allowed_keys if key in options}
+
 
 async def run_textual_repl(state_manager: StateManager) -> None:
     """Launch the Textual REPL application."""
     app = TextualReplApp(state_manager=state_manager)
-    await app.run_async()
+    try:
+        await app.run_async()
+    finally:
+        clear_output_sink()
 
 
 def build_textual_tool_callback(app: TextualReplApp, state_manager: StateManager):
     """Create a tool callback using the Textual confirmation flow."""
-    from typing import Any
-
     async def _callback(part: Any, _node: Any = None) -> None:
         tool_handler = state_manager.tool_handler or ToolHandler(state_manager)
         state_manager.set_tool_handler(tool_handler)
