@@ -28,6 +28,7 @@ async def _process_node(
     streaming_callback: Optional[Callable[[str], Awaitable[None]]] = None,
     usage_tracker: Optional[UsageTrackerProtocol] = None,
     response_state: Optional[ResponseState] = None,
+    tool_status_callback: Optional[Callable[[str], None]] = None,
 ) -> Tuple[bool, Optional[str]]:
     """Process a single node from the agent response.
 
@@ -224,7 +225,7 @@ async def _process_node(
 
         # Process tool calls
         await _process_tool_calls(
-            node, buffering_callback, state_manager, tool_buffer, response_state
+            node, buffering_callback, state_manager, tool_buffer, response_state, tool_status_callback
         )
 
     # If there were no tools and we processed a model response, transition to RESPONSE
@@ -312,6 +313,7 @@ async def _process_tool_calls(
     state_manager: StateManager,
     tool_buffer: Optional[ToolBuffer],
     response_state: Optional[ResponseState],
+    tool_status_callback: Optional[Callable[[str], None]] = None,
 ) -> None:
     """
     Process tool calls from the node using smart batching strategy.

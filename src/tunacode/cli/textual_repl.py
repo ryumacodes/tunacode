@@ -112,6 +112,7 @@ class TextualReplApp(App[None]):
                 state_manager=self.state_manager,
                 tool_callback=build_textual_tool_callback(self, self.state_manager),
                 streaming_callback=self.streaming_callback,
+                tool_status_callback=build_tool_status_callback(self),
             )
         except Exception as e:
             # Ensure errors surface visibly
