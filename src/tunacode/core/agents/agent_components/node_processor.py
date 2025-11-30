@@ -20,6 +20,31 @@ logger = get_logger(__name__)
 colors = DotDict(UI_COLORS)
 
 
+def _update_tool_status(
+    message: str,
+    tool_status_callback: Optional[Callable[[str], None]],
+) -> None:
+    """Update tool status via callback if available.
+
+    This is a synchronous helper that posts to the Textual app's message queue.
+    The callback is designed to be called from async context but uses post_message
+    which is thread-safe and non-blocking.
+    """
+    if tool_status_callback is not None:
+        # Strip Rich markup for cleaner status bar display
+        import re
+        clean_message = re.sub(r"\[.*?\]", "", message)
+        tool_status_callback(clean_message)
+
+
+def _clear_tool_status(
+    tool_status_callback: Optional[Callable[[str], None]],
+) -> None:
+    """Clear tool status via callback if available."""
+    if tool_status_callback is not None:
+        tool_status_callback("")
+
+
 async def _process_node(
     node,
     tool_callback: Optional[Callable],
@@ -398,11 +423,11 @@ async def _process_tool_calls(
             # Display purple research agent panel
             await ui.research_agent(panel_text)
 
-            # Update spinner to show research in progress
+            # Update tool status to show research in progress
             query_preview = query[:60] + "..." if len(query) > 60 else query
-            await ui.update_spinner_message(
-                f"[bold {colors.accent}]Researching: {query_preview}[/bold {colors.accent}]",
-                state_manager,
+            _update_tool_status(
+                f"Researching: {query_preview}",
+                tool_status_callback,
             )
 
         # Execute the research agent tool
@@ -415,20 +440,15 @@ async def _process_tool_calls(
                 files = result.get("relevant_files", [])
                 findings_count = len(result.get("key_findings", []))
                 if files:
-                    summary = (
-                        f"[bold {colors.accent}]Research complete: analyzed {len(files)} file(s), "
-                        f"{findings_count} finding(s)[/bold {colors.accent}]"
-                    )
-                    await ui.update_spinner_message(summary, state_manager)
+                    summary = f"Research complete: analyzed {len(files)} file(s), {findings_count} finding(s)"
+                    _update_tool_status(summary, tool_status_callback)
                     # Brief pause to show summary before resetting
                     import asyncio
 
                     await asyncio.sleep(0.5)
 
-        # Reset spinner message back to thinking
-        from tunacode.constants import UI_THINKING_MESSAGE
-
-        await ui.update_spinner_message(UI_THINKING_MESSAGE, state_manager)
+        # Clear tool status
+        _clear_tool_status(tool_status_callback)
 
     # Phase 3: Execute read-only tools in ONE parallel batch
     if read_only_tasks and tool_callback:
@@ -437,19 +457,16 @@ async def _process_tool_calls(
         batch_id = getattr(state_manager.session, "batch_counter", 0) + 1
         state_manager.session.batch_counter = batch_id
 
-        # Update spinner to show batch collection
-        collection_msg = (
-            f"[bold {colors.primary}]Collected {len(read_only_tasks)} "
-            f"read-only tools...[/bold {colors.primary}]"
+        # Update tool status to show batch collection
+        _update_tool_status(
+            f"Collected {len(read_only_tasks)} read-only tools...",
+            tool_status_callback,
         )
-        await ui.update_spinner_message(collection_msg, state_manager)
 
-        # Update spinner message for batch execution
+        # Update tool status for batch execution
         tool_names = [part.tool_name for part, _ in read_only_tasks]
         batch_msg = get_batch_description(len(read_only_tasks), tool_names)
-        await ui.update_spinner_message(
-            f"[bold {colors.primary}]{batch_msg}...[/bold {colors.primary}]", state_manager
-        )
+        _update_tool_status(f"{batch_msg}...", tool_status_callback)
 
         # Build batch content as markdown for Rich panel
         batch_content = (
@@ -479,17 +496,15 @@ async def _process_tool_calls(
         # Display batch execution in green Rich panel
         await ui.batch(batch_content)
 
-        # Reset spinner message back to thinking
-        from tunacode.constants import UI_THINKING_MESSAGE
-
-        await ui.update_spinner_message(UI_THINKING_MESSAGE, state_manager)
+        # Clear tool status after batch execution
+        _clear_tool_status(tool_status_callback)
 
     # Phase 4: Execute write/execute tools sequentially
     for part, node in write_execute_tasks:
         if state_manager.session.show_thoughts:
-            await ui.warning(f"⚠️ SEQUENTIAL: {part.tool_name} (write/execute tool)")
+            await ui.warning(f"SEQUENTIAL: {part.tool_name} (write/execute tool)")
 
-        # Update spinner for sequential tool
+        # Update tool status for sequential tool
         tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
         # Parse args if they're a JSON string
         if isinstance(tool_args, str):
@@ -500,9 +515,7 @@ async def _process_tool_calls(
             except (json.JSONDecodeError, TypeError):
                 tool_args = {}
         tool_desc = get_tool_description(part.tool_name, tool_args)
-        await ui.update_spinner_message(
-            f"[bold {colors.primary}]{tool_desc}...[/bold {colors.primary}]", state_manager
-        )
+        _update_tool_status(f"{tool_desc}...", tool_status_callback)
 
         # Execute the tool with robust error handling
         try:
@@ -520,7 +533,7 @@ async def _process_tool_calls(
             # Surface to UI when thoughts are enabled, then continue gracefully
             if getattr(state_manager.session, "show_thoughts", False):
                 await ui.warning(
-                    f"❌ Tool failed: {getattr(part, 'tool_name', '<unknown>')} — continuing"
+                    f"Tool failed: {getattr(part, 'tool_name', '<unknown>')} - continuing"
                 )
         finally:
             # Tool execution completed - resource cleanup handled by BaseTool.execute()
@@ -529,6 +542,8 @@ async def _process_tool_calls(
                 "Tool execution completed (success or failure): tool=%s",
                 tool_name,
             )
+            # Clear tool status after each sequential tool
+            _clear_tool_status(tool_status_callback)
 
     # Track tool calls in session
     if is_processing_tools:

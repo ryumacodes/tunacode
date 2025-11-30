@@ -476,7 +476,7 @@ class RequestOrchestrator:
 
                     i += 1
 
-                await _finalize_buffered_tasks(tool_buffer, self.tool_callback, self.state_manager)
+                await _finalize_buffered_tasks(tool_buffer, self.tool_callback, self.state_manager, self.tool_status_callback)
 
                 # Return wrapper that carries response_state
                 return ac.AgentRunWithState(agent_run, response_state)
@@ -551,6 +551,7 @@ async def _finalize_buffered_tasks(
     tool_buffer: ac.ToolBuffer,
     tool_callback: Optional[ToolCallback],
     state_manager: StateManager,
+    tool_status_callback: Optional[Callable[[str], None]] = None,
 ) -> None:
     """Finalize and execute any buffered read-only tasks."""
     if not tool_callback or not tool_buffer.has_tasks():
@@ -558,13 +559,12 @@ async def _finalize_buffered_tasks(
 
     buffered_tasks = tool_buffer.flush()
 
-    # Update spinner message (best-effort)
+    # Update tool status (best-effort)
     try:
         tool_names = [part.tool_name for part, _ in buffered_tasks]
         batch_msg = get_batch_description(len(buffered_tasks), tool_names)
-        await ui.update_spinner_message(
-            f"[bold {colors.primary}]{batch_msg}...[/bold {colors.primary}]", state_manager
-        )
+        if tool_status_callback is not None:
+            tool_status_callback(f"{batch_msg}...")
     except Exception:
         # UI is best-effort; never fail request because of display
         logger.debug("UI batch prelude failed (non-fatal)", exc_info=True)
@@ -572,11 +572,10 @@ async def _finalize_buffered_tasks(
     # Execute
     await ac.execute_tools_parallel(buffered_tasks, tool_callback)
 
-    # Reset spinner message (best-effort)
+    # Clear tool status (best-effort)
     try:
-        from tunacode.constants import UI_THINKING_MESSAGE  # local import OK (rare path)
-
-        await ui.update_spinner_message(UI_THINKING_MESSAGE, state_manager)
+        if tool_status_callback is not None:
+            tool_status_callback("")
     except Exception:
         logger.debug("UI batch epilogue failed (non-fatal)", exc_info=True)
 
