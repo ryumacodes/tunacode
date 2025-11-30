@@ -106,27 +106,21 @@ TUNACODE_HOME_DIR = ".tunacode"
 SESSIONS_SUBDIR = "sessions"
 DEVICE_ID_FILE = "device_id"
 
-# UI colors - Professional monochromatic cyan scheme
+# UI colors - High contrast neutral scheme (matches reference)
 UI_COLORS = {
-    # Core brand colors
-    "primary": "#00d7ff",  # Bright cyan (primary accent)
-    "primary_light": "#4de4ff",  # Light cyan for hover states
-    "primary_dark": "#0095b3",  # Dark cyan for interactive elements
-    "accent": "#0ea5e9",  # Rich cyan (replaces purple)
-    # Background & structure (cyan-tinted grays)
-    "background": "#0d1720",  # Ultra dark with cyan undertone
-    "surface": "#162332",  # Panels, cards
-    "border": "#2d4461",  # Stronger cyan-gray borders
-    "border_light": "#1e2d3f",  # Subtle borders
-    # Text & content (cyan-tinted neutrals)
-    "muted": "#6b8aa3",  # Secondary text, descriptions
-    "secondary": "#4a6582",  # Tertiary text, less important
-    # Semantic colors (professional, muted)
-    "success": "#059669",  # Corporate emerald green
-    "warning": "#d97706",  # Muted amber
-    "error": "#dc2626",  # Clean red
-    # Legacy compatibility
-    "file_ref": "#00d7ff",  # Same as primary
+    # Backgrounds (neutral, not cyan-tinted)
+    "background": "#1a1a1a",  # Near black
+    "surface": "#252525",  # Panels, slightly lighter
+    "border": "#ff6b9d",  # Magenta borders
+    # Text (HIGH CONTRAST)
+    "text": "#e0e0e0",  # Primary text - light gray
+    "muted": "#808080",  # Secondary text
+    # Accents (used sparingly)
+    "primary": "#00d7d7",  # Cyan - model, tokens
+    "accent": "#ff6b9d",  # Magenta - brand
+    "success": "#4ec9b0",  # Green - costs
+    "warning": "#c3e88d",  # Yellow/lime
+    "error": "#f44747",  # Red
 }
 
 # UI text and formatting
@@ -186,33 +180,46 @@ JSON_PARSE_MAX_DELAY = 5.0  # Maximum delay in seconds
 # Textual TUI Theme
 THEME_NAME = "tunacode"
 
+# ResourceBar display constants (NeXTSTEP: Persistent Status Zone)
+RESOURCE_BAR_HEIGHT = 1
+RESOURCE_BAR_SEPARATOR = " ◇ "
+RESOURCE_BAR_TOKEN_FORMAT = "{tokens}/{max_tokens}"
+RESOURCE_BAR_COST_FORMAT = "${cost:.2f}"
+RESOURCE_BAR_SESSION_LABEL = "session"
+
+# ToolStatusBar state CSS classes (NeXTSTEP: Visual Feedback)
+TOOL_STATUS_CLASS_ACTIVE = "active"
+TOOL_STATUS_CLASS_IDLE = "idle"
+TOOL_STATUS_CLASS_ERROR = "error"
+
+# RichLog pause mode CSS class (NeXTSTEP: Mode Visibility)
+RICHLOG_CLASS_PAUSED = "paused"
+RICHLOG_CLASS_STREAMING = "streaming"
+
 
 def build_tunacode_theme():
     """Build and return the TunaCode Textual theme.
 
-    Uses UI_COLORS palette to create a consistent cyan-branded theme.
+    Uses UI_COLORS palette - high contrast neutral scheme.
     Import Theme lazily to avoid import cycles and allow non-TUI usage.
     """
     from textual.theme import Theme
 
-    palette = UI_COLORS
-    custom_variables = {
-        "text-muted": palette["muted"],
-        "border": palette["border"],
-        "border-light": palette["border_light"],
-    }
+    p = UI_COLORS
     return Theme(
         name=THEME_NAME,
-        primary=palette["primary"],
-        secondary=palette["accent"],
-        accent=palette["primary_light"],
-        background=palette["background"],
-        surface=palette["surface"],
-        panel=palette["border_light"],
-        success=palette["success"],
-        warning=palette["warning"],
-        error=palette["error"],
-        boost=palette["primary_dark"],
-        foreground=palette["primary_light"],
-        variables=custom_variables,
+        primary=p["primary"],
+        secondary=p["muted"],
+        accent=p["accent"],
+        background=p["background"],
+        surface=p["surface"],
+        panel=p["surface"],
+        success=p["success"],
+        warning=p["warning"],
+        error=p["error"],
+        foreground=p["text"],  # KEY: Light gray for readable text
+        variables={
+            "text-muted": p["muted"],
+            "border": p["border"],
+        },
     )

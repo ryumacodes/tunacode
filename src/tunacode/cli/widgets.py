@@ -15,6 +15,13 @@ from textual.events import Key
 from textual.message import Message
 from textual.widgets import Static, TextArea
 
+from tunacode.constants import (
+    APP_NAME,
+    RESOURCE_BAR_COST_FORMAT,
+    RESOURCE_BAR_SEPARATOR,
+    TOOL_STATUS_CLASS_ACTIVE,
+    TOOL_STATUS_CLASS_IDLE,
+)
 from tunacode.ui.completers import get_command_names, replace_token, textual_complete_paths
 
 
@@ -48,7 +55,11 @@ class ToolStatusClear(Message):
 
 
 class ToolStatusBar(Static):
-    """Single-line status bar showing current tool activity."""
+    """Single-line status bar showing current tool activity.
+
+    NeXTSTEP Context Zone: Shows current state through highlighting.
+    State classes: .active (tool running), .idle (no activity), .error (failed)
+    """
 
     DEFAULT_CSS = """
     ToolStatusBar {
@@ -62,23 +73,31 @@ class ToolStatusBar(Static):
     def __init__(self) -> None:
         super().__init__("")
         self._status: str = ""
+        self.add_class(TOOL_STATUS_CLASS_IDLE)
 
     def set_status(self, status: str) -> None:
-        """Update the status bar content."""
+        """Update the status bar content and set active state."""
         self._status = status
+        self.remove_class(TOOL_STATUS_CLASS_IDLE)
+        self.add_class(TOOL_STATUS_CLASS_ACTIVE)
         self.update(Text(self._status, style="bold"))
 
     def clear(self) -> None:
-        """Clear the status bar."""
+        """Clear the status bar and return to idle state."""
         self._status = ""
+        self.remove_class(TOOL_STATUS_CLASS_ACTIVE)
+        self.add_class(TOOL_STATUS_CLASS_IDLE)
         self.update("")
 
 
 class ResourceBar(Static):
-    """Top bar showing resources: tokens, model, cost."""
+    """Top bar showing resources: tokens, model, cost.
+
+    NeXTSTEP Persistent Status Zone: "Glanceable, rarely changes"
+    """
 
     def __init__(self) -> None:
-        super().__init__("")
+        super().__init__("Loading...")  # Initial content to ensure rendering
         self._tokens: int = 0
         self._max_tokens: int = 200000
         self._model: str = "---"
@@ -109,10 +128,33 @@ class ResourceBar(Static):
             self._session_cost = session_cost
         self._refresh_display()
 
+    def _format_tokens(self) -> str:
+        """Format token count with K suffix for readability."""
+        if self._tokens >= 1000:
+            return f"{self._tokens / 1000:.1f}k"
+        return str(self._tokens)
+
+    def _format_max_tokens(self) -> str:
+        """Format max tokens with K suffix."""
+        if self._max_tokens >= 1000:
+            return f"{self._max_tokens // 1000}k"
+        return str(self._max_tokens)
+
     def _refresh_display(self) -> None:
+        """Compact single-line status: ◇ tokens: 1.2k ◇ model ◇ $0.00 ◇ tunacode"""
+        sep = RESOURCE_BAR_SEPARATOR
+        session_cost_str = RESOURCE_BAR_COST_FORMAT.format(cost=self._session_cost)
+
         content = Text.assemble(
-            ("Model: ", "dim"),
+            ("◇ ", "dim"),
+            ("tokens: ", ""),  # Default text (light gray)
+            (self._format_tokens(), "cyan"),
+            (sep, "dim"),
             (self._model, "cyan"),
+            (sep, "dim"),
+            (session_cost_str, "green"),
+            (sep, "dim"),
+            (APP_NAME.lower(), "magenta bold"),
         )
         self.update(content)
 

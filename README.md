@@ -208,3 +208,10 @@ For a complete overview of the documentation, see the [**Documentation Hub**](do
 ---
 
 MIT License - see [LICENSE](LICENSE) file
+
+---
+
+## Bonus: Developer Joke
+
+> Why do programmers prefer dark mode?
+> Because light attracts bugs.

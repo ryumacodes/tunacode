@@ -13,9 +13,9 @@ from rich.console import RenderableType
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import Horizontal
 from textual.message import Message
-from textual.widgets import Footer, Header, RichLog, Static
+from textual.widgets import RichLog, Static
 
 from tunacode.cli.screens import ToolConfirmationModal, ToolConfirmationResult
 from tunacode.cli.widgets import (
@@ -27,7 +27,12 @@ from tunacode.cli.widgets import (
     ToolStatusClear,
     ToolStatusUpdate,
 )
-from tunacode.constants import THEME_NAME, build_tunacode_theme
+from tunacode.constants import (
+    RICHLOG_CLASS_PAUSED,
+    RICHLOG_CLASS_STREAMING,
+    THEME_NAME,
+    build_tunacode_theme,
+)
 from tunacode.core.agents.main import process_request
 from tunacode.core.tool_handler import ToolHandler
 from tunacode.types import (
@@ -54,7 +59,7 @@ class TextualReplApp(App[None]):
     CSS_PATH = "textual_repl.tcss"
 
     BINDINGS = [
-        Binding("ctrl+p", "toggle_pause", "Pause/Resume Stream", priority=True),
+        Binding("ctrl+p", "toggle_pause", "Pause/Resume Stream", show=False, priority=True),
     ]
 
     def __init__(self, *, state_manager: StateManager) -> None:
@@ -72,24 +77,42 @@ class TextualReplApp(App[None]):
         self.rich_log: RichLog
         self.editor: Editor
         self.resource_bar: ResourceBar
-        self.streaming_output: Static
         self.tool_status: ToolStatusBar
+        self.context_panel: Static
 
     def compose(self) -> ComposeResult:
-        # Create widgets here where app context is active
-        self.rich_log = RichLog(wrap=True, markup=False, highlight=False, auto_scroll=True)
-        self.editor = Editor()
-        self.resource_bar = ResourceBar()
-        self.streaming_output = Static(self._render_stream_text(""), id="streaming-output")
-        self.tool_status = ToolStatusBar()
+        """Compose NeXTSTEP zone-based layout.
 
-        yield Header()
+        ┌─────────────────────────────────────────────┐
+        │ Model │ Tokens │ Cost │ Session             │  ← PERSISTENT STATUS
+        ├─────────────────────────────────────────────┤
+        │                                             │
+        │           Main conversation/code            │  ← MAXIMUM VIEWPORT
+        │                                             │
+        ├──────────┬──────────────────────────────────┤
+        │ Context  │   Input area (Enter to submit)   │  ← COMMAND ZONE
+        │ files    │                                  │
+        └──────────┴──────────────────────────────────┘
+        """
+        # Create widgets here where app context is active
+        self.resource_bar = ResourceBar()
+        self.rich_log = RichLog(wrap=True, markup=False, highlight=False, auto_scroll=True)
+        self.tool_status = ToolStatusBar()
+        self.context_panel = Static("No files loaded", id="context-panel")
+        self.editor = Editor()
+
+        # Persistent status zone (top)
         yield self.resource_bar
-        body = Vertical(
-            self.rich_log, self.tool_status, self.streaming_output, self.editor, id="body"
-        )
-        yield body
-        yield Footer()
+
+        # Primary viewport (center)
+        yield self.rich_log
+
+        # Tool status (context indicator)
+        yield self.tool_status
+
+        # Command zone (bottom) - 2 column layout
+        command_zone = Horizontal(self.context_panel, self.editor, id="command-zone")
+        yield command_zone
 
     def on_mount(self) -> None:
         # Register custom TunaCode theme using UI_COLORS palette
@@ -117,7 +140,8 @@ class TextualReplApp(App[None]):
     async def _process_request(self, message: str) -> None:
         """Delegate request to the real orchestrator."""
         self.current_stream_text = ""
-        self._update_streaming_output()
+        # Enter streaming mode - NeXTSTEP visual feedback
+        self.rich_log.add_class(RICHLOG_CLASS_STREAMING)
 
         try:
             model_name = self.state_manager.session.current_model or "openai/gpt-4o"
@@ -136,13 +160,16 @@ class TextualReplApp(App[None]):
             self.rich_log.write(processing_error)
             raise  # Re-raise to be caught by worker loop logging
         finally:
+            # Exit streaming mode
+            self.rich_log.remove_class(RICHLOG_CLASS_STREAMING)
+            self.rich_log.remove_class(RICHLOG_CLASS_PAUSED)
+
             # Commit the streamed response to the persistent log
             if self.current_stream_text:
                 self.rich_log.write(self.current_stream_text)
 
-            # Reset the streaming display
+            # Reset the streaming state
             self.current_stream_text = ""
-            self._update_streaming_output()
 
             # Update resource bar with latest stats
             self._update_resource_bar()
@@ -153,7 +180,15 @@ class TextualReplApp(App[None]):
 
     async def on_editor_submit_requested(self, message: EditorSubmitRequested) -> None:
         await self.request_queue.put(message.text)
-        self.rich_log.write(f"> {message.text}")
+
+        # Format user message with left border and timestamp
+        from datetime import datetime
+
+        timestamp = datetime.now().strftime("%I:%M %p").lstrip("0")
+        user_block = Text()
+        user_block.append(f"│ {message.text}\n", style="cyan")
+        user_block.append(f"│ tc {timestamp}", style="dim cyan")
+        self.rich_log.write(user_block)
 
     async def request_tool_confirmation(
         self, request: ToolConfirmationRequest
@@ -184,14 +219,16 @@ class TextualReplApp(App[None]):
         self.tool_status.clear()
 
     async def streaming_callback(self, chunk: str) -> None:
-        """Receive streaming chunks from the orchestrator."""
+        """Receive streaming chunks from the orchestrator.
+
+        NeXTSTEP: Content streams directly into unified viewport (RichLog).
+        """
         if self._streaming_paused:
             self._stream_buffer.append(chunk)
         else:
             self.current_stream_text += chunk
-            self._update_streaming_output()
-            # Optional: Scroll to keep streaming output in view if needed
-            # self.rich_log.scroll_end() # Not needed as this is outside log
+            # Scroll to keep content visible during streaming
+            self.rich_log.scroll_end()
 
     def action_toggle_pause(self) -> None:
         """Toggle the streaming pause state."""
@@ -201,23 +238,24 @@ class TextualReplApp(App[None]):
             self.pause_streaming()
 
     def pause_streaming(self) -> None:
+        """Pause streaming and show visual indicator.
+
+        NeXTSTEP: "Modes must be visually apparent at all times"
+        """
         self._streaming_paused = True
-        # We don't write to RichLog here to avoid polluting history with meta-messages
-        # But visual feedback is good. Maybe update status bar?
-        # For now, appending to stream text might be confusing if it's not part of response.
-        # Let's just rely on the UI state or a separate notification if needed.
-        # The original plan asked for visual indicator.
+        self.rich_log.add_class(RICHLOG_CLASS_PAUSED)
         self.notify("Streaming paused...")
 
     def resume_streaming(self) -> None:
+        """Resume streaming and remove pause indicator."""
         self._streaming_paused = False
+        self.rich_log.remove_class(RICHLOG_CLASS_PAUSED)
         self.notify("Streaming resumed...")
 
         # Flush buffer
         if self._stream_buffer:
             buffered_text = "".join(self._stream_buffer)
             self.current_stream_text += buffered_text
-            self._update_streaming_output()
             self._stream_buffer.clear()
 
     def _update_resource_bar(self) -> None:
@@ -233,13 +271,6 @@ class TextualReplApp(App[None]):
             cost=last_usage.get("cost", 0.0),
             session_cost=usage.get("cost", 0.0),
         )
-
-    def _render_stream_text(self, content: str) -> Text:
-        return Text(content, overflow="fold", no_wrap=False)
-
-    def _update_streaming_output(self) -> None:
-        stream_renderable = self._render_stream_text(self.current_stream_text)
-        self.streaming_output.update(stream_renderable)
 
     def _install_output_sink(self) -> None:
         """Route legacy console output into the Textual RichLog."""
