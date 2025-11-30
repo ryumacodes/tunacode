@@ -60,9 +60,6 @@ class TextualReplApp(App[None]):
     def __init__(self, *, state_manager: StateManager) -> None:
         super().__init__()
         self.state_manager: StateManager = state_manager
-        self.rich_log: RichLog = RichLog(wrap=True, markup=False, highlight=False, auto_scroll=True)
-        self.editor: Editor = Editor()
-        self.resource_bar: ResourceBar = ResourceBar()
         self.request_queue: asyncio.Queue[str] = asyncio.Queue()
         self.pending_confirmation: asyncio.Future[ToolConfirmationResponse] | None = None
 
@@ -70,10 +67,22 @@ class TextualReplApp(App[None]):
         self._streaming_paused: bool = False
         self._stream_buffer: list[str] = []
         self.current_stream_text: str = ""
-        self.streaming_output: Static = Static(self._render_stream_text(""), id="streaming-output")
-        self.tool_status: ToolStatusBar = ToolStatusBar()
+
+        # Widgets are created in compose() to ensure app context is active
+        self.rich_log: RichLog
+        self.editor: Editor
+        self.resource_bar: ResourceBar
+        self.streaming_output: Static
+        self.tool_status: ToolStatusBar
 
     def compose(self) -> ComposeResult:
+        # Create widgets here where app context is active
+        self.rich_log = RichLog(wrap=True, markup=False, highlight=False, auto_scroll=True)
+        self.editor = Editor()
+        self.resource_bar = ResourceBar()
+        self.streaming_output = Static(self._render_stream_text(""), id="streaming-output")
+        self.tool_status = ToolStatusBar()
+
         yield Header()
         yield self.resource_bar
         body = Vertical(

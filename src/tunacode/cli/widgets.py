@@ -126,7 +126,7 @@ class Editor(TextArea):
     ]
 
     def __init__(self, *, language: Optional[str] = None) -> None:
-        super().__init__(language=language, placeholder="Enter a request...")
+        super().__init__(language=language)
         self._awaiting_escape_enter: bool = False
         self._command_names: list[str] = get_command_names()
 
@@ -190,4 +190,4 @@ class Editor(TextArea):
             return
 
         self._awaiting_escape_enter = False
-        self._on_key(event)
+        await self._on_key(event)
