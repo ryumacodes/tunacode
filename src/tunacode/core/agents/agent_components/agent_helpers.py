@@ -253,8 +253,6 @@ async def handle_empty_response(
     state: Any,
 ) -> None:
     """Handle empty responses by creating a synthetic user message with retry guidance."""
-    from tunacode.ui import console as ui
-
     force_action_content = create_empty_response_message(
         message,
         reason,
@@ -263,15 +261,6 @@ async def handle_empty_response(
         state.sm,
     )
     create_user_message(force_action_content, state.sm)
-
-    if state.show_thoughts:
-        await ui.warning("\nEMPTY RESPONSE FAILURE - AGGRESSIVE RETRY TRIGGERED")
-        await ui.muted(f"   Reason: {reason}")
-        await ui.muted(
-            f"   Recent tools: "
-            f"{get_recent_tools_context(getattr(state.sm.session, 'tool_calls', []))}"
-        )
-        await ui.muted("   Injecting retry guidance prompt")
 
 
 def format_fallback_output(fallback: FallbackResponse) -> str:

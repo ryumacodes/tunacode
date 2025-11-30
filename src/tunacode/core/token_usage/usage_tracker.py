@@ -1,10 +1,12 @@
+import logging
 from typing import Any
 
 from tunacode.core.state import StateManager
 from tunacode.core.token_usage.api_response_parser import ApiResponseParser
 from tunacode.core.token_usage.cost_calculator import CostCalculator
 from tunacode.types import UsageTrackerProtocol
-from tunacode.ui import console as ui  # Import the ui console directly
+
+logger = logging.getLogger(__name__)
 
 
 class UsageTracker(UsageTrackerProtocol):
@@ -40,17 +42,8 @@ class UsageTracker(UsageTrackerProtocol):
             # 3. Update the session state (always done to track totals for session cost display)
             self._update_state(parsed_data, cost)
 
-            # 4. Display detailed per-call summary only if debugging enabled
-            if self.state_manager.session.show_thoughts:
-                await self._display_summary()
-
         except Exception as e:
-            if self.state_manager.session.show_thoughts:
-                import traceback
-
-                await ui.error(f"Error during cost calculation: {e}")
-                # Log the full traceback for debugging
-                await ui.debug(f"Traceback: {traceback.format_exc()}")
+            logger.debug(f"Error during cost calculation: {e}", exc_info=True)
 
     def _calculate_cost(self, parsed_data: dict) -> float:
         """Calculates the cost for the given parsed data."""
@@ -115,32 +108,3 @@ class UsageTracker(UsageTrackerProtocol):
             float(session.session_total_usage.get("cost", 0.0) or 0.0) + cost
         )
 
-    async def _display_summary(self):
-        """Formats and prints the usage summary to the console."""
-        session = self.state_manager.session
-
-        # Initialize usage dicts if they're None
-        if session.last_call_usage is None:
-            session.last_call_usage = {"prompt_tokens": 0, "completion_tokens": 0, "cost": 0.0}
-        if session.session_total_usage is None:
-            session.session_total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "cost": 0.0}
-
-        prompt = session.last_call_usage["prompt_tokens"]
-        completion = session.last_call_usage["completion_tokens"]
-        last_cost = session.last_call_usage["cost"]
-        session_cost = session.session_total_usage["cost"]
-
-        # Ensure tokens are not None before arithmetic operations
-        prompt_safe = prompt if prompt is not None else 0
-        completion_safe = completion if completion is not None else 0
-        last_cost_safe = last_cost if last_cost is not None else 0.0
-        session_cost_safe = session_cost if session_cost is not None else 0.0
-
-        total_tokens = prompt_safe + completion_safe
-        usage_summary = (
-            f"[ Tokens: {total_tokens:,} "
-            f"(P: {prompt_safe:,}, C: {completion_safe:,}) | "
-            f"Cost: ${last_cost_safe:.4f} | "
-            f"Session Total: ${session_cost_safe:.4f} ]"
-        )
-        await ui.muted(usage_summary)

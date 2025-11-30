@@ -1,6 +1,6 @@
 """Agent components package for modular agent functionality."""
 
-from tunacode.ui.tool_descriptions import get_batch_description
+from tunacode.utils.tool_descriptions import get_batch_description
 
 from .agent_config import get_or_create_agent
 from .agent_helpers import (

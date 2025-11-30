@@ -33,9 +33,8 @@ from tunacode.types import (
     ToolCallback,
     UsageTrackerProtocol,
 )
-from tunacode.ui import console as ui
-from tunacode.ui.tool_descriptions import get_batch_description
 from tunacode.utils.file_utils import DotDict
+from tunacode.utils.tool_descriptions import get_batch_description
 
 from . import agent_components as ac
 from .prompts import format_clarification, format_iteration_limit, format_no_progress
@@ -141,12 +140,6 @@ class IterationManager:
             limit_message = format_iteration_limit(self.config.max_iterations, iteration, tools_str)
             ac.create_user_message(limit_message, self.state_manager)
 
-            if getattr(self.state_manager.session, "show_thoughts", False):
-                await ui.muted(
-                    f"\nITERATION LIMIT: Awaiting user guidance at "
-                    f"{self.config.max_iterations} iterations"
-                )
-
             response_state.awaiting_user_guidance = True
 
     def update_counters(self, iteration: int) -> None:
@@ -170,11 +163,6 @@ class IterationManager:
         )
         ac.create_user_message(no_progress_message, self.state_manager)
 
-        if getattr(self.state_manager.session, "show_thoughts", False):
-            await ui.warning(
-                f"NO PROGRESS: {self.unproductive_iterations} iterations without tool usage"
-            )
-
         # Reset after nudge
         self.unproductive_iterations = 0
 
@@ -187,8 +175,6 @@ class IterationManager:
         clarification_message = format_clarification(original_query, iteration, tools_used_str)
         ac.create_user_message(clarification_message, self.state_manager)
 
-        if getattr(self.state_manager.session, "show_thoughts", False):
-            await ui.muted("\nSEEKING CLARIFICATION: Asking user for guidance on task progress")
 
 
 class ReactSnapshotManager:
@@ -286,8 +272,6 @@ class ReactSnapshotManager:
                     # Append synthetic system message so LLM receives react guidance next turn
                     ctx_messages.append(ModelRequest(parts=[system_part], kind="request"))
 
-            if show_debug:
-                await ui.muted("\n[react → LLM] BEGIN\n" + guidance_entry + "\n[react → LLM] END\n")
         except Exception:
             logger.debug("Forced react snapshot failed", exc_info=True)
 
@@ -447,28 +431,12 @@ class RequestOrchestrator:
                     )
                     await self.react_manager.capture_snapshot(i, agent_run.ctx, show_thoughts)
 
-                    # Optional debug progress
-                    if show_thoughts:
-                        await ui.muted(
-                            f"\nITERATION: {i}/{ctx.max_iterations} (Request ID: {ctx.request_id})"
-                        )
-                        tool_summary = ac.get_tool_summary(
-                            getattr(self.state_manager.session, "tool_calls", [])
-                        )
-                        if tool_summary:
-                            summary_str = ", ".join(
-                                f"{name}: {count}" for name, count in tool_summary.items()
-                            )
-                            await ui.muted(f"TOOLS USED: {summary_str}")
-
                     # Ask for clarification if agent requested it
                     if response_state.awaiting_user_guidance:
                         await self.iteration_manager.ask_for_clarification(i)
 
                     # Early completion
                     if response_state.task_completed:
-                        if show_thoughts:
-                            await ui.success("Task completed successfully")
                         break
 
                     # Handle iteration limit

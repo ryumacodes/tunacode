@@ -57,7 +57,6 @@ These commands are for debugging and troubleshooting the agent's behavior.
 
 - **`/fix`**: Attempts to fix orphaned tool calls that can cause API errors. This is useful when the agent gets stuck in a loop.
 
-- **`/parsetools`**: Manually triggers the parsing of JSON tool calls from the last response. This is a fallback for when the structured tool calling fails.
 
 ## Utility Commands
 

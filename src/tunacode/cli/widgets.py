@@ -22,7 +22,7 @@ from tunacode.constants import (
     TOOL_STATUS_CLASS_ACTIVE,
     TOOL_STATUS_CLASS_IDLE,
 )
-from tunacode.ui.completers import get_command_names, replace_token, textual_complete_paths
+from tunacode.utils.completion_utils import replace_token, textual_complete_paths
 
 
 class EditorCompletionsAvailable(Message):
@@ -170,15 +170,12 @@ class Editor(TextArea):
     def __init__(self, *, language: Optional[str] = None) -> None:
         super().__init__(language=language)
         self._awaiting_escape_enter: bool = False
-        self._command_names: list[str] = get_command_names()
 
     def action_complete(self) -> None:
         prefix, start, end = self._current_token()
         if prefix is None:
             return
-        if prefix.startswith("/"):
-            candidates = [c for c in self._command_names if c.startswith(prefix)]
-        elif prefix.startswith("@"):
+        if prefix.startswith("@"):
             candidates = [f"@{c}" for c in textual_complete_paths(prefix[1:])]
         else:
             candidates = []

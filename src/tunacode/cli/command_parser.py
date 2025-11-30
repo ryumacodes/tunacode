@@ -1,8 +1,6 @@
-"""
-Module: tunacode.cli.repl_components.command_parser
+"""Module: tunacode.cli.command_parser
 
-Command parsing utilities for the REPL.
-"""
+Command parsing utilities for the Textual REPL."""
 
 import json
 import logging

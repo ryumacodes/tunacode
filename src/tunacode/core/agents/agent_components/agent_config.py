@@ -28,7 +28,6 @@ from tunacode.tools.run_command import run_command
 from tunacode.tools.update_file import update_file
 from tunacode.tools.write_file import write_file
 from tunacode.types import ModelName, PydanticAgent
-from tunacode.ui import console as ui
 
 logger = get_logger(__name__)
 
@@ -50,13 +49,8 @@ def _format_request_delay_message(seconds_remaining: float) -> str:
 
 async def _publish_delay_message(message: str, state_manager: StateManager) -> None:
     """Best-effort spinner update; UI failures must not block requests."""
-    spinner = getattr(state_manager.session, "spinner", None)
     streaming_panel = getattr(state_manager.session, "streaming_panel", None)
     try:
-        if spinner:
-            await ui.update_spinner_message(message, state_manager)
-            return
-
         if streaming_panel:
             if message == UI_THINKING_MESSAGE:
                 await streaming_panel.clear_status_message()

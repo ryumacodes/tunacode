@@ -20,7 +20,6 @@ from tunacode.types import (
     StateManager,
     ToolCallback,
 )
-from tunacode.ui import console as ui
 from tunacode.utils.retry import retry_json_parse_async
 
 logger = logging.getLogger(__name__)
@@ -179,9 +178,6 @@ async def create_buffering_callback(
             buffered_tasks = buffer.flush()
 
             # Execute buffered read-only tools in parallel
-            if state_manager.session.show_thoughts:
-                await ui.muted(f"Executing {len(buffered_tasks)} read-only tools in parallel")
-
             await execute_tools_parallel(buffered_tasks, original_callback)
 
         # Execute the non-read-only tool
@@ -227,10 +223,6 @@ async def parse_json_tool_calls(
                 except json.JSONDecodeError as e:
                     # After all retries failed
                     logger.error(f"JSON parsing failed after {JSON_PARSE_MAX_RETRIES} retries: {e}")
-                    if state_manager.session.show_thoughts:
-                        await ui.error(
-                            f"Failed to parse tool JSON after {JSON_PARSE_MAX_RETRIES} retries"
-                        )
                     # Raise custom exception for better error handling
                     raise ToolBatchingJSONError(
                         json_content=potential_json,
@@ -259,12 +251,8 @@ async def parse_json_tool_calls(
 
             await tool_callback(mock_call, mock_node)
 
-            if state_manager.session.show_thoughts:
-                await ui.muted(f"FALLBACK: Executed {tool_name} via JSON parsing")
-
         except Exception as e:
-            if state_manager.session.show_thoughts:
-                await ui.error(f"Error executing fallback tool {tool_name}: {e!s}")
+            logger.debug(f"Error executing fallback tool {tool_name}: {e!s}")
 
 
 async def extract_and_execute_tool_calls(

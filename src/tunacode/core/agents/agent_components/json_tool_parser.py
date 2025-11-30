@@ -72,16 +72,8 @@ async def parse_json_tool_calls(
             await tool_callback(mock_call, mock_node)
             tools_executed += 1
 
-            if state_manager.session.show_thoughts:
-                from tunacode.ui import console as ui
-
-                await ui.muted(f"FALLBACK: Executed {tool_name} via JSON parsing")
-
         except Exception as e:
-            if state_manager.session.show_thoughts:
-                from tunacode.ui import console as ui
-
-                await ui.error(f"Error executing fallback tool {tool_name}: {str(e)}")
+            logger.debug(f"Error executing fallback tool {tool_name}: {str(e)}")
 
     return tools_executed
 

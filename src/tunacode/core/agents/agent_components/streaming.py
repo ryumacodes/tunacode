@@ -290,7 +290,3 @@ async def stream_model_request_node(
                 exc_info=True,
             )
 
-        if getattr(state_manager.session, "show_thoughts", False):
-            from tunacode.ui import console as ui
-
-            await ui.warning("Streaming failed; falling back to non-streaming mode")

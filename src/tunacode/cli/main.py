@@ -15,7 +15,6 @@ from tunacode.core.state import StateManager
 from tunacode.core.tool_handler import ToolHandler
 from tunacode.exceptions import UserAbortError
 from tunacode.setup import setup
-from tunacode.ui import console as ui
 from tunacode.utils.system import check_for_updates
 
 app_settings = ApplicationSettings()
@@ -74,7 +73,8 @@ def main(
 
     async def async_main():
         if version:
-            await ui.version()
+            from tunacode.constants import VERSION
+            print(f"tunacode {VERSION}")
             return
 
         # Start update check in background
@@ -105,18 +105,18 @@ def main(
 
             if isinstance(e, ConfigurationError):
                 # Display the configuration error message
-                await ui.error(str(e))
+                print(f"Error: {e}")
                 update_task.cancel()  # Cancel the update check
                 return
             import traceback
 
-            await ui.error(f"{str(e)}\n\nTraceback:\n{traceback.format_exc()}")
+            print(f"Error: {e}\n\nTraceback:\n{traceback.format_exc()}")
 
         # Gracefully handle update check result (may have failed in background)
         try:
             has_update, latest_version = await update_task
             if has_update:
-                await ui.update_available(latest_version)
+                print(f"Update available: {latest_version}")
         except Exception:
             # Update check failed; error already logged by callback
             pass
