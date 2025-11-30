@@ -21,6 +21,9 @@ from tunacode.cli.widgets import (
     EditorCompletionsAvailable,
     EditorSubmitRequested,
     ResourceBar,
+    ToolStatusBar,
+    ToolStatusClear,
+    ToolStatusUpdate,
 )
 from tunacode.constants import THEME_NAME, build_tunacode_theme
 from tunacode.core.agents.main import process_request
@@ -65,11 +68,12 @@ class TextualReplApp(App[None]):
         self._stream_buffer: list[str] = []
         self.current_stream_text: str = ""
         self.streaming_output: Static = Static(self._render_stream_text(""), id="streaming-output")
+        self.tool_status: ToolStatusBar = ToolStatusBar()
 
     def compose(self) -> ComposeResult:
         yield Header()
         yield self.resource_bar
-        yield Vertical(self.rich_log, self.streaming_output, self.editor, id="body")
+        yield Vertical(self.rich_log, self.tool_status, self.streaming_output, self.editor, id="body")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -153,6 +157,14 @@ class TextualReplApp(App[None]):
             return
         self.pending_confirmation.set_result(message.response)
         self.pending_confirmation = None
+
+    def on_tool_status_update(self, message: ToolStatusUpdate) -> None:
+        """Handle tool status update message."""
+        self.tool_status.set_status(message.status)
+
+    def on_tool_status_clear(self, message: ToolStatusClear) -> None:
+        """Handle tool status clear message."""
+        self.tool_status.clear()
 
     async def streaming_callback(self, chunk: str) -> None:
         """Receive streaming chunks from the orchestrator."""
@@ -238,5 +250,21 @@ def build_textual_tool_callback(app: TextualReplApp, state_manager: StateManager
         response = await app.request_tool_confirmation(request)
         if not tool_handler.process_confirmation(response, part.tool_name):
             raise UserAbortError("User aborted tool execution")
+
+    return _callback
+
+
+def build_tool_status_callback(app: TextualReplApp):
+    """Create a callback to update the tool status bar via Textual messages.
+
+    This follows the same pattern as streaming_callback - the callback
+    posts a message to the app which handles it on the main thread.
+    """
+
+    def _callback(status: str) -> None:
+        if status:
+            app.post_message(ToolStatusUpdate(status=status))
+        else:
+            app.post_message(ToolStatusClear())
 
     return _callback
