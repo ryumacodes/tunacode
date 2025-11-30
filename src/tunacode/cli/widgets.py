@@ -35,6 +35,45 @@ class EditorSubmitRequested(Message):
         self.raw_text = raw_text
 
 
+class ToolStatusUpdate(Message):
+    """Request to update the tool status bar with a message."""
+
+    def __init__(self, *, status: str) -> None:
+        super().__init__()
+        self.status = status
+
+
+class ToolStatusClear(Message):
+    """Request to clear the tool status bar."""
+
+
+class ToolStatusBar(Static):
+    """Single-line status bar showing current tool activity."""
+
+    DEFAULT_CSS = """
+    ToolStatusBar {
+        height: 1;
+        background: $surface;
+        color: $primary;
+        padding: 0 1;
+    }
+    """
+
+    def __init__(self) -> None:
+        super().__init__("")
+        self._status: str = ""
+
+    def set_status(self, status: str) -> None:
+        """Update the status bar content."""
+        self._status = status
+        self.update(Text(self._status, style="bold"))
+
+    def clear(self) -> None:
+        """Clear the status bar."""
+        self._status = ""
+        self.update("")
+
+
 class ResourceBar(Static):
     """Top bar showing resources: tokens, model, cost."""
 
