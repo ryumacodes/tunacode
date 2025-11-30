@@ -250,7 +250,12 @@ async def _process_node(
 
         # Process tool calls
         await _process_tool_calls(
-            node, buffering_callback, state_manager, tool_buffer, response_state, tool_status_callback
+            node,
+            buffering_callback,
+            state_manager,
+            tool_buffer,
+            response_state,
+            tool_status_callback,
         )
 
     # If there were no tools and we processed a model response, transition to RESPONSE
@@ -440,7 +445,8 @@ async def _process_tool_calls(
                 files = result.get("relevant_files", [])
                 findings_count = len(result.get("key_findings", []))
                 if files:
-                    summary = f"Research complete: analyzed {len(files)} file(s), {findings_count} finding(s)"
+                    fc, fc2 = len(files), findings_count
+                    summary = f"Research complete: {fc} file(s), {fc2} finding(s)"
                     _update_tool_status(summary, tool_status_callback)
                     # Brief pause to show summary before resetting
                     import asyncio

@@ -476,7 +476,12 @@ class RequestOrchestrator:
 
                     i += 1
 
-                await _finalize_buffered_tasks(tool_buffer, self.tool_callback, self.state_manager, self.tool_status_callback)
+                await _finalize_buffered_tasks(
+                    tool_buffer,
+                    self.tool_callback,
+                    self.state_manager,
+                    self.tool_status_callback,
+                )
 
                 # Return wrapper that carries response_state
                 return ac.AgentRunWithState(agent_run, response_state)

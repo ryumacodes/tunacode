@@ -73,7 +73,10 @@ class TextualReplApp(App[None]):
     def compose(self) -> ComposeResult:
         yield Header()
         yield self.resource_bar
-        yield Vertical(self.rich_log, self.tool_status, self.streaming_output, self.editor, id="body")
+        body = Vertical(
+            self.rich_log, self.tool_status, self.streaming_output, self.editor, id="body"
+        )
+        yield body
         yield Footer()
 
     def on_mount(self) -> None:
