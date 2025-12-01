@@ -6,7 +6,7 @@ Provides defensive measures against command injection attacks.
 import re
 import shlex
 import subprocess
-from typing import List, Optional
+from typing import List
 
 from tunacode.core.logging.logger import get_logger
 
