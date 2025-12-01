@@ -17,12 +17,14 @@ from textual.message import Message
 from textual.widgets import RichLog, Static
 
 from tunacode.cli.error_panels import render_exception
+from tunacode.cli.rich_panels import tool_panel
 from tunacode.cli.screens import ToolConfirmationModal, ToolConfirmationResult
 from tunacode.cli.widgets import (
     Editor,
     EditorCompletionsAvailable,
     EditorSubmitRequested,
     ResourceBar,
+    ToolResultDisplay,
     ToolStatusBar,
     ToolStatusClear,
     ToolStatusUpdate,
@@ -152,6 +154,7 @@ class TextualReplApp(App[None]):
                 tool_callback=build_textual_tool_callback(self, self.state_manager),
                 streaming_callback=self.streaming_callback,
                 tool_status_callback=build_tool_status_callback(self),
+                tool_result_callback=build_tool_result_callback(self),
             )
         except Exception as e:
             # Use rich error panels for structured error display
@@ -216,6 +219,17 @@ class TextualReplApp(App[None]):
     def on_tool_status_clear(self, message: ToolStatusClear) -> None:
         """Handle tool status clear message."""
         self.tool_status.clear()
+
+    def on_tool_result_display(self, message: ToolResultDisplay) -> None:
+        """Handle tool result display - write panel to RichLog."""
+        panel = tool_panel(
+            name=message.tool_name,
+            status=message.status,
+            args=message.args,
+            result=message.result,
+            duration_ms=message.duration_ms,
+        )
+        self.rich_log.write(panel)
 
     async def streaming_callback(self, chunk: str) -> None:
         """Receive streaming chunks from the orchestrator.
@@ -312,5 +326,31 @@ def build_tool_status_callback(app: TextualReplApp):
             app.post_message(ToolStatusUpdate(status=status))
         else:
             app.post_message(ToolStatusClear())
+
+    return _callback
+
+
+def build_tool_result_callback(app: TextualReplApp):
+    """Create a callback to display tool results as panels in RichLog.
+
+    Called after each tool execution completes with structured data.
+    """
+
+    def _callback(
+        tool_name: str,
+        status: str,
+        args: dict,
+        result: str | None = None,
+        duration_ms: float | None = None,
+    ) -> None:
+        app.post_message(
+            ToolResultDisplay(
+                tool_name=tool_name,
+                status=status,
+                args=args,
+                result=result,
+                duration_ms=duration_ms,
+            )
+        )
 
     return _callback

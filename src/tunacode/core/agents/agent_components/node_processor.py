@@ -79,6 +79,7 @@ async def _process_node(
     streaming_callback: Optional[Callable[[str], Awaitable[None]]] = None,
     response_state: Optional[ResponseState] = None,
     tool_status_callback: Optional[Callable[[str], None]] = None,
+    tool_result_callback: Optional[Callable[..., None]] = None,
 ) -> Tuple[bool, Optional[str]]:
     """Process a single node from the agent response.
 
@@ -236,6 +237,7 @@ async def _process_node(
             tool_buffer,
             response_state,
             tool_status_callback,
+            tool_result_callback,
         )
 
     # If there were no tools and we processed a model response, transition to RESPONSE
@@ -265,6 +267,7 @@ async def _process_tool_calls(
     tool_buffer: Optional[ToolBuffer],
     response_state: Optional[ResponseState],
     tool_status_callback: Optional[Callable[[str], None]] = None,
+    tool_result_callback: Optional[Callable[..., None]] = None,
 ) -> None:
     """
     Process tool calls from the node using smart batching strategy.
@@ -321,6 +324,21 @@ async def _process_tool_calls(
         # Execute the research agent tool
         await execute_tools_parallel(research_agent_tasks, tool_callback)
 
+        # Display tool result panels
+        if tool_result_callback:
+            for part, _ in research_agent_tasks:
+                tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
+                if isinstance(tool_args, str):
+                    try:
+                        tool_args = json.loads(tool_args)
+                    except (json.JSONDecodeError, TypeError):
+                        tool_args = {}
+                tool_result_callback(
+                    tool_name=part.tool_name,
+                    status="completed",
+                    args=tool_args,
+                )
+
         # Clear tool status
         _clear_tool_status(tool_status_callback)
 
@@ -337,6 +355,21 @@ async def _process_tool_calls(
         _update_tool_status(f"{batch_msg}...", tool_status_callback)
 
         await execute_tools_parallel(read_only_tasks, tool_callback)
+
+        # Display tool result panels for batch
+        if tool_result_callback:
+            for part, _ in read_only_tasks:
+                tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
+                if isinstance(tool_args, str):
+                    try:
+                        tool_args = json.loads(tool_args)
+                    except (json.JSONDecodeError, TypeError):
+                        tool_args = {}
+                tool_result_callback(
+                    tool_name=part.tool_name,
+                    status="completed",
+                    args=tool_args,
+                )
 
         # Clear tool status after batch execution
         _clear_tool_status(tool_status_callback)
@@ -355,11 +388,14 @@ async def _process_tool_calls(
         _update_tool_status(f"{tool_desc}...", tool_status_callback)
 
         # Execute the tool with robust error handling
+        tool_status = "completed"
         try:
             await tool_callback(part, node)
         except UserAbortError:
+            tool_status = "failed"
             raise
         except Exception as tool_err:
+            tool_status = "failed"
             logger.error(
                 "Tool callback failed: tool=%s iter=%s err=%s",
                 getattr(part, "tool_name", "<unknown>"),
@@ -374,6 +410,15 @@ async def _process_tool_calls(
                 "Tool execution completed (success or failure): tool=%s",
                 tool_name,
             )
+
+            # Display tool result panel
+            if tool_result_callback:
+                tool_result_callback(
+                    tool_name=tool_name,
+                    status=tool_status,
+                    args=tool_args,
+                )
+
             # Clear tool status after each sequential tool
             _clear_tool_status(tool_status_callback)
 

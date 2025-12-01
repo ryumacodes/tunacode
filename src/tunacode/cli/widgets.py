@@ -54,6 +54,26 @@ class ToolStatusClear(Message):
     """Request to clear the tool status bar."""
 
 
+class ToolResultDisplay(Message):
+    """Request to display a tool result panel in the RichLog."""
+
+    def __init__(
+        self,
+        *,
+        tool_name: str,
+        status: str,
+        args: dict,
+        result: str | None = None,
+        duration_ms: float | None = None,
+    ) -> None:
+        super().__init__()
+        self.tool_name = tool_name
+        self.status = status
+        self.args = args
+        self.result = result
+        self.duration_ms = duration_ms
+
+
 class ToolStatusBar(Static):
     """Single-line status bar showing current tool activity.
 
