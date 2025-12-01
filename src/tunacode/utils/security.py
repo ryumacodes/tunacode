@@ -118,60 +118,6 @@ def sanitize_command_args(args: List[str]) -> List[str]:
     return [shlex.quote(arg) for arg in args]
 
 
-def safe_subprocess_run(
-    command: str,
-    shell: bool = False,
-    validate: bool = True,
-    timeout: Optional[int] = None,
-    **kwargs,
-) -> subprocess.CompletedProcess:
-    """
-    Safely execute a subprocess with security validation.
-
-    Args:
-        command: Command to execute (string if shell=True, list if shell=False)
-        shell: Whether to use shell execution (discouraged)
-        validate: Whether to validate command safety
-        timeout: Timeout in seconds
-        **kwargs: Additional subprocess arguments
-
-    Returns:
-        CompletedProcess result
-
-    Raises:
-        CommandSecurityError: If command fails security validation
-    """
-    if validate and shell and isinstance(command, str):
-        validate_command_safety(command, allow_shell_features=shell)
-
-    # Log the command execution
-    logger.info(f"Executing command: {str(command)[:100]}...")
-
-    try:
-        if shell:
-            # When using shell=True, command should be a string
-            result = subprocess.run(command, shell=True, timeout=timeout, **kwargs)
-        else:
-            # When shell=False, command should be a list
-            if isinstance(command, str):
-                # Parse the string into a list
-                command_list = shlex.split(command)
-            else:
-                command_list = command
-
-            result = subprocess.run(command_list, shell=False, timeout=timeout, **kwargs)
-
-        logger.info(f"Command completed with return code: {result.returncode}")
-        return result
-
-    except subprocess.TimeoutExpired:
-        logger.error(f"Command timed out after {timeout} seconds")
-        raise
-    except Exception as e:
-        logger.error(f"Command execution failed: {str(e)}")
-        raise
-
-
 def safe_subprocess_popen(
     command: str, shell: bool = False, validate: bool = True, **kwargs
 ) -> subprocess.Popen:

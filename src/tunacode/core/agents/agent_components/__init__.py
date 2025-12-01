@@ -1,7 +1,5 @@
 """Agent components package for modular agent functionality."""
 
-from tunacode.utils.tool_descriptions import get_batch_description
-
 from .agent_config import get_or_create_agent
 from .agent_helpers import (
     create_empty_response_message,
@@ -50,5 +48,4 @@ __all__ = [
     "get_user_prompt_part_class",
     "handle_empty_response",
     "stream_model_request_node",
-    "get_batch_description",
 ]

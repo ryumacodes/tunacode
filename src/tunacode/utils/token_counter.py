@@ -83,10 +83,3 @@ def estimate_tokens(text: str, model_name: Optional[str] = None) -> int:
     return len(text) // 4
 
 
-def format_token_count(count: int) -> str:
-    """Format token count for display with full precision."""
-    if count >= 1_000_000:
-        return f"{count:,}"
-    elif count >= 1000:
-        return f"{count:,}"
-    return str(count)
