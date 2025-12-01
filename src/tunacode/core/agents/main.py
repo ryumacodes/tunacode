@@ -31,7 +31,6 @@ from tunacode.types import (
     AgentRun,
     ModelName,
     ToolCallback,
-    UsageTrackerProtocol,
 )
 from tunacode.utils.file_utils import DotDict
 from tunacode.utils.tool_descriptions import get_batch_description
@@ -286,7 +285,6 @@ class RequestOrchestrator:
         state_manager: StateManager,
         tool_callback: Optional[ToolCallback],
         streaming_callback: Optional[Callable[[str], Awaitable[None]]],
-        usage_tracker: Optional[UsageTrackerProtocol],
         tool_status_callback: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.message = message
@@ -294,7 +292,6 @@ class RequestOrchestrator:
         self.state_manager = state_manager
         self.tool_callback = tool_callback
         self.streaming_callback = streaming_callback
-        self.usage_tracker = usage_tracker
         self.tool_status_callback = tool_status_callback
 
         # Initialize config from session settings
@@ -402,7 +399,6 @@ class RequestOrchestrator:
                         self.state_manager,
                         tool_buffer,
                         self.streaming_callback,
-                        self.usage_tracker,
                         response_state,
                         self.tool_status_callback,
                     )
@@ -577,7 +573,6 @@ async def process_request(
     state_manager: StateManager,
     tool_callback: Optional[ToolCallback] = None,
     streaming_callback: Optional[Callable[[str], Awaitable[None]]] = None,
-    usage_tracker: Optional[UsageTrackerProtocol] = None,
     tool_status_callback: Optional[Callable[[str], None]] = None,
 ) -> AgentRun:
     orchestrator = RequestOrchestrator(
@@ -586,7 +581,6 @@ async def process_request(
         state_manager,
         tool_callback,
         streaming_callback,
-        usage_tracker,
         tool_status_callback,
     )
     return await orchestrator.run()

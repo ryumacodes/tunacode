@@ -190,25 +190,6 @@ class AgentState(Enum):
 # =============================================================================
 
 
-@dataclass
-class SessionState:
-    """Complete session state for the application."""
-
-    user_config: Dict[str, Any]
-    agents: Dict[str, Any]
-    messages: List[Any]
-    total_cost: float
-    current_model: str
-    spinner: Optional[Any]
-    tool_ignore: List[str]
-    yolo: bool
-    undo_initialized: bool
-    session_id: str
-    device_id: Optional[str]
-    input_sessions: Dict[str, Any]
-    current_task: Optional[Any]
-
-
 # Forward reference for StateManager to avoid circular imports
 StateManager = Any  # Will be replaced with actual StateManager type
 
@@ -312,9 +293,3 @@ class CostBreakdown:
     cached_cost: float
     output_cost: float
     total_cost: float
-
-
-class UsageTrackerProtocol(Protocol):
-    """Protocol for a class that tracks and displays token usage and cost."""
-
-    async def track_and_display(self, response_obj: Any) -> None: ...

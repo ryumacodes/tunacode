@@ -7,7 +7,7 @@ from tunacode.constants import UI_COLORS
 from tunacode.core.logging.logger import get_logger
 from tunacode.core.state import StateManager
 from tunacode.exceptions import UserAbortError
-from tunacode.types import AgentState, UsageTrackerProtocol
+from tunacode.types import AgentState
 from tunacode.utils.file_utils import DotDict
 from tunacode.utils.tool_descriptions import get_batch_description, get_tool_description
 
@@ -45,13 +45,38 @@ def _clear_tool_status(
         tool_status_callback("")
 
 
+def _update_token_usage(model_response: Any, state_manager: StateManager) -> None:
+    """Update session state with token usage from model response.
+
+    Extracts token counts from pydantic-ai ModelResponse and updates
+    both last_call_usage and session_total_usage in session state.
+    """
+    usage = getattr(model_response, "usage", None)
+    if not usage:
+        return
+
+    prompt_tokens = getattr(usage, "request_tokens", 0) or 0
+    completion_tokens = getattr(usage, "response_tokens", 0) or 0
+
+    # Update last call usage
+    session = state_manager.session
+    session.last_call_usage["prompt_tokens"] = prompt_tokens
+    session.last_call_usage["completion_tokens"] = completion_tokens
+    # Cost calculation would require model pricing - leave as 0 for now
+    session.last_call_usage["cost"] = 0.0
+
+    # Accumulate session totals
+    session.session_total_usage["prompt_tokens"] += prompt_tokens
+    session.session_total_usage["completion_tokens"] += completion_tokens
+    # session_total_usage["cost"] accumulates over the session
+
+
 async def _process_node(
     node,
     tool_callback: Optional[Callable],
     state_manager: StateManager,
     tool_buffer: Optional[ToolBuffer] = None,
     streaming_callback: Optional[Callable[[str], Awaitable[None]]] = None,
-    usage_tracker: Optional[UsageTrackerProtocol] = None,
     response_state: Optional[ResponseState] = None,
     tool_status_callback: Optional[Callable[[str], None]] = None,
 ) -> Tuple[bool, Optional[str]]:
@@ -83,8 +108,8 @@ async def _process_node(
     if hasattr(node, "model_response"):
         state_manager.session.messages.append(node.model_response)
 
-        if usage_tracker:
-            await usage_tracker.track_and_display(node.model_response)
+        # Track token usage from model response
+        _update_token_usage(node.model_response, state_manager)
 
         # Check for task completion marker in response content
         if response_state:

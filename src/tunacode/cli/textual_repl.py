@@ -259,13 +259,14 @@ class TextualReplApp(App[None]):
         """Refresh the resource bar with current session stats."""
         session = self.state_manager.session
         usage = session.session_total_usage
-        last_usage = session.last_call_usage
+
+        # Show actual tokens used from API (prompt + completion)
+        actual_tokens = usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
 
         self.resource_bar.update_stats(
             model=session.current_model,
-            tokens=session.total_tokens,
+            tokens=actual_tokens,
             max_tokens=session.max_tokens or 200000,
-            cost=last_usage.get("cost", 0.0),
             session_cost=usage.get("cost", 0.0),
         )
 
