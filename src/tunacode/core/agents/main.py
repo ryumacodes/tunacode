@@ -27,7 +27,7 @@ from tunacode.types import (
     ModelName,
     ToolCallback,
 )
-from tunacode.utils.file_utils import DotDict
+from tunacode.utils.ui import DotDict
 
 from . import agent_components as ac
 from .prompts import format_clarification, format_iteration_limit, format_no_progress

@@ -1,7 +1,7 @@
 import logging
 import logging.config
 
-from tunacode.utils import user_configuration
+from tunacode.utils import config as user_configuration
 
 # Default logging configuration when none is provided
 DEFAULT_LOGGING_CONFIG = {

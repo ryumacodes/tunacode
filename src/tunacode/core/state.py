@@ -20,8 +20,7 @@ from tunacode.types import (
     ToolName,
     UserConfig,
 )
-from tunacode.utils.message_utils import get_message_content
-from tunacode.utils.token_counter import estimate_tokens
+from tunacode.utils.messaging import estimate_tokens, get_message_content
 
 if TYPE_CHECKING:
     from tunacode.core.tool_handler import ToolHandler
@@ -108,7 +107,7 @@ class StateManager:
     def _load_user_configuration(self) -> None:
         """Load user configuration from file and merge with defaults."""
         from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
-        from tunacode.utils.user_configuration import load_config
+        from tunacode.utils.config import load_config
 
         # Load user config from file
         user_config = load_config()

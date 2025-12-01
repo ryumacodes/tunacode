@@ -8,7 +8,7 @@ from tunacode.core.logging.logger import get_logger
 from tunacode.core.state import StateManager
 from tunacode.exceptions import UserAbortError
 from tunacode.types import AgentState
-from tunacode.utils.file_utils import DotDict
+from tunacode.utils.ui import DotDict
 
 from .response_state import ResponseState
 from .task_completion import check_task_completion

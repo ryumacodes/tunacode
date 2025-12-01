@@ -20,7 +20,7 @@ from tunacode.constants import (
     RESOURCE_BAR_COST_FORMAT,
     RESOURCE_BAR_SEPARATOR,
 )
-from tunacode.utils.completion_utils import replace_token, textual_complete_paths
+from tunacode.utils.ui import replace_token, textual_complete_paths
 
 
 class EditorCompletionsAvailable(Message):

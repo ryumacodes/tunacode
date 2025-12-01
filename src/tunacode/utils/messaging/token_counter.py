@@ -81,5 +81,3 @@ def estimate_tokens(text: str, model_name: Optional[str] = None) -> int:
     # Fallback to character-based estimation
     # This is roughly accurate for English text
     return len(text) // 4
-
-

@@ -20,7 +20,7 @@ from tunacode.types import (
     StateManager,
     ToolCallback,
 )
-from tunacode.utils.retry import retry_json_parse_async
+from tunacode.utils.parsing import retry_json_parse_async
 
 logger = logging.getLogger(__name__)
 

@@ -1,0 +1,132 @@
+"""
+Module: tunacode.utils.system.paths
+
+Provides path utilities, session management, device identification, and update checking.
+"""
+
+import os
+import subprocess
+import uuid
+from pathlib import Path
+
+from tunacode.configuration.settings import ApplicationSettings
+from tunacode.constants import DEVICE_ID_FILE, SESSIONS_SUBDIR, TUNACODE_HOME_DIR
+
+
+def get_tunacode_home():
+    """
+    Get the path to the TunaCode home directory (~/.tunacode).
+    Creates it if it doesn't exist.
+
+    Returns:
+        Path: The path to the TunaCode home directory.
+    """
+    home = Path.home() / TUNACODE_HOME_DIR
+    home.mkdir(exist_ok=True)
+    return home
+
+
+def get_session_dir(state_manager):
+    """
+    Get the path to the current session directory.
+
+    Args:
+        state_manager: The StateManager instance containing session info.
+
+    Returns:
+        Path: The path to the current session directory.
+    """
+    session_dir = get_tunacode_home() / SESSIONS_SUBDIR / state_manager.session.session_id
+    session_dir.mkdir(exist_ok=True, parents=True)
+    return session_dir
+
+
+def get_cwd():
+    """Returns the current working directory."""
+    return os.getcwd()
+
+
+def get_device_id():
+    """
+    Get the device ID from the ~/.tunacode/device_id file.
+    If the file doesn't exist, generate a new UUID and save it.
+
+    Returns:
+        str: The device ID as a string.
+    """
+    try:
+        tunacode_home = get_tunacode_home()
+        device_id_file = tunacode_home / DEVICE_ID_FILE
+
+        if device_id_file.exists():
+            device_id = device_id_file.read_text().strip()
+            if device_id:
+                return device_id
+
+        device_id = str(uuid.uuid4())
+        device_id_file.write_text(device_id)
+
+        return device_id
+    except Exception as e:
+        print(f"Error getting device ID: {e}")
+        return str(uuid.uuid4())
+
+
+def cleanup_session(state_manager):
+    """
+    Clean up the session directory after the CLI exits.
+    Removes the session directory completely.
+
+    Args:
+        state_manager: The StateManager instance containing session info.
+
+    Returns:
+        bool: True if cleanup was successful, False otherwise.
+    """
+    try:
+        if state_manager.session.session_id is None:
+            return True
+
+        session_dir = get_session_dir(state_manager)
+
+        if session_dir.exists():
+            import shutil
+
+            shutil.rmtree(session_dir)
+
+        return True
+    except Exception as e:
+        print(f"Error cleaning up session: {e}")
+        return False
+
+
+def check_for_updates():
+    """
+    Check if there's a newer version of tunacode-cli available on PyPI.
+
+    Returns:
+        tuple: (has_update, latest_version)
+            - has_update (bool): True if a newer version is available
+            - latest_version (str): The latest version available
+    """
+    app_settings = ApplicationSettings()
+    current_version = app_settings.version
+    try:
+        result = subprocess.run(
+            ["pip", "index", "versions", "tunacode-cli"], capture_output=True, text=True, check=True
+        )
+        output = result.stdout
+
+        if "Available versions:" in output:
+            versions_line = output.split("Available versions:")[1].strip()
+            versions = versions_line.split(", ")
+            latest_version = versions[0]
+
+            latest_version = latest_version.strip()
+
+            if latest_version > current_version:
+                return True, latest_version
+
+        return False, current_version
+    except Exception:
+        return False, current_version
