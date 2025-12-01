@@ -16,7 +16,7 @@ from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
-from tunacode.tools_utils.text_match import replace
+from tunacode.tools.utils.text_match import replace
 from tunacode.types import ToolResult
 
 logger = logging.getLogger(__name__)
