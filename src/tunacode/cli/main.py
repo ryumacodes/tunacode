@@ -14,7 +14,6 @@ from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.state import StateManager
 from tunacode.core.tool_handler import ToolHandler
 from tunacode.exceptions import UserAbortError
-from tunacode.setup import setup
 from tunacode.utils.system import check_for_updates
 
 app_settings = ApplicationSettings()
@@ -53,10 +52,6 @@ def _handle_background_task_error(task: asyncio.Task) -> None:
 @app.command()
 def main(
     version: bool = typer.Option(False, "--version", "-v", help="Show version and exit."),
-    run_setup: bool = typer.Option(False, "--setup", help="Run setup process."),
-    wizard: bool = typer.Option(
-        False, "--wizard", help="Run interactive setup wizard for guided configuration."
-    ),
     baseurl: str = typer.Option(
         None, "--baseurl", help="API base URL (e.g., https://openrouter.ai/api/v1)"
     ),
@@ -90,9 +85,7 @@ def main(
         cli_config = {k: v for k, v in cli_config.items() if v is not None}
 
         try:
-            await setup(run_setup or wizard, state_manager, cli_config, wizard_mode=wizard)
-
-            # Initialize ToolHandler after setup
+            # Initialize ToolHandler
             tool_handler = ToolHandler(state_manager)
             state_manager.set_tool_handler(tool_handler)
 
