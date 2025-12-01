@@ -45,36 +45,22 @@ RichLog.paused {
 }
 
 /* ============================================
- * TOOL STATUS - Minimal single line
- * NeXTSTEP: "State shown through highlighting"
+ * BOTTOM ZONE - Container for tool status + command area
+ * Docked as single unit to prevent RichLog (1fr) from crushing children
  * ============================================ */
-ToolStatusBar {
-    height: 1;
-    background: $background;
-    color: $primary;
-    padding: 0 1;
-}
-
-ToolStatusBar.active {
-    color: $accent;
-}
-
-ToolStatusBar.idle {
-    color: $text-muted;
-}
-
-ToolStatusBar.error {
-    color: $error;
+#bottom-zone {
+    dock: bottom;
+    height: auto;
+    width: 100%;
 }
 
 /* ============================================
  * COMMAND ZONE - Clean 2-column layout
+ * Inside #bottom-zone, no longer needs dock
  * ============================================ */
 #command-zone {
-    dock: bottom;
     height: 5;
     width: 100%;
-    border-top: solid $border;
 }
 
 #context-panel {

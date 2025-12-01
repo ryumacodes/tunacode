@@ -9,8 +9,9 @@ Follows NeXTSTEP principles:
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeVar
 
 from rich.console import RenderableType
 from rich.panel import Panel
@@ -19,6 +20,25 @@ from rich.text import Text
 
 from tunacode.cli.rich_panels import RichPanelRenderer, SearchResultData
 from tunacode.constants import UI_COLORS
+
+T = TypeVar("T")
+
+
+def _paginate(items: list[T], page: int, page_size: int) -> tuple[list[T], int, int]:
+    """Paginate a list of items.
+
+    Args:
+        items: Full list to paginate
+        page: 1-indexed page number
+        page_size: Items per page
+
+    Returns:
+        Tuple of (page_items, start_idx, total_pages)
+    """
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    total_pages = (len(items) + page_size - 1) // page_size if items else 1
+    return items[start_idx:end_idx], start_idx, total_pages
 
 
 @dataclass
@@ -86,10 +106,8 @@ class SearchDisplayRenderer:
 
             generic_results.append(result_dict)
 
-        # Paginate
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        page_results = generic_results[start_idx:end_idx]
+        # Paginate using helper
+        page_results, _, _ = _paginate(generic_results, page, page_size)
 
         data = SearchResultData(
             query=query,
@@ -134,10 +152,8 @@ class SearchDisplayRenderer:
 
             generic_results.append(result_dict)
 
-        # Paginate
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        page_results = generic_results[start_idx:end_idx]
+        # Paginate using helper
+        page_results, _, _ = _paginate(generic_results, page, page_size)
 
         data = SearchResultData(
             query=query,
@@ -195,6 +211,135 @@ class SearchDisplayRenderer:
             border_style=Style(color=UI_COLORS["warning"]),
             padding=(0, 1),
             expand=False,
+        )
+
+    @staticmethod
+    def parse_grep_output(text: str, query: str | None = None) -> SearchResultData | None:
+        """Parse grep tool output into structured SearchResultData.
+
+        Expected format:
+            Found {count} matches for pattern: {pattern}
+            ============================================================
+
+            📁 {file_path}:{line_number}
+              {ctx_line_num}│ {context_before}
+            ▶ {match_line_num}│ {before}⟨{match}⟩{after}
+              {ctx_line_num}│ {context_after}
+
+        Returns None if parsing fails.
+        """
+        if not text or "Found" not in text:
+            return None
+
+        # Extract header info
+        header_match = re.match(r"Found (\d+) match(?:es)? for pattern: (.+)", text)
+        if not header_match:
+            return None
+
+        total_count = int(header_match.group(1))
+        detected_query = header_match.group(2).strip()
+        final_query = query or detected_query
+
+        # Parse individual results
+        results: list[dict[str, Any]] = []
+        file_pattern = re.compile(r"📁 (.+?):(\d+)")
+        match_pattern = re.compile(r"▶\s*(\d+)│\s*(.*?)⟨(.+?)⟩(.*)")
+
+        current_file: str | None = None
+
+        for line in text.split("\n"):
+            # Check for file entry
+            file_match = file_pattern.search(line)
+            if file_match:
+                current_file = file_match.group(1)
+                continue
+
+            # Check for match line
+            match_line = match_pattern.search(line)
+            if match_line and current_file:
+                line_num = int(match_line.group(1))
+                before = match_line.group(2)
+                match_text = match_line.group(3)
+                after = match_line.group(4)
+
+                results.append({
+                    "title": f"{current_file}:{line_num}",
+                    "file": current_file,
+                    "snippet": f"{before}[{match_text}]{after}",
+                    "line_number": line_num,
+                })
+
+        if not results:
+            return None
+
+        return SearchResultData(
+            query=final_query,
+            results=results,
+            total_count=total_count,
+            current_page=1,
+            page_size=len(results),
+        )
+
+    @staticmethod
+    def parse_glob_output(text: str, pattern: str | None = None) -> SearchResultData | None:
+        """Parse glob tool output into structured SearchResultData.
+
+        Expected format:
+            Found {count} files matching pattern: {pattern}
+            (Results limited to {max_results} files)
+            ============================================================
+            📁 {directory}/
+              - {filename}
+              - {filename}
+
+        Returns None if parsing fails.
+        """
+        if not text or "Found" not in text:
+            return None
+
+        # Extract header info
+        header_match = re.match(r"Found (\d+) files? matching pattern: (.+)", text)
+        if not header_match:
+            return None
+
+        total_count = int(header_match.group(1))
+        detected_pattern = header_match.group(2).strip()
+        final_pattern = pattern or detected_pattern
+
+        # Parse file entries
+        results: list[dict[str, Any]] = []
+        dir_pattern = re.compile(r"📁 (.+)/")
+        file_pattern = re.compile(r"^\s+-\s+(.+)$")
+
+        current_dir: str | None = None
+
+        for line in text.split("\n"):
+            # Check for directory header
+            dir_match = dir_pattern.search(line)
+            if dir_match:
+                current_dir = dir_match.group(1)
+                continue
+
+            # Check for file entry
+            file_match = file_pattern.match(line)
+            if file_match and current_dir is not None:
+                filename = file_match.group(1)
+                full_path = f"{current_dir}/{filename}"
+                results.append({
+                    "title": full_path,
+                    "file": full_path,
+                    "snippet": filename,
+                })
+
+        if not results:
+            return None
+
+        return SearchResultData(
+            query=final_pattern,
+            results=results,
+            total_count=total_count,
+            current_page=1,
+            page_size=len(results),
         )
 
 

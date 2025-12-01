@@ -9,7 +9,6 @@ from tunacode.core.state import StateManager
 from tunacode.exceptions import UserAbortError
 from tunacode.types import AgentState
 from tunacode.utils.file_utils import DotDict
-from tunacode.utils.tool_descriptions import get_batch_description, get_tool_description
 
 from .response_state import ResponseState
 from .task_completion import check_task_completion
@@ -18,31 +17,6 @@ from .truncation_checker import check_for_truncation
 
 logger = get_logger(__name__)
 colors = DotDict(UI_COLORS)
-
-
-def _update_tool_status(
-    message: str,
-    tool_status_callback: Optional[Callable[[str], None]],
-) -> None:
-    """Update tool status via callback if available.
-
-    This is a synchronous helper that posts to the Textual app's message queue.
-    The callback is designed to be called from async context but uses post_message
-    which is thread-safe and non-blocking.
-    """
-    if tool_status_callback is not None:
-        # Strip Rich markup for cleaner status bar display
-        import re
-        clean_message = re.sub(r"\[.*?\]", "", message)
-        tool_status_callback(clean_message)
-
-
-def _clear_tool_status(
-    tool_status_callback: Optional[Callable[[str], None]],
-) -> None:
-    """Clear tool status via callback if available."""
-    if tool_status_callback is not None:
-        tool_status_callback("")
 
 
 def _update_token_usage(model_response: Any, state_manager: StateManager) -> None:
@@ -78,7 +52,6 @@ async def _process_node(
     tool_buffer: Optional[ToolBuffer] = None,
     streaming_callback: Optional[Callable[[str], Awaitable[None]]] = None,
     response_state: Optional[ResponseState] = None,
-    tool_status_callback: Optional[Callable[[str], None]] = None,
     tool_result_callback: Optional[Callable[..., None]] = None,
 ) -> Tuple[bool, Optional[str]]:
     """Process a single node from the agent response.
@@ -236,7 +209,6 @@ async def _process_node(
             state_manager,
             tool_buffer,
             response_state,
-            tool_status_callback,
             tool_result_callback,
         )
 
@@ -266,7 +238,6 @@ async def _process_tool_calls(
     state_manager: StateManager,
     tool_buffer: Optional[ToolBuffer],
     response_state: Optional[ResponseState],
-    tool_status_callback: Optional[Callable[[str], None]] = None,
     tool_result_callback: Optional[Callable[..., None]] = None,
 ) -> None:
     """
@@ -309,18 +280,6 @@ async def _process_tool_calls(
     if research_agent_tasks and tool_callback:
         from .tool_executor import execute_tools_parallel
 
-        # Update tool status for research
-        for part, _ in research_agent_tasks:
-            tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
-            if isinstance(tool_args, str):
-                try:
-                    tool_args = json.loads(tool_args)
-                except (json.JSONDecodeError, TypeError):
-                    tool_args = {}
-            query = tool_args.get("query", "Unknown query")
-            query_preview = query[:60] + "..." if len(query) > 60 else query
-            _update_tool_status(f"Researching: {query_preview}", tool_status_callback)
-
         # Execute the research agent tool
         await execute_tools_parallel(research_agent_tasks, tool_callback)
 
@@ -339,20 +298,12 @@ async def _process_tool_calls(
                     args=tool_args,
                 )
 
-        # Clear tool status
-        _clear_tool_status(tool_status_callback)
-
     # Phase 3: Execute read-only tools in ONE parallel batch
     if read_only_tasks and tool_callback:
         from .tool_executor import execute_tools_parallel
 
         batch_id = getattr(state_manager.session, "batch_counter", 0) + 1
         state_manager.session.batch_counter = batch_id
-
-        # Update tool status for batch execution
-        tool_names = [part.tool_name for part, _ in read_only_tasks]
-        batch_msg = get_batch_description(len(read_only_tasks), tool_names)
-        _update_tool_status(f"{batch_msg}...", tool_status_callback)
 
         await execute_tools_parallel(read_only_tasks, tool_callback)
 
@@ -371,12 +322,8 @@ async def _process_tool_calls(
                     args=tool_args,
                 )
 
-        # Clear tool status after batch execution
-        _clear_tool_status(tool_status_callback)
-
     # Phase 4: Execute write/execute tools sequentially
     for part, node in write_execute_tasks:
-        # Update tool status for sequential tool
         tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
         # Parse args if they're a JSON string
         if isinstance(tool_args, str):
@@ -384,8 +331,6 @@ async def _process_tool_calls(
                 tool_args = json.loads(tool_args)
             except (json.JSONDecodeError, TypeError):
                 tool_args = {}
-        tool_desc = get_tool_description(part.tool_name, tool_args)
-        _update_tool_status(f"{tool_desc}...", tool_status_callback)
 
         # Execute the tool with robust error handling
         tool_status = "completed"
@@ -418,9 +363,6 @@ async def _process_tool_calls(
                     status=tool_status,
                     args=tool_args,
                 )
-
-            # Clear tool status after each sequential tool
-            _clear_tool_status(tool_status_callback)
 
     # Track tool calls in session
     if is_processing_tools:

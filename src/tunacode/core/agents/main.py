@@ -33,7 +33,6 @@ from tunacode.types import (
     ToolCallback,
 )
 from tunacode.utils.file_utils import DotDict
-from tunacode.utils.tool_descriptions import get_batch_description
 
 from . import agent_components as ac
 from .prompts import format_clarification, format_iteration_limit, format_no_progress
@@ -285,7 +284,6 @@ class RequestOrchestrator:
         state_manager: StateManager,
         tool_callback: Optional[ToolCallback],
         streaming_callback: Optional[Callable[[str], Awaitable[None]]],
-        tool_status_callback: Optional[Callable[[str], None]] = None,
         tool_result_callback: Optional[Callable[..., None]] = None,
     ) -> None:
         self.message = message
@@ -293,7 +291,6 @@ class RequestOrchestrator:
         self.state_manager = state_manager
         self.tool_callback = tool_callback
         self.streaming_callback = streaming_callback
-        self.tool_status_callback = tool_status_callback
         self.tool_result_callback = tool_result_callback
 
         # Initialize config from session settings
@@ -402,7 +399,6 @@ class RequestOrchestrator:
                         tool_buffer,
                         self.streaming_callback,
                         response_state,
-                        self.tool_status_callback,
                         self.tool_result_callback,
                     )
 
@@ -447,7 +443,6 @@ class RequestOrchestrator:
                     tool_buffer,
                     self.tool_callback,
                     self.state_manager,
-                    self.tool_status_callback,
                 )
 
                 # Return wrapper that carries response_state
@@ -523,7 +518,6 @@ async def _finalize_buffered_tasks(
     tool_buffer: ac.ToolBuffer,
     tool_callback: Optional[ToolCallback],
     state_manager: StateManager,
-    tool_status_callback: Optional[Callable[[str], None]] = None,
 ) -> None:
     """Finalize and execute any buffered read-only tasks."""
     if not tool_callback or not tool_buffer.has_tasks():
@@ -531,25 +525,8 @@ async def _finalize_buffered_tasks(
 
     buffered_tasks = tool_buffer.flush()
 
-    # Update tool status (best-effort)
-    try:
-        tool_names = [part.tool_name for part, _ in buffered_tasks]
-        batch_msg = get_batch_description(len(buffered_tasks), tool_names)
-        if tool_status_callback is not None:
-            tool_status_callback(f"{batch_msg}...")
-    except Exception:
-        # UI is best-effort; never fail request because of display
-        logger.debug("UI batch prelude failed (non-fatal)", exc_info=True)
-
     # Execute
     await ac.execute_tools_parallel(buffered_tasks, tool_callback)
-
-    # Clear tool status (best-effort)
-    try:
-        if tool_status_callback is not None:
-            tool_status_callback("")
-    except Exception:
-        logger.debug("UI batch epilogue failed (non-fatal)", exc_info=True)
 
 
 def get_agent_tool() -> tuple[type[Agent], type["Tool"]]:
@@ -576,7 +553,6 @@ async def process_request(
     state_manager: StateManager,
     tool_callback: Optional[ToolCallback] = None,
     streaming_callback: Optional[Callable[[str], Awaitable[None]]] = None,
-    tool_status_callback: Optional[Callable[[str], None]] = None,
     tool_result_callback: Optional[Callable[..., None]] = None,
 ) -> AgentRun:
     orchestrator = RequestOrchestrator(
@@ -585,7 +561,6 @@ async def process_request(
         state_manager,
         tool_callback,
         streaming_callback,
-        tool_status_callback,
         tool_result_callback,
     )
     return await orchestrator.run()

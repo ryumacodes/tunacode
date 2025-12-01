@@ -406,3 +406,50 @@ def search_panel(
         search_time_ms=search_time_ms,
     )
     return RichPanelRenderer.render_search_results(data)
+
+
+def tool_panel_smart(
+    name: str,
+    status: str,
+    args: dict[str, Any] | None = None,
+    result: str | None = None,
+    duration_ms: float | None = None,
+) -> RenderableType:
+    """Route to SearchPanel for grep/glob, else standard ToolPanel.
+
+    Graceful degradation: if parsing fails, falls back to ToolPanel.
+    """
+    # Only try search parsing for completed grep/glob with results
+    if name.lower() in ("grep", "glob") and result and status == "completed":
+        parsed = _try_parse_search_result(name, args, result)
+        if parsed:
+            if duration_ms is not None:
+                parsed.search_time_ms = duration_ms
+            return RichPanelRenderer.render_search_results(parsed)
+
+    # Fall back to standard tool panel
+    return tool_panel(name, status, args, result, duration_ms)
+
+
+def _try_parse_search_result(
+    tool_name: str,
+    args: dict[str, Any] | None,
+    result: str,
+) -> SearchResultData | None:
+    """Try to parse search tool output into SearchResultData.
+
+    Returns None if parsing fails (triggering fallback to ToolPanel).
+    """
+    # Import here to avoid circular imports
+    from tunacode.cli.search_display import SearchDisplayRenderer
+
+    query = None
+    if args:
+        query = args.get("pattern") or args.get("query")
+
+    if tool_name.lower() == "grep":
+        return SearchDisplayRenderer.parse_grep_output(result, query)
+    elif tool_name.lower() == "glob":
+        return SearchDisplayRenderer.parse_glob_output(result, query)
+
+    return None

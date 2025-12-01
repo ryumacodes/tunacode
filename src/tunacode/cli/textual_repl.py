@@ -12,12 +12,12 @@ from typing import Any
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.widgets import RichLog, Static
 
 from tunacode.cli.error_panels import render_exception
-from tunacode.cli.rich_panels import tool_panel
+from tunacode.cli.rich_panels import tool_panel_smart
 from tunacode.cli.screens import ToolConfirmationModal, ToolConfirmationResult
 from tunacode.cli.widgets import (
     Editor,
@@ -25,9 +25,6 @@ from tunacode.cli.widgets import (
     EditorSubmitRequested,
     ResourceBar,
     ToolResultDisplay,
-    ToolStatusBar,
-    ToolStatusClear,
-    ToolStatusUpdate,
 )
 from tunacode.constants import (
     RICHLOG_CLASS_PAUSED,
@@ -78,7 +75,6 @@ class TextualReplApp(App[None]):
         self.rich_log: RichLog
         self.editor: Editor
         self.resource_bar: ResourceBar
-        self.tool_status: ToolStatusBar
         self.context_panel: Static
 
     def compose(self) -> ComposeResult:
@@ -98,7 +94,6 @@ class TextualReplApp(App[None]):
         # Create widgets here where app context is active
         self.resource_bar = ResourceBar()
         self.rich_log = RichLog(wrap=True, markup=False, highlight=False, auto_scroll=True)
-        self.tool_status = ToolStatusBar()
         self.context_panel = Static("No files loaded", id="context-panel")
         self.editor = Editor()
 
@@ -108,12 +103,11 @@ class TextualReplApp(App[None]):
         # Primary viewport (center)
         yield self.rich_log
 
-        # Tool status (context indicator)
-        yield self.tool_status
-
-        # Command zone (bottom) - 2 column layout
-        command_zone = Horizontal(self.context_panel, self.editor, id="command-zone")
-        yield command_zone
+        # Bottom zone - contains command area
+        # Wrapped in Vertical to prevent RichLog (1fr) from crushing it
+        command_row = Horizontal(self.context_panel, self.editor, id="command-zone")
+        bottom_zone = Vertical(command_row, id="bottom-zone")
+        yield bottom_zone
 
     def on_mount(self) -> None:
         # Register custom TunaCode theme using UI_COLORS palette
@@ -153,7 +147,6 @@ class TextualReplApp(App[None]):
                 state_manager=self.state_manager,
                 tool_callback=build_textual_tool_callback(self, self.state_manager),
                 streaming_callback=self.streaming_callback,
-                tool_status_callback=build_tool_status_callback(self),
                 tool_result_callback=build_tool_result_callback(self),
             )
         except Exception as e:
@@ -212,17 +205,12 @@ class TextualReplApp(App[None]):
         self.pending_confirmation.set_result(message.response)
         self.pending_confirmation = None
 
-    def on_tool_status_update(self, message: ToolStatusUpdate) -> None:
-        """Handle tool status update message."""
-        self.tool_status.set_status(message.status)
-
-    def on_tool_status_clear(self, message: ToolStatusClear) -> None:
-        """Handle tool status clear message."""
-        self.tool_status.clear()
-
     def on_tool_result_display(self, message: ToolResultDisplay) -> None:
-        """Handle tool result display - write panel to RichLog."""
-        panel = tool_panel(
+        """Handle tool result display - write panel to RichLog.
+
+        Uses tool_panel_smart() to route grep/glob results to SearchPanel.
+        """
+        panel = tool_panel_smart(
             name=message.tool_name,
             status=message.status,
             args=message.args,
@@ -310,22 +298,6 @@ def build_textual_tool_callback(app: TextualReplApp, state_manager: StateManager
         response = await app.request_tool_confirmation(request)
         if not tool_handler.process_confirmation(response, part.tool_name):
             raise UserAbortError("User aborted tool execution")
-
-    return _callback
-
-
-def build_tool_status_callback(app: TextualReplApp):
-    """Create a callback to update the tool status bar via Textual messages.
-
-    This follows the same pattern as streaming_callback - the callback
-    posts a message to the app which handles it on the main thread.
-    """
-
-    def _callback(status: str) -> None:
-        if status:
-            app.post_message(ToolStatusUpdate(status=status))
-        else:
-            app.post_message(ToolStatusClear())
 
     return _callback
 

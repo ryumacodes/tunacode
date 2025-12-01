@@ -187,11 +187,6 @@ RESOURCE_BAR_TOKEN_FORMAT = "{tokens}/{max_tokens}"
 RESOURCE_BAR_COST_FORMAT = "${cost:.2f}"
 RESOURCE_BAR_SESSION_LABEL = "session"
 
-# ToolStatusBar state CSS classes (NeXTSTEP: Visual Feedback)
-TOOL_STATUS_CLASS_ACTIVE = "active"
-TOOL_STATUS_CLASS_IDLE = "idle"
-TOOL_STATUS_CLASS_ERROR = "error"
-
 # RichLog pause mode CSS class (NeXTSTEP: Mode Visibility)
 RICHLOG_CLASS_PAUSED = "paused"
 RICHLOG_CLASS_STREAMING = "streaming"

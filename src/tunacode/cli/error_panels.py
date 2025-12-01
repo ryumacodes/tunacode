@@ -39,6 +39,29 @@ ERROR_SEVERITY_MAP: dict[str, str] = {
     "StateError": "info",
 }
 
+# Exception attribute to display label mapping
+EXCEPTION_CONTEXT_ATTRS: dict[str, str] = {
+    "tool_name": "Tool",
+    "path": "Path",
+    "operation": "Operation",
+    "server_name": "Server",
+    "model": "Model",
+    "step": "Step",
+    "validation_type": "Validation",
+}
+
+
+def _extract_exception_context(exc: Exception) -> dict[str, str]:
+    """Extract displayable context from exception attributes."""
+    context: dict[str, str] = {}
+    for attr, label in EXCEPTION_CONTEXT_ATTRS.items():
+        if hasattr(exc, attr):
+            value = getattr(exc, attr)
+            if value is not None:
+                context[label] = str(value)
+    return context
+
+
 # Default recovery commands by error type
 DEFAULT_RECOVERY_COMMANDS: dict[str, list[str]] = {
     "ConfigurationError": [
@@ -80,23 +103,9 @@ def render_exception(exc: Exception) -> RenderableType:
     # Extract structured information from TunaCode exceptions
     suggested_fix = getattr(exc, "suggested_fix", None)
     recovery_commands = getattr(exc, "recovery_commands", None)
-    context: dict[str, str] = {}
 
-    # Build context from exception attributes
-    if hasattr(exc, "tool_name"):
-        context["Tool"] = str(exc.tool_name)
-    if hasattr(exc, "path"):
-        context["Path"] = str(exc.path)
-    if hasattr(exc, "operation"):
-        context["Operation"] = str(exc.operation)
-    if hasattr(exc, "server_name"):
-        context["Server"] = str(exc.server_name)
-    if hasattr(exc, "model"):
-        context["Model"] = str(exc.model)
-    if hasattr(exc, "step"):
-        context["Step"] = str(exc.step)
-    if hasattr(exc, "validation_type"):
-        context["Validation"] = str(exc.validation_type)
+    # Build context from exception attributes using mapping
+    context = _extract_exception_context(exc)
 
     # Use default recovery commands if none provided
     if not recovery_commands:
