@@ -18,7 +18,6 @@ from tunacode.constants import UI_THINKING_MESSAGE
 from tunacode.core.agents.delegation_tools import create_research_codebase_tool
 from tunacode.core.logging.logger import get_logger
 from tunacode.core.state import StateManager
-from tunacode.services.mcp import get_mcp_servers, register_mcp_agent
 from tunacode.tools.bash import bash
 from tunacode.tools.glob import glob
 from tunacode.tools.grep import grep
@@ -103,9 +102,7 @@ def _coerce_global_request_timeout(state_manager: StateManager) -> float | None:
     return timeout
 
 
-def _compute_agent_version(
-    settings: Dict[str, Any], request_delay: float, mcp_servers: dict
-) -> int:
+def _compute_agent_version(settings: Dict[str, Any], request_delay: float) -> int:
     """Compute a hash representing agent-defining configuration."""
     return hash(
         (
@@ -113,7 +110,6 @@ def _compute_agent_version(
             str(settings.get("tool_strict_validation", False)),
             str(request_delay),
             str(settings.get("global_request_timeout", 90.0)),
-            str(mcp_servers),
         )
     )
 
@@ -294,8 +290,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
     """Get existing agent or create new one for the specified model."""
     request_delay = _coerce_request_delay(state_manager)
     settings = state_manager.session.user_config.get("settings", {})
-    mcp_servers_config = state_manager.session.user_config.get("mcpServers", {})
-    agent_version = _compute_agent_version(settings, request_delay, mcp_servers_config)
+    agent_version = _compute_agent_version(settings, request_delay)
 
     # Check session-level cache first (for backward compatibility with tests)
     session_agent = state_manager.session.agents.get(model)
@@ -360,8 +355,6 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
 
         logger.debug(f"Creating agent with {len(tools_list)} tools")
 
-        mcp_servers = get_mcp_servers(state_manager)
-
         # Configure HTTP client with retry logic at transport layer
         # This handles retries BEFORE node creation, avoiding pydantic-ai's
         # single-stream-per-node constraint violations
@@ -385,13 +378,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             model=model_instance,
             system_prompt=system_prompt,
             tools=tools_list,
-            mcp_servers=mcp_servers,
         )
-
-        # Register agent for MCP cleanup tracking
-        mcp_server_names = state_manager.session.user_config.get("mcpServers", {}).keys()
-        for server_name in mcp_server_names:
-            register_mcp_agent(server_name, agent)
 
         # Store in both caches
         _AGENT_CACHE[model] = agent

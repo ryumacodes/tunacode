@@ -1,9 +1,8 @@
 """
-Module: sidekick.utils.user_configuration
+Module: tunacode.utils.user_configuration
 
 Provides user configuration file management.
-Handles loading, saving, and updating user preferences including
-model selection and MCP server settings.
+Handles loading, saving, and updating user preferences including model selection.
 """
 
 import json
@@ -12,7 +11,7 @@ from typing import TYPE_CHECKING, Optional
 
 from tunacode.configuration.settings import ApplicationSettings
 from tunacode.exceptions import ConfigurationError
-from tunacode.types import MCPServers, ModelName, UserConfig
+from tunacode.types import ModelName, UserConfig
 
 if TYPE_CHECKING:
     from tunacode.core.state import StateManager
@@ -79,11 +78,6 @@ def save_config(state_manager: "StateManager") -> bool:
         )
     except Exception as e:
         raise ConfigurationError(f"Unexpected error saving configuration: {e}")
-
-
-def get_mcp_servers(state_manager: "StateManager") -> MCPServers:
-    """Retrieve MCP server configurations from user config"""
-    return state_manager.session.user_config.get("mcpServers", [])
 
 
 def set_default_model(model_name: ModelName, state_manager: "StateManager") -> bool:

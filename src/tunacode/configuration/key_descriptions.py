@@ -229,15 +229,6 @@ CONFIG_KEY_DESCRIPTIONS: Dict[str, KeyDescription] = {
         "tutorial prompts.",
         category="User Experience",
     ),
-    # MCP Servers
-    "mcpServers": KeyDescription(
-        name="mcpServers",
-        description="Model Context Protocol server configurations",
-        example={},
-        help_text="Advanced feature for connecting external tools and services. "
-        "Usually empty for basic usage.",
-        category="Advanced Features",
-    ),
 }
 
 

@@ -69,6 +69,7 @@ def main(
     async def async_main():
         if version:
             from tunacode.constants import VERSION
+
             print(f"tunacode {VERSION}")
             return
 
@@ -113,14 +114,6 @@ def main(
         except Exception:
             # Update check failed; error already logged by callback
             pass
-
-        # Normal exit - cleanup MCP servers
-        try:
-            from tunacode.core.agents import cleanup_mcp_servers
-
-            await cleanup_mcp_servers()
-        except Exception:
-            pass  # Best effort cleanup
 
     asyncio.run(async_main())
 

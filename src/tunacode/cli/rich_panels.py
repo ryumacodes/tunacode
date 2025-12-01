@@ -130,9 +130,7 @@ class RichPanelRenderer:
             "completed": (PanelType.SUCCESS, "done"),
             "failed": (PanelType.ERROR, "fail"),
         }
-        panel_type, status_suffix = status_map.get(
-            data.status, (PanelType.INFO, data.status)
-        )
+        panel_type, status_suffix = status_map.get(data.status, (PanelType.INFO, data.status))
         styles = PANEL_STYLES[panel_type]
 
         # Build content with argument display

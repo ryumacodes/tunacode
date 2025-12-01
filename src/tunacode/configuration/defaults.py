@@ -35,5 +35,4 @@ DEFAULT_USER_CONFIG: UserConfig = {
             "debug": False,  # Enable debug logging for ripgrep operations
         },
     },
-    "mcpServers": {},
 }

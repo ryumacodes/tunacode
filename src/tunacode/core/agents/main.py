@@ -21,11 +21,6 @@ from tunacode.constants import UI_COLORS
 from tunacode.core.logging.logger import get_logger
 from tunacode.core.state import StateManager
 from tunacode.exceptions import GlobalRequestTimeoutError, ToolBatchingJSONError, UserAbortError
-from tunacode.services.mcp import (  # re-exported by design
-    cleanup_mcp_servers,
-    get_mcp_servers,
-    register_mcp_agent,
-)
 from tunacode.tools.react import ReactTool
 from tunacode.types import (
     AgentRun,
@@ -42,9 +37,6 @@ colors = DotDict(UI_COLORS)
 
 __all__ = [
     "process_request",
-    "get_mcp_servers",
-    "cleanup_mcp_servers",
-    "register_mcp_agent",
     "get_agent_tool",
     "check_query_satisfaction",
 ]
@@ -172,7 +164,6 @@ class IterationManager:
         original_query = getattr(self.state_manager.session, "original_query", "your request")
         clarification_message = format_clarification(original_query, iteration, tools_used_str)
         ac.create_user_message(clarification_message, self.state_manager)
-
 
 
 class ReactSnapshotManager:

@@ -119,17 +119,6 @@ class ServiceError(TunaCodeError):
     pass
 
 
-class MCPError(ServiceError):
-    """Raised when MCP server operations fail."""
-
-    def __init__(
-        self, server_name: str, message: ErrorMessage, original_error: OriginalError = None
-    ):
-        self.server_name = server_name
-        self.original_error = original_error
-        super().__init__(f"MCP server '{server_name}' error: {message}")
-
-
 class GitOperationError(ServiceError):
     """Raised when Git operations fail."""
 

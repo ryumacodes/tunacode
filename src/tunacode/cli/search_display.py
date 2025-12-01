@@ -262,12 +262,14 @@ class SearchDisplayRenderer:
                 match_text = match_line.group(3)
                 after = match_line.group(4)
 
-                results.append({
-                    "title": f"{current_file}:{line_num}",
-                    "file": current_file,
-                    "snippet": f"{before}[{match_text}]{after}",
-                    "line_number": line_num,
-                })
+                results.append(
+                    {
+                        "title": f"{current_file}:{line_num}",
+                        "file": current_file,
+                        "snippet": f"{before}[{match_text}]{after}",
+                        "line_number": line_num,
+                    }
+                )
 
         if not results:
             return None
@@ -325,11 +327,13 @@ class SearchDisplayRenderer:
             if file_match and current_dir is not None:
                 filename = file_match.group(1)
                 full_path = f"{current_dir}/{filename}"
-                results.append({
-                    "title": full_path,
-                    "file": full_path,
-                    "snippet": filename,
-                })
+                results.append(
+                    {
+                        "title": full_path,
+                        "file": full_path,
+                        "snippet": filename,
+                    }
+                )
 
         if not results:
             return None

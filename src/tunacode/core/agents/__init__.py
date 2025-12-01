@@ -18,11 +18,8 @@ from .agent_components import (
 )
 from .main import (
     check_query_satisfaction,
-    cleanup_mcp_servers,
     get_agent_tool,
-    get_mcp_servers,
     process_request,
-    register_mcp_agent,
 )
 
 __all__ = [
@@ -40,9 +37,6 @@ __all__ = [
     "ToolBuffer",
     "check_task_completion",
     "execute_tools_parallel",
-    "get_mcp_servers",
-    "cleanup_mcp_servers",
-    "register_mcp_agent",
     "check_query_satisfaction",
     "get_agent_tool",
     "main",

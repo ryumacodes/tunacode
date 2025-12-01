@@ -162,9 +162,7 @@ async def _process_node(
                                 has_pending_intention or ends_with_action
                             ) and state_manager.session.iteration_count <= 1:
                                 # Too early to complete with pending intentions
-                                found_phrases = [
-                                    p for p in pending_phrases if p in combined_text
-                                ]
+                                found_phrases = [p for p in pending_phrases if p in combined_text]
                                 # Still allow it but log warning
                                 logger.warning(
                                     f"Task completion with pending intentions detected: "

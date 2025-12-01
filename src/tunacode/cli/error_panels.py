@@ -24,7 +24,6 @@ ERROR_SEVERITY_MAP: dict[str, str] = {
     "ToolExecutionError": "error",
     "FileOperationError": "error",
     "AgentError": "error",
-    "MCPError": "error",
     "GitOperationError": "error",
     "GlobalRequestTimeoutError": "error",
     "ToolBatchingJSONError": "error",
@@ -79,10 +78,6 @@ DEFAULT_RECOVERY_COMMANDS: dict[str, list[str]] = {
     "GitOperationError": [
         "git status  # Check repository state",
         "git stash  # Stash uncommitted changes",
-    ],
-    "MCPError": [
-        "Check MCP server configuration",
-        "Restart MCP server process",
     ],
     "GlobalRequestTimeoutError": [
         "Check network connectivity",
@@ -189,10 +184,12 @@ def render_connection_error(
     recovery = []
     if retry_available:
         recovery.append("Retry the operation")
-    recovery.extend([
-        "Check network connectivity",
-        f"Verify {service} service status",
-    ])
+    recovery.extend(
+        [
+            "Check network connectivity",
+            f"Verify {service} service status",
+        ]
+    )
 
     data = ErrorDisplayData(
         error_type=f"{service} Connection Error",
