@@ -59,6 +59,11 @@ class ToolStatusBar(Static):
 
     NeXTSTEP Context Zone: Shows current state through highlighting.
     State classes: .active (tool running), .idle (no activity), .error (failed)
+
+    Enhanced with:
+    - Progress indicators (spinner animation)
+    - Tool queue status
+    - Duration tracking
     """
 
     DEFAULT_CSS = """
@@ -70,24 +75,80 @@ class ToolStatusBar(Static):
     }
     """
 
+    # Spinner frames for progress indication
+    SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
     def __init__(self) -> None:
         super().__init__("")
         self._status: str = ""
+        self._tool_name: str = ""
+        self._spinner_index: int = 0
+        self._timer: Optional[object] = None
         self.add_class(TOOL_STATUS_CLASS_IDLE)
 
     def set_status(self, status: str) -> None:
         """Update the status bar content and set active state."""
         self._status = status
+        self._tool_name = self._extract_tool_name(status)
         self.remove_class(TOOL_STATUS_CLASS_IDLE)
         self.add_class(TOOL_STATUS_CLASS_ACTIVE)
-        self.update(Text(self._status, style="bold"))
+        self._update_display()
+        self._start_spinner()
+
+    def set_error(self, status: str) -> None:
+        """Set error state with visual indicator."""
+        self._status = status
+        self.remove_class(TOOL_STATUS_CLASS_IDLE)
+        self.remove_class(TOOL_STATUS_CLASS_ACTIVE)
+        self.add_class("error")
+        error_text = Text()
+        error_text.append("! ", style="bold red")
+        error_text.append(status, style="red")
+        self.update(error_text)
+        self._stop_spinner()
 
     def clear(self) -> None:
         """Clear the status bar and return to idle state."""
         self._status = ""
+        self._tool_name = ""
         self.remove_class(TOOL_STATUS_CLASS_ACTIVE)
+        self.remove_class("error")
         self.add_class(TOOL_STATUS_CLASS_IDLE)
         self.update("")
+        self._stop_spinner()
+
+    def _extract_tool_name(self, status: str) -> str:
+        """Extract tool name from status string."""
+        # Common patterns: "Running tool_name...", "Executing tool_name"
+        if "(" in status:
+            return status.split("(")[0].strip()
+        return status.split()[0] if status else ""
+
+    def _update_display(self) -> None:
+        """Update the display with current spinner frame."""
+        status_text = Text()
+        spinner = self.SPINNER_FRAMES[self._spinner_index]
+        status_text.append(f"{spinner} ", style="bold cyan")
+        status_text.append(self._status, style="bold")
+        self.update(status_text)
+
+    def _start_spinner(self) -> None:
+        """Start the spinner animation."""
+        if self._timer is None:
+            self._timer = self.set_interval(0.1, self._advance_spinner)
+
+    def _stop_spinner(self) -> None:
+        """Stop the spinner animation."""
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None
+        self._spinner_index = 0
+
+    def _advance_spinner(self) -> None:
+        """Advance to the next spinner frame."""
+        self._spinner_index = (self._spinner_index + 1) % len(self.SPINNER_FRAMES)
+        if self._status:
+            self._update_display()
 
 
 class ResourceBar(Static):

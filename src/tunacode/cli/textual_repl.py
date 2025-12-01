@@ -16,6 +16,7 @@ from textual.containers import Horizontal
 from textual.message import Message
 from textual.widgets import RichLog, Static
 
+from tunacode.cli.error_panels import render_exception
 from tunacode.cli.screens import ToolConfirmationModal, ToolConfirmationResult
 from tunacode.cli.widgets import (
     Editor,
@@ -129,8 +130,9 @@ class TextualReplApp(App[None]):
             try:
                 await self._process_request(request)
             except Exception as e:
-                error_message = Text(f"Error: {e}", style="red")
-                self.rich_log.write(error_message)
+                # Use rich error panels for structured error display
+                error_renderable = render_exception(e)
+                self.rich_log.write(error_renderable)
             finally:
                 self.request_queue.task_done()
 
@@ -152,9 +154,9 @@ class TextualReplApp(App[None]):
                 tool_status_callback=build_tool_status_callback(self),
             )
         except Exception as e:
-            # Ensure errors surface visibly
-            processing_error = Text(f"Processing Error: {e}", style="bold red")
-            self.rich_log.write(processing_error)
+            # Use rich error panels for structured error display
+            error_renderable = render_exception(e)
+            self.rich_log.write(error_renderable)
             raise  # Re-raise to be caught by worker loop logging
         finally:
             # Exit streaming mode
