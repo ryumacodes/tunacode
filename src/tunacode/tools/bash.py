@@ -9,7 +9,13 @@ from typing import Dict, Optional
 
 from pydantic_ai.exceptions import ModelRetry
 
-from tunacode.constants import MAX_COMMAND_OUTPUT
+from tunacode.constants import (
+    CMD_OUTPUT_TRUNCATED,
+    COMMAND_OUTPUT_END_SIZE,
+    COMMAND_OUTPUT_START_INDEX,
+    COMMAND_OUTPUT_THRESHOLD,
+    MAX_COMMAND_OUTPUT,
+)
 from tunacode.tools.decorators import base_tool
 
 logger = logging.getLogger(__name__)
@@ -29,26 +35,6 @@ DANGEROUS_PATTERNS = [
     r"fdisk",  # Partition manipulation
     r":\(\)\{.*\}\;",  # Fork bomb pattern
 ]
-
-# Shell injection patterns
-INJECTION_PATTERNS = [
-    r";\s*\w+",  # Command chaining with semicolon
-    r"&&\s*\w+",  # Command chaining with &&
-    r"\|\s*\w+",  # Piping to another command
-    r"`[^`]+`",  # Command substitution with backticks
-    r"\$\([^)]+\)",  # Command substitution with $()
-    r">\s*[/\w]",  # Output redirection
-    r"<\s*[/\w]",  # Input redirection
-]
-
-# Restricted shell characters
-RESTRICTED_CHARS = [";", "&", "`", "$", "{", "}"]
-
-
-class CommandSecurityError(Exception):
-    """Raised when a command fails security validation."""
-    pass
-
 
 @base_tool
 async def bash(
@@ -200,24 +186,7 @@ def _check_common_errors(command: str, returncode: int, stderr: str) -> None:
     """Check for common error patterns and provide guidance."""
     if returncode == 0 or not stderr:
         return
-
-    stderr_lower = stderr.lower()
-
-    if "command not found" in stderr_lower:
-        raise ModelRetry(
-            f"Command '{command}' not found. "
-            "Check if the command is installed or use the full path."
-        )
-    if "permission denied" in stderr_lower:
-        raise ModelRetry(
-            f"Permission denied for command '{command}'. "
-            "You may need elevated privileges or different file permissions."
-        )
-    if "no such file or directory" in stderr_lower:
-        raise ModelRetry(
-            f"File or directory not found when running '{command}'. "
-            "Verify the path exists or create it first."
-        )
+    logger.debug("Command exited non-zero: %s (stderr: %.120s)", command, stderr)
 
 
 async def _cleanup_process(process) -> None:
@@ -255,7 +224,11 @@ def _format_output(
     result = "\n".join(lines)
 
     if len(result) > MAX_COMMAND_OUTPUT:
-        truncate_point = MAX_COMMAND_OUTPUT - 100
-        result = result[:truncate_point] + "\n\n[... output truncated ...]"
+        start_part = result[:COMMAND_OUTPUT_START_INDEX]
+        if len(result) > COMMAND_OUTPUT_THRESHOLD:
+            end_part = result[-COMMAND_OUTPUT_END_SIZE:]
+        else:
+            end_part = result[COMMAND_OUTPUT_START_INDEX:]
+        result = start_part + CMD_OUTPUT_TRUNCATED + end_part
 
     return result
