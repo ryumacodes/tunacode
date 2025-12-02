@@ -13,6 +13,7 @@ from typing import Callable, TypeVar
 from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.exceptions import FileOperationError, ToolExecutionError
+from tunacode.tools.xml_helper import load_prompt_from_xml
 
 T = TypeVar("T")
 logger = logging.getLogger(__name__)
@@ -47,6 +48,11 @@ def base_tool(func: Callable[..., T]) -> Callable[..., T]:
             raise ToolExecutionError(
                 tool_name=func.__name__, message=str(e), original_error=e
             )
+
+    # Load XML prompt for agent alignment
+    xml_prompt = load_prompt_from_xml(func.__name__)
+    if xml_prompt:
+        wrapper.__doc__ = xml_prompt
 
     return wrapper
 
