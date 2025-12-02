@@ -8,15 +8,14 @@ Provides targeted file content modification with diff-based updates.
 import logging
 import os
 from functools import lru_cache
-from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-import defusedxml.ElementTree as ET
 from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.exceptions import ToolExecutionError
 from tunacode.tools.base import FileBasedTool
 from tunacode.tools.utils.text_match import replace
+from tunacode.tools.xml_helper import load_parameters_schema_from_xml, load_prompt_from_xml
 from tunacode.types import ToolResult
 
 logger = logging.getLogger(__name__)
@@ -31,68 +30,18 @@ class UpdateFileTool(FileBasedTool):
 
     @lru_cache(maxsize=1)
     def _get_base_prompt(self) -> str:
-        """Load and return the base prompt from XML file.
-
-        Returns:
-            str: The loaded prompt from XML or a default prompt
-        """
-        try:
-            # Load prompt from XML file
-            prompt_file = Path(__file__).parent / "prompts" / "update_file_prompt.xml"
-            if prompt_file.exists():
-                tree = ET.parse(prompt_file)
-                root = tree.getroot()
-                description = root.find("description")
-                if description is not None:
-                    return description.text.strip()
-        except Exception as e:
-            logger.warning(f"Failed to load XML prompt for update_file: {e}")
-
-        # Fallback to default prompt
-        return """Performs exact string replacements in files"""
+        """Load and return the base prompt from XML file."""
+        prompt = load_prompt_from_xml("update_file")
+        if prompt:
+            return prompt
+        return "Performs exact string replacements in files"
 
     @lru_cache(maxsize=1)
     def _get_parameters_schema(self) -> Dict[str, Any]:
-        """Get the parameters schema for update_file tool.
-
-        Returns:
-            Dict containing the JSON schema for tool parameters
-        """
-        # Try to load from XML first
-        try:
-            prompt_file = Path(__file__).parent / "prompts" / "update_file_prompt.xml"
-            if prompt_file.exists():
-                tree = ET.parse(prompt_file)
-                root = tree.getroot()
-                parameters = root.find("parameters")
-                if parameters is not None:
-                    schema: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
-                    required_fields: List[str] = []
-
-                    for param in parameters.findall("parameter"):
-                        name = param.get("name")
-                        required = param.get("required", "false").lower() == "true"
-                        param_type = param.find("type")
-                        description = param.find("description")
-
-                        if name and param_type is not None:
-                            prop = {
-                                "type": param_type.text.strip(),
-                                "description": description.text.strip()
-                                if description is not None
-                                else "",
-                            }
-
-                            schema["properties"][name] = prop
-                            if required:
-                                required_fields.append(name)
-
-                    schema["required"] = required_fields
-                    return schema
-        except Exception as e:
-            logger.warning(f"Failed to load parameters from XML for update_file: {e}")
-
-        # Fallback to hardcoded schema
+        """Get the parameters schema for update_file tool."""
+        schema = load_parameters_schema_from_xml("update_file")
+        if schema:
+            return schema
         return {
             "type": "object",
             "properties": {
