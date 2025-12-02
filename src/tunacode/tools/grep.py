@@ -16,13 +16,12 @@ import logging
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.exceptions import TooBroadPatternError, ToolExecutionError
-from tunacode.tools.base import BaseTool
+from tunacode.tools.decorators import base_tool
 from tunacode.tools.grep_components import (
     FileFilter,
     PatternMatcher,
@@ -32,101 +31,25 @@ from tunacode.tools.grep_components import (
 from tunacode.tools.grep_components.result_formatter import ResultFormatter
 from tunacode.tools.utils.ripgrep import RipgrepExecutor
 from tunacode.tools.utils.ripgrep import metrics as ripgrep_metrics
-from tunacode.tools.xml_helper import load_parameters_schema_from_xml, load_prompt_from_xml
 
 logger = logging.getLogger(__name__)
 
 
-class ParallelGrep(BaseTool):
-    """Advanced parallel grep tool with multiple search strategies.
+class ParallelGrep:
+    """Advanced parallel grep tool with multiple search strategies."""
 
-    CLAUDE_ANCHOR[parallel-grep-class]: Main grep implementation with timeout handling
-    """
-
-    def __init__(self, ui_logger=None):
-        super().__init__(ui_logger)
+    def __init__(self):
         self._executor = ThreadPoolExecutor(max_workers=8)
         self._file_filter = FileFilter()
         self._pattern_matcher = PatternMatcher()
         self._result_formatter = ResultFormatter()
         self._ripgrep_executor = RipgrepExecutor()
-
-        # Load configuration
         self._config = self._load_ripgrep_config()
 
-    @property
-    def tool_name(self) -> str:
-        return "grep"
-
-    @lru_cache(maxsize=1)
-    def _get_base_prompt(self) -> str:
-        """Load and return the base prompt from XML file.
-
-        Returns:
-            str: The loaded prompt from XML or a default prompt
-        """
-        # Try to load from XML helper
-        prompt = load_prompt_from_xml("grep")
-        if prompt:
-            return prompt
-
-        # Fallback to default prompt
-        return """A powerful search tool built on ripgrep
-
-Usage:
-- ALWAYS use Grep for search tasks. NEVER invoke `grep` or `rg` as a Bash command.
-- Supports full regex syntax
-- Filter files with glob or type parameters
-- Multiple output modes available"""
-
-    @lru_cache(maxsize=1)
-    def _get_parameters_schema(self) -> Dict[str, Any]:
-        """Get the parameters schema for grep tool.
-
-        Returns:
-            Dict containing the JSON schema for tool parameters
-        """
-        # Try to load from XML helper
-        schema = load_parameters_schema_from_xml("grep")
-        if schema:
-            return schema
-
-        # Fallback to hardcoded schema
-        return {
-            "type": "object",
-            "properties": {
-                "pattern": {
-                    "type": "string",
-                    "description": "Regular expression pattern to search for",
-                },
-                "directory": {"type": "string", "description": "Directory to search in"},
-                "include": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "File patterns to include",
-                },
-                "exclude": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "File patterns to exclude",
-                },
-                "max_results": {"type": "integer", "description": "Maximum number of results"},
-                "context_before": {
-                    "type": "integer",
-                    "description": "Lines of context before matches",
-                },
-                "context_after": {
-                    "type": "integer",
-                    "description": "Lines of context after matches",
-                },
-            },
-            "required": ["pattern"],
-        }
-
-    def _load_ripgrep_config(self) -> Dict:
-        """Load ripgrep configuration from settings."""
+    def _load_ripgrep_config(self) -> Dict[str, Any]:
+        """Load ripgrep configuration from defaults."""
         try:
-            settings = DEFAULT_USER_CONFIG.get("settings", {})
+            settings = DEFAULT_USER_CONFIG.get_section("tools", {})
             return settings.get(
                 "ripgrep",
                 {
@@ -146,7 +69,7 @@ Usage:
                 "debug": False,
             }
 
-    async def _execute(
+    async def execute(
         self,
         pattern: str,
         directory: str = ".",
@@ -496,11 +419,11 @@ Usage:
         return await asyncio.get_event_loop().run_in_executor(self._executor, search_file_sync)
 
 
-# Create tool instance for pydantic-ai
+@base_tool
 async def grep(
     pattern: str,
     directory: str = ".",
-    path: Optional[str] = None,  # Alias for directory
+    path: Optional[str] = None,
     case_sensitive: bool = False,
     use_regex: bool = False,
     include_files: Optional[str] = None,
@@ -510,34 +433,29 @@ async def grep(
     search_type: str = "smart",
     return_format: str = "string",
 ) -> Union[str, List[str]]:
-    """
-    Advanced parallel grep search with multiple strategies.
+    """Advanced parallel grep search with multiple strategies.
 
     Args:
-        pattern: Search pattern (literal text or regex)
-        directory: Directory to search (default: current directory)
-        case_sensitive: Whether search is case sensitive (default: False)
-        use_regex: Whether pattern is a regular expression (default: False)
-        include_files: File patterns to include, comma-separated (e.g., "*.py,*.js")
-        exclude_files: File patterns to exclude, comma-separated (e.g., "*.pyc,node_modules/*")
-        max_results: Maximum number of results to return (default: 50)
-        context_lines: Number of context lines before/after matches (default: 2)
-        search_type: Search strategy - "smart", "ripgrep", "python", or "hybrid" (default: "smart")
+        pattern: Search pattern (literal text or regex).
+        directory: Directory to search (default: current directory).
+        path: Alias for directory.
+        case_sensitive: Whether search is case sensitive.
+        use_regex: Whether pattern is a regular expression.
+        include_files: File patterns to include (e.g., "*.py,*.js").
+        exclude_files: File patterns to exclude.
+        max_results: Maximum number of results to return.
+        context_lines: Number of context lines before/after matches.
+        search_type: Search strategy (smart/ripgrep/python/hybrid).
+        return_format: Output format (string or list).
 
     Returns:
-        Formatted search results with file paths, line numbers, and context
-
-    Examples:
-        grep("TODO", ".", max_results=20)
-        grep("function.*export", "src/", use_regex=True, include_files="*.js,*.ts")
-        grep("import.*pandas", ".", include_files="*.py", search_type="hybrid")
+        Formatted search results with file paths, line numbers, and context.
     """
-    # Handle path alias for directory
     if path is not None:
         directory = path
 
     tool = ParallelGrep()
-    return await tool._execute(
+    return await tool.execute(
         pattern=pattern,
         directory=directory,
         case_sensitive=case_sensitive,

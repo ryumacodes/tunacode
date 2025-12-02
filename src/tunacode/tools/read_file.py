@@ -1,139 +1,35 @@
-"""
-Module: tunacode.tools.read_file
-
-File reading tool for agent operations in the TunaCode application.
-Provides safe file reading with size limits and proper error handling.
-"""
+"""File reading tool for agent operations."""
 
 import asyncio
-import logging
 import os
-from functools import lru_cache
-from typing import Any, Dict
 
 from tunacode.constants import (
-    ERROR_FILE_DECODE,
-    ERROR_FILE_DECODE_DETAILS,
-    ERROR_FILE_NOT_FOUND,
     ERROR_FILE_TOO_LARGE,
     MAX_FILE_SIZE,
     MSG_FILE_SIZE_LIMIT,
 )
 from tunacode.exceptions import ToolExecutionError
-from tunacode.tools.base import FileBasedTool
-from tunacode.tools.xml_helper import load_parameters_schema_from_xml, load_prompt_from_xml
-from tunacode.types import ToolResult
-
-logger = logging.getLogger(__name__)
+from tunacode.tools.decorators import file_tool
 
 
-class ReadFileTool(FileBasedTool):
-    """Tool for reading file contents."""
-
-    @property
-    def tool_name(self) -> str:
-        return "Read"
-
-    @lru_cache(maxsize=1)
-    def _get_base_prompt(self) -> str:
-        """Load and return the base prompt from XML file."""
-        prompt = load_prompt_from_xml("read_file")
-        if prompt:
-            return prompt
-        return "Reads a file from the local filesystem"
-
-    @lru_cache(maxsize=1)
-    def _get_parameters_schema(self) -> Dict[str, Any]:
-        """Get the parameters schema for read_file tool."""
-        schema = load_parameters_schema_from_xml("read_file")
-        if schema:
-            return schema
-        return {
-            "type": "object",
-            "properties": {
-                "file_path": {
-                    "type": "string",
-                    "description": "The absolute path to the file to read",
-                },
-                "offset": {
-                    "type": "number",
-                    "description": "The line number to start reading from",
-                },
-                "limit": {
-                    "type": "number",
-                    "description": "The number of lines to read",
-                },
-            },
-            "required": ["file_path"],
-        }
-
-    async def _execute(self, filepath: str) -> ToolResult:
-        """Read the contents of a file.
-
-        Args:
-            filepath: The path to the file to read.
-
-        Returns:
-            ToolResult: The contents of the file or an error message.
-
-        Raises:
-            Exception: Any file reading errors
-        """
-        # Add a size limit to prevent reading huge files
-        if os.path.getsize(filepath) > MAX_FILE_SIZE:
-            err_msg = ERROR_FILE_TOO_LARGE.format(filepath=filepath) + MSG_FILE_SIZE_LIMIT
-            if self.ui:
-                await self.ui.error(err_msg)
-            raise ToolExecutionError(tool_name=self.tool_name, message=err_msg, original_error=None)
-
-        # Run the blocking file I/O in a separate thread to avoid blocking the event loop
-        def _read_sync(path: str) -> str:
-            """Synchronous helper to read file contents (runs in thread)."""
-            with open(path, "r", encoding="utf-8") as f:
-                return f.read()
-
-        content: str = await asyncio.to_thread(_read_sync, filepath)
-        return content
-
-    async def _handle_error(self, error: Exception, filepath: str = None) -> ToolResult:
-        """Handle errors with specific messages for common cases.
-
-        Raises:
-            ToolExecutionError: Always raised with structured error information
-        """
-        if isinstance(error, FileNotFoundError):
-            err_msg = ERROR_FILE_NOT_FOUND.format(filepath=filepath)
-        elif isinstance(error, UnicodeDecodeError):
-            err_msg = (
-                ERROR_FILE_DECODE.format(filepath=filepath)
-                + " "
-                + ERROR_FILE_DECODE_DETAILS.format(error=error)
-            )
-        else:
-            # Use parent class handling for other errors
-            await super()._handle_error(error, filepath)
-            return  # super() will raise, this is unreachable
-
-        if self.ui:
-            await self.ui.error(err_msg)
-
-        raise ToolExecutionError(tool_name=self.tool_name, message=err_msg, original_error=error)
-
-
-# Create the function that maintains the existing interface
+@file_tool
 async def read_file(filepath: str) -> str:
-    """
-    Read the contents of a file.
+    """Read the contents of a file.
 
     Args:
-        filepath: The path to the file to read.
+        filepath: The absolute path to the file to read.
 
     Returns:
-        str: The contents of the file or an error message.
+        The contents of the file.
     """
-    tool = ReadFileTool(None)  # No UI for pydantic-ai compatibility
-    try:
-        return await tool.execute(filepath)
-    except ToolExecutionError as e:
-        # Return error message for pydantic-ai compatibility
-        return str(e)
+    if os.path.getsize(filepath) > MAX_FILE_SIZE:
+        raise ToolExecutionError(
+            tool_name="read_file",
+            message=ERROR_FILE_TOO_LARGE.format(filepath=filepath) + MSG_FILE_SIZE_LIMIT,
+        )
+
+    def _read_sync(path: str) -> str:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+
+    return await asyncio.to_thread(_read_sync, filepath)
