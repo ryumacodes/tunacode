@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import re
 import subprocess
 from typing import Dict, Optional
 
@@ -13,7 +14,40 @@ from tunacode.tools.decorators import base_tool
 
 logger = logging.getLogger(__name__)
 
-DESTRUCTIVE_PATTERNS = ["rm -rf", "rm -r", "rm /", "dd if=", "mkfs", "fdisk"]
+# Enhanced dangerous patterns from run_command.py
+DESTRUCTIVE_PATTERNS = [
+    "rm -rf", "rm -r", "rm /", "dd if=", "mkfs", "fdisk"
+]
+
+# Comprehensive dangerous patterns from security module
+DANGEROUS_PATTERNS = [
+    r"rm\s+-rf\s+/",  # Dangerous rm commands
+    r"sudo\s+rm",  # Sudo rm commands
+    r">\s*/dev/sd[a-z]",  # Writing to disk devices
+    r"dd\s+.*of=/dev/",  # DD to devices
+    r"mkfs\.",  # Format filesystem
+    r"fdisk",  # Partition manipulation
+    r":\(\)\{.*\}\;",  # Fork bomb pattern
+]
+
+# Shell injection patterns
+INJECTION_PATTERNS = [
+    r";\s*\w+",  # Command chaining with semicolon
+    r"&&\s*\w+",  # Command chaining with &&
+    r"\|\s*\w+",  # Piping to another command
+    r"`[^`]+`",  # Command substitution with backticks
+    r"\$\([^)]+\)",  # Command substitution with $()
+    r">\s*[/\w]",  # Output redirection
+    r"<\s*[/\w]",  # Input redirection
+]
+
+# Restricted shell characters
+RESTRICTED_CHARS = [";", "&", "`", "$", "{", "}"]
+
+
+class CommandSecurityError(Exception):
+    """Raised when a command fails security validation."""
+    pass
 
 
 @base_tool
@@ -37,6 +71,7 @@ async def bash(
         Formatted output with exit code, stdout, and stderr.
     """
     _validate_inputs(command, cwd, timeout)
+    _validate_command_security(command)
 
     exec_env = os.environ.copy()
     if env:
@@ -80,6 +115,64 @@ async def bash(
         )
     finally:
         await _cleanup_process(process)
+
+
+def _validate_command_security(command: str) -> None:
+    """
+    Validate command security using comprehensive validation from run_command.py.
+
+    Args:
+        command: The command string to validate
+
+    Raises:
+        ModelRetry: If the command fails security validation
+    """
+    if not command or not command.strip():
+        raise ModelRetry("Empty command not allowed")
+
+    logger.info(f"Validating command security: {command[:100]}...")
+
+    # Always check for the most dangerous patterns regardless of shell features
+    for pattern in DANGEROUS_PATTERNS:
+        if re.search(pattern, command, re.IGNORECASE):
+            logger.error(f"Highly dangerous pattern '{pattern}' detected in command")
+            raise ModelRetry(f"Command contains dangerous pattern and is blocked: {pattern}")
+
+    # Check for dangerous injection patterns (more selective, before character checks)
+    strict_patterns = [
+        r";\s*rm\s+",  # Command chaining to rm
+        r"&&\s*rm\s+",  # Command chaining to rm
+        r"`[^`]*rm[^`]*`",  # Command substitution with rm
+        r"\$\([^)]*rm[^)]*\)",  # Command substitution with rm
+        r":\(\)\{.*\}\;",  # Fork bomb
+    ]
+
+    for pattern in strict_patterns:
+        if re.search(pattern, command):
+            logger.warning(f"Dangerous injection pattern '{pattern}' detected in command")
+            raise ModelRetry(f"Potentially unsafe pattern detected in command: {pattern}")
+
+    # Check for restricted characters (but allow safe environment variable usage)
+    # Allow $ when used for legitimate environment variables or shell variables
+    if re.search(r'\$[^({a-zA-Z_]', command):
+        # $ followed by something that's not a valid variable start
+        logger.warning(f"Potentially dangerous character '$' detected in command")
+        raise ModelRetry(f"Potentially unsafe character '$' in command")
+
+    # Check other restricted characters but allow { } when part of valid variable expansion
+    if "{" in command or "}" in command:
+        # Only block braces if they're not part of valid variable expansion
+        if not re.search(r'\$\{?\w+\}?', command):
+            for char in ["{", "}"]:
+                if char in command:
+                    logger.warning(f"Potentially dangerous character '{char}' detected in command")
+                    raise ModelRetry(f"Potentially unsafe character '{char}' in command")
+
+    # Check remaining restricted characters
+    for char in [";", "&", "`"]:
+        if char in command:
+            logger.warning(f"Potentially dangerous character '{char}' detected in command")
+            raise ModelRetry(f"Potentially unsafe character '{char}' in command")
 
 
 def _validate_inputs(command: str, cwd: Optional[str], timeout: Optional[int]) -> None:

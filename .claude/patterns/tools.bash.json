@@ -1,0 +1,11 @@
+{
+  "$schema": "https://claude-kb.io/schema/pattern/v1",
+  "component": "tools.bash",
+  "patterns": [
+    {
+      "name": "Tool Consolidation Pattern",
+      "description": "Consolidating duplicate command execution tools with security validation"
+    }
+  ],
+  "last_updated": "2025-12-02T21:31:57.909821136Z"
+}

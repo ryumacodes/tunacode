@@ -206,7 +206,7 @@ def create_fallback_response(
                     if tool_name in ["write_file", "update_file"] and hasattr(part, "args"):
                         if isinstance(part.args, dict) and "file_path" in part.args:
                             files_modified.add(part.args["file_path"])
-                    elif tool_name in ["run_command", "bash"] and hasattr(part, "args"):
+                    elif tool_name == "bash" and hasattr(part, "args"):
                         if isinstance(part.args, dict) and "command" in part.args:
                             commands_run.append(part.args["command"])
 

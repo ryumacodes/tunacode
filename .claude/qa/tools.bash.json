@@ -1,0 +1,11 @@
+{
+  "$schema": "https://claude-kb.io/schema/qa/v1",
+  "component": "tools.bash",
+  "questions": [
+    {
+      "q": "Should we consolidate run_command and bash tools?",
+      "a": "Yes. The consolidation successfully merged run_command's comprehensive security validation with bash's advanced features (env, cwd, timeout, async execution). The enhanced bash tool now provides unified, secure command execution with comprehensive test coverage."
+    }
+  ],
+  "last_updated": "2025-12-02T21:32:02.121431268Z"
+}

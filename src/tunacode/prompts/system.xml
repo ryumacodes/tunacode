@@ -118,13 +118,9 @@ Your task is to execute these tools sequentially with explicit confirmation at e
     Safety: Shows diff before applying changes
     Use for: Fixing bugs, updating imports, refactoring
 
-8. `run_command(command: str)` — Execute shell commands
-    Safety: Full command confirmation required
-    Use for: Running tests, git operations, installs
-
-9. `bash(command: str)` — Advanced shell with environment control
-    Safety: Enhanced security, output limits (5KB)
-    Use for: Complex scripts, interactive commands
+8. `bash(command: str, cwd?: str, env?: dict, timeout?: int, capture_output?: bool)` — Enhanced shell command execution
+    Safety: Comprehensive security validation, output limits (5KB)
+    Use for: Running tests, git operations, installs, complex scripts, environment-specific commands
     **CRITICAL: AVOID bash for searching - use read-only tools instead**
     - For searching file contents: Use `grep` (parallelizable, faster, safer)
     - For finding files by name: Use `glob` (parallelizable, faster, safer)
@@ -314,42 +310,39 @@ update_file("config.py",
 → Returns: Fixed syntax error
 ```
 
-7. run_command  Execute Shell Commands
+7. bash  Shell Command Execution
 ```
 # Check Python version
-run_command("python --version")
+bash("python --version")
 → Returns: Python 3.10.x
 
 # List files with details
-run_command("ls -la")
+bash("ls -la")
 → Returns: Detailed file listing
 
-# Run pytest
-run_command("pytest tests/test_auth.py -v")
+# Run pytest with custom timeout
+bash("pytest tests/test_auth.py -v", timeout=60)
 → Returns: Test results with verbose output
 
 # Check current directory
-run_command("pwd")
+bash("pwd")
 → Returns: /home/user/project
 
 # Git status
-run_command("git status --short")
+bash("git status --short")
 → Returns: Modified files list
-```
 
-8. bash  Advanced Shell Operations
-```
-# Count TODO comments
-bash("grep -r 'TODO' . | wc -l")
-→ Returns: Number of TODOs in project
+# Set environment variable and run command
+bash("echo $MY_VAR", env={"MY_VAR": "test_value"})
+→ Returns: test_value
 
-# Complex find operation
+# Run command in specific directory
+bash("npm test", cwd="/path/to/project")
+→ Returns: npm test results
+
+# Complex find operation (should use glob instead for safety)
 bash("find . -name '*.py' -type f | xargs wc -l | tail -1")
 → Returns: Total lines of Python code
-
-# Multicommand with pipes
-bash("ps aux | grep python | grep -v grep | awk '{print $2}'")
-→ Returns: PIDs of Python processes
 
 # Environment and path check
 bash("echo $PATH && which python && python --version")
@@ -493,8 +486,7 @@ Need to modify existing code?
   → `update_file` (sequential, shows diff, requires confirmation)
 
 Need to run tests or commands?
-  → `run_command` for simple operations (sequential)
-  → `bash` for complex scripts (sequential)
+  → `bash` for all shell operations (sequential, comprehensive security)
   → **CRITICAL: Only use bash when read-only tools cannot accomplish the task or user explicitly requests bash**
 
 ### CRITICAL JSON FORMATTING RULES ###
@@ -637,7 +629,7 @@ ITERATION 3:
   THTHOUGHT: Run tests to verify fix.
 
   ACTION (Sequential):
-    run_command("pytest tests/test_auth.py -v")
+    bash("pytest tests/test_auth.py -v")
 
   OBSERVATION: All tests pass. Task complete.
 ```
@@ -653,7 +645,7 @@ ITERATION 1: read_file("src/auth.py")          ← SLOW
 ITERATION 2: read_file("tests/test_auth.py")   ← SLOW
 ITERATION 3: grep("authenticate", "src/")      ← SLOW
 ITERATION 4: update_file(...)
-ITERATION 5: run_command("pytest...")
+ITERATION 5: bash("pytest...")
 ```
 Result: 5+ iterations, 3x slower, PENALIZED
 
@@ -699,7 +691,7 @@ AGENT ACTION:
 AGENT OBSERVATION: Updated. Run tests.
 
 AGENT ACTION:
-  run_command("pytest tests/test_db.py -v")
+  bash("pytest tests/test_db.py -v")
 
 RESULT: 4 read-only tools in parallel → 18.7x speedup on iteration 1
 ```
@@ -779,7 +771,7 @@ AGENT ACTION:
   write_file("tests/test_email_validation.py", """[test implementation]""")
 
 AGENT ACTION:
-  run_command("pytest tests/test_email_validation.py -v")
+  bash("pytest tests/test_email_validation.py -v")
 
 RESULT: Initial parallel batch gave complete context in one iteration
 ```

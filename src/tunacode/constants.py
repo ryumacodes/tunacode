@@ -38,7 +38,6 @@ class ToolName(str, Enum):
     READ_FILE = "read_file"
     WRITE_FILE = "write_file"
     UPDATE_FILE = "update_file"
-    RUN_COMMAND = "run_command"
     BASH = "bash"
     GREP = "grep"
     LIST_DIR = "list_dir"
@@ -51,7 +50,6 @@ class ToolName(str, Enum):
 TOOL_READ_FILE = ToolName.READ_FILE
 TOOL_WRITE_FILE = ToolName.WRITE_FILE
 TOOL_UPDATE_FILE = ToolName.UPDATE_FILE
-TOOL_RUN_COMMAND = ToolName.RUN_COMMAND
 TOOL_BASH = ToolName.BASH
 TOOL_GREP = ToolName.GREP
 TOOL_LIST_DIR = ToolName.LIST_DIR
@@ -69,7 +67,7 @@ READ_ONLY_TOOLS = [
     ToolName.RESEARCH_CODEBASE,
 ]
 WRITE_TOOLS = [ToolName.WRITE_FILE, ToolName.UPDATE_FILE]
-EXECUTE_TOOLS = [ToolName.BASH, ToolName.RUN_COMMAND]
+EXECUTE_TOOLS = [ToolName.BASH]
 
 # Commands
 CMD_HELP = "/help"
