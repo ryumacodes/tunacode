@@ -128,6 +128,18 @@
         "INJECTED httpx request hook in agent_config to await the configured delay before each LLM request",
         "DOCUMENTED the setting inside tunacode.json.example and updated agent cache versioning to respect it"
       ]
+    },
+    {
+      "id": "template-loader-removal-20251210-000000",
+      "time": "2025-12-10T00:00:00Z",
+      "branch": "master",
+      "base": "current",
+      "head": "current",
+      "bullets": [
+        "REMOVED the unused TemplateLoader filesystem manager; template lifecycle now delegated elsewhere",
+        "KEPT the Template dataclass export for authorization context while stripping __all__ of loader symbols",
+        "UPDATED memory-bank research note to reflect the loader removal and prevent stale references"
+      ]
     }
   ]
 }

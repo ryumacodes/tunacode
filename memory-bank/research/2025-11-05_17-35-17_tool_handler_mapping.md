@@ -75,7 +75,7 @@ The authorization follows this priority:
 
 #### 3. **Template System Integration** (`tunacode.templates.loader`)
 - **Template Class**: Defines allowed_tools list for pre-approval
-- **TemplateLoader**: Manages template lifecycle from JSON files
+- **TemplateLoader**: Removed; template lifecycle now handled elsewhere
 - **Permission Override**: Active template can bypass confirmations for specific tools
 
 #### 4. **Type System Integration** (`tunacode.types`)
