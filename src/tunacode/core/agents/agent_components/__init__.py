@@ -13,7 +13,6 @@ from .agent_helpers import (
     get_user_prompt_part_class,
     handle_empty_response,
 )
-from .json_tool_parser import extract_and_execute_tool_calls, parse_json_tool_calls
 from .message_handler import get_model_messages, patch_tool_messages
 from .node_processor import _process_node
 from .response_state import ResponseState
@@ -25,8 +24,6 @@ from .tool_executor import execute_tools_parallel
 
 __all__ = [
     "get_or_create_agent",
-    "extract_and_execute_tool_calls",
-    "parse_json_tool_calls",
     "get_model_messages",
     "patch_tool_messages",
     "_process_node",

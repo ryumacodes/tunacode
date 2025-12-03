@@ -10,10 +10,8 @@ from .agent_components import (
     _process_node,
     check_task_completion,
     execute_tools_parallel,
-    extract_and_execute_tool_calls,
     get_model_messages,
     get_or_create_agent,
-    parse_json_tool_calls,
     patch_tool_messages,
 )
 from .main import (
@@ -25,8 +23,6 @@ from .main import (
 __all__ = [
     "process_request",
     "get_or_create_agent",
-    "extract_and_execute_tool_calls",
-    "parse_json_tool_calls",
     "get_model_messages",
     "patch_tool_messages",
     "_process_node",

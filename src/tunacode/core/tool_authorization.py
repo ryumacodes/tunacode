@@ -234,14 +234,6 @@ class AuthorizationPolicy:
         # No rule allowed it, require confirmation
         return True
 
-    def is_tool_blocked(self, tool_name: ToolName, context: AuthContext) -> bool:
-        """Check if tool is blocked.
-
-        Returns:
-            Always False (no tools are blocked)
-        """
-        return False
-
 
 # =============================================================================
 # Tool Rejection Notifier

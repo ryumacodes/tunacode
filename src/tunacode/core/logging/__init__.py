@@ -14,13 +14,6 @@ def thought(self: logging.Logger, message: str, *args: Any, **kwargs: Any) -> No
 setattr(logging.Logger, "thought", thought)
 
 
-# RichHandler for UI output (stub, real implementation in handlers.py)
-class RichHandler(logging.Handler):
-    def emit(self, _record):
-        # Actual implementation in handlers.py
-        pass
-
-
 def setup_logging(config_path=None):
     """
     Set up logging configuration from YAML file.
