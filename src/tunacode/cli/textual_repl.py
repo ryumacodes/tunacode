@@ -131,8 +131,7 @@ class TextualReplApp(App[None]):
         welcome.append("  • Run shell commands\n", style="")
         welcome.append("  • Search code with grep/glob\n", style="")
         welcome.append("  • Answer questions about your codebase\n", style="")
-        welcome.append("  • Help debug and refactor code\n\n", style="")
-        welcome.append("Type a message below to get started.\n", style="dim")
+        welcome.append("  • Help debug and refactor code\n", style="")
         self.rich_log.write(welcome)
 
     async def _request_worker(self) -> None:
