@@ -21,12 +21,11 @@
     {
       "name": "tunacode-theme",
       "description": "Custom theme built from UI_COLORS in constants.py, registered as 'tunacode' in on_mount(), uses external textual_repl.tcss"
+    },
+    {
+      "name": "textual-input-bar-sizing",
+      "description": "Sizing guidance for the Textual input row"
     }
   ],
-  "files": [
-    "src/tunacode/cli/textual_repl.py",
-    "src/tunacode/cli/textual_repl.tcss",
-    "src/tunacode/constants.py"
-  ],
-  "last_updated": "2025-11-29T17:30:00Z"
+  "last_updated": "2025-12-03T19:27:55.405212779Z"
 }

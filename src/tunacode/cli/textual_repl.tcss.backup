@@ -93,47 +93,35 @@ Editor {
  * NeXTSTEP: "left=identity, center=metrics, right=state"
  * ============================================ */
 StatusBar {
-    height: 3;
+    height: 1;
     width: 100%;
     background: $surface;
     border-right: solid $border;
-    border-top: solid $border;
-    border-left: solid $border;
     border-bottom: solid $border;
-}
-
-StatusBar Static {
-    color: white;
-    text-style: bold;
 }
 
 #status-left {
     width: 1fr;
-    height: 3;
-    padding: 1 1;
-    color: white;
-    text-style: bold;
-    text-align: left;
+    height: 1;
+    padding: 0 1;
+    color: $text-muted;
 }
 
 #status-mid {
     width: 1fr;
-    height: 3;
+    height: 1;
     text-align: center;
     border-left: solid $primary;
     border-right: solid $primary;
-    color: white;
-    text-style: bold;
-    padding: 1 0;
+    color: $text-muted;
 }
 
 #status-right {
     width: 1fr;
-    height: 3;
+    height: 1;
     text-align: right;
-    padding: 1 1;
-    color: white;
-    text-style: bold;
+    padding: 0 1;
+    color: $text-muted;
 }
 
 /* ============================================

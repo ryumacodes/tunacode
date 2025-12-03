@@ -214,6 +214,6 @@ class StatusBar(Horizontal):
     """
 
     def compose(self) -> ComposeResult:
-        yield Static("main ● ~/project", id="status-left")
-        yield Static("bg: indexing...", id="status-mid")
-        yield Static("last: read_file", id="status-right")
+        yield Static("[bold]main ● ~/project[/bold]", id="status-left")
+        yield Static("[bold]bg: indexing...[/bold]", id="status-mid")
+        yield Static("[bold]last: read_file[/bold]", id="status-right")

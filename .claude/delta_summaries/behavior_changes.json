@@ -2,6 +2,17 @@
   "version": 1,
   "sessions": [
     {
+      "id": "textual-input-height-20251203-192800",
+      "time": "2025-12-03T19:28:00Z",
+      "branch": "current",
+      "base": "current",
+      "head": "current",
+      "bullets": [
+        "Textual REPL input row now uses CSS variables (--input-row-lines, --editor-min-lines) defaulting to six lines to give prompts more breathing room.",
+        "Editor enforces the matching minimum height so the TextArea renders the full multi-line input area instead of collapsing to a single line."
+      ]
+    },
+    {
       "id": "agent-fallback-removal-20251208-000000",
       "time": "2025-12-08T00:00:00Z",
       "branch": "master",
