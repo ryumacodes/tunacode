@@ -100,31 +100,46 @@ class ResourceBar(Static):
             self._session_cost = session_cost
         self._refresh_display()
 
-    def _format_tokens(self) -> str:
-        """Format token count with K suffix for readability."""
-        if self._tokens >= 1000:
-            return f"{self._tokens / 1000:.1f}k"
-        return str(self._tokens)
+    def _calculate_remaining_pct(self) -> float:
+        """Calculate percentage of context window remaining."""
+        if self._max_tokens == 0:
+            return 0.0
+        return (self._max_tokens - self._tokens) / self._max_tokens * 100
 
-    def _format_max_tokens(self) -> str:
-        """Format max tokens with K suffix."""
-        if self._max_tokens >= 1000:
-            return f"{self._max_tokens // 1000}k"
-        return str(self._max_tokens)
+    def _get_circle_color(self, remaining_pct: float) -> str:
+        """Return color based on remaining context percentage."""
+        if remaining_pct > 60:
+            return "green"
+        if remaining_pct > 30:
+            return "yellow"
+        return "red"
+
+    def _get_circle_char(self, remaining_pct: float) -> str:
+        """Pick circle character based on fill level."""
+        if remaining_pct > 87.5:
+            return "●"
+        if remaining_pct > 62.5:
+            return "◕"
+        if remaining_pct > 37.5:
+            return "◑"
+        if remaining_pct > 12.5:
+            return "◔"
+        return "○"
 
     def _refresh_display(self) -> None:
-        """Compact single-line status: 🍣 tunacode ◇ tokens: 1.2k ◇ model ◇ $0.00"""
+        """Compact single-line status: model ◇ ● 100% ◇ $0.00"""
         sep = RESOURCE_BAR_SEPARATOR
         session_cost_str = RESOURCE_BAR_COST_FORMAT.format(cost=self._session_cost)
 
+        remaining_pct = self._calculate_remaining_pct()
+        circle_char = self._get_circle_char(remaining_pct)
+        circle_color = self._get_circle_color(remaining_pct)
+
         content = Text.assemble(
-            ("🍣 ", ""),
-            (APP_NAME.lower(), "magenta bold"),
-            (sep, "dim"),
-            ("tokens: ", ""),
-            (self._format_tokens(), "cyan"),
-            (sep, "dim"),
             (self._model, "cyan"),
+            (sep, "dim"),
+            (circle_char, circle_color),
+            (f" {remaining_pct:.0f}%", circle_color),
             (sep, "dim"),
             (session_cost_str, "green"),
         )

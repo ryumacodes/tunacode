@@ -180,7 +180,7 @@ THEME_NAME = "tunacode"
 
 # ResourceBar display constants (NeXTSTEP: Persistent Status Zone)
 RESOURCE_BAR_HEIGHT = 1
-RESOURCE_BAR_SEPARATOR = " ◇ "
+RESOURCE_BAR_SEPARATOR = " - "
 RESOURCE_BAR_TOKEN_FORMAT = "{tokens}/{max_tokens}"
 RESOURCE_BAR_COST_FORMAT = "${cost:.2f}"
 RESOURCE_BAR_SESSION_LABEL = "session"
