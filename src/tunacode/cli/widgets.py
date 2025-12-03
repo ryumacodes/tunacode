@@ -140,8 +140,17 @@ class Editor(TextArea):
     ]
 
     def __init__(self, *, language: Optional[str] = None) -> None:
-        super().__init__(language=language, placeholder="type here...")
+        super().__init__(language=language)
+        self.placeholder = "we await..."
         self._awaiting_escape_enter: bool = False
+
+    def get_line(self, line_index: int) -> Text:
+        # If document is empty and we're rendering the first line, show placeholder
+        if not self.text.strip() and line_index == 0 and self.placeholder:
+            return Text(self.placeholder, end="", no_wrap=True, style="dim")
+        
+        # Otherwise, use the normal implementation
+        return super().get_line(line_index)
 
     def action_complete(self) -> None:
         prefix, start, end = self._current_token()
