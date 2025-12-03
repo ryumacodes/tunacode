@@ -1,13 +1,8 @@
 """
-Module: sidekick.utils.file_utils
+Module: tunacode.utils.ui.helpers
 
-Provides file system utilities and helper classes.
-Includes DotDict for dot notation access and stdout capture functionality.
+Provides DotDict for dot notation access to dictionary attributes.
 """
-
-import io
-import sys
-from contextlib import contextmanager
 
 
 class DotDict(dict):
@@ -16,26 +11,3 @@ class DotDict(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__  # type: ignore[assignment]
     __delattr__ = dict.__delitem__  # type: ignore[assignment]
-
-
-@contextmanager
-def capture_stdout():
-    """
-    Context manager to capture stdout output.
-
-    Example:
-        with capture_stdout() as stdout_capture:
-            print("This will be captured")
-
-        captured_output = stdout_capture.getvalue()
-
-    Returns:
-        StringIO object containing the captured output
-    """
-    stdout_capture = io.StringIO()
-    original_stdout = sys.stdout
-    sys.stdout = stdout_capture
-    try:
-        yield stdout_capture
-    finally:
-        sys.stdout = original_stdout
