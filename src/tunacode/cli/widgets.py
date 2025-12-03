@@ -214,15 +214,41 @@ class TestBar(Horizontal):
         yield Static("TEST RIGHT", id="test-right")
 
 
-# class StatusBar(Horizontal):
-#     """Bottom status bar with 3 zones (NeXTSTEP style).
-# 
-#     ┌───────────────┬─────────────┬───────────────────┐
-#     │ main ● ~/proj │ bg: index.. │ last: read_file  │
-#     └───────────────┴─────────────┴───────────────────┘
-#     """
-# 
-#     def compose(self) -> ComposeResult:
-#         yield Static("[bold]main ● ~/project[/bold]", id="status-left")
-#         yield Static("[bold]bg: indexing...[/bold]", id="status-mid")
-#         yield Static("[bold]last: read_file[/bold]", id="status-right")
+class StatusBar(Horizontal):
+    """Bottom status bar - 3 zones, no borders.
+
+    ┌───────────────┬─────────────┬───────────────────┐
+    │ branch ● dir  │  bg: idle   │   last: tool      │
+    └───────────────┴─────────────┴───────────────────┘
+    """
+
+    def compose(self) -> ComposeResult:
+        yield Static("main ● ~/proj", id="status-left")
+        yield Static("bg: idle", id="status-mid")
+        yield Static("last: -", id="status-right")
+
+    def on_mount(self) -> None:
+        self._refresh_location()
+
+    def _refresh_location(self) -> None:
+        """Get git branch and pwd."""
+        import os
+        import subprocess
+
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=1,
+            )
+            branch = result.stdout.strip() or "main"
+        except Exception:
+            branch = "main"
+
+        dirname = os.path.basename(os.getcwd()) or "~"
+        self.query_one("#status-left", Static).update(f"{branch} ● {dirname}")
+
+    def update_last_action(self, tool_name: str) -> None:
+        """Update the last action zone with tool name."""
+        self.query_one("#status-right", Static).update(f"last: {tool_name}")

@@ -12,9 +12,8 @@ from typing import Any
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
 from textual.message import Message
-from textual.widgets import RichLog, Static
+from textual.widgets import RichLog
 
 from tunacode.cli.error_panels import render_exception
 from tunacode.cli.rich_panels import tool_panel_smart
@@ -24,6 +23,7 @@ from tunacode.cli.widgets import (
     EditorCompletionsAvailable,
     EditorSubmitRequested,
     ResourceBar,
+    StatusBar,
     ToolResultDisplay,
 )
 from tunacode.constants import (
@@ -75,6 +75,7 @@ class TextualReplApp(App[None]):
         self.rich_log: RichLog
         self.editor: Editor
         self.resource_bar: ResourceBar
+        self.status_bar: StatusBar
 
     def compose(self) -> ComposeResult:
         """Compose NeXTSTEP zone-based layout.
@@ -95,6 +96,7 @@ class TextualReplApp(App[None]):
         self.resource_bar = ResourceBar()
         self.rich_log = RichLog(wrap=True, markup=False, highlight=False, auto_scroll=True)
         self.editor = Editor()
+        self.status_bar = StatusBar()
 
         # Persistent status zone (top)
         yield self.resource_bar
@@ -104,6 +106,9 @@ class TextualReplApp(App[None]):
 
         # Bottom input bar
         yield self.editor
+
+        # Bottom status bar (branch/pwd | bg agent | last action)
+        yield self.status_bar
 
     def on_mount(self) -> None:
         # Register custom TunaCode theme using UI_COLORS palette
@@ -327,6 +332,9 @@ def build_tool_result_callback(app: TextualReplApp):
         result: str | None = None,
         duration_ms: float | None = None,
     ) -> None:
+        # Update status bar with last action
+        app.status_bar.update_last_action(tool_name)
+
         app.post_message(
             ToolResultDisplay(
                 tool_name=tool_name,

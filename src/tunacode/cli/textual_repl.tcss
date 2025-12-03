@@ -128,48 +128,37 @@ TestBar Static {
 }
 
 /* ============================================
- * STATUS BAR - 3-column bottom status
+ * STATUS BAR - 3-column bottom status (no borders)
  * NeXTSTEP: "left=identity, center=metrics, right=state"
  * ============================================ */
 StatusBar {
-    height: 3;
+    height: 1;
     width: 100%;
-    background: $surface;
-    border-right: solid $border;
-    border-top: solid $border;
-    border-left: solid $border;
-    border-bottom: solid $border;
+    background: $background;
 }
 
 StatusBar Static {
     color: $text;
-    text-style: bold;
 }
 
 #status-left {
     width: 1fr;
-    height: 3;
-    padding: 1 1;
-    text-style: bold;
     text-align: left;
+    padding: 0 1;
 }
 
 #status-mid {
-    width: 1fr;
-    height: 3;
+    width: auto;
     text-align: center;
-    border-left: solid $primary;
-    border-right: solid $primary;
-    text-style: bold;
-    padding: 1 0;
+    color: $text-muted;
+    padding: 0 2;
 }
 
 #status-right {
     width: 1fr;
-    height: 3;
     text-align: right;
-    padding: 1 1;
-    text-style: bold;
+    padding: 0 1;
+    color: $text-muted;
 }
 
 /* ============================================
