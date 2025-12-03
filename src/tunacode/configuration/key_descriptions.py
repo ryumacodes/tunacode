@@ -206,30 +206,7 @@ CONFIG_KEY_DESCRIPTIONS: Dict[str, KeyDescription] = {
         help_text="Enable for troubleshooting search issues. Creates verbose output.",
         category="Search Settings",
     ),
-    # Tutorial/onboarding settings
-    "settings.enable_tutorial": KeyDescription(
-        name="enable_tutorial",
-        description="Show tutorial prompts for new users",
-        example=True,
-        help_text="Helps new users learn TunaCode. Disable once you're comfortable with the tool.",
-        category="User Experience",
-    ),
-    "settings.first_installation_date": KeyDescription(
-        name="first_installation_date",
-        description="When TunaCode was first installed",
-        example="2025-09-11T11:50:40.167105",
-        help_text="Automatically set. Used for tracking usage patterns and showing relevant tips.",
-        category="System Information",
-    ),
-    "settings.tutorial_declined": KeyDescription(
-        name="tutorial_declined",
-        description="Whether user declined the tutorial",
-        example=True,
-        help_text="Automatically set when you skip the tutorial. Prevents repeated "
-        "tutorial prompts.",
-        category="User Experience",
-    ),
-}
+  }
 
 
 def get_key_description(key_path: str) -> Optional[KeyDescription]:

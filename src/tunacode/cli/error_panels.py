@@ -32,7 +32,6 @@ ERROR_SEVERITY_MAP: dict[str, str] = {
     "ModelConfigurationError": "warning",
     "ValidationError": "warning",
     "SetupValidationError": "warning",
-    "OnboardingError": "warning",
     # User-initiated (info - not really an error)
     "UserAbortError": "info",
     "StateError": "info",

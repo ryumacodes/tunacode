@@ -142,8 +142,8 @@ def _validate_command_security(command: str) -> None:
     # Allow $ when used for legitimate environment variables or shell variables
     if re.search(r'\$[^({a-zA-Z_]', command):
         # $ followed by something that's not a valid variable start
-        logger.warning(f"Potentially dangerous character '$' detected in command")
-        raise ModelRetry(f"Potentially unsafe character '$' in command")
+        logger.warning("Potentially dangerous character '$' detected in command")
+        raise ModelRetry("Potentially unsafe character '$' in command")
 
     # Check other restricted characters but allow { } when part of valid variable expansion
     if "{" in command or "}" in command:

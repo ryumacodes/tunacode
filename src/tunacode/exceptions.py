@@ -145,27 +145,6 @@ class FileOperationError(TunaCodeError):
         super().__init__(f"File {operation} failed for '{path}': {message}")
 
 
-# Additional specialized exception classes for onboarding scenarios
-class OnboardingError(TunaCodeError):
-    """Raised when onboarding process encounters issues."""
-
-    def __init__(
-        self, message: str, step: str = None, suggested_fix: str = None, help_command: str = None
-    ):
-        self.step = step
-        self.suggested_fix = suggested_fix
-        self.help_command = help_command
-
-        # Build enhanced error message
-        full_message = f"Onboarding failed: {message}"
-        if step:
-            full_message = f"Onboarding failed at step '{step}': {message}"
-        if suggested_fix:
-            full_message += f"\n\n💡 Suggested fix: {suggested_fix}"
-        if help_command:
-            full_message += f"\n🆘 For help: {help_command}"
-
-        super().__init__(full_message)
 
 
 class ModelConfigurationError(ConfigurationError):

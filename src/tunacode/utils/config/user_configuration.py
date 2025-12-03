@@ -93,20 +93,8 @@ def set_default_model(model_name: ModelName, state_manager: "StateManager") -> b
 
 def _ensure_onboarding_defaults(config: UserConfig) -> None:
     """Ensure onboarding-related default settings are present in config."""
-    from datetime import datetime
-
     if "settings" not in config:
         config["settings"] = {}
-
-    settings = config["settings"]
-
-    # Set tutorial enabled by default for new users
-    if "enable_tutorial" not in settings:
-        settings["enable_tutorial"] = True
-
-    # Set first installation date if not present (for new installs)
-    if "first_installation_date" not in settings:
-        settings["first_installation_date"] = datetime.now().isoformat()
 
 
 def initialize_first_time_user(state_manager: "StateManager") -> None:
