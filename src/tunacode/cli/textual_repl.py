@@ -24,7 +24,6 @@ from tunacode.cli.widgets import (
     EditorCompletionsAvailable,
     EditorSubmitRequested,
     ResourceBar,
-    StatusBar,
     ToolResultDisplay,
 )
 from tunacode.constants import (
@@ -76,7 +75,6 @@ class TextualReplApp(App[None]):
         self.rich_log: RichLog
         self.editor: Editor
         self.resource_bar: ResourceBar
-        self.status_bar: StatusBar
 
     def compose(self) -> ComposeResult:
         """Compose NeXTSTEP zone-based layout.
@@ -97,7 +95,6 @@ class TextualReplApp(App[None]):
         self.resource_bar = ResourceBar()
         self.rich_log = RichLog(wrap=True, markup=False, highlight=False, auto_scroll=True)
         self.editor = Editor()
-        self.status_bar = StatusBar()
 
         # Persistent status zone (top)
         yield self.resource_bar
@@ -105,11 +102,8 @@ class TextualReplApp(App[None]):
         # Primary viewport (center)
         yield self.rich_log
 
-        # Bottom zone - input bar + status bar
-        prompt_label = Static("> ", id="input-prompt")
-        input_row = Horizontal(prompt_label, self.editor, id="input-row")
-        bottom_zone = Vertical(input_row, self.status_bar, id="bottom-zone")
-        yield bottom_zone
+        # Bottom input bar
+        yield self.editor
 
     def on_mount(self) -> None:
         # Register custom TunaCode theme using UI_COLORS palette

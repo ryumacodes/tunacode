@@ -205,15 +205,24 @@ class Editor(TextArea):
         await self._on_key(event)
 
 
-class StatusBar(Horizontal):
-    """Bottom status bar with 3 zones (NeXTSTEP style).
-
-    ┌───────────────┬─────────────┬───────────────────┐
-    │ main ● ~/proj │ bg: index.. │ last: read_file  │
-    └───────────────┴─────────────┴───────────────────┘
-    """
+class TestBar(Horizontal):
+    """Simple test bar to debug text visibility."""
 
     def compose(self) -> ComposeResult:
-        yield Static("[bold]main ● ~/project[/bold]", id="status-left")
-        yield Static("[bold]bg: indexing...[/bold]", id="status-mid")
-        yield Static("[bold]last: read_file[/bold]", id="status-right")
+        yield Static("TEST LEFT", id="test-left")
+        yield Static("TEST MID", id="test-mid") 
+        yield Static("TEST RIGHT", id="test-right")
+
+
+# class StatusBar(Horizontal):
+#     """Bottom status bar with 3 zones (NeXTSTEP style).
+# 
+#     ┌───────────────┬─────────────┬───────────────────┐
+#     │ main ● ~/proj │ bg: index.. │ last: read_file  │
+#     └───────────────┴─────────────┴───────────────────┘
+#     """
+# 
+#     def compose(self) -> ComposeResult:
+#         yield Static("[bold]main ● ~/project[/bold]", id="status-left")
+#         yield Static("[bold]bg: indexing...[/bold]", id="status-mid")
+#         yield Static("[bold]last: read_file[/bold]", id="status-right")
