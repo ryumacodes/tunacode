@@ -10,7 +10,9 @@ from __future__ import annotations
 from typing import Iterable, Optional
 
 from rich.text import Text
+from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import Horizontal
 from textual.events import Key
 from textual.message import Message
 from textual.widgets import Static, TextArea
@@ -111,20 +113,20 @@ class ResourceBar(Static):
         return str(self._max_tokens)
 
     def _refresh_display(self) -> None:
-        """Compact single-line status: ◇ tokens: 1.2k ◇ model ◇ $0.00 ◇ tunacode"""
+        """Compact single-line status: 🍣 tunacode ◇ tokens: 1.2k ◇ model ◇ $0.00"""
         sep = RESOURCE_BAR_SEPARATOR
         session_cost_str = RESOURCE_BAR_COST_FORMAT.format(cost=self._session_cost)
 
         content = Text.assemble(
-            ("◇ ", "dim"),
-            ("tokens: ", ""),  # Default text (light gray)
+            ("🍣 ", ""),
+            (APP_NAME.lower(), "magenta bold"),
+            (sep, "dim"),
+            ("tokens: ", ""),
             (self._format_tokens(), "cyan"),
             (sep, "dim"),
             (self._model, "cyan"),
             (sep, "dim"),
             (session_cost_str, "green"),
-            (sep, "dim"),
-            (APP_NAME.lower(), "magenta bold"),
         )
         self.update(content)
 
@@ -139,6 +141,7 @@ class Editor(TextArea):
 
     def __init__(self, *, language: Optional[str] = None) -> None:
         super().__init__(language=language)
+        self.placeholder = "type here..."
         self._awaiting_escape_enter: bool = False
 
     def action_complete(self) -> None:
@@ -200,3 +203,17 @@ class Editor(TextArea):
 
         self._awaiting_escape_enter = False
         await self._on_key(event)
+
+
+class StatusBar(Horizontal):
+    """Bottom status bar with 3 zones (NeXTSTEP style).
+
+    ┌───────────────┬─────────────┬───────────────────┐
+    │ main ● ~/proj │ bg: index.. │ last: read_file  │
+    └───────────────┴─────────────┴───────────────────┘
+    """
+
+    def compose(self) -> ComposeResult:
+        yield Static("main ● ~/project", id="status-left")
+        yield Static("bg: indexing...", id="status-mid")
+        yield Static("last: read_file", id="status-right")

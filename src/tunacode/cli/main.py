@@ -12,8 +12,8 @@ import typer
 from tunacode.cli.textual_repl import run_textual_repl
 from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.state import StateManager
-from tunacode.core.tool_handler import ToolHandler
 from tunacode.exceptions import UserAbortError
+from tunacode.tools.authorization.handler import ToolHandler
 from tunacode.utils.system import check_for_updates
 
 app_settings = ApplicationSettings()

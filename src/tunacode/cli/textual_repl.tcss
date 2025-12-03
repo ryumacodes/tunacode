@@ -55,29 +55,69 @@ RichLog.paused {
 }
 
 /* ============================================
- * COMMAND ZONE - Clean 2-column layout
- * Inside #bottom-zone, no longer needs dock
+ * INPUT ROW - Prompt + Editor
  * ============================================ */
-#command-zone {
-    height: 5;
+#input-row {
+    height: 3;
     width: 100%;
 }
 
-#context-panel {
-    width: 15;
+#input-prompt {
+    width: 3;
     height: 100%;
+    color: $primary;
     background: $background;
-    border-right: solid $border;
-    padding: 0 1;
-    color: $text-muted;
+    border-top: solid $border;
+    border-left: solid $border;
+    padding: 0 0 0 1;
 }
 
+/* ============================================
+ * EDITOR - Input bar (compact)
+ * ============================================ */
 Editor {
     width: 1fr;
     height: 100%;
     background: $background;
-    border: none;
+    border-top: solid $border;
+    border-right: solid $border;
+    border-bottom: none;
+    border-left: none;
     padding: 0 1;
+}
+
+/* ============================================
+ * STATUS BAR - 3-column bottom status
+ * NeXTSTEP: "left=identity, center=metrics, right=state"
+ * ============================================ */
+StatusBar {
+    height: 1;
+    width: 100%;
+    background: $surface;
+}
+
+#status-left {
+    width: 1fr;
+    height: 1;
+    padding: 0 1;
+    color: $text-muted;
+}
+
+#status-mid {
+    width: 1fr;
+    height: 1;
+    text-align: center;
+    border-left: solid $primary;
+    border-right: solid $primary;
+    color: $text-muted;
+}
+
+#status-right {
+    width: 1fr;
+    height: 1;
+    text-align: right;
+    padding: 0 1;
+    color: $text-muted;
 }
 
 /* ============================================

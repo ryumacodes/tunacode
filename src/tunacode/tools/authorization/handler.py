@@ -1,0 +1,60 @@
+from __future__ import annotations
+
+from typing import Optional
+
+from tunacode.core.state import StateManager
+from tunacode.templates.loader import Template
+from tunacode.types import (
+    ToolArgs,
+    ToolConfirmationRequest,
+    ToolConfirmationResponse,
+    ToolName,
+)
+
+from .context import AuthContext
+from .factory import create_default_authorization_policy
+from .notifier import ToolRejectionNotifier
+from .policy import AuthorizationPolicy
+from .requests import ConfirmationRequestFactory
+
+
+class ToolHandler:
+    """Coordinate tool authorization, confirmation, and rejection handling."""
+
+    def __init__(
+        self,
+        state_manager: StateManager,
+        policy: Optional[AuthorizationPolicy] = None,
+        notifier: Optional[ToolRejectionNotifier] = None,
+        factory: Optional[ConfirmationRequestFactory] = None,
+    ):
+        self.state = state_manager
+        self.active_template: Optional[Template] = None
+
+        self._policy = policy or create_default_authorization_policy()
+        self._notifier = notifier or ToolRejectionNotifier()
+        self._factory = factory or ConfirmationRequestFactory()
+
+        if state_manager.tool_handler is None:
+            state_manager.set_tool_handler(self)
+
+    def set_active_template(self, template: Optional[Template]) -> None:
+        self.active_template = template
+
+    def should_confirm(self, tool_name: ToolName) -> bool:
+        context = AuthContext.from_state(self.state)
+        return self._policy.should_confirm(tool_name, context)
+
+    def process_confirmation(self, response: ToolConfirmationResponse, tool_name: ToolName) -> bool:
+        if response.skip_future:
+            self.state.session.tool_ignore.append(tool_name)
+
+        if not response.approved or response.abort:
+            self._notifier.notify_rejection(tool_name, response, self.state)
+
+        return response.approved and not response.abort
+
+    def create_confirmation_request(
+        self, tool_name: ToolName, args: ToolArgs
+    ) -> ToolConfirmationRequest:
+        return self._factory.create(tool_name, args)

@@ -23,7 +23,7 @@ from tunacode.types import (
 from tunacode.utils.messaging import estimate_tokens, get_message_content
 
 if TYPE_CHECKING:
-    from tunacode.core.tool_handler import ToolHandler
+    from tunacode.tools.authorization.handler import ToolHandler
 
 
 @dataclass

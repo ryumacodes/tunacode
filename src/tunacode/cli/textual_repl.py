@@ -24,6 +24,7 @@ from tunacode.cli.widgets import (
     EditorCompletionsAvailable,
     EditorSubmitRequested,
     ResourceBar,
+    StatusBar,
     ToolResultDisplay,
 )
 from tunacode.constants import (
@@ -33,7 +34,7 @@ from tunacode.constants import (
     build_tunacode_theme,
 )
 from tunacode.core.agents.main import process_request
-from tunacode.core.tool_handler import ToolHandler
+from tunacode.tools.authorization.handler import ToolHandler
 from tunacode.types import (
     ModelName,
     StateManager,
@@ -75,7 +76,7 @@ class TextualReplApp(App[None]):
         self.rich_log: RichLog
         self.editor: Editor
         self.resource_bar: ResourceBar
-        self.context_panel: Static
+        self.status_bar: StatusBar
 
     def compose(self) -> ComposeResult:
         """Compose NeXTSTEP zone-based layout.
@@ -86,16 +87,17 @@ class TextualReplApp(App[None]):
         │                                             │
         │           Main conversation/code            │  ← MAXIMUM VIEWPORT
         │                                             │
-        ├──────────┬──────────────────────────────────┤
-        │ Context  │   Input area (Enter to submit)   │  ← COMMAND ZONE
-        │ files    │                                  │
-        └──────────┴──────────────────────────────────┘
+        ├─────────────────────────────────────────────┤
+        │ > input here_                               │  ← INPUT BAR
+        ├───────────────┬─────────────┬───────────────┤
+        │ main ● ~/proj │ bg: index.. │ last: action  │  ← STATUS BAR
+        └───────────────┴─────────────┴───────────────┘
         """
         # Create widgets here where app context is active
         self.resource_bar = ResourceBar()
         self.rich_log = RichLog(wrap=True, markup=False, highlight=False, auto_scroll=True)
-        self.context_panel = Static("No files loaded", id="context-panel")
         self.editor = Editor()
+        self.status_bar = StatusBar()
 
         # Persistent status zone (top)
         yield self.resource_bar
@@ -103,10 +105,10 @@ class TextualReplApp(App[None]):
         # Primary viewport (center)
         yield self.rich_log
 
-        # Bottom zone - contains command area
-        # Wrapped in Vertical to prevent RichLog (1fr) from crushing it
-        command_row = Horizontal(self.context_panel, self.editor, id="command-zone")
-        bottom_zone = Vertical(command_row, id="bottom-zone")
+        # Bottom zone - input bar + status bar
+        prompt_label = Static("> ", id="input-prompt")
+        input_row = Horizontal(prompt_label, self.editor, id="input-row")
+        bottom_zone = Vertical(input_row, self.status_bar, id="bottom-zone")
         yield bottom_zone
 
     def on_mount(self) -> None:
@@ -118,6 +120,21 @@ class TextualReplApp(App[None]):
         self.set_focus(self.editor)
         self.run_worker(self._request_worker, exclusive=False)
         self._update_resource_bar()
+        self._show_welcome()
+
+    def _show_welcome(self) -> None:
+        """Display welcome message with TunaCode capabilities."""
+        welcome = Text()
+        welcome.append("🍣 Welcome to TunaCode\n", style="magenta bold")
+        welcome.append("AI-powered coding assistant in your terminal.\n\n", style="dim")
+        welcome.append("What I can do:\n", style="cyan")
+        welcome.append("  • Read, write, and edit files\n", style="")
+        welcome.append("  • Run shell commands\n", style="")
+        welcome.append("  • Search code with grep/glob\n", style="")
+        welcome.append("  • Answer questions about your codebase\n", style="")
+        welcome.append("  • Help debug and refactor code\n\n", style="")
+        welcome.append("Type a message below to get started.\n", style="dim")
+        self.rich_log.write(welcome)
 
     async def _request_worker(self) -> None:
         """Process requests from the queue."""
