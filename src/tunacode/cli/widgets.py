@@ -140,8 +140,7 @@ class Editor(TextArea):
     ]
 
     def __init__(self, *, language: Optional[str] = None) -> None:
-        super().__init__(language=language)
-        self.placeholder = "type here..."
+        super().__init__(language=language, placeholder="type here...")
         self._awaiting_escape_enter: bool = False
 
     def action_complete(self) -> None:
