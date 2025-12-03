@@ -6,8 +6,6 @@ used throughout the TunaCode codebase.
 """
 
 from dataclasses import dataclass, field
-
-# Plan types will be defined below
 from enum import Enum
 from pathlib import Path
 from typing import (
@@ -22,7 +20,6 @@ from typing import (
     Union,
 )
 
-# Import pydantic-ai types (required dependency)
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelRequest, ToolReturnPart
 
@@ -32,11 +29,6 @@ ModelRequest = ModelRequest  # type: ignore[misc]
 ModelResponse = Any
 
 
-# =============================================================================
-# Core Types
-# =============================================================================
-
-# Basic type aliases
 UserConfig = Dict[str, Any]
 EnvConfig = Dict[str, str]
 ModelName = str
@@ -45,13 +37,8 @@ SessionId = str
 DeviceId = str
 InputSessions = Dict[str, Any]
 
-# Logging configuration types
 LoggingConfig = Dict[str, Any]
 LoggingEnabled = bool
-
-# =============================================================================
-# Configuration Types
-# =============================================================================
 
 
 @dataclass
@@ -72,15 +59,10 @@ class ModelConfig:
 
 ModelRegistry = Dict[str, ModelConfig]
 
-# Path configuration
 ConfigPath = Path
 ConfigFile = Path
 
-# =============================================================================
-# Tool Types
-# =============================================================================
 
-# Tool execution types
 ToolArgs = Dict[str, Any]
 ToolResult = str
 ToolCallback = Callable[[Any, Any], Awaitable[None]]
@@ -112,11 +94,6 @@ class ToolConfirmationResponse:
     instructions: str = ""
 
 
-# =============================================================================
-# UI Types
-# =============================================================================
-
-
 class UILogger(Protocol):
     """Protocol for UI logging operations."""
 
@@ -131,20 +108,13 @@ class UILogger(Protocol):
     async def success(self, message: str) -> None: ...
 
 
-# UI callback types
 UICallback = Callable[[str], Awaitable[None]]
 UIInputCallback = Callable[[str, str], Awaitable[str]]
 
-# =============================================================================
-# Agent Types
-# =============================================================================
-
-# Agent response types
-AgentResponse = Any  # Replace with proper pydantic-ai types when available
+AgentResponse = Any
 MessageHistory = List[Any]
-AgentRun = Any  # pydantic_ai.RunContext or similar
+AgentRun = Any
 
-# Agent configuration
 AgentConfig = Dict[str, Any]
 AgentName = str
 
@@ -185,19 +155,8 @@ class AgentState(Enum):
     RESPONSE = "response"  # Handling results, may complete or loop
 
 
-# =============================================================================
-# Session and State Types
-# =============================================================================
+StateManager = Any
 
-
-# Forward reference for StateManager to avoid circular imports
-StateManager = Any  # Will be replaced with actual StateManager type
-
-# =============================================================================
-# Command Types
-# =============================================================================
-
-# Command execution types
 CommandArgs = List[str]
 CommandResult = Optional[Any]
 ProcessRequestCallback = Callable[[str, StateManager, bool], Awaitable[Any]]
@@ -211,58 +170,28 @@ class CommandContext:
     process_request: Optional[ProcessRequestCallback] = None
 
 
-# =============================================================================
-# File Operation Types
-# =============================================================================
-
-# File-related types
 FilePath = Union[str, Path]
 FileContent = str
 FileEncoding = str
-FileDiff = Tuple[str, str]  # (original, modified)
+FileDiff = Tuple[str, str]
 FileSize = int
 LineNumber = int
 
-# =============================================================================
-# Error Handling Types
-# =============================================================================
-
-# Error context types
 ErrorContext = Dict[str, Any]
 OriginalError = Optional[Exception]
 ErrorMessage = str
 
-# =============================================================================
-# Async Types
-# =============================================================================
-
-# Async function types
 AsyncFunc = Callable[..., Awaitable[Any]]
 AsyncToolFunc = Callable[..., Awaitable[str]]
 AsyncVoidFunc = Callable[..., Awaitable[None]]
 
-# =============================================================================
-# Diff and Update Types
-# =============================================================================
-
-# Types for file updates and diffs
 UpdateOperation = Dict[str, Any]
 DiffLine = str
 DiffHunk = List[DiffLine]
 
-# =============================================================================
-# Validation Types
-# =============================================================================
-
-# Input validation types
-ValidationResult = Union[bool, str]  # True for valid, error message for invalid
+ValidationResult = Union[bool, str]
 Validator = Callable[[Any], ValidationResult]
 
-# =============================================================================
-# Cost Tracking Types
-# =============================================================================
-
-# Cost calculation types
 TokenCount = int
 CostAmount = float
 
