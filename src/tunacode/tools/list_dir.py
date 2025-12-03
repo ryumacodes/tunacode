@@ -53,7 +53,7 @@ async def list_dir(
 def _try_cache(dir_path: Path, show_hidden: bool, max_entries: int) -> str | None:
     """Try to get directory contents from CodeIndex cache."""
     try:
-        from tunacode.core.code_index import CodeIndex
+        from tunacode.indexing import CodeIndex
 
         index = CodeIndex.get_instance()
         cached = index.get_directory_contents(dir_path)
@@ -103,7 +103,7 @@ def _scan_directory(path: Path, show_hidden: bool) -> List[Tuple[str, bool, str]
 def _update_cache(dir_path: Path, entries: List[Tuple[str, bool, str]]) -> None:
     """Update CodeIndex cache with scanned entries."""
     try:
-        from tunacode.core.code_index import CodeIndex
+        from tunacode.indexing import CodeIndex
 
         index = CodeIndex.get_instance()
         names = [name for name, _, _ in entries]

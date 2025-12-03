@@ -8,7 +8,7 @@ from enum import Enum
 from pathlib import Path
 from typing import List, Optional, Set
 
-from tunacode.core.code_index import CodeIndex
+from tunacode.indexing import CodeIndex
 from tunacode.tools.decorators import base_tool
 
 MAX_RESULTS = 5000
