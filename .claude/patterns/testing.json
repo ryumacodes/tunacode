@@ -1,0 +1,11 @@
+{
+  "$schema": "https://claude-kb.io/schema/pattern/v1",
+  "component": "testing",
+  "patterns": [
+    {
+      "name": "opentelemetry_warnings",
+      "description": "How to suppress OpenTelemetry deprecation warnings in pytest configuration"
+    }
+  ],
+  "last_updated": "2025-12-04T19:06:17.626338899Z"
+}

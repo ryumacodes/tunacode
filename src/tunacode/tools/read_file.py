@@ -2,10 +2,13 @@
 
 import asyncio
 import os
+from typing import Optional
 
 from tunacode.constants import (
+    DEFAULT_READ_LIMIT,
     ERROR_FILE_TOO_LARGE,
     MAX_FILE_SIZE,
+    MAX_LINE_LENGTH,
     MSG_FILE_SIZE_LIMIT,
 )
 from tunacode.exceptions import ToolExecutionError
@@ -13,14 +16,20 @@ from tunacode.tools.decorators import file_tool
 
 
 @file_tool
-async def read_file(filepath: str) -> str:
-    """Read the contents of a file.
+async def read_file(
+    filepath: str,
+    offset: int = 0,
+    limit: Optional[int] = None,
+) -> str:
+    """Read the contents of a file with line limiting and truncation.
 
     Args:
         filepath: The absolute path to the file to read.
+        offset: The line number to start reading from (0-based). Defaults to 0.
+        limit: The number of lines to read. Defaults to DEFAULT_READ_LIMIT (2000).
 
     Returns:
-        The contents of the file.
+        The formatted file contents with line numbers.
     """
     if os.path.getsize(filepath) > MAX_FILE_SIZE:
         raise ToolExecutionError(
@@ -28,8 +37,33 @@ async def read_file(filepath: str) -> str:
             message=ERROR_FILE_TOO_LARGE.format(filepath=filepath) + MSG_FILE_SIZE_LIMIT,
         )
 
+    effective_limit = limit if limit is not None else DEFAULT_READ_LIMIT
+
     def _read_sync(path: str) -> str:
         with open(path, "r", encoding="utf-8") as f:
-            return f.read()
+            lines = f.readlines()
+
+        total_lines = len(lines)
+        raw = lines[offset : offset + effective_limit]
+
+        content_lines = []
+        for i, line in enumerate(raw):
+            line = line.rstrip("\n")
+            if len(line) > MAX_LINE_LENGTH:
+                line = line[:MAX_LINE_LENGTH] + "..."
+            line_num = str(i + offset + 1).zfill(5)
+            content_lines.append(f"{line_num}| {line}")
+
+        output = "<file>\n"
+        output += "\n".join(content_lines)
+
+        last_line = offset + len(content_lines)
+        if total_lines > last_line:
+            output += f"\n\n(File has more lines. Use 'offset' to read beyond line {last_line})"
+        else:
+            output += f"\n\n(End of file - total {total_lines} lines)"
+        output += "\n</file>"
+
+        return output
 
     return await asyncio.to_thread(_read_sync, filepath)

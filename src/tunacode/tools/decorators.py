@@ -82,10 +82,16 @@ def file_tool(
         except FileNotFoundError:
             raise ModelRetry(f"File not found: {filepath}. Check the path.")
         except PermissionError as e:
-            raise FileOperationError(filepath=filepath, operation="access", original_error=e)
+            raise FileOperationError(
+                operation="access", path=filepath, message=str(e), original_error=e
+            )
         except UnicodeDecodeError as e:
-            raise FileOperationError(filepath=filepath, operation="decode", original_error=e)
+            raise FileOperationError(
+                operation="decode", path=filepath, message=str(e), original_error=e
+            )
         except (IOError, OSError) as e:
-            raise FileOperationError(filepath=filepath, operation="read/write", original_error=e)
+            raise FileOperationError(
+                operation="read/write", path=filepath, message=str(e), original_error=e
+            )
 
     return base_tool(wrapper)  # type: ignore[arg-type]

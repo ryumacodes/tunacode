@@ -39,7 +39,6 @@ def _handle_background_task_error(task: asyncio.Task) -> None:
 @app.command()
 def main(
     version: bool = typer.Option(False, "--version", "-v", help="Show version and exit."),
-    wizard: bool = typer.Option(False, "--wizard", "-w", help="Run setup wizard."),
     _baseurl: str = typer.Option(  # noqa: ARG001 - reserved for future use
         None, "--baseurl", help="API base URL (e.g., https://openrouter.ai/api/v1)"
     ),
@@ -55,9 +54,9 @@ def main(
 
     async def async_main():
         if version:
-            from tunacode.constants import VERSION
+            from tunacode.constants import APP_VERSION
 
-            print(f"tunacode {VERSION}")
+            print(f"tunacode {APP_VERSION}")
             return
 
         update_task = asyncio.create_task(asyncio.to_thread(check_for_updates), name="update_check")
@@ -70,7 +69,7 @@ def main(
             tool_handler = ToolHandler(state_manager)
             state_manager.set_tool_handler(tool_handler)
 
-            await run_textual_repl(state_manager, show_wizard=wizard)
+            await run_textual_repl(state_manager)
         except (KeyboardInterrupt, UserAbortError):
             update_task.cancel()
             return

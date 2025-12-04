@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from rich.markdown import Markdown
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -53,12 +54,11 @@ class TextualReplApp(App[None]):
         Binding("escape", "cancel_stream", "Cancel", show=False, priority=True),
     ]
 
-    def __init__(self, *, state_manager: StateManager, show_wizard: bool = False) -> None:
+    def __init__(self, *, state_manager: StateManager) -> None:
         super().__init__()
         self.state_manager: StateManager = state_manager
         self.request_queue: asyncio.Queue[str] = asyncio.Queue()
         self.pending_confirmation: asyncio.Future[ToolConfirmationResponse] | None = None
-        self._show_wizard: bool = show_wizard
 
         self._streaming_paused: bool = False
         self._streaming_cancelled: bool = False
@@ -73,7 +73,7 @@ class TextualReplApp(App[None]):
 
     def compose(self) -> ComposeResult:
         self.resource_bar = ResourceBar()
-        self.rich_log = RichLog(wrap=True, markup=False, highlight=False, auto_scroll=True)
+        self.rich_log = RichLog(wrap=True, markup=True, highlight=True, auto_scroll=True)
         self.editor = Editor()
         self.status_bar = StatusBar()
 
@@ -91,11 +91,6 @@ class TextualReplApp(App[None]):
         self.run_worker(self._request_worker, exclusive=False)
         self._update_resource_bar()
         self._show_welcome()
-
-        if self._show_wizard:
-            from tunacode.ui.screens import SetupWizardScreen
-
-            self.push_screen(SetupWizardScreen(self.state_manager))
 
     def _show_welcome(self) -> None:
         welcome = Text()
@@ -157,7 +152,7 @@ class TextualReplApp(App[None]):
             self.rich_log.remove_class(RICHLOG_CLASS_PAUSED)
 
             if self.current_stream_text and not self._streaming_cancelled:
-                self.rich_log.write(self.current_stream_text)
+                self.rich_log.write(Markdown(self.current_stream_text))
 
             self.current_stream_text = ""
             self._streaming_cancelled = False
@@ -262,8 +257,8 @@ class TextualReplApp(App[None]):
         )
 
 
-async def run_textual_repl(state_manager: StateManager, show_wizard: bool = False) -> None:
-    app = TextualReplApp(state_manager=state_manager, show_wizard=show_wizard)
+async def run_textual_repl(state_manager: StateManager) -> None:
+    app = TextualReplApp(state_manager=state_manager)
     await app.run_async()
 
 

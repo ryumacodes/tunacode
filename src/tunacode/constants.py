@@ -21,6 +21,8 @@ CONFIG_FILE_NAME = "tunacode.json"
 # Default limits
 MAX_FILE_SIZE = 100 * 1024  # 100KB
 MAX_COMMAND_OUTPUT = 5000  # 5000 chars
+DEFAULT_READ_LIMIT = 2000  # Max lines per read_file call
+MAX_LINE_LENGTH = 2000  # Truncate lines beyond this length
 MAX_FILES_IN_DIR = 50
 MAX_TOTAL_DIR_SIZE = 2 * 1024 * 1024  # 2 MB
 DEFAULT_CONTEXT_WINDOW = 200000  # 200k tokens

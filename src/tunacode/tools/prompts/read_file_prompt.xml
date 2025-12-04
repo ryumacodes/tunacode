@@ -5,7 +5,7 @@ Reads a file from the local filesystem. You can access any file directly by usin
 Assume this tool is able to read all files on the machine. If the User provides a path to a file assume that path is valid. It is okay to read a file that does not exist; an error will be returned.
 
 Usage:
-- The file_path parameter must be an absolute path, not a relative path
+- The filepath parameter must be an absolute path, not a relative path
 - By default, it reads up to 2000 lines starting from the beginning of the file
 - You can optionally specify a line offset and limit (especially handy for long files), but it's recommended to read the whole file by not providing these parameters
 - Any lines longer than 2000 characters will be truncated
@@ -19,18 +19,18 @@ Usage:
     </description>
 
     <parameters>
-        <parameter name="file_path" required="true">
+        <parameter name="filepath" required="true">
             <description>The absolute path to the file to read</description>
             <type>string</type>
         </parameter>
 
         <parameter name="offset" required="false">
-            <description>The line number to start reading from. Only provide if the file is too large to read at once</description>
+            <description>The line number to start reading from (0-based). Only provide if the file is too large to read at once</description>
             <type>number</type>
         </parameter>
 
         <parameter name="limit" required="false">
-            <description>The number of lines to read. Only provide if the file is too large to read at once.</description>
+            <description>The number of lines to read. Defaults to 2000. Only provide if you need a different limit.</description>
             <type>number</type>
         </parameter>
     </parameters>
@@ -38,17 +38,17 @@ Usage:
     <examples>
         <example>
             <title>Read entire file</title>
-            <command>{"file_path": "/home/user/project/main.py"}</command>
+            <command>{"filepath": "/home/user/project/main.py"}</command>
         </example>
 
         <example>
             <title>Read partial file with offset</title>
-            <command>{"file_path": "/home/user/large_file.log", "offset": 1000, "limit": 500}</command>
+            <command>{"filepath": "/home/user/large_file.log", "offset": 1000, "limit": 500}</command>
         </example>
 
         <example>
             <title>Read image file</title>
-            <command>{"file_path": "/home/user/screenshot.png"}</command>
+            <command>{"filepath": "/home/user/screenshot.png"}</command>
         </example>
     </examples>
 </tool_prompt>

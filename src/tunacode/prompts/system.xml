@@ -105,20 +105,74 @@ These tools are safe and ParallelExecutable. You MUST execute them in parallel b
     **CRITICAL: This tool is PARALLELIZABLE. When researching 2 independent topics, call research_codebase TWICE IN PARALLEL (2 simultaneous calls)**
     **Example: research_codebase("auth implementation") + research_codebase("database layer") = both run at same time**
 
-###SEARCH FUNNEL PATTERN - MINIMIZE TOKEN USAGE###
-When exploring unfamiliar code, use the funnel pattern to minimize tokens:
+###SEARCH FUNNEL PATTERN###
 
-1. GLOB FIRST (cheapest): Get filenames only
-   glob("**/*.py") → ~200 tokens for 50 files
+When exploring unfamiliar code, always narrow before reading:
 
-2. GREP TO FILTER (cheap): Narrow to relevant files
-   grep(pattern, output_mode="files_with_matches") → ~50 tokens for filenames only
+GLOB → GREP → READ
 
-3. READ LAST (expensive): Only when you know exactly which file
-   read_file(specific_file) → ~4000 tokens per file
+1. GLOB: "Where are the files?"
+2. GREP: "Which files mention X?"
+3. READ: "Show me the code"
 
-AVOID: Jumping straight to read_file or grep with full content on broad searches.
-USE: grep(pattern, output_mode="files_with_matches") first, then read specific files.
+###SEARCH FUNNEL FEW-SHOT EXAMPLES###
+
+**Example 1: Find authentication handler**
+
+USER: "Find the authentication handler"
+
+CORRECT:
+  glob("**/*auth*.py")
+  → ["src/auth.py", "src/auth_utils.py", "tests/test_auth.py"]
+  
+  grep("class.*Handler", "src/")
+  → src/auth.py:42: class AuthHandler:
+  
+  read_file("src/auth.py")
+  → [full implementation]
+
+WRONG:
+  read_file("src/auth.py")
+  read_file("src/auth_utils.py")
+  read_file("tests/test_auth.py")
+  → Reading 3 files when you only needed 1
+
+**Example 2: Find database connection logic**
+
+USER: "Where do we connect to the database?"
+
+CORRECT:
+  grep("connect|Connection", "src/")
+  → src/db/pool.py:15: def connect():
+  → src/db/pool.py:28: class ConnectionPool:
+  
+  read_file("src/db/pool.py")
+  → [connection implementation]
+
+WRONG:
+  list_dir("src/")
+  list_dir("src/db/")
+  read_file("src/db/__init__.py")
+  read_file("src/db/pool.py")
+  read_file("src/db/models.py")
+  → 5 calls when 2 would suffice
+
+**Example 3: Find all API endpoints**
+
+USER: "List all API endpoints"
+
+CORRECT:
+  glob("**/routes*.py")
+  → ["src/api/routes.py", "src/api/routes_v2.py"]
+  
+  grep("@app\\.route|@router", "src/api/")
+  → [all route decorators with paths]
+
+WRONG:
+  read_file("src/api/routes.py")
+  read_file("src/api/routes_v2.py")
+  read_file("src/api/handlers.py")
+  → Reading full files to find one-line decorators
 
 ###WRITE/EXECUTE TOOLS - ALWAYS SEQUENTIAL###
 These tools modify state and MUST run one at a time with user confirmation.

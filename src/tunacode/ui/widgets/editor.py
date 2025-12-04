@@ -96,7 +96,7 @@ class Editor(TextArea):
         end = start + len(token)
         return token, start, end
 
-    async def on_key(self, event: Key) -> None:
+    def on_key(self, event: Key) -> None:
         if event.key == "escape":
             self._awaiting_escape_enter = True
             event.stop()
@@ -113,4 +113,4 @@ class Editor(TextArea):
             return
 
         self._awaiting_escape_enter = False
-        await super().on_key(event)
+        # Let event propagate to TextArea's default handling
