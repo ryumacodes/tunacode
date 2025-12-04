@@ -44,12 +44,12 @@ def _extract_exception_context(exc: Exception) -> dict[str, str]:
 
 DEFAULT_RECOVERY_COMMANDS: dict[str, list[str]] = {
     "ConfigurationError": [
-        "tunacode --wizard  # Run setup wizard",
+        "tunacode --setup  # Run setup wizard",
         "cat ~/.tunacode/tunacode.json  # Check config",
     ],
     "ModelConfigurationError": [
         "/model  # List available models",
-        "tunacode --wizard  # Reconfigure",
+        "tunacode --setup  # Reconfigure",
     ],
     "FileOperationError": [
         "ls -la <path>  # Check permissions",

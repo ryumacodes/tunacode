@@ -153,7 +153,7 @@ class ModelConfigurationError(ConfigurationError):
         self.issue = issue
         self.valid_models = valid_models or []
 
-        suggested_fix = "Use --wizard for guided setup or --model with a valid model name"
+        suggested_fix = "Use --setup for guided setup or --model with a valid model name"
         help_url = "https://docs.anthropic.com/en/docs/claude-code"
 
         message = f"Model '{model}' configuration error: {issue}"
@@ -172,14 +172,14 @@ class SetupValidationError(ValidationError):
         self.details = details
         self.quick_fixes = quick_fixes or []
 
-        suggested_fix = "Run 'tunacode --wizard' for guided setup"
+        suggested_fix = "Run 'tunacode --setup' for guided setup"
         if quick_fixes:
             suggested_fix = f"Try these quick fixes: {', '.join(quick_fixes)}"
 
         super().__init__(
             f"{validation_type} validation failed: {details}",
             suggested_fix=suggested_fix,
-            valid_examples=["tunacode --wizard", "tunacode --setup", "tunacode --help"],
+            valid_examples=["tunacode --setup", "tunacode --help"],
         )
 
 
