@@ -143,6 +143,12 @@ class TextualReplApp(App[None]):
         except asyncio.CancelledError:
             self.notify("Cancelled")
         except Exception as e:
+            from tunacode.core.agents.agent_components import patch_tool_messages
+
+            patch_tool_messages(
+                f"Request failed: {type(e).__name__}",
+                state_manager=self.state_manager,
+            )
             error_renderable = render_exception(e)
             self.rich_log.write(error_renderable)
         finally:
