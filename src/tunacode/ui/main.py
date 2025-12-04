@@ -62,13 +62,8 @@ def main(
         update_task = asyncio.create_task(asyncio.to_thread(check_for_updates), name="update_check")
         update_task.add_done_callback(_handle_background_task_error)
 
-        cli_config = {
-            "baseurl": baseurl,
-            "model": model,
-            "key": key,
-            "custom_context_window": context,
-        }
-        cli_config = {k: v for k, v in cli_config.items() if v is not None}
+        if model:
+            state_manager.session.current_model = model
 
         try:
             tool_handler = ToolHandler(state_manager)
