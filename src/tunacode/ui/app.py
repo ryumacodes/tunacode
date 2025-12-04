@@ -52,11 +52,12 @@ class TextualReplApp(App[None]):
         Binding("ctrl+p", "toggle_pause", "Pause/Resume Stream", show=False, priority=True),
     ]
 
-    def __init__(self, *, state_manager: StateManager) -> None:
+    def __init__(self, *, state_manager: StateManager, show_wizard: bool = False) -> None:
         super().__init__()
         self.state_manager: StateManager = state_manager
         self.request_queue: asyncio.Queue[str] = asyncio.Queue()
         self.pending_confirmation: asyncio.Future[ToolConfirmationResponse] | None = None
+        self._show_wizard: bool = show_wizard
 
         self._streaming_paused: bool = False
         self._stream_buffer: list[str] = []
@@ -87,6 +88,10 @@ class TextualReplApp(App[None]):
         self.run_worker(self._request_worker, exclusive=False)
         self._update_resource_bar()
         self._show_welcome()
+
+        if self._show_wizard:
+            from tunacode.ui.screens import SetupWizardScreen
+            self.push_screen(SetupWizardScreen(self.state_manager))
 
     def _show_welcome(self) -> None:
         welcome = Text()
@@ -230,8 +235,8 @@ class TextualReplApp(App[None]):
         )
 
 
-async def run_textual_repl(state_manager: StateManager) -> None:
-    app = TextualReplApp(state_manager=state_manager)
+async def run_textual_repl(state_manager: StateManager, show_wizard: bool = False) -> None:
+    app = TextualReplApp(state_manager=state_manager, show_wizard=show_wizard)
     await app.run_async()
 
 

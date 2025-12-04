@@ -39,6 +39,7 @@ def _handle_background_task_error(task: asyncio.Task) -> None:
 @app.command()
 def main(
     version: bool = typer.Option(False, "--version", "-v", help="Show version and exit."),
+    wizard: bool = typer.Option(False, "--wizard", "-w", help="Run setup wizard."),
     baseurl: str = typer.Option(
         None, "--baseurl", help="API base URL (e.g., https://openrouter.ai/api/v1)"
     ),
@@ -69,7 +70,7 @@ def main(
             tool_handler = ToolHandler(state_manager)
             state_manager.set_tool_handler(tool_handler)
 
-            await run_textual_repl(state_manager)
+            await run_textual_repl(state_manager, show_wizard=wizard)
         except (KeyboardInterrupt, UserAbortError):
             update_task.cancel()
             return

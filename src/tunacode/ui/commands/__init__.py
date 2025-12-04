@@ -78,17 +78,18 @@ class ModelCommand(Command):
             from tunacode.configuration.models import ModelRegistry
 
             registry = ModelRegistry()
-            models = registry.get_all_models()
+            models = registry.list_models()
             current = app.state_manager.session.current_model
 
             table = Table(title="Available Models", show_header=True)
             table.add_column("Model", style="cyan")
-            table.add_column("Context", justify="right")
+            table.add_column("Input $/M", justify="right")
             table.add_column("Current", justify="center")
 
             for name, config in models.items():
                 marker = "●" if name == current else ""
-                table.add_row(name, str(config.context_window), marker)
+                price = f"${config.pricing.input:.2f}" if config.pricing else "-"
+                table.add_row(name, price, marker)
 
             app.rich_log.write(table)
             app.rich_log.write(f"\nCurrent: {current}")
