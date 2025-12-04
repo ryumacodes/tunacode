@@ -63,8 +63,7 @@ def create_react_tool(state_manager: StateManager) -> Callable:
                 return "React scratchpad is empty"
 
             formatted = [
-                f"{i + 1}. {item['type']}: {_format_entry(item)}"
-                for i, item in enumerate(timeline)
+                f"{i + 1}. {item['type']}: {_format_entry(item)}" for i, item in enumerate(timeline)
             ]
             return "\n".join(formatted)
 
@@ -90,7 +89,7 @@ def _format_entry(item: Dict[str, Any]) -> str:
 class ReactTool:
     """Wrapper class for backwards compatibility with existing code."""
 
-    def __init__(self, state_manager: StateManager, ui_logger=None):
+    def __init__(self, state_manager: StateManager) -> None:
         self.state_manager = state_manager
         self._react = create_react_tool(state_manager)
 

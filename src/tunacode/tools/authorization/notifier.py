@@ -19,6 +19,7 @@ class ToolRejectionNotifier:
         state: "StateManager",
     ) -> None:
         from tunacode.core.agents.agent_components.agent_helpers import create_user_message
+
         guidance = getattr(response, "instructions", "").strip()
         if guidance:
             guidance_section = f"User guidance:\n{guidance}"

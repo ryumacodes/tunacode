@@ -51,7 +51,8 @@ class ResourceBar(Static):
     def _calculate_remaining_pct(self) -> float:
         if self._max_tokens == 0:
             return 0.0
-        return (self._max_tokens - self._tokens) / self._max_tokens * 100
+        raw_pct = (self._max_tokens - self._tokens) / self._max_tokens * 100
+        return max(0.0, min(100.0, raw_pct))
 
     def _get_circle_color(self, remaining_pct: float) -> str:
         if remaining_pct > 60:

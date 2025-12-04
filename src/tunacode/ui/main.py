@@ -40,12 +40,12 @@ def _handle_background_task_error(task: asyncio.Task) -> None:
 def main(
     version: bool = typer.Option(False, "--version", "-v", help="Show version and exit."),
     wizard: bool = typer.Option(False, "--wizard", "-w", help="Run setup wizard."),
-    baseurl: str = typer.Option(
+    _baseurl: str = typer.Option(  # noqa: ARG001 - reserved for future use
         None, "--baseurl", help="API base URL (e.g., https://openrouter.ai/api/v1)"
     ),
     model: str = typer.Option(None, "--model", help="Default model to use (e.g., openai/gpt-4)"),
-    key: str = typer.Option(None, "--key", help="API key for the provider"),
-    context: int = typer.Option(
+    _key: str = typer.Option(None, "--key", help="API key for the provider"),  # noqa: ARG001
+    _context: int = typer.Option(  # noqa: ARG001 - reserved for future use
         None, "--context", help="Maximum context window size for custom models"
     ),
 ):

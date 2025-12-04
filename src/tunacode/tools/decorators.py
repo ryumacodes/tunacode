@@ -8,18 +8,21 @@ This module provides decorators that wrap tool functions with:
 
 import logging
 from functools import wraps
-from typing import Callable, TypeVar
+from typing import Any, Callable, Coroutine, ParamSpec, TypeVar
 
 from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.exceptions import FileOperationError, ToolExecutionError
 from tunacode.tools.xml_helper import load_prompt_from_xml
 
-T = TypeVar("T")
+P = ParamSpec("P")
+R = TypeVar("R")
 logger = logging.getLogger(__name__)
 
 
-def base_tool(func: Callable[..., T]) -> Callable[..., T]:
+def base_tool(
+    func: Callable[P, Coroutine[Any, Any, R]],
+) -> Callable[P, Coroutine[Any, Any, R]]:
     """Wrap tool with error handling.
 
     Converts uncaught exceptions to ToolExecutionError while preserving
@@ -33,31 +36,30 @@ def base_tool(func: Callable[..., T]) -> Callable[..., T]:
     """
 
     @wraps(func)
-    async def wrapper(*args, **kwargs) -> T:
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         try:
             logger.info(f"{func.__name__}({args}, {kwargs})")
             return await func(*args, **kwargs)
         except ModelRetry:
-            raise  # Let pydantic-ai handle retries
+            raise
         except ToolExecutionError:
-            raise  # Already formatted
+            raise
         except FileOperationError:
-            raise  # Already formatted
+            raise
         except Exception as e:
             logger.exception(f"{func.__name__} failed")
-            raise ToolExecutionError(
-                tool_name=func.__name__, message=str(e), original_error=e
-            )
+            raise ToolExecutionError(tool_name=func.__name__, message=str(e), original_error=e)
 
-    # Load XML prompt for agent alignment
     xml_prompt = load_prompt_from_xml(func.__name__)
     if xml_prompt:
         wrapper.__doc__ = xml_prompt
 
-    return wrapper
+    return wrapper  # type: ignore[return-value]
 
 
-def file_tool(func: Callable[..., T]) -> Callable[..., T]:
+def file_tool(
+    func: Callable[..., Coroutine[Any, Any, R]],
+) -> Callable[..., Coroutine[Any, Any, R]]:
     """Wrap file tool with path-specific error handling.
 
     Provides specialized handling for common file operation errors:
@@ -74,22 +76,16 @@ def file_tool(func: Callable[..., T]) -> Callable[..., T]:
     """
 
     @wraps(func)
-    async def wrapper(filepath: str, *args, **kwargs) -> T:
+    async def wrapper(filepath: str, *args: Any, **kwargs: Any) -> R:
         try:
             return await func(filepath, *args, **kwargs)
         except FileNotFoundError:
             raise ModelRetry(f"File not found: {filepath}. Check the path.")
         except PermissionError as e:
-            raise FileOperationError(
-                filepath=filepath, operation="access", original_error=e
-            )
+            raise FileOperationError(filepath=filepath, operation="access", original_error=e)
         except UnicodeDecodeError as e:
-            raise FileOperationError(
-                filepath=filepath, operation="decode", original_error=e
-            )
+            raise FileOperationError(filepath=filepath, operation="decode", original_error=e)
         except (IOError, OSError) as e:
-            raise FileOperationError(
-                filepath=filepath, operation="read/write", original_error=e
-            )
+            raise FileOperationError(filepath=filepath, operation="read/write", original_error=e)
 
-    return base_tool(wrapper)
+    return base_tool(wrapper)  # type: ignore[arg-type]

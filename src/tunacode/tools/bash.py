@@ -21,9 +21,7 @@ from tunacode.tools.decorators import base_tool
 logger = logging.getLogger(__name__)
 
 # Enhanced dangerous patterns from run_command.py
-DESTRUCTIVE_PATTERNS = [
-    "rm -rf", "rm -r", "rm /", "dd if=", "mkfs", "fdisk"
-]
+DESTRUCTIVE_PATTERNS = ["rm -rf", "rm -r", "rm /", "dd if=", "mkfs", "fdisk"]
 
 # Comprehensive dangerous patterns from security module
 DANGEROUS_PATTERNS = [
@@ -35,6 +33,7 @@ DANGEROUS_PATTERNS = [
     r"fdisk",  # Partition manipulation
     r":\(\)\{.*\}\;",  # Fork bomb pattern
 ]
+
 
 @base_tool
 async def bash(
@@ -140,7 +139,7 @@ def _validate_command_security(command: str) -> None:
 
     # Check for restricted characters (but allow safe environment variable usage)
     # Allow $ when used for legitimate environment variables or shell variables
-    if re.search(r'\$[^({a-zA-Z_]', command):
+    if re.search(r"\$[^({a-zA-Z_]", command):
         # $ followed by something that's not a valid variable start
         logger.warning("Potentially dangerous character '$' detected in command")
         raise ModelRetry("Potentially unsafe character '$' in command")
@@ -148,7 +147,7 @@ def _validate_command_security(command: str) -> None:
     # Check other restricted characters but allow { } when part of valid variable expansion
     if "{" in command or "}" in command:
         # Only block braces if they're not part of valid variable expansion
-        if not re.search(r'\$\{?\w+\}?', command):
+        if not re.search(r"\$\{?\w+\}?", command):
             for char in ["{", "}"]:
                 if char in command:
                     logger.warning(f"Potentially dangerous character '{char}' detected in command")
@@ -205,9 +204,7 @@ async def _cleanup_process(process) -> None:
         logger.warning(f"Failed to cleanup process: {e}")
 
 
-def _format_output(
-    command: str, exit_code: int, stdout: str, stderr: str, cwd: str
-) -> str:
+def _format_output(command: str, exit_code: int, stdout: str, stderr: str, cwd: str) -> str:
     """Format command output."""
     lines = [
         f"Command: {command}",

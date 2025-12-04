@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Any, Iterable
 
 from textual.message import Message
 
@@ -32,7 +32,7 @@ class ToolResultDisplay(Message):
         *,
         tool_name: str,
         status: str,
-        args: dict,
+        args: dict[str, Any],
         result: str | None = None,
         duration_ms: float | None = None,
     ) -> None:

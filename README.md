@@ -30,6 +30,14 @@ pip install tunacode-cli
 
 For detailed installation and configuration instructions, see the [**Getting Started Guide**](documentation/user/getting-started.md).
 
+## What's New in 2.0
+
+- Native Textual-based terminal UI
+- Real-time streaming with pause/resume (Ctrl+P)
+- Interactive resource bar showing model, tokens, cost
+- Status bar with git branch and last action
+- Setup wizard for first-time configuration
+
 ## Quickstart
 
 ```bash
@@ -150,6 +158,25 @@ tunacode
 | `/yolo`                  | Skip confirmations     |
 | `!<command>`             | Run shell command      |
 | `exit`                   | Exit TunaCode          |
+
+## CLI Flags
+
+```bash
+tunacode --wizard          # Run setup wizard
+tunacode --model <name>    # Set model for session
+tunacode --version         # Show version
+```
+
+## Keybindings
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Submit input |
+| `Esc` | Cancel streaming |
+| `Esc + Enter` | Insert newline |
+| `Ctrl+O` | Insert newline |
+| `Ctrl+P` | Pause/resume streaming |
+| `Tab` | Path completion |
 
 ## Performance
 

@@ -8,6 +8,8 @@ from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widgets import DataTable, Static
 
+from tunacode.utils.ui.helpers import truncate
+
 
 class SearchResultsTable(Static):
     """Interactive DataTable for search results.
@@ -74,14 +76,7 @@ class SearchResultsTable(Static):
         for i, result in enumerate(self.results, start=1):
             title = result.get("title", result.get("file", "..."))
             snippet = result.get("snippet", result.get("content", ""))
-            snippet = _truncate(snippet, 50)
+            snippet = truncate(snippet, 50)
             table.add_row(str(i), str(title), snippet)
 
         yield table
-
-
-def _truncate(value: Any, max_length: int = 50) -> str:
-    s = str(value)
-    if len(s) <= max_length:
-        return s
-    return s[: max_length - 3] + "..."

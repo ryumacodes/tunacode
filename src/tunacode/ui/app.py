@@ -94,6 +94,7 @@ class TextualReplApp(App[None]):
 
         if self._show_wizard:
             from tunacode.ui.screens import SetupWizardScreen
+
             self.push_screen(SetupWizardScreen(self.state_manager))
 
     def _show_welcome(self) -> None:
@@ -144,7 +145,6 @@ class TextualReplApp(App[None]):
         except Exception as e:
             error_renderable = render_exception(e)
             self.rich_log.write(error_renderable)
-            raise
         finally:
             self._current_request_task = None
             self.rich_log.remove_class(RICHLOG_CLASS_STREAMING)

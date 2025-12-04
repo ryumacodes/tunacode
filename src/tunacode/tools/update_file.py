@@ -36,8 +36,7 @@ async def update_file(filepath: str, target: str, patch: str) -> str:
         preview_lines = min(20, len(lines))
         snippet = "\n".join(lines[:preview_lines])
         raise ModelRetry(
-            f"{e}\n\n"
-            f"File '{filepath}' preview ({preview_lines} lines):\n---\n{snippet}\n---"
+            f"{e}\n\nFile '{filepath}' preview ({preview_lines} lines):\n---\n{snippet}\n---"
         )
 
     if original == new_content:

@@ -186,7 +186,9 @@ class ReactSnapshotManager:
         forced_calls = getattr(self.state_manager.session, "react_forced_calls", 0)
         return forced_calls < self.config.forced_react_limit
 
-    async def capture_snapshot(self, iteration: int, agent_run_ctx: Any, show_debug: bool) -> None:
+    async def capture_snapshot(
+        self, iteration: int, agent_run_ctx: Any, _show_debug: bool = False
+    ) -> None:
         """Capture react snapshot and inject guidance."""
         if not self.should_snapshot(iteration):
             return

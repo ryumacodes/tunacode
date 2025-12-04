@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from textual.app import ComposeResult
 from textual.containers import Vertical
@@ -130,7 +130,7 @@ class SetupWizardScreen(Screen[None]):
         model = DEFAULT_MODELS.get(provider, "openrouter:openai/gpt-4.1")
         key_name = API_KEY_NAMES.get(provider, "OPENROUTER_API_KEY")
 
-        config = {
+        config: dict[str, Any] = {
             "default_model": model,
             "env": {
                 "ANTHROPIC_API_KEY": "",
@@ -150,8 +150,13 @@ class SetupWizardScreen(Screen[None]):
         config_dir.mkdir(mode=0o700, exist_ok=True)
         config_file = config_dir / "tunacode.json"
 
-        with open(config_file, "w") as f:
-            json.dump(config, f, indent=2)
+        try:
+            config_file.touch(mode=0o600, exist_ok=True)
+            with open(config_file, "w") as f:
+                json.dump(config, f, indent=2)
+        except (OSError, IOError) as e:
+            self.notify(f"Failed to save config: {e}", severity="error")
+            return
 
         self.state_manager.session.current_model = model
         self.state_manager.session.user_config = config

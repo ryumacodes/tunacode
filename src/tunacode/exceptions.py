@@ -145,8 +145,6 @@ class FileOperationError(TunaCodeError):
         super().__init__(f"File {operation} failed for '{path}': {message}")
 
 
-
-
 class ModelConfigurationError(ConfigurationError):
     """Raised when model configuration is invalid."""
 

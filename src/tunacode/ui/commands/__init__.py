@@ -182,6 +182,7 @@ async def handle_command(app: "TextualReplApp", text: str) -> bool:
 
 async def run_shell_command(app: "TextualReplApp", cmd: str) -> None:
     """Run a shell command and display output."""
+    import asyncio
     import subprocess
 
     if not cmd.strip():
@@ -189,9 +190,10 @@ async def run_shell_command(app: "TextualReplApp", cmd: str) -> None:
         return
 
     try:
-        result = subprocess.run(
+        result = await asyncio.to_thread(
+            subprocess.run,
             cmd,
-            shell=True,
+            shell=True,  # noqa: S602 - intentional shell command from user
             capture_output=True,
             text=True,
             timeout=30,

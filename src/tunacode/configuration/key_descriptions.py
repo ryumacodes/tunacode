@@ -6,7 +6,7 @@ understand what each setting does and how to configure it properly.
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -23,7 +23,7 @@ class KeyDescription:
 
 
 # Configuration key descriptions organized by category
-CONFIG_KEY_DESCRIPTIONS: Dict[str, KeyDescription] = {
+CONFIG_KEY_DESCRIPTIONS: dict[str, KeyDescription] = {
     # Root level keys
     "default_model": KeyDescription(
         name="default_model",
@@ -226,15 +226,11 @@ def get_service_type_for_api_key(key_name: str) -> Optional[str]:
     return service_mapping.get(key_name)
 
 
-def get_categories() -> Dict[str, list[KeyDescription]]:
+def get_categories() -> dict[str, list[KeyDescription]]:
     """Get all configuration keys organized by category."""
-    categories: Dict[str, list[KeyDescription]] = {}
-
+    categories: dict[str, list[KeyDescription]] = {}
     for desc in CONFIG_KEY_DESCRIPTIONS.values():
-        if desc.category not in categories:
-            categories[desc.category] = []
-        categories[desc.category].append(desc)
-
+        categories.setdefault(desc.category, []).append(desc)
     return categories
 
 

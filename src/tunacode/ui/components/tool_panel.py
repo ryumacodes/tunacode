@@ -8,6 +8,8 @@ from typing import Any
 from textual.app import ComposeResult
 from textual.widgets import Label, Static
 
+from tunacode.utils.ui.helpers import truncate
+
 
 class ToolPanel(Static):
     """Native Textual panel for tool results.
@@ -86,18 +88,11 @@ class ToolPanel(Static):
         yield Label(f"{self.tool_name} [{status_suffix}]", classes="tool-title")
 
         if self.args:
-            args_text = "\n".join(f"  {k}: {_truncate(v)}" for k, v in self.args.items())
+            args_text = "\n".join(f"  {k}: {truncate(v, 60)}" for k, v in self.args.items())
             yield Static(args_text, classes="tool-args")
 
         if self.result:
-            yield Static(_truncate(self.result, 200), classes="tool-result")
+            yield Static(truncate(self.result, 200), classes="tool-result")
 
         if self.duration_ms is not None:
             yield Static(f"{self.duration_ms:.0f}ms", classes="tool-duration")
-
-
-def _truncate(value: Any, max_length: int = 60) -> str:
-    s = str(value)
-    if len(s) <= max_length:
-        return s
-    return s[: max_length - 3] + "..."

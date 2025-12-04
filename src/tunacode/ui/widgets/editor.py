@@ -29,7 +29,8 @@ class Editor(TextArea):
         self._awaiting_escape_enter: bool = False
 
     def get_line(self, line_index: int) -> Text:
-        if not self.text.strip() and line_index == 0 and self.placeholder:
+        text_value: str = self.text  # type: ignore[has-type]
+        if not text_value.strip() and line_index == 0 and self.placeholder:
             return Text(self.placeholder, end="", no_wrap=True, style="dim")
         return super().get_line(line_index)
 
@@ -46,7 +47,8 @@ class Editor(TextArea):
             return
 
         replacement = candidates[0]
-        self.text = replace_token(self.text, start, end, replacement)
+        text_value: str = self.text  # type: ignore[has-type]
+        self.text = replace_token(text_value, start, end, replacement)
         cursor_row, _ = self.cursor_location
         self.move_cursor((cursor_row, start + len(replacement)))
 
@@ -54,27 +56,45 @@ class Editor(TextArea):
             self.post_message(EditorCompletionsAvailable(candidates=candidates))
 
     def action_submit(self) -> None:
-        text = self.text.strip()
+        text_value: str = self.text  # type: ignore[has-type]
+        text = text_value.strip()
         if not text:
             return
 
-        self.post_message(EditorSubmitRequested(text=text, raw_text=self.text))
+        self.post_message(EditorSubmitRequested(text=text, raw_text=text_value))
         self.text = ""
 
     def action_insert_newline(self) -> None:
         self.insert("\n")
 
     def _current_token(self) -> tuple[Optional[str], int, int]:
+        """Get the current token under cursor with absolute buffer offsets.
+
+        Returns (token, start_offset, end_offset) where offsets are absolute
+        character positions in the full text buffer.
+        """
         cursor_row, cursor_col = self.cursor_location
-        lines = self.text.splitlines()
+        text_value: str = self.text  # type: ignore[has-type]
+        lines = text_value.splitlines(keepends=True)
+
         if cursor_row >= len(lines):
-            return None, cursor_col, cursor_col
+            end = len(text_value)
+            return None, end, end
+
         line = lines[cursor_row]
-        left = line.rfind(" ", 0, cursor_col) + 1
-        token = line[left:cursor_col]
+        # Compute absolute start-of-line index in the full text
+        line_start = sum(len(ln) for ln in lines[:cursor_row])
+
+        # Find token bounds within the line, then convert to absolute offsets
+        left_in_line = line.rfind(" ", 0, cursor_col) + 1
+        token = line[left_in_line:cursor_col]
         if not token:
-            return None, left, left
-        return token, left, left + len(token)
+            abs_pos = line_start + left_in_line
+            return None, abs_pos, abs_pos
+
+        start = line_start + left_in_line
+        end = start + len(token)
+        return token, start, end
 
     async def on_key(self, event: Key) -> None:
         if event.key == "escape":
@@ -93,4 +113,4 @@ class Editor(TextArea):
             return
 
         self._awaiting_escape_enter = False
-        await self._on_key(event)
+        await super().on_key(event)

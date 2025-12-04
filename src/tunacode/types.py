@@ -66,6 +66,7 @@ ConfigFile = Path
 ToolArgs = Dict[str, Any]
 ToolResult = str
 ToolCallback = Callable[[Any, Any], Awaitable[None]]
+ToolStartCallback = Callable[[str], None]  # Called when tool execution starts
 ToolCallId = str
 
 

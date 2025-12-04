@@ -137,8 +137,8 @@ Replace the prompt_toolkit/Rich CLI REPL with a Textual-based shell that drives 
 - Test trigger `/testmodal` to be removed now that modal verified
 
 ### Task 5: Streaming Callback with Pause/Resume
-**Owner:** Gemini  
-**Dependencies:** Task 3  
+**Owner:** Gemini
+**Dependencies:** Task 3
 **Acceptance Tests:**
 - [ ] `streaming_callback` writes Rich renderables to `RichLog`.
 - [ ] Pause flag buffers new chunks; resume flushes buffer in order.
@@ -146,8 +146,8 @@ Replace the prompt_toolkit/Rich CLI REPL with a Textual-based shell that drives 
 **Files/Interfaces:** `src/tunacode/cli/textual_repl.py` (streaming handler, buffer), `core/agents.py` integration.
 
 ### Task 6: Wire Real Orchestrator
-**Owner:** Gemini  
-**Dependencies:** Tasks 3-5  
+**Owner:** Gemini
+**Dependencies:** Tasks 3-5
 **Acceptance Tests:**
 - [ ] Worker uses `agent.process_request()` with actual state_manager and tool callbacks.
 - [ ] No demo/fake agents remain; `cli/repl.py` references removed or redirected.
@@ -155,8 +155,8 @@ Replace the prompt_toolkit/Rich CLI REPL with a Textual-based shell that drives 
 **Files/Interfaces:** `src/tunacode/core/agents.py`, `src/tunacode/core/state.py`, `src/tunacode/cli/textual_repl.py`.
 
 ### Task 7: Testing & QA
-**Owner:** Gemini  
-**Dependencies:** Tasks 1-6  
+**Owner:** Gemini
+**Dependencies:** Tasks 1-6
 **Acceptance Tests:**
 - [ ] Golden baseline test for Textual shell launch added (characterization of startup render).
 - [ ] Failing test for mid-stream tool confirmation added, then passes once modal + streaming wiring complete.
@@ -164,8 +164,8 @@ Replace the prompt_toolkit/Rich CLI REPL with a Textual-based shell that drives 
 **Files/Interfaces:** `tests/e2e/test_textual_repl.py` (new), potential fixtures under `tests/fixtures`.
 
 ### Task 8: PR, Docs, & KB
-**Owner:** Gemini  
-**Dependencies:** Tasks 1-7  
+**Owner:** Gemini
+**Dependencies:** Tasks 1-7
 **Acceptance Tests:**
 - [ ] PR titled without WIP markers; description links research + plan and summarizes tests.
 - [ ] Docs updated for new Textual shell usage and prompt_toolkit removal.

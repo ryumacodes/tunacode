@@ -10,11 +10,11 @@ from .context import AuthContext
 class AuthorizationRule(Protocol):
     """Protocol for authorization rules."""
 
-    def should_allow_without_confirmation(self, tool_name: ToolName, context: AuthContext) -> bool:
-        ...
+    def should_allow_without_confirmation(
+        self, tool_name: ToolName, context: AuthContext
+    ) -> bool: ...
 
-    def priority(self) -> int:
-        ...
+    def priority(self) -> int: ...
 
 
 class ReadOnlyToolRule:
