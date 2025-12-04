@@ -79,10 +79,6 @@ class SearchResultsTable(Static):
 
         yield table
 
-    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        """Handle row selection - could open file in future."""
-        pass
-
 
 def _truncate(value: Any, max_length: int = 50) -> str:
     s = str(value)

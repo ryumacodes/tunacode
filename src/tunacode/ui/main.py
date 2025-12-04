@@ -93,7 +93,7 @@ def main(
             has_update, latest_version = await update_task
             if has_update:
                 print(f"Update available: {latest_version}")
-        except Exception:
+        except asyncio.CancelledError:
             pass
 
     asyncio.run(async_main())
