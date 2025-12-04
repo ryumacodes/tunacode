@@ -38,7 +38,7 @@ dependencies = [
 ]
 
 [project.scripts]
-tunacode = "tunacode.cli.main:app"
+tunacode = "tunacode.ui.main:app"
 
 [project.optional-dependencies]
 dev = [
