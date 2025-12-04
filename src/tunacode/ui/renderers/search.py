@@ -11,8 +11,8 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.ui.renderers.panels import RichPanelRenderer, SearchResultData
 from tunacode.constants import UI_COLORS
+from tunacode.ui.renderers.panels import RichPanelRenderer, SearchResultData
 
 T = TypeVar("T")
 

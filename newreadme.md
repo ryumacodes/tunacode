@@ -100,7 +100,9 @@ tunacode --version         # Show version
 | Key | Action |
 |-----|--------|
 | `Enter` | Submit input |
+| `Esc` | Cancel streaming |
 | `Esc + Enter` | Insert newline |
+| `Ctrl+O` | Insert newline |
 | `Ctrl+P` | Pause/resume streaming |
 | `Tab` | Path completion |
 

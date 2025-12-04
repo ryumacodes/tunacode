@@ -6,7 +6,6 @@ from rich.console import RenderableType
 
 from tunacode.ui.renderers.panels import ErrorDisplayData, RichPanelRenderer
 
-
 ERROR_SEVERITY_MAP: dict[str, str] = {
     "ToolExecutionError": "error",
     "FileOperationError": "error",

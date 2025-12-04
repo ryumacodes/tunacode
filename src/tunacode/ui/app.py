@@ -11,17 +11,6 @@ from textual.binding import Binding
 from textual.message import Message
 from textual.widgets import RichLog
 
-from tunacode.ui.renderers.errors import render_exception
-from tunacode.ui.renderers.panels import tool_panel_smart
-from tunacode.ui.screens import ToolConfirmationModal, ToolConfirmationResult
-from tunacode.ui.widgets import (
-    Editor,
-    EditorCompletionsAvailable,
-    EditorSubmitRequested,
-    ResourceBar,
-    StatusBar,
-    ToolResultDisplay,
-)
 from tunacode.constants import (
     RICHLOG_CLASS_PAUSED,
     RICHLOG_CLASS_STREAMING,
@@ -35,6 +24,17 @@ from tunacode.types import (
     StateManager,
     ToolConfirmationRequest,
     ToolConfirmationResponse,
+)
+from tunacode.ui.renderers.errors import render_exception
+from tunacode.ui.renderers.panels import tool_panel_smart
+from tunacode.ui.screens import ToolConfirmationModal, ToolConfirmationResult
+from tunacode.ui.widgets import (
+    Editor,
+    EditorCompletionsAvailable,
+    EditorSubmitRequested,
+    ResourceBar,
+    StatusBar,
+    ToolResultDisplay,
 )
 
 
@@ -50,6 +50,7 @@ class TextualReplApp(App[None]):
 
     BINDINGS = [
         Binding("ctrl+p", "toggle_pause", "Pause/Resume Stream", show=False, priority=True),
+        Binding("escape", "cancel_stream", "Cancel", show=False, priority=True),
     ]
 
     def __init__(self, *, state_manager: StateManager, show_wizard: bool = False) -> None:
@@ -60,8 +61,10 @@ class TextualReplApp(App[None]):
         self._show_wizard: bool = show_wizard
 
         self._streaming_paused: bool = False
+        self._streaming_cancelled: bool = False
         self._stream_buffer: list[str] = []
         self.current_stream_text: str = ""
+        self._current_request_task: asyncio.Task | None = None
 
         self.rich_log: RichLog
         self.editor: Editor
@@ -118,32 +121,42 @@ class TextualReplApp(App[None]):
 
     async def _process_request(self, message: str) -> None:
         self.current_stream_text = ""
+        self._streaming_cancelled = False
         self.rich_log.add_class(RICHLOG_CLASS_STREAMING)
 
         try:
             model_name = self.state_manager.session.current_model or "openai/gpt-4o"
 
-            await process_request(
-                message=message,
-                model=ModelName(model_name),
-                state_manager=self.state_manager,
-                tool_callback=build_textual_tool_callback(self, self.state_manager),
-                streaming_callback=self.streaming_callback,
-                tool_result_callback=build_tool_result_callback(self),
+            self._current_request_task = asyncio.create_task(
+                process_request(
+                    message=message,
+                    model=ModelName(model_name),
+                    state_manager=self.state_manager,
+                    tool_callback=build_textual_tool_callback(self, self.state_manager),
+                    streaming_callback=self.streaming_callback,
+                    tool_result_callback=build_tool_result_callback(self),
+                    tool_start_callback=build_tool_start_callback(self),
+                )
             )
+            await self._current_request_task
+        except asyncio.CancelledError:
+            self.notify("Cancelled")
         except Exception as e:
             error_renderable = render_exception(e)
             self.rich_log.write(error_renderable)
             raise
         finally:
+            self._current_request_task = None
             self.rich_log.remove_class(RICHLOG_CLASS_STREAMING)
             self.rich_log.remove_class(RICHLOG_CLASS_PAUSED)
 
-            if self.current_stream_text:
+            if self.current_stream_text and not self._streaming_cancelled:
                 self.rich_log.write(self.current_stream_text)
 
             self.current_stream_text = ""
+            self._streaming_cancelled = False
             self._update_resource_bar()
+            self.status_bar.update_bg_status("")
 
     def on_editor_completions_available(self, message: EditorCompletionsAvailable) -> None:
         self.rich_log.write(f"Suggestions: {', '.join(message.candidates)}")
@@ -221,6 +234,14 @@ class TextualReplApp(App[None]):
             self.current_stream_text += buffered_text
             self._stream_buffer.clear()
 
+    def action_cancel_stream(self) -> None:
+        if self._current_request_task is None:
+            return
+        self._streaming_cancelled = True
+        self._stream_buffer.clear()
+        self.current_stream_text = ""
+        self._current_request_task.cancel()
+
     def _update_resource_bar(self) -> None:
         session = self.state_manager.session
         usage = session.session_total_usage
@@ -228,7 +249,7 @@ class TextualReplApp(App[None]):
         actual_tokens = usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
 
         self.resource_bar.update_stats(
-            model=session.current_model,
+            model=session.current_model or "No model selected",
             tokens=actual_tokens,
             max_tokens=session.max_tokens or 200000,
             session_cost=usage.get("cost", 0.0),
@@ -248,8 +269,8 @@ def build_textual_tool_callback(app: TextualReplApp, state_manager: StateManager
         if not tool_handler.should_confirm(part.tool_name):
             return
 
-        from tunacode.utils.parsing.command_parser import parse_args
         from tunacode.exceptions import UserAbortError
+        from tunacode.utils.parsing.command_parser import parse_args
 
         args = parse_args(part.args)
         request = tool_handler.create_confirmation_request(part.tool_name, args)
@@ -279,5 +300,12 @@ def build_tool_result_callback(app: TextualReplApp):
                 duration_ms=duration_ms,
             )
         )
+
+    return _callback
+
+
+def build_tool_start_callback(app: TextualReplApp):
+    def _callback(tool_name: str) -> None:
+        app.status_bar.update_bg_status(tool_name)
 
     return _callback

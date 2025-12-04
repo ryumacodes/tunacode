@@ -146,9 +146,9 @@ class SetupWizardScreen(Screen[None]):
         }
         config["env"][key_name] = api_key
 
-        config_dir = Path.home() / ".tunacode"
+        config_dir = Path.home() / ".config"
         config_dir.mkdir(mode=0o700, exist_ok=True)
-        config_file = config_dir / "config.json"
+        config_file = config_dir / "tunacode.json"
 
         with open(config_file, "w") as f:
             json.dump(config, f, indent=2)

@@ -276,6 +276,7 @@ class RequestOrchestrator:
         tool_callback: Optional[ToolCallback],
         streaming_callback: Optional[Callable[[str], Awaitable[None]]],
         tool_result_callback: Optional[Callable[..., None]] = None,
+        tool_start_callback: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.message = message
         self.model = model
@@ -283,6 +284,7 @@ class RequestOrchestrator:
         self.tool_callback = tool_callback
         self.streaming_callback = streaming_callback
         self.tool_result_callback = tool_result_callback
+        self.tool_start_callback = tool_start_callback
 
         # Initialize config from session settings
         user_config = getattr(state_manager.session, "user_config", {}) or {}
@@ -391,6 +393,7 @@ class RequestOrchestrator:
                         self.streaming_callback,
                         response_state,
                         self.tool_result_callback,
+                        self.tool_start_callback,
                     )
 
                     # Handle empty response
@@ -545,6 +548,7 @@ async def process_request(
     tool_callback: Optional[ToolCallback] = None,
     streaming_callback: Optional[Callable[[str], Awaitable[None]]] = None,
     tool_result_callback: Optional[Callable[..., None]] = None,
+    tool_start_callback: Optional[Callable[[str], None]] = None,
 ) -> AgentRun:
     orchestrator = RequestOrchestrator(
         message,
@@ -553,5 +557,6 @@ async def process_request(
         tool_callback,
         streaming_callback,
         tool_result_callback,
+        tool_start_callback,
     )
     return await orchestrator.run()

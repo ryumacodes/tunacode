@@ -6,7 +6,7 @@ from typing import Any
 
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.widgets import DataTable, Label, Static
+from textual.widgets import DataTable, Static
 
 
 class SearchResultsTable(Static):

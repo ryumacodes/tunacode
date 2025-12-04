@@ -118,3 +118,7 @@ class StatusBar(Horizontal):
 
     def update_last_action(self, tool_name: str) -> None:
         self.query_one("#status-right", Static).update(f"last: {tool_name}")
+
+    def update_bg_status(self, tool_name: str) -> None:
+        text = f"bg: {tool_name}..." if tool_name else "bg: idle"
+        self.query_one("#status-mid", Static).update(text)

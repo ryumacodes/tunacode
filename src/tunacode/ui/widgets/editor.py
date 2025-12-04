@@ -20,6 +20,7 @@ class Editor(TextArea):
     BINDINGS = [
         Binding("tab", "complete", "Complete", show=False),
         Binding("enter", "submit", "Submit", show=False),
+        Binding("ctrl+o", "insert_newline", "Newline", show=False),
     ]
 
     def __init__(self, *, language: Optional[str] = None) -> None:
@@ -59,6 +60,9 @@ class Editor(TextArea):
 
         self.post_message(EditorSubmitRequested(text=text, raw_text=self.text))
         self.text = ""
+
+    def action_insert_newline(self) -> None:
+        self.insert("\n")
 
     def _current_token(self) -> tuple[Optional[str], int, int]:
         cursor_row, cursor_col = self.cursor_location
