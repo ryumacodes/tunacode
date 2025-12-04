@@ -13,14 +13,27 @@ from tunacode.tools.decorators import base_tool
 
 MAX_RESULTS = 5000
 EXCLUDE_DIRS = {
-    "node_modules", ".git", "__pycache__", ".venv", "venv", "dist", "build",
-    ".pytest_cache", ".mypy_cache", ".tox", "target", ".next", ".nuxt",
-    "coverage", ".coverage",
+    "node_modules",
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".tox",
+    "target",
+    ".next",
+    ".nuxt",
+    "coverage",
+    ".coverage",
 }
 
 
 class SortOrder(Enum):
     """Sorting options for glob results."""
+
     MODIFIED = "modified"
     SIZE = "size"
     ALPHABETICAL = "alphabetical"
@@ -83,8 +96,7 @@ async def glob(
         )
     else:
         matches = await _glob_filesystem(
-            root_path, patterns, recursive, include_hidden,
-            all_exclude, max_results, case_sensitive
+            root_path, patterns, recursive, include_hidden, all_exclude, max_results, case_sensitive
         )
 
     if not matches:
@@ -136,8 +148,8 @@ def _expand_brace_pattern(pattern: str) -> List[str]:
                 depth -= 1
                 if depth == 0 and start != -1:
                     prefix = current[:start]
-                    suffix = current[i + 1:]
-                    options = current[start + 1:i].split(",")
+                    suffix = current[i + 1 :]
+                    options = current[start + 1 : i].split(",")
 
                     for option in options:
                         new_pattern = prefix + option.strip() + suffix

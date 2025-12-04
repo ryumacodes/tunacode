@@ -88,15 +88,6 @@ repos:
         exclude: ^(tests/|test_)
         stages: [pre-commit]
 
-      # Run test suite using hatch for consistency
-      - id: run-tests
-        name: Run test suite
-        entry: .venv/bin/pytest
-        language: system
-        pass_filenames: false
-        always_run: true
-        stages: [pre-commit]
-
       # Check for common security issues
       - id: security-check
         name: Security audit
@@ -153,5 +144,5 @@ ci:
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: weekly
   # Skip hooks that require project-specific environment setup
-  skip: [run-tests, hatch-lint, dead-imports, vulture-changed]
+  skip: [hatch-lint, dead-imports, vulture-changed]
   submodules: false

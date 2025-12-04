@@ -20,11 +20,6 @@ colors = DotDict(UI_COLORS)
 
 
 def _update_token_usage(model_response: Any, state_manager: StateManager) -> None:
-    """Update session state with token usage from model response.
-
-    Extracts token counts from pydantic-ai ModelResponse and updates
-    both last_call_usage and session_total_usage in session state.
-    """
     usage = getattr(model_response, "usage", None)
     if not usage:
         return
@@ -32,17 +27,13 @@ def _update_token_usage(model_response: Any, state_manager: StateManager) -> Non
     prompt_tokens = getattr(usage, "request_tokens", 0) or 0
     completion_tokens = getattr(usage, "response_tokens", 0) or 0
 
-    # Update last call usage
     session = state_manager.session
     session.last_call_usage["prompt_tokens"] = prompt_tokens
     session.last_call_usage["completion_tokens"] = completion_tokens
-    # Cost calculation would require model pricing - leave as 0 for now
     session.last_call_usage["cost"] = 0.0
 
-    # Accumulate session totals
     session.session_total_usage["prompt_tokens"] += prompt_tokens
     session.session_total_usage["completion_tokens"] += completion_tokens
-    # session_total_usage["cost"] accumulates over the session
 
 
 async def _process_node(
@@ -53,6 +44,7 @@ async def _process_node(
     streaming_callback: Optional[Callable[[str], Awaitable[None]]] = None,
     response_state: Optional[ResponseState] = None,
     tool_result_callback: Optional[Callable[..., None]] = None,
+    tool_start_callback: Optional[Callable[[str], None]] = None,
 ) -> Tuple[bool, Optional[str]]:
     """Process a single node from the agent response.
 
@@ -82,7 +74,6 @@ async def _process_node(
     if hasattr(node, "model_response"):
         state_manager.session.messages.append(node.model_response)
 
-        # Track token usage from model response
         _update_token_usage(node.model_response, state_manager)
 
         # Check for task completion marker in response content
@@ -208,6 +199,7 @@ async def _process_node(
             tool_buffer,
             response_state,
             tool_result_callback,
+            tool_start_callback,
         )
 
     # If there were no tools and we processed a model response, transition to RESPONSE
@@ -237,6 +229,7 @@ async def _process_tool_calls(
     tool_buffer: Optional[ToolBuffer],
     response_state: Optional[ResponseState],
     tool_result_callback: Optional[Callable[..., None]] = None,
+    tool_start_callback: Optional[Callable[[str], None]] = None,
 ) -> None:
     """
     Process tool calls from the node using smart batching strategy.
@@ -278,10 +271,11 @@ async def _process_tool_calls(
     if research_agent_tasks and tool_callback:
         from .tool_executor import execute_tools_parallel
 
-        # Execute the research agent tool
+        if tool_start_callback:
+            tool_start_callback("research")
+
         await execute_tools_parallel(research_agent_tasks, tool_callback)
 
-        # Display tool result panels
         if tool_result_callback:
             for part, _ in research_agent_tasks:
                 tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
@@ -303,9 +297,13 @@ async def _process_tool_calls(
         batch_id = getattr(state_manager.session, "batch_counter", 0) + 1
         state_manager.session.batch_counter = batch_id
 
+        if tool_start_callback:
+            names = [p.tool_name for p, _ in read_only_tasks[:3]]
+            suffix = "..." if len(read_only_tasks) > 3 else ""
+            tool_start_callback(", ".join(names) + suffix)
+
         await execute_tools_parallel(read_only_tasks, tool_callback)
 
-        # Display tool result panels for batch
         if tool_result_callback:
             for part, _ in read_only_tasks:
                 tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
@@ -323,14 +321,15 @@ async def _process_tool_calls(
     # Phase 4: Execute write/execute tools sequentially
     for part, node in write_execute_tasks:
         tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
-        # Parse args if they're a JSON string
         if isinstance(tool_args, str):
             try:
                 tool_args = json.loads(tool_args)
             except (json.JSONDecodeError, TypeError):
                 tool_args = {}
 
-        # Execute the tool with robust error handling
+        if tool_start_callback:
+            tool_start_callback(part.tool_name)
+
         tool_status = "completed"
         try:
             await tool_callback(part, node)
@@ -347,14 +346,9 @@ async def _process_tool_calls(
                 exc_info=True,
             )
         finally:
-            # Tool execution completed - resource cleanup handled by BaseTool.execute()
             tool_name = getattr(part, "tool_name", "<unknown>")
-            logger.debug(
-                "Tool execution completed (success or failure): tool=%s",
-                tool_name,
-            )
+            logger.debug("Tool execution completed: tool=%s", tool_name)
 
-            # Display tool result panel
             if tool_result_callback:
                 tool_result_callback(
                     tool_name=tool_name,

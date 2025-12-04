@@ -1,43 +1,26 @@
-"""Error Panel System for Textual TUI.
-
-Provides structured error display with recovery options, following NeXTSTEP:
-- User Control: Actionable recovery commands
-- Visual Feedback: Error severity through color coding
-- Consistency: All errors rendered with same structure
-"""
+"""Error Panel System for Textual TUI."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from rich.console import RenderableType
 
-from tunacode.cli.rich_panels import ErrorDisplayData, RichPanelRenderer
+from tunacode.ui.renderers.panels import ErrorDisplayData, RichPanelRenderer
 
-if TYPE_CHECKING:
-    pass
-
-
-# Error type to severity mapping
 ERROR_SEVERITY_MAP: dict[str, str] = {
-    # Critical errors (red)
     "ToolExecutionError": "error",
     "FileOperationError": "error",
     "AgentError": "error",
     "GitOperationError": "error",
     "GlobalRequestTimeoutError": "error",
     "ToolBatchingJSONError": "error",
-    # Configuration errors (warning - recoverable)
     "ConfigurationError": "warning",
     "ModelConfigurationError": "warning",
     "ValidationError": "warning",
     "SetupValidationError": "warning",
-    # User-initiated (info - not really an error)
     "UserAbortError": "info",
     "StateError": "info",
 }
 
-# Exception attribute to display label mapping
 EXCEPTION_CONTEXT_ATTRS: dict[str, str] = {
     "tool_name": "Tool",
     "path": "Path",
@@ -50,7 +33,6 @@ EXCEPTION_CONTEXT_ATTRS: dict[str, str] = {
 
 
 def _extract_exception_context(exc: Exception) -> dict[str, str]:
-    """Extract displayable context from exception attributes."""
     context: dict[str, str] = {}
     for attr, label in EXCEPTION_CONTEXT_ATTRS.items():
         if hasattr(exc, attr):
@@ -60,7 +42,6 @@ def _extract_exception_context(exc: Exception) -> dict[str, str]:
     return context
 
 
-# Default recovery commands by error type
 DEFAULT_RECOVERY_COMMANDS: dict[str, list[str]] = {
     "ConfigurationError": [
         "tunacode --wizard  # Run setup wizard",
@@ -86,28 +67,18 @@ DEFAULT_RECOVERY_COMMANDS: dict[str, list[str]] = {
 
 
 def render_exception(exc: Exception) -> RenderableType:
-    """Render any exception as an error panel.
-
-    Extracts structured information from TunaCode exceptions
-    and provides appropriate recovery options.
-    """
     error_type = type(exc).__name__
     severity = ERROR_SEVERITY_MAP.get(error_type, "error")
 
-    # Extract structured information from TunaCode exceptions
     suggested_fix = getattr(exc, "suggested_fix", None)
     recovery_commands = getattr(exc, "recovery_commands", None)
 
-    # Build context from exception attributes using mapping
     context = _extract_exception_context(exc)
 
-    # Use default recovery commands if none provided
     if not recovery_commands:
         recovery_commands = DEFAULT_RECOVERY_COMMANDS.get(error_type)
 
-    # Extract clean message (without emoji formatting)
     message = str(exc)
-    # Remove emoji prefixes from formatted messages
     for prefix in ("Fix: ", "Suggested fix: ", "Recovery commands:"):
         if prefix in message:
             message = message.split(prefix)[0].strip()
@@ -130,7 +101,6 @@ def render_tool_error(
     suggested_fix: str | None = None,
     file_path: str | None = None,
 ) -> RenderableType:
-    """Render a tool execution error with context."""
     context = {}
     if file_path:
         context["Path"] = file_path
@@ -146,7 +116,6 @@ def render_tool_error(
         context=context if context else None,
         severity="error",
     )
-    # Filter None from recovery commands
     if data.recovery_commands:
         data.recovery_commands = [cmd for cmd in data.recovery_commands if cmd]
 
@@ -158,7 +127,6 @@ def render_validation_error(
     message: str,
     valid_examples: list[str] | None = None,
 ) -> RenderableType:
-    """Render a validation error with examples."""
     suggested_fix = None
     if valid_examples:
         suggested_fix = f"Valid examples: {', '.join(valid_examples[:3])}"
@@ -179,7 +147,6 @@ def render_connection_error(
     message: str,
     retry_available: bool = True,
 ) -> RenderableType:
-    """Render a connection/service error."""
     recovery = []
     if retry_available:
         recovery.append("Retry the operation")
@@ -201,7 +168,6 @@ def render_connection_error(
 
 
 def render_user_abort() -> RenderableType:
-    """Render a user abort notification (not really an error)."""
     data = ErrorDisplayData(
         error_type="Operation Cancelled",
         message="User cancelled the operation",

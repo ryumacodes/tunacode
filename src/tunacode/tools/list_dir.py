@@ -12,9 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @base_tool
-async def list_dir(
-    directory: str = ".", max_entries: int = 200, show_hidden: bool = False
-) -> str:
+async def list_dir(directory: str = ".", max_entries: int = 200, show_hidden: bool = False) -> str:
     """List the contents of a directory.
 
     Args:
@@ -112,9 +110,7 @@ def _update_cache(dir_path: Path, entries: List[Tuple[str, bool, str]]) -> None:
         logger.debug(f"Failed to update CodeIndex cache for {dir_path}: {e}")
 
 
-def _format_output(
-    dir_path: Path, entries: List[Tuple[str, bool, str]], max_entries: int
-) -> str:
+def _format_output(dir_path: Path, entries: List[Tuple[str, bool, str]], max_entries: int) -> str:
     """Format directory listing output."""
     total_entries = len(entries)
 
@@ -139,10 +135,12 @@ def _format_output(
     dir_count = sum(1 for _, is_dir, _ in entries if is_dir)
     file_count = displayed - dir_count
 
-    lines.extend([
-        "",
-        f"Total: {displayed} entries ({dir_count} directories, {file_count} files)",
-    ])
+    lines.extend(
+        [
+            "",
+            f"Total: {displayed} entries ({dir_count} directories, {file_count} files)",
+        ]
+    )
 
     if total_entries > max_entries:
         lines.append(f"Note: Output limited to {max_entries} entries")

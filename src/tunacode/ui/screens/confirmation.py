@@ -1,8 +1,4 @@
-"""Textual screens for TunaCode REPL.
-
-Contains modal screens:
-- ToolConfirmationModal: Confirm tool execution with optional skip-future toggle
-"""
+"""Tool confirmation modal screen."""
 
 from __future__ import annotations
 
@@ -17,7 +13,6 @@ from textual.widgets import Button, Checkbox, Label
 if TYPE_CHECKING:
     from tunacode.types import ToolConfirmationRequest, ToolConfirmationResponse
 
-# Button IDs for modal actions
 BUTTON_ID_YES = "yes"
 BUTTON_ID_NO = "no"
 

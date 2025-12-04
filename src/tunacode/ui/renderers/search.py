@@ -1,11 +1,4 @@
-"""Search Result Display for Textual TUI.
-
-Provides paginated search results with relevance scoring and context highlighting.
-Follows NeXTSTEP principles:
-- Information Hierarchy: Results ordered by relevance
-- User Control: Pagination for navigation
-- Visual Feedback: Highlighted matches
-"""
+"""Search Result Display for Textual TUI."""
 
 from __future__ import annotations
 
@@ -18,23 +11,13 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.cli.rich_panels import RichPanelRenderer, SearchResultData
 from tunacode.constants import UI_COLORS
+from tunacode.ui.renderers.panels import RichPanelRenderer, SearchResultData
 
 T = TypeVar("T")
 
 
 def _paginate(items: list[T], page: int, page_size: int) -> tuple[list[T], int, int]:
-    """Paginate a list of items.
-
-    Args:
-        items: Full list to paginate
-        page: 1-indexed page number
-        page_size: Items per page
-
-    Returns:
-        Tuple of (page_items, start_idx, total_pages)
-    """
     start_idx = (page - 1) * page_size
     end_idx = start_idx + page_size
     total_pages = (len(items) + page_size - 1) // page_size if items else 1
@@ -43,8 +26,6 @@ def _paginate(items: list[T], page: int, page_size: int) -> tuple[list[T], int, 
 
 @dataclass
 class FileSearchResult:
-    """Search result for file/grep operations."""
-
     file_path: str
     line_number: int | None = None
     content: str = ""
@@ -55,22 +36,15 @@ class FileSearchResult:
 
 @dataclass
 class CodeSearchResult:
-    """Search result for code/symbol search."""
-
     file_path: str
     symbol_name: str
-    symbol_type: str  # "function", "class", "variable", etc.
+    symbol_type: str
     line_number: int
     context: str = ""
     relevance: float | None = None
 
 
 class SearchDisplayRenderer:
-    """Renders search results with highlighting and pagination.
-
-    NeXTSTEP: Maximum viewport for results, clear relevance ordering.
-    """
-
     @staticmethod
     def render_file_results(
         query: str,
@@ -79,8 +53,6 @@ class SearchDisplayRenderer:
         page_size: int = 10,
         search_time_ms: float | None = None,
     ) -> RenderableType:
-        """Render file search results (grep-style)."""
-        # Convert to generic format
         generic_results = []
         for r in results:
             result_dict: dict[str, Any] = {
@@ -95,7 +67,6 @@ class SearchDisplayRenderer:
             if r.relevance is not None:
                 result_dict["relevance"] = r.relevance
 
-            # Build snippet with highlighting
             if r.match_start is not None and r.match_end is not None:
                 before = r.content[: r.match_start]
                 match = r.content[r.match_start : r.match_end]
@@ -106,7 +77,6 @@ class SearchDisplayRenderer:
 
             generic_results.append(result_dict)
 
-        # Paginate using helper
         page_results, _, _ = _paginate(generic_results, page, page_size)
 
         data = SearchResultData(
@@ -128,11 +98,8 @@ class SearchDisplayRenderer:
         page_size: int = 10,
         search_time_ms: float | None = None,
     ) -> RenderableType:
-        """Render code/symbol search results."""
-        # Convert to generic format with symbol-specific display
         generic_results = []
         for r in results:
-            # Symbol type icons
             type_icons = {
                 "function": "fn",
                 "class": "cls",
@@ -152,7 +119,6 @@ class SearchDisplayRenderer:
 
             generic_results.append(result_dict)
 
-        # Paginate using helper
         page_results, _, _ = _paginate(generic_results, page, page_size)
 
         data = SearchResultData(
@@ -171,11 +137,6 @@ class SearchDisplayRenderer:
         results: list[dict[str, Any]],
         max_display: int = 5,
     ) -> RenderableType:
-        """Render compact inline results for quick display.
-
-        Used when results should appear inline without full panel.
-        NeXTSTEP: Don't interrupt user flow for non-critical info.
-        """
         if not results:
             return Text("No results found", style="dim")
 
@@ -196,7 +157,6 @@ class SearchDisplayRenderer:
 
     @staticmethod
     def render_empty_results(query: str) -> RenderableType:
-        """Render empty results state with suggestions."""
         content = Text()
         content.append("No results found for: ", style="dim")
         content.append(query, style="bold")
@@ -215,23 +175,9 @@ class SearchDisplayRenderer:
 
     @staticmethod
     def parse_grep_output(text: str, query: str | None = None) -> SearchResultData | None:
-        """Parse grep tool output into structured SearchResultData.
-
-        Expected format:
-            Found {count} matches for pattern: {pattern}
-            ============================================================
-
-            📁 {file_path}:{line_number}
-              {ctx_line_num}│ {context_before}
-            ▶ {match_line_num}│ {before}⟨{match}⟩{after}
-              {ctx_line_num}│ {context_after}
-
-        Returns None if parsing fails.
-        """
         if not text or "Found" not in text:
             return None
 
-        # Extract header info
         header_match = re.match(r"Found (\d+) match(?:es)? for pattern: (.+)", text)
         if not header_match:
             return None
@@ -240,7 +186,6 @@ class SearchDisplayRenderer:
         detected_query = header_match.group(2).strip()
         final_query = query or detected_query
 
-        # Parse individual results
         results: list[dict[str, Any]] = []
         file_pattern = re.compile(r"📁 (.+?):(\d+)")
         match_pattern = re.compile(r"▶\s*(\d+)│\s*(.*?)⟨(.+?)⟩(.*)")
@@ -248,13 +193,11 @@ class SearchDisplayRenderer:
         current_file: str | None = None
 
         for line in text.split("\n"):
-            # Check for file entry
             file_match = file_pattern.search(line)
             if file_match:
                 current_file = file_match.group(1)
                 continue
 
-            # Check for match line
             match_line = match_pattern.search(line)
             if match_line and current_file:
                 line_num = int(match_line.group(1))
@@ -284,22 +227,9 @@ class SearchDisplayRenderer:
 
     @staticmethod
     def parse_glob_output(text: str, pattern: str | None = None) -> SearchResultData | None:
-        """Parse glob tool output into structured SearchResultData.
-
-        Expected format:
-            Found {count} files matching pattern: {pattern}
-            (Results limited to {max_results} files)
-            ============================================================
-            📁 {directory}/
-              - {filename}
-              - {filename}
-
-        Returns None if parsing fails.
-        """
         if not text or "Found" not in text:
             return None
 
-        # Extract header info
         header_match = re.match(r"Found (\d+) files? matching pattern: (.+)", text)
         if not header_match:
             return None
@@ -308,7 +238,6 @@ class SearchDisplayRenderer:
         detected_pattern = header_match.group(2).strip()
         final_pattern = pattern or detected_pattern
 
-        # Parse file entries
         results: list[dict[str, Any]] = []
         dir_pattern = re.compile(r"📁 (.+)/")
         file_pattern = re.compile(r"^\s+-\s+(.+)$")
@@ -316,13 +245,11 @@ class SearchDisplayRenderer:
         current_dir: str | None = None
 
         for line in text.split("\n"):
-            # Check for directory header
             dir_match = dir_pattern.search(line)
             if dir_match:
                 current_dir = dir_match.group(1)
                 continue
 
-            # Check for file entry
             file_match = file_pattern.match(line)
             if file_match and current_dir is not None:
                 filename = file_match.group(1)
@@ -347,14 +274,12 @@ class SearchDisplayRenderer:
         )
 
 
-# Convenience functions
 def file_search_panel(
     query: str,
     results: list[FileSearchResult],
     page: int = 1,
     search_time_ms: float | None = None,
 ) -> RenderableType:
-    """Create a file search results panel."""
     if not results:
         return SearchDisplayRenderer.render_empty_results(query)
     return SearchDisplayRenderer.render_file_results(
@@ -368,7 +293,6 @@ def code_search_panel(
     page: int = 1,
     search_time_ms: float | None = None,
 ) -> RenderableType:
-    """Create a code search results panel."""
     if not results:
         return SearchDisplayRenderer.render_empty_results(query)
     return SearchDisplayRenderer.render_code_results(
@@ -377,5 +301,4 @@ def code_search_panel(
 
 
 def quick_results(results: list[dict[str, Any]], max_display: int = 5) -> RenderableType:
-    """Create inline results for quick display."""
     return SearchDisplayRenderer.render_inline_results(results, max_display)
