@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from typing import Any
 
 from rich.markdown import Markdown
+from rich.panel import Panel
 from rich.text import Text
+from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.message import Message
 from textual.widgets import LoadingIndicator, RichLog
 
 from tunacode.constants import (
@@ -28,7 +30,6 @@ from tunacode.types import (
 )
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
-from tunacode.ui.screens import ToolConfirmationModal, ToolConfirmationResult
 from tunacode.ui.widgets import (
     Editor,
     EditorSubmitRequested,
@@ -39,10 +40,12 @@ from tunacode.ui.widgets import (
 )
 
 
-class ShowToolConfirmationModal(Message):
-    def __init__(self, *, request: ToolConfirmationRequest) -> None:
-        super().__init__()
-        self.request = request
+@dataclass
+class PendingConfirmationState:
+    """Tracks pending tool confirmation state."""
+
+    future: asyncio.Future[ToolConfirmationResponse]
+    request: ToolConfirmationRequest
 
 
 class TextualReplApp(App[None]):
@@ -54,11 +57,12 @@ class TextualReplApp(App[None]):
         Binding("escape", "cancel_stream", "Cancel", show=False, priority=True),
     ]
 
-    def __init__(self, *, state_manager: StateManager) -> None:
+    def __init__(self, *, state_manager: StateManager, show_setup: bool = False) -> None:
         super().__init__()
         self.state_manager: StateManager = state_manager
+        self._show_setup: bool = show_setup
         self.request_queue: asyncio.Queue[str] = asyncio.Queue()
-        self.pending_confirmation: asyncio.Future[ToolConfirmationResponse] | None = None
+        self.pending_confirmation: PendingConfirmationState | None = None
 
         self._streaming_paused: bool = False
         self._streaming_cancelled: bool = False
@@ -91,6 +95,21 @@ class TextualReplApp(App[None]):
         self.register_theme(tunacode_theme)
         self.theme = THEME_NAME
 
+        if self._show_setup:
+            from tunacode.ui.screens import SetupScreen
+
+            self.push_screen(SetupScreen(self.state_manager), self._on_setup_complete)
+        else:
+            self._start_repl()
+
+    def _on_setup_complete(self, completed: bool) -> None:
+        """Called when setup screen is dismissed."""
+        if completed:
+            self._update_resource_bar()
+        self._start_repl()
+
+    def _start_repl(self) -> None:
+        """Initialize REPL components after setup."""
         self.set_focus(self.editor)
         self.run_worker(self._request_worker, exclusive=False)
         self._update_resource_bar()
@@ -179,6 +198,7 @@ class TextualReplApp(App[None]):
         from datetime import datetime
 
         timestamp = datetime.now().strftime("%I:%M %p").lstrip("0")
+        self.rich_log.write("")
         user_block = Text()
         user_block.append(f"│ {message.text}\n", style="cyan")
         user_block.append(f"│ tc {timestamp}", style="dim cyan")
@@ -187,21 +207,13 @@ class TextualReplApp(App[None]):
     async def request_tool_confirmation(
         self, request: ToolConfirmationRequest
     ) -> ToolConfirmationResponse:
-        if self.pending_confirmation is not None and not self.pending_confirmation.done():
+        if self.pending_confirmation is not None and not self.pending_confirmation.future.done():
             raise RuntimeError("Previous confirmation still pending")
 
-        self.pending_confirmation = asyncio.Future()
-        self.post_message(ShowToolConfirmationModal(request=request))
-        return await self.pending_confirmation
-
-    def on_show_tool_confirmation_modal(self, message: ShowToolConfirmationModal) -> None:
-        self.push_screen(ToolConfirmationModal(message.request))
-
-    def on_tool_confirmation_result(self, message: ToolConfirmationResult) -> None:
-        if self.pending_confirmation is None or self.pending_confirmation.done():
-            return
-        self.pending_confirmation.set_result(message.response)
-        self.pending_confirmation = None
+        future: asyncio.Future[ToolConfirmationResponse] = asyncio.Future()
+        self.pending_confirmation = PendingConfirmationState(future=future, request=request)
+        self._show_inline_confirmation(request)
+        return await future
 
     def on_tool_result_display(self, message: ToolResultDisplay) -> None:
         panel = tool_panel_smart(
@@ -242,6 +254,15 @@ class TextualReplApp(App[None]):
             self._stream_buffer.clear()
 
     def action_cancel_stream(self) -> None:
+        # If confirmation is pending, Escape rejects it
+        if self.pending_confirmation is not None and not self.pending_confirmation.future.done():
+            response = ToolConfirmationResponse(approved=False, skip_future=False, abort=True)
+            self.pending_confirmation.future.set_result(response)
+            self.pending_confirmation = None
+            self.rich_log.write(Text("Rejected", style="red"))
+            return
+
+        # Otherwise, cancel the stream
         if self._current_request_task is None:
             return
         self._streaming_cancelled = True
@@ -262,9 +283,59 @@ class TextualReplApp(App[None]):
             session_cost=usage.get("cost", 0.0),
         )
 
+    def _show_inline_confirmation(self, request: ToolConfirmationRequest) -> None:
+        """Display inline confirmation prompt in RichLog."""
+        content = Text()
+        content.append(f"Confirm: {request.tool_name}\n", style="bold cyan")
 
-async def run_textual_repl(state_manager: StateManager) -> None:
-    app = TextualReplApp(state_manager=state_manager)
+        for key, value in request.args.items():
+            display_value = str(value)
+            if len(display_value) > 60:
+                display_value = display_value[:57] + "..."
+            content.append(f"  {key}: ", style="dim")
+            content.append(f"{display_value}\n")
+
+        content.append("\n")
+        content.append("[1]", style="bold green")
+        content.append(" Yes  ")
+        content.append("[2]", style="bold yellow")
+        content.append(" Yes + Skip  ")
+        content.append("[3]", style="bold red")
+        content.append(" No")
+
+        panel = Panel(
+            content,
+            border_style="cyan",
+            padding=(0, 1),
+            expand=False,
+        )
+        self.rich_log.write(panel)
+
+    def on_key(self, event: events.Key) -> None:
+        """Handle key events, intercepting confirmation keys when pending."""
+        if self.pending_confirmation is None or self.pending_confirmation.future.done():
+            return
+
+        response: ToolConfirmationResponse | None = None
+
+        if event.key == "1":
+            response = ToolConfirmationResponse(approved=True, skip_future=False, abort=False)
+            self.rich_log.write(Text("Approved", style="green"))
+        elif event.key == "2":
+            response = ToolConfirmationResponse(approved=True, skip_future=True, abort=False)
+            self.rich_log.write(Text("Approved (skipping future)", style="yellow"))
+        elif event.key == "3":
+            response = ToolConfirmationResponse(approved=False, skip_future=False, abort=True)
+            self.rich_log.write(Text("Rejected", style="red"))
+
+        if response is not None:
+            self.pending_confirmation.future.set_result(response)
+            self.pending_confirmation = None
+            event.stop()
+
+
+async def run_textual_repl(state_manager: StateManager, show_setup: bool = False) -> None:
+    app = TextualReplApp(state_manager=state_manager, show_setup=show_setup)
     await app.run_async()
 
 

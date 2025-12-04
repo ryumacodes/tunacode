@@ -47,93 +47,44 @@ class ResultFormatter:
 
     @staticmethod
     def _format_content(results: List[SearchResult], pattern: str, config: SearchConfig) -> str:
-        """Format results with full content and context."""
-        output = []
-        output.append(f"Found {len(results)} matches for pattern: {pattern}")
-        output.append("=" * 60)
+        """Format results with content grouped by file."""
+        output = [f"Found {len(results)} matches"]
 
+        current_file = ""
         for result in results:
-            # File header
-            output.append(f"\n📁 {result.file_path}:{result.line_number}")
+            if current_file != result.file_path:
+                if current_file:
+                    output.append("")
+                current_file = result.file_path
+                output.append(f"{result.file_path}:")
 
-            # Context before
-            for i, context_line in enumerate(result.context_before):
-                line_num = result.line_number - len(result.context_before) + i
-                output.append(f"  {line_num:4d}│ {context_line}")
-
-            # Main match line with highlighting
-            line_content = result.line_content
-            before_match = line_content[: result.match_start]
-            match_text = line_content[result.match_start : result.match_end]
-            after_match = line_content[result.match_end :]
-
-            output.append(f"▶ {result.line_number:4d}│ {before_match}⟨{match_text}⟩{after_match}")
-
-            # Context after
-            for i, context_line in enumerate(result.context_after):
-                line_num = result.line_number + i + 1
-                output.append(f"  {line_num:4d}│ {context_line}")
+            output.append(f"  {result.line_number}: {result.line_content}")
 
         return "\n".join(output)
 
     @staticmethod
     def _format_files_only(results: List[SearchResult], pattern: str) -> str:
         """Format results showing only file paths."""
-        # Collect unique file paths
         files = sorted(set(r.file_path for r in results))
-
-        output = []
-        output.append(f"Files with matches for pattern: {pattern}")
-        output.append(f"Total files: {len(files)}")
-        output.append("=" * 60)
-
-        for file_path in files:
-            output.append(file_path)
-
-        return "\n".join(output)
+        return "\n".join(files)
 
     @staticmethod
     def _format_count(results: List[SearchResult], pattern: str) -> str:
         """Format results showing match counts per file."""
-        # Count matches per file
         file_counts: Dict[str, int] = {}
         for result in results:
             file_counts[result.file_path] = file_counts.get(result.file_path, 0) + 1
 
-        output = []
-        output.append(f"Match counts for pattern: {pattern}")
-        output.append(f"Total matches: {len(results)} across {len(file_counts)} files")
-        output.append("=" * 60)
-
-        # Sort by count (descending) then by file path
         sorted_counts = sorted(file_counts.items(), key=lambda x: (-x[1], x[0]))
-
-        for file_path, count in sorted_counts:
-            output.append(f"{count:5d} {file_path}")
-
-        return "\n".join(output)
+        return "\n".join(f"{count} {path}" for path, count in sorted_counts)
 
     @staticmethod
     def _format_json(results: List[SearchResult], pattern: str) -> str:
-        """Format results as JSON for programmatic use."""
+        """Format results as JSON."""
         import json
 
-        # Convert results to JSON-serializable format
-        json_results = []
-        for result in results:
-            json_results.append(
-                {
-                    "file": result.file_path,
-                    "line": result.line_number,
-                    "content": result.line_content,
-                    "match_start": result.match_start,
-                    "match_end": result.match_end,
-                    "context_before": result.context_before,
-                    "context_after": result.context_after,
-                    "score": result.relevance_score,
-                }
-            )
-
-        output_data = {"pattern": pattern, "total_matches": len(results), "results": json_results}
-
-        return json.dumps(output_data, indent=2)
+        json_results = [
+            {"file": r.file_path, "line": r.line_number, "content": r.line_content}
+            for r in results
+        ]
+        return json.dumps(json_results)

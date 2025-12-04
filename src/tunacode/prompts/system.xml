@@ -77,33 +77,27 @@ These tools are safe and ParallelExecutable. You MUST execute them in parallel b
 - You will be penalized for sequential execution of independent read-only tools
 - Think step by step: identify all needed reads, then execute in parallel
 
-1. `read_file(filepath: str)` — Read file contents
-    Returns: File content with line numbers
-    Use for: Viewing code, configs, documentation
+you MUST never commit to a list dir or file before running the glob tool 
+the glob tool is the most efficient way to find files by pattern.
+
+1. `glob(pattern: str)` — Find files by pattern
+    Returns: List of matching file paths
+    Use for: Locating files by name pattern
 
 2. `grep(pattern: str, directory: str = ".")` — Fast parallel text search
     Returns: Matching files with context lines
     Use for: Finding code patterns, imports, definitions
+only then can you call the read_file tool to read the files.
 
-3. `list_dir(directory: str = ".")` — List directory contents efficiently
+3. `read_file(filepath: str)` — Read file contents
+    Returns: File content with line numbers
+    Use for: Viewing code, configs, documentation
+
+4. `list_dir(directory: str = ".")` — List directory contents efficiently
     Returns: Files/dirs with type indicators
     Use for: Exploring project structure
-
-4. `glob(pattern: str)` — Find files by pattern
-    Returns: List of matching file paths
-    Use for: Locating files by name pattern
-
-5. `research_codebase(query: str, directories: list[str], max_files: int)` — Delegate deep research to specialized read-only agent
-    Returns: Structured research findings dict with:
-      - relevant_files: list of file paths discovered (max 3 files analyzed)
-      - key_findings: list of important discoveries
-      - code_examples: relevant code snippets with explanations
-      - recommendations: next steps or areas needing attention
-    Use for: Complex multi-file analysis, architecture exploration, pattern discovery when user explicitly requests research
-    **CRITICAL CONSTRAINT: You MUST ONLY call research_codebase if the user explicitly asks for research, analysis, or investigation.**
-    **DO NOT use research_codebase for routine tasks - use regular read-only tools (read_file, grep, glob, list_dir) instead.**
-    **CRITICAL: This tool is PARALLELIZABLE. When researching 2 independent topics, call research_codebase TWICE IN PARALLEL (2 simultaneous calls)**
-    **Example: research_codebase("auth implementation") + research_codebase("database layer") = both run at same time**
+    
+this is critical you will be penalized for using list_dir without running the glob tool first.
 
 ###SEARCH FUNNEL PATTERN###
 

@@ -1,3 +1,5 @@
 """Textual screens for TunaCode REPL."""
 
-__all__: list[str] = []
+from .setup import SetupScreen
+
+__all__: list[str] = ["SetupScreen"]

@@ -47,6 +47,7 @@ def main(
     _context: int = typer.Option(  # noqa: ARG001 - reserved for future use
         None, "--context", help="Maximum context window size for custom models"
     ),
+    setup: bool = typer.Option(False, "--setup", help="Run setup wizard"),
 ):
     """Start TunaCode - Your AI-powered development assistant"""
 
@@ -69,7 +70,7 @@ def main(
             tool_handler = ToolHandler(state_manager)
             state_manager.set_tool_handler(tool_handler)
 
-            await run_textual_repl(state_manager)
+            await run_textual_repl(state_manager, show_setup=setup)
         except (KeyboardInterrupt, UserAbortError):
             update_task.cancel()
             return

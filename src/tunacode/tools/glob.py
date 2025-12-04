@@ -325,20 +325,7 @@ async def _sort_matches(matches: List[str], sort_by: SortOrder) -> List[str]:
 
 
 def _format_output(pattern: str, matches: List[str], max_results: int) -> str:
-    """Format glob results grouped by directory."""
-    output = [f"Found {len(matches)} files matching pattern: {pattern}"]
+    """Format glob results as simple file list."""
     if len(matches) == max_results:
-        output.append(f"(Results limited to {max_results} files)")
-    output.append("=" * 60)
-
-    current_dir = None
-    for match in matches:
-        match_dir = os.path.dirname(match)
-        if match_dir != current_dir:
-            if current_dir is not None:
-                output.append("")
-            output.append(f"{match_dir}/")
-            current_dir = match_dir
-        output.append(f"  - {os.path.basename(match)}")
-
-    return "\n".join(output)
+        return "\n".join(matches) + f"\n(truncated at {max_results})"
+    return "\n".join(matches)

@@ -1,25 +1,14 @@
 # TunaCode CLI
 
-<div align="center">
-
 [![PyPI version](https://badge.fury.io/py/tunacode-cli.svg)](https://badge.fury.io/py/tunacode-cli)
-[![Downloads](https://pepy.tech/badge/tunacode-cli)](https://pepy.tech/project/tunacode-cli)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**AI-powered CLI coding assistant**
-
-![TunaCode Example](assets/tunacode_example.png)
-
-</div>
-
 ---
 
-## Why TunaCode?
+## Overview
 
-**Start coding faster with your AI-powered CLI assistant**
-
-Now let's get you set up with a tool that helps catch those bugs before they catch you.
+TunaCode is an AI-powered CLI coding assistant that helps you write, debug, and refactor code faster through natural language interaction.
 
 ## Quick Install
 
@@ -131,19 +120,15 @@ Replace the model and API key with your preferred provider and credentials. Exam
 - `google:gemini-2.5-pro` (requires GEMINI_API_KEY)
 
 
-I also apologize for any recent issues with model selection and configuration. I'm actively working to fix these problems and improve the overall stability of TunaCode. Your patience and feedback are greatly appreciated as I work to make the tool more reliable.
+
 
 ### Recommended Models
 
-Based on extensive testing, these models provide the best performance:
-
-- `google/gemini-2.5-pro` - Excellent for complex reasoning
-- `openai/gpt-4.1` - Strong general-purpose model
-- `deepseek/deepseek-r1-0528` - Great for code generation
+- `google/gemini-2.5-pro` - Complex reasoning
+- `openai/gpt-4.1` - General purpose
+- `deepseek/deepseek-r1-0528` - Code generation
 - `openai/gpt-4.1-mini` - Fast and cost-effective
-- `anthropic/claude-4-sonnet-20250522` - Superior context handling
-
-_Note: Formal evaluations coming soon. Any model can work, but these have shown the best results in practice._
+- `anthropic/claude-4-sonnet-20250522` - Context handling
 
 ## Start Coding
 
@@ -185,17 +170,11 @@ tunacode --version         # Show version
 
 ## Performance
 
-TunaCode leverages parallel execution for read-only operations, achieving **3x faster** file operations:
+Parallel execution of read-only operations provides 3x faster file operations through concurrent async I/O.
 
-![Parallel Execution Performance](docs/assets/parrelel_work_3x.png)
+## Development
 
-Multiple file reads, directory listings, and searches execute concurrently using async I/O, making code exploration significantly faster.
-
-## Features in Development
-
-- **Bug Fixes**: Actively addressing issues - please report any bugs you encounter!
-
-_Note: While the tool is fully functional, we're focusing on stability and core features before optimizing for speed._
+Focus is on stability and core features. Report bugs via GitHub issues.
 
 ## Safety First
 
@@ -216,20 +195,7 @@ For a complete overview of the documentation, see the [**Documentation Hub**](do
 
 ### Developer Documentation
 
-- **Architecture** (planned) - The overall architecture of the TunaCode application.
-- **Contributing** (planned) - Guidelines for contributing to the project.
-- **Tools** (planned) - How to create and use custom tools.
-- **Testing** (planned) - Information on the testing philosophy and how to run tests.
-
-### Guides
-
-- [**Advanced Configuration**](documentation/configuration/config-file-example.md) - An example of an advanced configuration file.
-
-### Reference
-
-- **Changelog** (planned) - A history of changes to the application.
-- **Roadmap** (planned) - The future direction of the project.
-- **Security** (planned) - Information about the security of the application.
+- [**Advanced Configuration**](documentation/configuration/config-file-example.md) - Configuration examples
 
 ## Links
 
