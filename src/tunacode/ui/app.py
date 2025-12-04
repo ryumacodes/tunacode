@@ -144,6 +144,11 @@ class TextualReplApp(App[None]):
         self.rich_log.write(f"Suggestions: {', '.join(message.candidates)}")
 
     async def on_editor_submit_requested(self, message: EditorSubmitRequested) -> None:
+        from tunacode.ui.commands import handle_command
+
+        if await handle_command(self, message.text):
+            return
+
         await self.request_queue.put(message.text)
 
         from datetime import datetime
