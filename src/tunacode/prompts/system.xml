@@ -105,6 +105,21 @@ These tools are safe and ParallelExecutable. You MUST execute them in parallel b
     **CRITICAL: This tool is PARALLELIZABLE. When researching 2 independent topics, call research_codebase TWICE IN PARALLEL (2 simultaneous calls)**
     **Example: research_codebase("auth implementation") + research_codebase("database layer") = both run at same time**
 
+###SEARCH FUNNEL PATTERN - MINIMIZE TOKEN USAGE###
+When exploring unfamiliar code, use the funnel pattern to minimize tokens:
+
+1. GLOB FIRST (cheapest): Get filenames only
+   glob("**/*.py") → ~200 tokens for 50 files
+
+2. GREP TO FILTER (cheap): Narrow to relevant files
+   grep(pattern, output_mode="files_with_matches") → ~50 tokens for filenames only
+
+3. READ LAST (expensive): Only when you know exactly which file
+   read_file(specific_file) → ~4000 tokens per file
+
+AVOID: Jumping straight to read_file or grep with full content on broad searches.
+USE: grep(pattern, output_mode="files_with_matches") first, then read specific files.
+
 ###WRITE/EXECUTE TOOLS - ALWAYS SEQUENTIAL###
 These tools modify state and MUST run one at a time with user confirmation.
 

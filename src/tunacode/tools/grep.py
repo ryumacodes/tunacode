@@ -81,6 +81,7 @@ class ParallelGrep:
         context_lines: int = 2,
         search_type: str = "smart",  # smart, ripgrep, python, hybrid
         return_format: str = "string",  # "string" (default) or "list" (legacy)
+        output_mode: str = "content",  # content, files_with_matches, count, json
     ) -> Union[str, List[str]]:
         """
         Execute parallel grep search with fast-glob prefiltering and multiple strategies.
@@ -169,7 +170,9 @@ class ParallelGrep:
                 f"Strategy: {search_type} (was {original_search_type}), "
                 f"Files: {len(candidates)}/{5000}"
             )
-            formatted_results = self._result_formatter.format_results(results, pattern, config)
+            formatted_results = self._result_formatter.format_results(
+                results, pattern, config, output_mode=output_mode
+            )
 
             if return_format == "list":
                 # Legacy: return list of file paths with at least one match
@@ -432,6 +435,7 @@ async def grep(
     context_lines: int = 2,
     search_type: str = "smart",
     return_format: str = "string",
+    output_mode: str = "content",
 ) -> Union[str, List[str]]:
     """Advanced parallel grep search with multiple strategies.
 
@@ -447,6 +451,7 @@ async def grep(
         context_lines: Number of context lines before/after matches.
         search_type: Search strategy (smart/ripgrep/python/hybrid).
         return_format: Output format (string or list).
+        output_mode: Output mode (content, files_with_matches, count, json).
 
     Returns:
         Formatted search results with file paths, line numbers, and context.
@@ -466,4 +471,5 @@ async def grep(
         context_lines=context_lines,
         search_type=search_type,
         return_format=return_format,
+        output_mode=output_mode,
     )
