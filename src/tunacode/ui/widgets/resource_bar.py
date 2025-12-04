@@ -1,13 +1,8 @@
-"""Resource and status bar widgets for TunaCode REPL."""
+"""Resource bar widget for TunaCode REPL."""
 
 from __future__ import annotations
 
-import os
-import subprocess
-
 from rich.text import Text
-from textual.app import ComposeResult
-from textual.containers import Horizontal
 from textual.widgets import Static
 
 from tunacode.constants import RESOURCE_BAR_COST_FORMAT, RESOURCE_BAR_SEPARATOR
@@ -89,37 +84,3 @@ class ResourceBar(Static):
             (session_cost_str, "green"),
         )
         self.update(content)
-
-
-class StatusBar(Horizontal):
-    """Bottom status bar - 3 zones."""
-
-    def compose(self) -> ComposeResult:
-        yield Static("main ● ~/proj", id="status-left")
-        yield Static("bg: idle", id="status-mid")
-        yield Static("last: -", id="status-right")
-
-    def on_mount(self) -> None:
-        self._refresh_location()
-
-    def _refresh_location(self) -> None:
-        try:
-            result = subprocess.run(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                capture_output=True,
-                text=True,
-                timeout=1,
-            )
-            branch = result.stdout.strip() or "main"
-        except Exception:
-            branch = "main"
-
-        dirname = os.path.basename(os.getcwd()) or "~"
-        self.query_one("#status-left", Static).update(f"{branch} ● {dirname}")
-
-    def update_last_action(self, tool_name: str) -> None:
-        self.query_one("#status-right", Static).update(f"last: {tool_name}")
-
-    def update_bg_status(self, tool_name: str) -> None:
-        text = f"bg: {tool_name}..." if tool_name else "bg: idle"
-        self.query_one("#status-mid", Static).update(text)

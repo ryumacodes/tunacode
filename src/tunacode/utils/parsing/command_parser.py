@@ -12,8 +12,8 @@ from tunacode.constants import (
 )
 from tunacode.exceptions import ValidationError
 from tunacode.types import ToolArgs
-from tunacode.utils.parsing.retry import retry_json_parse
 from tunacode.utils.parsing.json_utils import safe_json_parse
+from tunacode.utils.parsing.retry import retry_json_parse
 
 logger = logging.getLogger(__name__)
 

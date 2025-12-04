@@ -27,7 +27,7 @@ Add keyboard-driven interaction to the tool confirmation modal so users can appr
 - Ensure keyboard navigation works immediately when modal appears
 
 **Out of scope:**
-- Adding Input widget for user feedback on rejection
+-
 - Changing the visual layout of the modal
 - Modifying authorization handler logic
 

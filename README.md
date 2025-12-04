@@ -15,6 +15,12 @@
 
 ---
 
+## Why TunaCode?
+
+**Start coding faster with your AI-powered CLI assistant**
+
+Now let's get you set up with a tool that helps catch those bugs before they catch you.
+
 ## Quick Install
 
 ```bash
@@ -124,9 +130,8 @@ Replace the model and API key with your preferred provider and credentials. Exam
 - `anthropic:claude-4-sonnet-20250522` (requires ANTHROPIC_API_KEY)
 - `google:gemini-2.5-pro` (requires GEMINI_API_KEY)
 
-### ⚠️ Important Notice
 
-I apologize for any recent issues with model selection and configuration. I'm actively working to fix these problems and improve the overall stability of TunaCode. Your patience and feedback are greatly appreciated as I work to make the tool more reliable.
+I also apologize for any recent issues with model selection and configuration. I'm actively working to fix these problems and improve the overall stability of TunaCode. Your patience and feedback are greatly appreciated as I work to make the tool more reliable.
 
 ### Recommended Models
 

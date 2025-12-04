@@ -17,6 +17,25 @@ from tunacode.core.state import StateManager
 logger = get_logger(__name__)
 
 
+def _find_overlap_length(pre_text: str, delta_text: str) -> int:
+    """Find length of longest pre_text suffix that equals delta_text prefix.
+
+    This detects when delta_text starts with content already in pre_text,
+    so we can avoid emitting duplicate text.
+
+    Returns:
+        Number of characters that overlap (0 if no overlap).
+    """
+    if not pre_text or not delta_text:
+        return 0
+
+    max_check = min(len(pre_text), len(delta_text))
+    for overlap_len in range(max_check, 0, -1):
+        if delta_text[:overlap_len] == pre_text[-overlap_len:]:
+            return overlap_len
+    return 0
+
+
 async def stream_model_request_node(
     node,
     agent_run_ctx,
@@ -173,45 +192,31 @@ async def stream_model_request_node(
                                         and len(pre_first_delta_text) <= 100
                                         and not seeded_prefix_sent
                                     ):
-                                        # If delta contains the candidate,
-                                        # emit the prefix up to that point
-                                        probe = pre_first_delta_text[:20]
-                                        idx = pre_first_delta_text.find(probe)
-                                        if idx > 0:
-                                            prefix = pre_first_delta_text[:idx]
-                                            if prefix:
-                                                await streaming_callback(prefix)
-                                                seeded_prefix_sent = True
-                                                preview_msg = (
-                                                    f"[src] seeded_prefix idx={idx} "
-                                                    f"len={len(prefix)} preview={repr(prefix)}"
-                                                )
-                                                state_manager.session._debug_events.append(
-                                                    preview_msg
-                                                )
-                                        elif idx == -1:
-                                            # Delta text does not appear in pre-text;
-                                            # emit the pre-text directly as a seed
-                                            # Safe for short pre-text (e.g., first word)
-                                            # to avoid duplication
-                                            if pre_first_delta_text.strip():
-                                                await streaming_callback(pre_first_delta_text)
-                                                seeded_prefix_sent = True
-                                                text_len = len(pre_first_delta_text)
-                                                preview_repr = repr(pre_first_delta_text)
-                                                direct_msg = (
-                                                    f"[src] seeded_prefix_direct "
-                                                    f"len={text_len} preview={preview_repr}"
-                                                )
-                                                state_manager.session._debug_events.append(
-                                                    direct_msg
-                                                )
+                                        # Find overlap: longest suffix of pre_first_delta_text
+                                        # that matches a prefix of delta_text
+                                        overlap_len = _find_overlap_length(
+                                            pre_first_delta_text, delta_text
+                                        )
+                                        # Emit the non-overlapping prefix
+                                        prefix_len = len(pre_first_delta_text) - overlap_len
+                                        prefix_to_emit = pre_first_delta_text[:prefix_len]
+
+                                        if prefix_to_emit.strip():
+                                            await streaming_callback(prefix_to_emit)
+                                            seeded_prefix_sent = True
+                                            preview_msg = (
+                                                f"[src] seeded_prefix overlap={overlap_len} "
+                                                f"len={len(prefix_to_emit)} "
+                                                f"preview={repr(prefix_to_emit[:20])}"
+                                            )
+                                            state_manager.session._debug_events.append(
+                                                preview_msg
+                                            )
                                         else:
-                                            # idx == 0 means pre-text is already the
-                                            # start of delta; skip
                                             skip_msg = (
-                                                f"[src] seed_skip idx={idx} "
-                                                f"delta_len={len(delta_text)}"
+                                                f"[src] seed_skip overlap={overlap_len} "
+                                                f"delta_len={len(delta_text)} "
+                                                f"pre_len={len(pre_first_delta_text)}"
                                             )
                                             state_manager.session._debug_events.append(skip_msg)
                                 except Exception:

@@ -18,8 +18,8 @@ Adapt responses to the user's technical level, stay direct, neutral, and concise
    - Execute tools immediately: call read_file three times in parallel
    - You will be penalized for announcing actions without executing them
 
-3. ALWAYS BATCH COMPATIBLE TOOLS: Your task is to maximize parallelization. When multiple read-only tools are needed, group 3-4 calls together for optimal performance.
-   - Optimal batch size: 3-4 concurrent read-only tools
+3. ALWAYS BATCH COMPATIBLE TOOLS: Your task is to maximize parallelization. When multiple read-only tools are needed, group 3 calls together for optimal performance.
+   - Optimal batch size: 3 concurrent read-only tools
    - You MUST scan ahead and identify all read-only operations before execution
    - Execute them as a single parallel batch
    - You will be penalized for making sequential calls when parallel execution is possible
@@ -73,7 +73,7 @@ These tools are safe and ParallelExecutable. You MUST execute them in parallel b
 
 **MANDATORY PARALLEL EXECUTION RULE:**
 - When you need 2+ read-only tools, you MUST execute them together in one response
-- Optimal batch size: 3-4 concurrent calls (governed by TUNACODE_MAX_PARALLEL)
+- Optimal batch size: 3 concurrent calls (governed by TUNACODE_MAX_PARALLEL)
 - You will be penalized for sequential execution of independent read-only tools
 - Think step by step: identify all needed reads, then execute in parallel
 
@@ -200,7 +200,7 @@ Your task is to execute these tools sequentially with explicit confirmation at e
 You will be penalized for:
 - Sequential execution of independent read-only tools (use parallel batches instead)
 - Announcing actions without executing them in the same response
-- Making fewer than optimal parallel calls when 3-4 could be batched
+- Making fewer than optimal parallel calls when 3 could be batched
 - Using write tools when read-only tools would suffice
 - Using bash for searching when read-only tools (grep, glob, list_dir) would work
 - Using research_codebase without explicit user request for research/analysis/investigation
@@ -425,7 +425,7 @@ bash("python -m venv venv && source venv/bin/activate && pip list")
 
 REMEMBER:
  Always use these exact patterns
- Batch readonly tools for parallel execution (3-4 calls optimal)
+ Batch readonly tools for parallel execution (3 calls optimal)
  Execute write/execute tools one at a time with confirmation
  Think step by step before executing to identify parallelization opportunities
 
@@ -949,7 +949,7 @@ Returns 2 complete research reports in same time as 1
 
 
 Benchmark Metrics (from real usage):
-- Optimal: 3-4 tools in parallel = 15-20x speedup
+- Optimal: 3 tools in parallel = 15-20x speedup
 - Good: 2 tools in parallel = 8-10x speedup
 - WRONG: Sequential execution = 0x speedup (baseline), PENALIZED
 

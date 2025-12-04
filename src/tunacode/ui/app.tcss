@@ -44,6 +44,19 @@ RichLog.paused {
 }
 
 /* ============================================
+ * LOADING INDICATOR - Hidden by default, shown during processing
+ * ============================================ */
+LoadingIndicator {
+    height: 1;
+    display: none;
+    background: $background;
+}
+
+LoadingIndicator.active {
+    display: block;
+}
+
+/* ============================================
  * BOTTOM ZONE - Container for tool status + command area
  * Docked as single unit to prevent RichLog (1fr) from crushing children
  * ============================================ */

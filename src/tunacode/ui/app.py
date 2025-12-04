@@ -10,7 +10,7 @@ from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.message import Message
-from textual.widgets import RichLog
+from textual.widgets import LoadingIndicator, RichLog
 
 from tunacode.constants import (
     RICHLOG_CLASS_PAUSED,
@@ -31,8 +31,8 @@ from tunacode.ui.renderers.panels import tool_panel_smart
 from tunacode.ui.screens import ToolConfirmationModal, ToolConfirmationResult
 from tunacode.ui.widgets import (
     Editor,
-    EditorCompletionsAvailable,
     EditorSubmitRequested,
+    FileAutoComplete,
     ResourceBar,
     StatusBar,
     ToolResultDisplay,
@@ -65,6 +65,7 @@ class TextualReplApp(App[None]):
         self._stream_buffer: list[str] = []
         self.current_stream_text: str = ""
         self._current_request_task: asyncio.Task | None = None
+        self._loading_indicator_shown: bool = False
 
         self.rich_log: RichLog
         self.editor: Editor
@@ -74,12 +75,15 @@ class TextualReplApp(App[None]):
     def compose(self) -> ComposeResult:
         self.resource_bar = ResourceBar()
         self.rich_log = RichLog(wrap=True, markup=True, highlight=True, auto_scroll=True)
+        self.loading_indicator = LoadingIndicator()
         self.editor = Editor()
         self.status_bar = StatusBar()
 
         yield self.resource_bar
         yield self.rich_log
+        yield self.loading_indicator
         yield self.editor
+        yield FileAutoComplete(self.editor)
         yield self.status_bar
 
     def on_mount(self) -> None:
@@ -120,6 +124,9 @@ class TextualReplApp(App[None]):
         self._streaming_cancelled = False
         self.rich_log.add_class(RICHLOG_CLASS_STREAMING)
 
+        self._loading_indicator_shown = True
+        self.loading_indicator.add_class("active")
+
         try:
             model_name = self.state_manager.session.current_model or "openai/gpt-4o"
 
@@ -131,7 +138,6 @@ class TextualReplApp(App[None]):
                     tool_callback=build_textual_tool_callback(self, self.state_manager),
                     streaming_callback=self.streaming_callback,
                     tool_result_callback=build_tool_result_callback(self),
-                    tool_start_callback=build_tool_start_callback(self),
                 )
             )
             await self._current_request_task
@@ -148,19 +154,19 @@ class TextualReplApp(App[None]):
             self.rich_log.write(error_renderable)
         finally:
             self._current_request_task = None
+            self._loading_indicator_shown = False
+            self.loading_indicator.remove_class("active")
             self.rich_log.remove_class(RICHLOG_CLASS_STREAMING)
             self.rich_log.remove_class(RICHLOG_CLASS_PAUSED)
 
             if self.current_stream_text and not self._streaming_cancelled:
+                self.rich_log.write("")
+                self.rich_log.write(Text("agent:", style="accent"))
                 self.rich_log.write(Markdown(self.current_stream_text))
 
             self.current_stream_text = ""
             self._streaming_cancelled = False
             self._update_resource_bar()
-            self.status_bar.update_bg_status("")
-
-    def on_editor_completions_available(self, message: EditorCompletionsAvailable) -> None:
-        self.rich_log.write(f"Suggestions: {', '.join(message.candidates)}")
 
     async def on_editor_submit_requested(self, message: EditorSubmitRequested) -> None:
         from tunacode.ui.commands import handle_command
@@ -282,6 +288,9 @@ def build_textual_tool_callback(app: TextualReplApp, state_manager: StateManager
     return _callback
 
 
+FILE_EDIT_TOOLS = frozenset({"write_file", "update_file"})
+
+
 def build_tool_result_callback(app: TextualReplApp):
     def _callback(
         tool_name: str,
@@ -290,6 +299,11 @@ def build_tool_result_callback(app: TextualReplApp):
         result: str | None = None,
         duration_ms: float | None = None,
     ) -> None:
+        if tool_name in FILE_EDIT_TOOLS and status == "completed":
+            filepath = args.get("filepath")
+            if filepath:
+                app.status_bar.add_edited_file(filepath)
+
         app.status_bar.update_last_action(tool_name)
 
         app.post_message(
@@ -301,12 +315,5 @@ def build_tool_result_callback(app: TextualReplApp):
                 duration_ms=duration_ms,
             )
         )
-
-    return _callback
-
-
-def build_tool_start_callback(app: TextualReplApp):
-    def _callback(tool_name: str) -> None:
-        app.status_bar.update_bg_status(tool_name)
 
     return _callback
