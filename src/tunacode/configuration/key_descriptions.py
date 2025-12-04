@@ -206,7 +206,7 @@ CONFIG_KEY_DESCRIPTIONS: Dict[str, KeyDescription] = {
         help_text="Enable for troubleshooting search issues. Creates verbose output.",
         category="Search Settings",
     ),
-  }
+}
 
 
 def get_key_description(key_path: str) -> Optional[KeyDescription]:
