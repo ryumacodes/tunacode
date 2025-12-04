@@ -1,0 +1,103 @@
+"""CLI entry point for TunaCode."""
+
+import asyncio
+import logging
+
+import typer
+
+from tunacode.ui.app import run_textual_repl
+from tunacode.configuration.settings import ApplicationSettings
+from tunacode.core.state import StateManager
+from tunacode.exceptions import UserAbortError
+from tunacode.tools.authorization.handler import ToolHandler
+from tunacode.utils.system import check_for_updates
+
+app_settings = ApplicationSettings()
+app = typer.Typer(help="TunaCode - OS AI-powered development assistant")
+state_manager = StateManager()
+
+logger = logging.getLogger(__name__)
+
+
+def _handle_background_task_error(task: asyncio.Task) -> None:
+    try:
+        exception = task.exception()
+        if exception is not None:
+            task_name = task.get_name()
+            logger.warning(
+                "Background task '%s' failed: %s",
+                task_name,
+                exception,
+                exc_info=exception,
+            )
+    except asyncio.CancelledError:
+        pass
+    except Exception as e:
+        logger.error("Error in background task error callback: %s", e, exc_info=True)
+
+
+@app.command()
+def main(
+    version: bool = typer.Option(False, "--version", "-v", help="Show version and exit."),
+    baseurl: str = typer.Option(
+        None, "--baseurl", help="API base URL (e.g., https://openrouter.ai/api/v1)"
+    ),
+    model: str = typer.Option(None, "--model", help="Default model to use (e.g., openai/gpt-4)"),
+    key: str = typer.Option(None, "--key", help="API key for the provider"),
+    context: int = typer.Option(
+        None, "--context", help="Maximum context window size for custom models"
+    ),
+):
+    """Start TunaCode - Your AI-powered development assistant"""
+
+    logging.basicConfig(level=logging.WARNING, force=True)
+
+    async def async_main():
+        if version:
+            from tunacode.constants import VERSION
+
+            print(f"tunacode {VERSION}")
+            return
+
+        update_task = asyncio.create_task(asyncio.to_thread(check_for_updates), name="update_check")
+        update_task.add_done_callback(_handle_background_task_error)
+
+        cli_config = {
+            "baseurl": baseurl,
+            "model": model,
+            "key": key,
+            "custom_context_window": context,
+        }
+        cli_config = {k: v for k, v in cli_config.items() if v is not None}
+
+        try:
+            tool_handler = ToolHandler(state_manager)
+            state_manager.set_tool_handler(tool_handler)
+
+            await run_textual_repl(state_manager)
+        except (KeyboardInterrupt, UserAbortError):
+            update_task.cancel()
+            return
+        except Exception as e:
+            from tunacode.exceptions import ConfigurationError
+
+            if isinstance(e, ConfigurationError):
+                print(f"Error: {e}")
+                update_task.cancel()
+                return
+            import traceback
+
+            print(f"Error: {e}\n\nTraceback:\n{traceback.format_exc()}")
+
+        try:
+            has_update, latest_version = await update_task
+            if has_update:
+                print(f"Update available: {latest_version}")
+        except Exception:
+            pass
+
+    asyncio.run(async_main())
+
+
+if __name__ == "__main__":
+    app()
