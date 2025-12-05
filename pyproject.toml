@@ -140,7 +140,7 @@ skips = ["B404", "B603", "B101", "B607", "B110", "B324", "B103", "B604", "B602",
 # B108: hardcoded tmp paths (test fixtures)
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 ignore_missing_imports = true
 warn_return_any = false
 warn_unused_configs = true
@@ -175,7 +175,7 @@ typecheck = "mypy src/"
 security = "bandit -r src/ -ll"
 
 # Version management
-version = "0.1.1"
+version = "0.1.2"
 
 # Release workflow
 release = [
