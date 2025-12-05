@@ -2,11 +2,6 @@
 
 This project is tunacode, much like you! It's a TUI code agent that can be used to code and debug code or general agentic tasks.
 
-> How many programmers does it take to change a light bulb?  
-> None - that's a hardware problem! 💡
-
-But if you need help with the software side, you're in the right place.
-
 src/tunacode/ui is the TUI interface that is used to interact with the user.
 src/tunacode/core is the core agent that is used to code and debug code or general agentic tasks.
 src/tunacode/tools is the tools that are used to code and debug code or general agentic tasks.

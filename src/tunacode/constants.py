@@ -27,6 +27,9 @@ MAX_FILES_IN_DIR = 50
 MAX_TOTAL_DIR_SIZE = 2 * 1024 * 1024  # 2 MB
 DEFAULT_CONTEXT_WINDOW = 200000  # 200k tokens
 
+# File autocomplete settings
+AUTOCOMPLETE_MAX_DEPTH = 3  # Levels deep from current prefix (sliding window)
+AUTOCOMPLETE_RESULT_LIMIT = 50
 
 # Command output processing
 COMMAND_OUTPUT_THRESHOLD = 3500  # Length threshold for truncation

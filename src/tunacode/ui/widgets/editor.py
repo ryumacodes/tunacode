@@ -13,26 +13,33 @@ from .status_bar import StatusBar
 class Editor(Input):
     """Single-line editor with Enter to submit."""
 
+    value: str  # type re-declaration for mypy (inherited reactive from Input)
+
     BINDINGS = [
         Binding("enter", "submit", "Submit", show=False),
     ]
 
     def __init__(self) -> None:
         super().__init__(placeholder="we await...")
+        self._placeholder_cleared: bool = False
 
     def on_key(self, event: events.Key) -> None:
-        """Let confirmation keys pass through when confirmation is pending."""
-        if event.key not in ("1", "2", "3"):
-            return
-        app = self.app
-        if not hasattr(app, "pending_confirmation"):
-            return
-        if app.pending_confirmation is None:
-            return
-        if app.pending_confirmation.future.done():
-            return
-        # Pending confirmation active - prevent Input from consuming this key
-        event.prevent_default()
+        """Handle key events for confirmation and bash-mode auto-spacing."""
+        if event.key in ("1", "2", "3"):
+            app = self.app
+            if hasattr(app, "pending_confirmation"):
+                if app.pending_confirmation is not None:
+                    if not app.pending_confirmation.future.done():
+                        event.prevent_default()
+                        return
+
+        # Auto-insert space after ! prefix
+        # When value is "!" and user types a non-space character,
+        # insert space between ! and the character
+        if self.value == "!" and event.character and event.character != " ":
+            event.prevent_default()
+            self.value = f"! {event.character}"
+            self.cursor_position = len(self.value)
 
     def action_submit(self) -> None:
         text = self.value.strip()
@@ -43,7 +50,11 @@ class Editor(Input):
         self.value = ""
 
     def watch_value(self, value: str) -> None:
-        """Toggle bash-mode class based on input prefix."""
+        """Toggle bash-mode class and clear placeholder on first input."""
+        if value and not self._placeholder_cleared:
+            self.placeholder = ""
+            self._placeholder_cleared = True
+
         self.remove_class("bash-mode")
         try:
             status_bar = self.app.query_one(StatusBar)
@@ -52,9 +63,5 @@ class Editor(Input):
         if value.startswith("!"):
             self.add_class("bash-mode")
             status_bar.set_mode("bash mode")
-            # Auto-insert space: "!x" -> "! x"
-            if len(value) == 2 and value[1] != " ":
-                self.value = f"! {value[1]}"
-                self.cursor_position = len(self.value)
         else:
             status_bar.set_mode(None)

@@ -1,0 +1,29 @@
+{
+    "default_model": "openrouter:openai/gpt-4.1",
+    "env": {
+        "ANTHROPIC_API_KEY": "",
+        "GEMINI_API_KEY": "",
+        "OPENAI_API_KEY": "",
+        "OPENROUTER_API_KEY": ""
+    },
+    "settings": {
+        "max_retries": 10,
+        "max_iterations": 40,
+        "request_delay": 0.0,
+        "global_request_timeout": 90.0,
+        "tool_ignore": [],
+        "guide_file": "AGENTS.md",
+        "fallback_response": true,
+        "fallback_verbosity": "normal",
+        "context_window_size": 200000,
+        "enable_streaming": true,
+        "theme": "dracula",
+        "ripgrep": {
+            "timeout": 10,
+            "max_buffer_size": 1048576,
+            "max_results": 100,
+            "enable_metrics": false,
+            "debug": false
+        }
+    }
+}
