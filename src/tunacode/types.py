@@ -140,13 +140,6 @@ class FallbackResponse:
     next_steps: List[str] = field(default_factory=list)
 
 
-@dataclass
-class SimpleResult:
-    """Simple result container for agent responses."""
-
-    output: str
-
-
 class AgentState(Enum):
     """Agent loop states for enhanced completion detection."""
 
