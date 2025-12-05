@@ -57,38 +57,6 @@ LoadingIndicator.active {
 }
 
 /* ============================================
- * BOTTOM ZONE - Container for tool status + command area
- * Docked as single unit to prevent RichLog (1fr) from crushing children
- * ============================================ */
-/* ============================================
- * UNUSED - Removed complex docking layout
- * ============================================ */
-/*
-#bottom-zone {
-    dock: bottom;
-    height: auto;
-    width: 100%;
-}
-
-#input-row {
-    height: 6;
-    width: 100%;
-    dock: top;
-}
-
-#input-prompt {
-    width: 3;
-    height: 100%;
-    color: $primary;
-    background: $background;
-    border-top: solid $border;
-    border-left: solid $border;
-    border-bottom: solid $border;
-    padding: 0 0 0 1;
-}
-*/
-
-/* ============================================
  * EDITOR - Input bar (compact)
  * ============================================ */
 Editor {
