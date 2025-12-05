@@ -48,6 +48,7 @@ def create_user_message(content: str, state_manager: StateManager):
     user_prompt_part = UserPromptPart(content=content, part_kind="user-prompt")
     message = model_request_cls(parts=[user_prompt_part], kind="request")
     state_manager.session.messages.append(message)
+    state_manager.session.update_token_count()
     return message
 
 

@@ -88,12 +88,18 @@ class SessionState:
     iteration_budgets: dict[str, int] = field(default_factory=dict)
     recursive_context_stack: list[dict[str, Any]] = field(default_factory=list)
 
-    def update_token_count(self):
-        """Calculates the total token count from messages and files in context."""
-        message_contents = [get_message_content(msg) for msg in self.messages]
-        message_content = " ".join(c for c in message_contents if c)
-        file_content = " ".join(self.files_in_context)
-        self.total_tokens = estimate_tokens(message_content + file_content, self.current_model)
+    def update_token_count(self) -> None:
+        """Calculate total token count from conversation messages."""
+        total = 0
+        for msg in self.messages:
+            content = get_message_content(msg)
+            if content:
+                total += estimate_tokens(content, self.current_model)
+        self.total_tokens = total
+
+    def adjust_token_count(self, delta: int) -> None:
+        """Adjust total_tokens by delta (negative for reclaimed tokens)."""
+        self.total_tokens = max(0, self.total_tokens + delta)
 
 
 class StateManager:
@@ -130,6 +136,10 @@ class StateManager:
         # Update current_model to match the loaded user config
         if self._session.user_config.get("default_model"):
             self._session.current_model = self._session.user_config["default_model"]
+
+        # Initialize max_tokens from config's context_window_size
+        settings = self._session.user_config.get("settings", {})
+        self._session.max_tokens = settings.get("context_window_size", 200000)
 
     @property
     def session(self) -> SessionState:

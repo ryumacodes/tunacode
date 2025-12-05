@@ -75,6 +75,8 @@ async def _process_node(
         state_manager.session.messages.append(node.model_response)
 
         _update_token_usage(node.model_response, state_manager)
+        # Update context window token count
+        state_manager.session.update_token_count()
 
         # Check for task completion marker in response content
         if response_state:

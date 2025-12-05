@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from pydantic_ai import Tool  # noqa: F401
 
 from tunacode.constants import UI_COLORS
+from tunacode.core.compaction import prune_old_tool_outputs
 from tunacode.core.logging.logger import get_logger
 from tunacode.core.state import StateManager
 from tunacode.exceptions import GlobalRequestTimeoutError, ToolBatchingJSONError, UserAbortError
@@ -363,8 +364,14 @@ class RequestOrchestrator:
         # Acquire agent
         agent = ac.get_or_create_agent(self.model, self.state_manager)
 
-        # Prepare history snapshot
-        message_history = list(getattr(self.state_manager.session, "messages", []))
+        # Prune old tool outputs directly in session (persisted)
+        session_messages = self.state_manager.session.messages
+        _, tokens_reclaimed = prune_old_tool_outputs(session_messages, self.model)
+        if tokens_reclaimed > 0:
+            logger.info("Pruned %d tokens from old tool outputs", tokens_reclaimed)
+
+        # Prepare history snapshot (now pruned)
+        message_history = list(session_messages)
 
         # Per-request trackers
         tool_buffer = ac.ToolBuffer()

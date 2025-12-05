@@ -205,4 +205,9 @@ For a complete overview of the documentation, see the [**Documentation Hub**](do
 
 ---
 
+> **Why don't programmers like nature?**  
+> It has too many bugs.
+
+---
+
 MIT License - see [LICENSE](LICENSE) file
