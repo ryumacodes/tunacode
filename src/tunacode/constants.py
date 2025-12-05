@@ -76,7 +76,6 @@ CMD_HELP = "/help"
 CMD_CLEAR = "/clear"
 CMD_DUMP = "/dump"
 CMD_YOLO = "/yolo"
-CMD_COMPACT = "/compact"
 CMD_MODEL = "/model"
 CMD_EXIT = "exit"
 CMD_QUIT = "quit"
@@ -86,7 +85,6 @@ DESC_HELP = "Show this help message"
 DESC_CLEAR = "Clear the conversation history"
 DESC_DUMP = "Show the current conversation history"
 DESC_YOLO = "Toggle confirmation prompts on/off"
-DESC_COMPACT = "Summarize the conversation context"
 DESC_MODEL = "List available models"
 DESC_MODEL_SWITCH = "Switch to a specific model"
 DESC_MODEL_DEFAULT = "Set a model as the default"
@@ -96,7 +94,7 @@ DESC_EXIT = "Exit the application"
 COMMAND_PREFIX = "/"
 COMMAND_CATEGORIES = {
     "state": ["yolo"],
-    "debug": ["dump", "compact"],
+    "debug": ["dump"],
     "ui": ["clear", "help"],
     "config": ["model"],
 }
@@ -121,6 +119,32 @@ UI_COLORS = {
     "success": "#4ec9b0",  # Green - costs
     "warning": "#c3e88d",  # Yellow/lime
     "error": "#f44747",  # Red
+}
+
+# NeXTSTEP theme colors - Classic 1990s monochrome (high contrast)
+NEXTSTEP_COLORS = {
+    # Desktop/app background - medium gray
+    "background": "#acacac",
+    # Window content area - lighter gray
+    "surface": "#c8c8c8",
+    "window_content": "#d0d0d0",
+    # Title bar - dark charcoal (distinctive NeXTSTEP look)
+    "title_bar": "#3a3a3a",
+    "title_bar_text": "#e0e0e0",
+    # Borders - strong definition
+    "border": "#2a2a2a",
+    # Text - BLACK on light gray = MAXIMUM contrast
+    "text": "#000000",
+    "muted": "#404040",
+    # 3D Bevel effect (essential for NeXTSTEP)
+    "bevel_light": "#e8e8e8",  # Top/left highlight
+    "bevel_dark": "#606060",  # Bottom/right shadow
+    # PURE MONOCHROME - all accents are grayscale
+    "primary": "#1a1a1a",
+    "accent": "#3a3a3a",
+    "success": "#2a2a2a",
+    "warning": "#4a4a4a",
+    "error": "#1a1a1a",
 }
 
 # UI text and formatting
@@ -216,5 +240,42 @@ def build_tunacode_theme():
         variables={
             "text-muted": p["muted"],
             "border": p["border"],
+        },
+    )
+
+
+def build_nextstep_theme():
+    """Build and return the NeXTSTEP Textual theme.
+
+    Classic 1990s NeXTSTEP look - light gray background, black text,
+    pure monochrome with no colored accents. High contrast for readability.
+    """
+    from textual.theme import Theme
+
+    p = NEXTSTEP_COLORS
+    return Theme(
+        name="nextstep",
+        dark=False,  # LIGHT theme - authentic NeXTSTEP
+        primary=p["primary"],
+        secondary=p["muted"],
+        accent=p["accent"],
+        background=p["background"],
+        surface=p["surface"],
+        panel=p["surface"],
+        success=p["success"],
+        warning=p["warning"],
+        error=p["error"],
+        foreground=p["text"],  # Black text on gray
+        variables={
+            "text-muted": p["muted"],
+            "border": p["border"],
+            # NeXTSTEP 3D bevel colors
+            "bevel-light": p["bevel_light"],
+            "bevel-dark": p["bevel_dark"],
+            # Title bar styling
+            "title-bar": p["title_bar"],
+            "title-bar-text": p["title_bar_text"],
+            # Window content
+            "window-content": p["window_content"],
         },
     )

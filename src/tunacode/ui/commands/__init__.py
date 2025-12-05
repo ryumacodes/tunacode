@@ -68,36 +68,46 @@ class YoloCommand(Command):
 
 class ModelCommand(Command):
     name = "model"
-    description = "Show or set the current model"
+    description = "Open model picker or switch directly"
     usage = "/model [provider:model-name]"
 
     async def execute(self, app: "TextualReplApp", args: str) -> None:
-        from rich.table import Table
+        from tunacode.utils.config.user_configuration import save_config
 
         if args:
-            app.state_manager.session.current_model = args.strip()
+            model_name = args.strip()
+            app.state_manager.session.current_model = model_name
+            app.state_manager.session.user_config["default_model"] = model_name
+            save_config(app.state_manager)
             app._update_resource_bar()
-            app.notify(f"Model set to: {args.strip()}")
+            app.notify(f"Model: {model_name}")
         else:
-            from tunacode.configuration.models import ModelRegistry
+            from tunacode.ui.screens.model_picker import (
+                ModelPickerScreen,
+                ProviderPickerScreen,
+            )
 
-            registry = ModelRegistry()
-            models = registry.list_models()
-            current = app.state_manager.session.current_model
+            current_model = app.state_manager.session.current_model
 
-            table = Table(title="Available Models", show_header=True)
-            table.add_column("Model", style=STYLE_PRIMARY)
-            table.add_column("Input $/M", justify="right")
-            table.add_column("Current", justify="center")
+            def on_model_selected(full_model: str | None) -> None:
+                if full_model is not None:
+                    app.state_manager.session.current_model = full_model
+                    app.state_manager.session.user_config["default_model"] = full_model
+                    save_config(app.state_manager)
+                    app._update_resource_bar()
+                    app.notify(f"Model: {full_model}")
 
-            for name, config in models.items():
-                marker = "●" if name == current else ""
-                price = f"${config.pricing.input:.2f}" if config.pricing else "-"
-                table.add_row(name, price, marker)
+            def on_provider_selected(provider_id: str | None) -> None:
+                if provider_id is not None:
+                    app.push_screen(
+                        ModelPickerScreen(provider_id, current_model),
+                        on_model_selected,
+                    )
 
-            app.rich_log.write(table)
-            app.rich_log.write(f"\nCurrent: {current}")
-            app.rich_log.write("Usage: /model <provider:model-name>")
+            app.push_screen(
+                ProviderPickerScreen(current_model),
+                on_provider_selected,
+            )
 
 
 class BranchCommand(Command):
@@ -129,14 +139,6 @@ class BranchCommand(Command):
             app.rich_log.write(f"Error: {e}")
 
 
-class CompactCommand(Command):
-    name = "compact"
-    description = "Summarize conversation to save context"
-
-    async def execute(self, app: "TextualReplApp", args: str) -> None:
-        app.notify("Compact not yet implemented", severity="warning")
-
-
 class PlanCommand(Command):
     name = "plan"
     description = "Toggle read-only planning mode"
@@ -145,14 +147,48 @@ class PlanCommand(Command):
         app.notify("Plan mode not yet implemented", severity="warning")
 
 
+class ThemeCommand(Command):
+    name = "theme"
+    description = "Open theme picker or switch directly"
+    usage = "/theme [name]"
+
+    async def execute(self, app: "TextualReplApp", args: str) -> None:
+        from tunacode.utils.config.user_configuration import save_config
+
+        if args:
+            theme_name = args.strip()
+            if theme_name not in app.available_themes:
+                app.notify(f"Unknown theme: {theme_name}", severity="error")
+                return
+
+            app.theme = theme_name
+            app.state_manager.session.user_config.setdefault("settings", {})["theme"] = theme_name
+            save_config(app.state_manager)
+            app.notify(f"Theme: {theme_name}")
+        else:
+            from tunacode.ui.screens.theme_picker import ThemePickerScreen
+
+            def on_dismiss(selected: str | None) -> None:
+                if selected is not None:
+                    config = app.state_manager.session.user_config
+                    config.setdefault("settings", {})["theme"] = selected
+                    save_config(app.state_manager)
+                    app.notify(f"Theme: {selected}")
+
+            app.push_screen(
+                ThemePickerScreen(app.available_themes, app.theme),
+                on_dismiss,
+            )
+
+
 COMMANDS: dict[str, Command] = {
     "help": HelpCommand(),
     "clear": ClearCommand(),
     "yolo": YoloCommand(),
     "model": ModelCommand(),
     "branch": BranchCommand(),
-    "compact": CompactCommand(),
     "plan": PlanCommand(),
+    "theme": ThemeCommand(),
 }
 
 

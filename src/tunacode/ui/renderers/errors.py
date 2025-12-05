@@ -175,3 +175,22 @@ def render_user_abort() -> RenderableType:
     )
 
     return RichPanelRenderer.render_error(data)
+
+
+def render_catastrophic_error(exc: Exception, context: str | None = None) -> RenderableType:
+    """Render a user-friendly error when something goes very wrong.
+
+    This is the catch-all error display for unexpected failures.
+    Shows a clear message asking the user to try again.
+    """
+    error_details = str(exc)[:200] if str(exc) else type(exc).__name__
+
+    data = ErrorDisplayData(
+        error_type="Something Went Wrong",
+        message="An unexpected error occurred. Please try again.",
+        suggested_fix="If this persists, check the logs or report the issue.",
+        context={"Details": error_details} if error_details else None,
+        severity="error",
+    )
+
+    return RichPanelRenderer.render_error(data)

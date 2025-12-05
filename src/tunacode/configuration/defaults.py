@@ -27,6 +27,7 @@ DEFAULT_USER_CONFIG: UserConfig = {
         "fallback_verbosity": "normal",  # Options: minimal, normal, detailed
         "context_window_size": 200000,
         "enable_streaming": True,  # Always enable streaming
+        "theme": "dracula",  # UI theme name
         "ripgrep": {
             "timeout": 10,  # Search timeout in seconds
             "max_buffer_size": 1048576,  # 1MB max output buffer

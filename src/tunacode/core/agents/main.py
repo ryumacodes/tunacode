@@ -455,15 +455,11 @@ class RequestOrchestrator:
             # User aborts must propagate - they represent user intent
             raise
         except ToolBatchingJSONError as e:
-            # Log error and patch messages, but return gracefully instead of raising
+            # Log error and re-raise - fail fast, fail loud
             logger.error("Tool batching JSON error [req=%s]: %s", ctx.request_id, e, exc_info=True)
-            error_msg = f"Tool batching failed: {str(e)[:100]}..."
-            ac.patch_tool_messages(error_msg, state_manager=self.state_manager)
-            # Return wrapper with fallback result - agent_run context has exited
-            fallback = ac.SimpleResult(error_msg)
-            return ac.AgentRunWrapper(None, fallback, response_state)
+            raise
         except Exception as e:
-            # Attach request/iteration context for observability
+            # Log with context and re-raise - fail fast, fail loud
             safe_iter = getattr(self.state_manager.session, "current_iteration", "?")
             logger.error(
                 "Error in process_request [req=%s iter=%s]: %s",
@@ -472,11 +468,7 @@ class RequestOrchestrator:
                 e,
                 exc_info=True,
             )
-            error_msg = f"Request processing failed: {str(e)[:100]}..."
-            ac.patch_tool_messages(error_msg, state_manager=self.state_manager)
-            # Return wrapper with fallback result - agent_run context has exited
-            fallback = ac.SimpleResult(error_msg)
-            return ac.AgentRunWrapper(None, fallback, response_state)
+            raise
 
 
 # Utility functions

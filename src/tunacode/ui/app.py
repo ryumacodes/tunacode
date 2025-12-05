@@ -17,7 +17,7 @@ from textual.widgets import LoadingIndicator, RichLog
 from tunacode.constants import (
     RICHLOG_CLASS_PAUSED,
     RICHLOG_CLASS_STREAMING,
-    THEME_NAME,
+    build_nextstep_theme,
     build_tunacode_theme,
 )
 from tunacode.core.agents.main import process_request
@@ -102,7 +102,12 @@ class TextualReplApp(App[None]):
     def on_mount(self) -> None:
         tunacode_theme = build_tunacode_theme()
         self.register_theme(tunacode_theme)
-        self.theme = THEME_NAME
+        nextstep_theme = build_nextstep_theme()
+        self.register_theme(nextstep_theme)
+
+        user_config = self.state_manager.session.user_config
+        saved_theme = user_config.get("settings", {}).get("theme", "dracula")
+        self.theme = saved_theme if saved_theme in self.available_themes else "dracula"
 
         if self._show_setup:
             from tunacode.ui.screens import SetupScreen
@@ -110,6 +115,13 @@ class TextualReplApp(App[None]):
             self.push_screen(SetupScreen(self.state_manager), self._on_setup_complete)
         else:
             self._start_repl()
+
+    def watch_theme(self, old_theme: str, new_theme: str) -> None:
+        """Toggle CSS class when theme changes for theme-specific styling."""
+        if old_theme:
+            self.remove_class(f"theme-{old_theme}")
+        if new_theme:
+            self.add_class(f"theme-{new_theme}")
 
     def _on_setup_complete(self, completed: bool) -> None:
         """Called when setup screen is dismissed."""
@@ -210,7 +222,7 @@ class TextualReplApp(App[None]):
         self.rich_log.write("")
         user_block = Text()
         user_block.append(f"│ {message.text}\n", style=STYLE_PRIMARY)
-        user_block.append(f"│ tc {timestamp}", style=f"dim {STYLE_PRIMARY}")
+        user_block.append(f"│ you {timestamp}", style=f"dim {STYLE_PRIMARY}")
         self.rich_log.write(user_block)
 
     async def request_tool_confirmation(

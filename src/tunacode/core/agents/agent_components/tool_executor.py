@@ -20,26 +20,27 @@ async def execute_tools_parallel(
     Args:
         tool_calls: List of (part, node) tuples
         callback: The tool callback function to execute
-        return_exceptions: Whether to return exceptions or raise them
+        return_exceptions: Whether to return exceptions or raise them (kept for API compat)
 
     Returns:
-        List of results in the same order as input, with exceptions for failed calls
+        List of results in the same order as input
+
+    Raises:
+        Exception: Re-raises the first exception encountered during tool execution
     """
     # Get max parallel from environment or default to CPU count
     max_parallel = int(os.environ.get("TUNACODE_MAX_PARALLEL", os.cpu_count() or 4))
+    errors: List[Exception] = []
 
     async def execute_with_error_handling(part, node):
+        tool_name = getattr(part, "tool_name", "<unknown>")
         try:
             return await callback(part, node)
         except Exception as e:
-            logger.error(f"Error executing parallel tool: {e}", exc_info=True)
-            return e
+            logger.error(f"Error executing parallel tool {tool_name}: {e}", exc_info=True)
+            errors.append(e)
+            raise  # Re-raise to fail fast
         finally:
-            # Tool execution completed - resource cleanup handled by BaseTool.execute()
-            # Each tool's cleanup() method is called automatically in its execute()
-            # finally block. This ensures resources (file handles, connections,
-            # processes) are freed regardless of success or failure.
-            tool_name = getattr(part, "tool_name", "<unknown>")
             logger.debug(
                 "Parallel tool execution completed (success or failure): tool=%s",
                 tool_name,
@@ -51,9 +52,18 @@ async def execute_tools_parallel(
         for i in range(0, len(tool_calls), max_parallel):
             batch = tool_calls[i : i + max_parallel]
             batch_tasks = [execute_with_error_handling(part, node) for part, node in batch]
-            batch_results = await asyncio.gather(*batch_tasks, return_exceptions=return_exceptions)
+            batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
             results.extend(batch_results)
+            # Check for errors after each batch - fail fast
+            for result in batch_results:
+                if isinstance(result, Exception):
+                    raise result
         return results
     else:
         tasks = [execute_with_error_handling(part, node) for part, node in tool_calls]
-        return await asyncio.gather(*tasks, return_exceptions=return_exceptions)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Check for errors - fail fast, raise the first one
+        for result in results:
+            if isinstance(result, Exception):
+                raise result
+        return results

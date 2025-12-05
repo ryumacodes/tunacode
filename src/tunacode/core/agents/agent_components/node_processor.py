@@ -347,6 +347,7 @@ async def _process_tool_calls(
                 tool_err,
                 exc_info=True,
             )
+            raise  # Fail fast - surface error to user
         finally:
             tool_name = getattr(part, "tool_name", "<unknown>")
             logger.debug("Tool execution completed: tool=%s", tool_name)
