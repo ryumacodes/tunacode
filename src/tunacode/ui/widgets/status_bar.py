@@ -16,6 +16,7 @@ class StatusBar(Horizontal):
     def __init__(self) -> None:
         super().__init__()
         self._edited_files: set[str] = set()
+        self._location_text: str = ""
 
     def compose(self) -> ComposeResult:
         yield Static("main ● ~/proj", id="status-left")
@@ -38,7 +39,8 @@ class StatusBar(Horizontal):
             branch = "main"
 
         dirname = os.path.basename(os.getcwd()) or "~"
-        self.query_one("#status-left", Static).update(f"{branch} ● {dirname}")
+        self._location_text = f"{branch} ● {dirname}"
+        self.query_one("#status-left", Static).update(self._location_text)
 
     def update_last_action(self, tool_name: str) -> None:
         self.query_one("#status-right", Static).update(f"last: {tool_name}")
@@ -60,3 +62,13 @@ class StatusBar(Horizontal):
             shown = ", ".join(files[:2])
             text = f"edited: {shown} +{len(files) - 2}"
         self.query_one("#status-mid", Static).update(text)
+
+    def set_mode(self, mode: str | None) -> None:
+        """Show mode indicator in status bar."""
+        left = self.query_one("#status-left", Static)
+        if mode:
+            left.add_class("mode-active")
+            left.update(f"[{mode}] {self._location_text}")
+        else:
+            left.remove_class("mode-active")
+            left.update(self._location_text)

@@ -102,6 +102,10 @@ Editor {
     padding: 0 1;
 }
 
+Editor.bash-mode {
+    border: solid $success;
+}
+
 /* ============================================
  * TEST BAR - Simple test bar to debug text visibility
  * ============================================ */
@@ -359,6 +363,10 @@ ToolConfirmationModal {
     border-left: solid #606060;
     border-bottom: solid #e8e8e8;
     border-right: solid #e8e8e8;
+}
+
+.theme-nextstep Editor.bash-mode {
+    border: double #4ec9b0;
 }
 
 /* --- Status Bar (Bottom) --- */
