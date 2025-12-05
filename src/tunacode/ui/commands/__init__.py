@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tunacode.ui.app import TextualReplApp
 
+from tunacode.ui.styles import STYLE_PRIMARY
+
 
 class Command(ABC):
     """Base class for REPL commands."""
@@ -30,7 +32,7 @@ class HelpCommand(Command):
         from rich.table import Table
 
         table = Table(title="Commands", show_header=True)
-        table.add_column("Command", style="cyan")
+        table.add_column("Command", style=STYLE_PRIMARY)
         table.add_column("Description")
 
         for name, cmd in COMMANDS.items():
@@ -49,6 +51,8 @@ class ClearCommand(Command):
     async def execute(self, app: "TextualReplApp", args: str) -> None:
         app.rich_log.clear()
         app.state_manager.session.messages = []
+        app.state_manager.session.total_tokens = 0
+        app._update_resource_bar()
         app.notify("Cleared conversation history")
 
 
@@ -82,7 +86,7 @@ class ModelCommand(Command):
             current = app.state_manager.session.current_model
 
             table = Table(title="Available Models", show_header=True)
-            table.add_column("Model", style="cyan")
+            table.add_column("Model", style=STYLE_PRIMARY)
             table.add_column("Input $/M", justify="right")
             table.add_column("Current", justify="center")
 

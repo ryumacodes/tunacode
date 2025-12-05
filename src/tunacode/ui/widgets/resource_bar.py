@@ -6,6 +6,13 @@ from rich.text import Text
 from textual.widgets import Static
 
 from tunacode.constants import RESOURCE_BAR_COST_FORMAT, RESOURCE_BAR_SEPARATOR
+from tunacode.ui.styles import (
+    STYLE_ERROR,
+    STYLE_MUTED,
+    STYLE_PRIMARY,
+    STYLE_SUCCESS,
+    STYLE_WARNING,
+)
 
 
 class ResourceBar(Static):
@@ -51,10 +58,10 @@ class ResourceBar(Static):
 
     def _get_circle_color(self, remaining_pct: float) -> str:
         if remaining_pct > 60:
-            return "green"
+            return STYLE_SUCCESS
         if remaining_pct > 30:
-            return "yellow"
-        return "red"
+            return STYLE_WARNING
+        return STYLE_ERROR
 
     def _get_circle_char(self, remaining_pct: float) -> str:
         if remaining_pct > 87.5:
@@ -76,11 +83,11 @@ class ResourceBar(Static):
         circle_color = self._get_circle_color(remaining_pct)
 
         content = Text.assemble(
-            (self._model, "cyan"),
-            (sep, "dim"),
+            (self._model, STYLE_PRIMARY),
+            (sep, STYLE_MUTED),
             (circle_char, circle_color),
             (f" {remaining_pct:.0f}%", circle_color),
-            (sep, "dim"),
-            (session_cost_str, "green"),
+            (sep, STYLE_MUTED),
+            (session_cost_str, STYLE_SUCCESS),
         )
         self.update(content)

@@ -30,6 +30,15 @@ from tunacode.types import (
 )
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
+from tunacode.ui.styles import (
+    STYLE_ERROR,
+    STYLE_HEADING,
+    STYLE_MUTED,
+    STYLE_PRIMARY,
+    STYLE_SUBHEADING,
+    STYLE_SUCCESS,
+    STYLE_WARNING,
+)
 from tunacode.ui.widgets import (
     Editor,
     EditorSubmitRequested,
@@ -117,9 +126,9 @@ class TextualReplApp(App[None]):
 
     def _show_welcome(self) -> None:
         welcome = Text()
-        welcome.append("🍣 Welcome to TunaCode\n", style="magenta bold")
-        welcome.append("AI-powered coding assistant in your terminal.\n\n", style="dim")
-        welcome.append("What I can do:\n", style="cyan")
+        welcome.append("🍣 Welcome to TunaCode\n", style=STYLE_HEADING)
+        welcome.append("AI-powered coding assistant in your terminal.\n\n", style=STYLE_MUTED)
+        welcome.append("What I can do:\n", style=STYLE_PRIMARY)
         welcome.append("  • Read, write, and edit files\n", style="")
         welcome.append("  • Run shell commands\n", style="")
         welcome.append("  • Search code with grep/glob\n", style="")
@@ -200,8 +209,8 @@ class TextualReplApp(App[None]):
         timestamp = datetime.now().strftime("%I:%M %p").lstrip("0")
         self.rich_log.write("")
         user_block = Text()
-        user_block.append(f"│ {message.text}\n", style="cyan")
-        user_block.append(f"│ tc {timestamp}", style="dim cyan")
+        user_block.append(f"│ {message.text}\n", style=STYLE_PRIMARY)
+        user_block.append(f"│ tc {timestamp}", style=f"dim {STYLE_PRIMARY}")
         self.rich_log.write(user_block)
 
     async def request_tool_confirmation(
@@ -259,7 +268,7 @@ class TextualReplApp(App[None]):
             response = ToolConfirmationResponse(approved=False, skip_future=False, abort=True)
             self.pending_confirmation.future.set_result(response)
             self.pending_confirmation = None
-            self.rich_log.write(Text("Rejected", style="red"))
+            self.rich_log.write(Text("Rejected", style=STYLE_ERROR))
             return
 
         # Otherwise, cancel the stream
@@ -274,11 +283,12 @@ class TextualReplApp(App[None]):
         session = self.state_manager.session
         usage = session.session_total_usage
 
-        actual_tokens = usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
+        # Use actual context window tokens, not cumulative API usage
+        context_tokens = session.total_tokens
 
         self.resource_bar.update_stats(
             model=session.current_model or "No model selected",
-            tokens=actual_tokens,
+            tokens=context_tokens,
             max_tokens=session.max_tokens or 200000,
             session_cost=usage.get("cost", 0.0),
         )
@@ -286,26 +296,26 @@ class TextualReplApp(App[None]):
     def _show_inline_confirmation(self, request: ToolConfirmationRequest) -> None:
         """Display inline confirmation prompt in RichLog."""
         content = Text()
-        content.append(f"Confirm: {request.tool_name}\n", style="bold cyan")
+        content.append(f"Confirm: {request.tool_name}\n", style=STYLE_SUBHEADING)
 
         for key, value in request.args.items():
             display_value = str(value)
             if len(display_value) > 60:
                 display_value = display_value[:57] + "..."
-            content.append(f"  {key}: ", style="dim")
+            content.append(f"  {key}: ", style=STYLE_MUTED)
             content.append(f"{display_value}\n")
 
         content.append("\n")
-        content.append("[1]", style="bold green")
+        content.append("[1]", style=f"bold {STYLE_SUCCESS}")
         content.append(" Yes  ")
-        content.append("[2]", style="bold yellow")
+        content.append("[2]", style=f"bold {STYLE_WARNING}")
         content.append(" Yes + Skip  ")
-        content.append("[3]", style="bold red")
+        content.append("[3]", style=f"bold {STYLE_ERROR}")
         content.append(" No")
 
         panel = Panel(
             content,
-            border_style="cyan",
+            border_style=STYLE_PRIMARY,
             padding=(0, 1),
             expand=False,
         )
@@ -320,13 +330,13 @@ class TextualReplApp(App[None]):
 
         if event.key == "1":
             response = ToolConfirmationResponse(approved=True, skip_future=False, abort=False)
-            self.rich_log.write(Text("Approved", style="green"))
+            self.rich_log.write(Text("Approved", style=STYLE_SUCCESS))
         elif event.key == "2":
             response = ToolConfirmationResponse(approved=True, skip_future=True, abort=False)
-            self.rich_log.write(Text("Approved (skipping future)", style="yellow"))
+            self.rich_log.write(Text("Approved (skipping future)", style=STYLE_WARNING))
         elif event.key == "3":
             response = ToolConfirmationResponse(approved=False, skip_future=False, abort=True)
-            self.rich_log.write(Text("Rejected", style="red"))
+            self.rich_log.write(Text("Rejected", style=STYLE_ERROR))
 
         if response is not None:
             self.pending_confirmation.future.set_result(response)
