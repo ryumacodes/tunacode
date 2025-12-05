@@ -130,9 +130,7 @@ def _render_tree(base_name: str, files: list[str]) -> str:
 
         # Get child directories (handle root "." specially)
         parent_match = "" if dir_path == "." else dir_path
-        children = sorted(
-            d for d in dirs if d != dir_path and os.path.dirname(d) == parent_match
-        )
+        children = sorted(d for d in dirs if d != dir_path and os.path.dirname(d) == parent_match)
 
         # Render subdirectories first
         for child in children:

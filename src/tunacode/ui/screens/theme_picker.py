@@ -74,16 +74,12 @@ class ThemePickerScreen(Screen[str | None]):
             option_list.highlighted = highlight_index
             yield option_list
 
-    def on_option_list_option_highlighted(
-        self, event: OptionList.OptionHighlighted
-    ) -> None:
+    def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
         """Live preview: change theme as user navigates."""
         if event.option and event.option.id:
             self.app.theme = str(event.option.id)
 
-    def on_option_list_option_selected(
-        self, event: OptionList.OptionSelected
-    ) -> None:
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         """Confirm selection and dismiss."""
         if event.option and event.option.id:
             self.dismiss(str(event.option.id))

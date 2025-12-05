@@ -63,16 +63,12 @@ class TestBaseTool:
 
         @base_tool
         async def raises_file_error():
-            raise FileOperationError(
-                operation="read", path="/test.txt", message="file error"
-            )
+            raise FileOperationError(operation="read", path="/test.txt", message="file error")
 
         with pytest.raises(FileOperationError, match="file error"):
             await raises_file_error()
 
-    async def test_wraps_generic_exception_in_tool_execution_error(
-        self, mock_no_xml_prompt
-    ):
+    async def test_wraps_generic_exception_in_tool_execution_error(self, mock_no_xml_prompt):
         """Other exceptions are wrapped in ToolExecutionError."""
 
         @base_tool
@@ -128,9 +124,7 @@ class TestFileTool:
         with pytest.raises(ModelRetry, match="File not found"):
             await read_missing("/missing/file.txt")
 
-    async def test_converts_permission_error_to_file_operation_error(
-        self, mock_no_xml_prompt
-    ):
+    async def test_converts_permission_error_to_file_operation_error(self, mock_no_xml_prompt):
         """PermissionError is converted to FileOperationError."""
 
         @file_tool
@@ -143,9 +137,7 @@ class TestFileTool:
         assert exc_info.value.operation == "access"
         assert exc_info.value.path == "/protected/file.txt"
 
-    async def test_converts_unicode_decode_error_to_file_operation_error(
-        self, mock_no_xml_prompt
-    ):
+    async def test_converts_unicode_decode_error_to_file_operation_error(self, mock_no_xml_prompt):
         """UnicodeDecodeError is converted to FileOperationError."""
 
         @file_tool
