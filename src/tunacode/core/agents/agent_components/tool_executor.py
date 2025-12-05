@@ -12,7 +12,7 @@ ToolCallback = Callable[[Any, Any], Awaitable[Any]]
 
 
 async def execute_tools_parallel(
-    tool_calls: List[Tuple[Any, Any]], callback: ToolCallback, return_exceptions: bool = True
+    tool_calls: List[Tuple[Any, Any]], callback: ToolCallback
 ) -> List[Any]:
     """
     Execute multiple tool calls in parallel using asyncio.
@@ -20,7 +20,6 @@ async def execute_tools_parallel(
     Args:
         tool_calls: List of (part, node) tuples
         callback: The tool callback function to execute
-        return_exceptions: Whether to return exceptions or raise them (kept for API compat)
 
     Returns:
         List of results in the same order as input
