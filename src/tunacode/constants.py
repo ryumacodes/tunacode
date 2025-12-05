@@ -56,8 +56,6 @@ TOOL_BASH = ToolName.BASH
 TOOL_GREP = ToolName.GREP
 TOOL_LIST_DIR = ToolName.LIST_DIR
 TOOL_GLOB = ToolName.GLOB
-TOOL_REACT = ToolName.REACT
-TOOL_RESEARCH_CODEBASE = ToolName.RESEARCH_CODEBASE
 
 # Tool categorization
 READ_ONLY_TOOLS = [
@@ -74,7 +72,6 @@ EXECUTE_TOOLS = [ToolName.BASH]
 # Commands
 CMD_HELP = "/help"
 CMD_CLEAR = "/clear"
-CMD_DUMP = "/dump"
 CMD_YOLO = "/yolo"
 CMD_MODEL = "/model"
 CMD_EXIT = "exit"
@@ -83,21 +80,12 @@ CMD_QUIT = "quit"
 # Command descriptions
 DESC_HELP = "Show this help message"
 DESC_CLEAR = "Clear the conversation history"
-DESC_DUMP = "Show the current conversation history"
 DESC_YOLO = "Toggle confirmation prompts on/off"
 DESC_MODEL = "List available models"
-DESC_MODEL_SWITCH = "Switch to a specific model"
-DESC_MODEL_DEFAULT = "Set a model as the default"
 DESC_EXIT = "Exit the application"
 
 # Command Configuration
 COMMAND_PREFIX = "/"
-COMMAND_CATEGORIES = {
-    "state": ["yolo"],
-    "debug": ["dump"],
-    "ui": ["clear", "help"],
-    "config": ["model"],
-}
 
 # System paths
 TUNACODE_HOME_DIR = ".tunacode"
