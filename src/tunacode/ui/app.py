@@ -138,14 +138,15 @@ class TextualReplApp(App[None]):
 
     def _show_welcome(self) -> None:
         welcome = Text()
-        welcome.append("🍣 Welcome to TunaCode\n", style=STYLE_HEADING)
-        welcome.append("AI-powered coding assistant in your terminal.\n\n", style=STYLE_MUTED)
-        welcome.append("What I can do:\n", style=STYLE_PRIMARY)
-        welcome.append("  • Read, write, and edit files\n", style="")
-        welcome.append("  • Run shell commands\n", style="")
-        welcome.append("  • Search code with grep/glob\n", style="")
-        welcome.append("  • Answer questions about your codebase\n", style="")
-        welcome.append("  • Help debug and refactor code\n", style="")
+        welcome.append("Welcome to TunaCode\n", style=STYLE_HEADING)
+        welcome.append("AI coding assistant for your terminal.\n\n", style=STYLE_MUTED)
+        welcome.append("Commands:\n", style=STYLE_PRIMARY)
+        welcome.append("  /help    - Show all commands\n", style="")
+        welcome.append("  /clear   - Clear conversation\n", style="")
+        welcome.append("  /yolo    - Toggle auto-confirm\n", style="")
+        welcome.append("  /model   - Switch model\n", style="")
+        welcome.append("  /theme   - Switch theme\n", style="")
+        welcome.append("  !<cmd>   - Run shell command\n", style="")
         self.rich_log.write(welcome)
 
     async def _request_worker(self) -> None:

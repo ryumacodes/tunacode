@@ -2,6 +2,8 @@
 
 A TUI code agent.
 
+**Note:** TunaCode has full bash shell access. This tool assumes you know what you're doing. If you're concerned, run it in a sandboxed environment.
+
 ## v0.1.1 - Major Rewrite
 
 This release is a complete rewrite with a new Textual-based TUI.
