@@ -232,8 +232,7 @@ class TestPruneOldToolOutputs:
         """Recent tool outputs within protection window are not pruned."""
         # Create enough user turns
         user_msgs = [
-            mock_model_request([mock_user_prompt_part()])
-            for _ in range(PRUNE_MIN_USER_TURNS)
+            mock_model_request([mock_user_prompt_part()]) for _ in range(PRUNE_MIN_USER_TURNS)
         ]
         # Small tool output that fits in protection window
         tool_msg = mock_model_request([mock_tool_return_part("small output")])
@@ -249,8 +248,7 @@ class TestPruneOldToolOutputs:
         """Old tool outputs beyond protection window are pruned."""
         # Create enough user turns
         user_msgs = [
-            mock_model_request([mock_user_prompt_part()])
-            for _ in range(PRUNE_MIN_USER_TURNS)
+            mock_model_request([mock_user_prompt_part()]) for _ in range(PRUNE_MIN_USER_TURNS)
         ]
 
         # Create tool output with small content, mock token count to exceed thresholds
@@ -276,8 +274,7 @@ class TestPruneOldToolOutputs:
         """Pruning is skipped if savings below minimum threshold."""
         # Create enough user turns
         user_msgs = [
-            mock_model_request([mock_user_prompt_part()])
-            for _ in range(PRUNE_MIN_USER_TURNS)
+            mock_model_request([mock_user_prompt_part()]) for _ in range(PRUNE_MIN_USER_TURNS)
         ]
 
         # Create TWO tool outputs:

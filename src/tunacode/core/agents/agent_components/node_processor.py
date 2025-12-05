@@ -26,11 +26,22 @@ def _update_token_usage(model_response: Any, state_manager: StateManager) -> Non
 
     prompt_tokens = getattr(usage, "request_tokens", 0) or 0
     completion_tokens = getattr(usage, "response_tokens", 0) or 0
+    cached_tokens = getattr(usage, "cached_tokens", 0) or 0
 
     session = state_manager.session
     session.last_call_usage["prompt_tokens"] = prompt_tokens
     session.last_call_usage["completion_tokens"] = completion_tokens
-    session.last_call_usage["cost"] = 0.0
+
+    from tunacode.pricing import calculate_cost, get_model_pricing
+
+    pricing = get_model_pricing(session.current_model)
+    if pricing is not None:
+        non_cached_input = max(0, prompt_tokens - cached_tokens)
+        cost = calculate_cost(pricing, non_cached_input, cached_tokens, completion_tokens)
+        session.last_call_usage["cost"] = cost
+        session.session_total_usage["cost"] += cost
+    else:
+        session.last_call_usage["cost"] = 0.0
 
     session.session_total_usage["prompt_tokens"] += prompt_tokens
     session.session_total_usage["completion_tokens"] += completion_tokens

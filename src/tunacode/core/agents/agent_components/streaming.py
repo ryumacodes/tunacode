@@ -209,9 +209,7 @@ async def stream_model_request_node(
                                                 f"len={len(prefix_to_emit)} "
                                                 f"preview={repr(prefix_to_emit[:20])}"
                                             )
-                                            state_manager.session._debug_events.append(
-                                                preview_msg
-                                            )
+                                            state_manager.session._debug_events.append(preview_msg)
                                         else:
                                             skip_msg = (
                                                 f"[src] seed_skip overlap={overlap_len} "

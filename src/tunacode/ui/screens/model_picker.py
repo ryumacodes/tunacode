@@ -113,9 +113,7 @@ class ProviderPickerScreen(Screen[str | None]):
             self._rebuild_options()
             event.stop()
 
-    def on_option_list_option_selected(
-        self, event: OptionList.OptionSelected
-    ) -> None:
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         """Confirm selection and dismiss with provider ID."""
         if event.option and event.option.id:
             self.dismiss(str(event.option.id))
@@ -184,7 +182,9 @@ class ModelPickerScreen(Screen[str | None]):
         self.call_after_refresh(self._rebuild_options)
 
     def _rebuild_options(self) -> None:
-        """Rebuild OptionList with filtered items."""
+        """Rebuild OptionList with filtered items and pricing."""
+        from tunacode.pricing import format_pricing_display, get_model_pricing
+
         option_list = self.query_one("#model-list", OptionList)
         option_list.clear_options()
 
@@ -195,7 +195,15 @@ class ModelPickerScreen(Screen[str | None]):
         for display_name, model_id in self._all_models:
             if query and query not in display_name.lower():
                 continue
-            option_list.add_option(Option(display_name, id=model_id))
+
+            full_model = f"{self._provider_id}:{model_id}"
+            pricing = get_model_pricing(full_model)
+            if pricing is not None:
+                label = f"{display_name}  {format_pricing_display(pricing)}"
+            else:
+                label = display_name
+
+            option_list.add_option(Option(label, id=model_id))
             if model_id == self._current_model_id:
                 highlight_index = matched_count
             matched_count += 1
@@ -228,9 +236,7 @@ class ModelPickerScreen(Screen[str | None]):
             self._rebuild_options()
             event.stop()
 
-    def on_option_list_option_selected(
-        self, event: OptionList.OptionSelected
-    ) -> None:
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         """Confirm selection and dismiss with full model string."""
         if event.option and event.option.id:
             full_model = f"{self._provider_id}:{event.option.id}"

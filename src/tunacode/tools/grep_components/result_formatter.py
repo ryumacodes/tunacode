@@ -84,7 +84,6 @@ class ResultFormatter:
         import json
 
         json_results = [
-            {"file": r.file_path, "line": r.line_number, "content": r.line_content}
-            for r in results
+            {"file": r.file_path, "line": r.line_number, "content": r.line_content} for r in results
         ]
         return json.dumps(json_results)

@@ -79,9 +79,7 @@ class TestToolsAreAsyncCallables:
     def test_all_tools_are_coroutine_functions(self):
         """Every tool must be an async function."""
         for tool in ALL_TOOLS:
-            assert inspect.iscoroutinefunction(tool), (
-                f"{tool.__name__} is not an async function"
-            )
+            assert inspect.iscoroutinefunction(tool), f"{tool.__name__} is not an async function"
 
 
 class TestToolsHaveDocstrings:
@@ -91,9 +89,7 @@ class TestToolsHaveDocstrings:
         """Every tool must have a docstring (from XML or inline)."""
         for tool in ALL_TOOLS:
             assert tool.__doc__, f"{tool.__name__} has no docstring"
-            assert len(tool.__doc__) > 10, (
-                f"{tool.__name__} docstring too short: {tool.__doc__!r}"
-            )
+            assert len(tool.__doc__) > 10, f"{tool.__name__} docstring too short: {tool.__doc__!r}"
 
 
 class TestFileToolSignatures:
@@ -144,6 +140,4 @@ class TestToolReturnAnnotations:
             return_annotation = sig.return_annotation
             if return_annotation is not inspect.Parameter.empty:
                 valid = return_annotation is str or "str" in str(return_annotation)
-                assert valid, (
-                    f"{tool.__name__} return annotation is {return_annotation}"
-                )
+                assert valid, f"{tool.__name__} return annotation is {return_annotation}"
