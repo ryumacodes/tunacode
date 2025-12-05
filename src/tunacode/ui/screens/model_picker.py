@@ -183,7 +183,7 @@ class ModelPickerScreen(Screen[str | None]):
 
     def _rebuild_options(self) -> None:
         """Rebuild OptionList with filtered items and pricing."""
-        from tunacode.pricing import format_pricing_display, get_model_pricing
+        from tunacode.configuration.pricing import format_pricing_display, get_model_pricing
 
         option_list = self.query_one("#model-list", OptionList)
         option_list.clear_options()

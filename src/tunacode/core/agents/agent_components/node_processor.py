@@ -32,7 +32,7 @@ def _update_token_usage(model_response: Any, state_manager: StateManager) -> Non
     session.last_call_usage["prompt_tokens"] = prompt_tokens
     session.last_call_usage["completion_tokens"] = completion_tokens
 
-    from tunacode.pricing import calculate_cost, get_model_pricing
+    from tunacode.configuration.pricing import calculate_cost, get_model_pricing
 
     pricing = get_model_pricing(session.current_model)
     if pricing is not None:
