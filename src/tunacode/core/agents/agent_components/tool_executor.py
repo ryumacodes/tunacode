@@ -2,14 +2,12 @@
 
 import asyncio
 import os
-from collections.abc import Awaitable, Callable
 from typing import Any
 
 from tunacode.core.logging.logger import get_logger
+from tunacode.types import ToolCallback
 
 logger = get_logger(__name__)
-
-ToolCallback = Callable[[Any, Any], Awaitable[Any]]
 
 
 async def execute_tools_parallel(
@@ -30,7 +28,6 @@ async def execute_tools_parallel(
     """
     # Get max parallel from environment or default to CPU count
     max_parallel = int(os.environ.get("TUNACODE_MAX_PARALLEL", os.cpu_count() or 4))
-    errors: list[Exception] = []
 
     async def execute_with_error_handling(part, node):
         tool_name = getattr(part, "tool_name", "<unknown>")
@@ -38,7 +35,6 @@ async def execute_tools_parallel(
             return await callback(part, node)
         except Exception as e:
             logger.error(f"Error executing parallel tool {tool_name}: {e}", exc_info=True)
-            errors.append(e)
             raise  # Re-raise to fail fast
         finally:
             logger.debug(
