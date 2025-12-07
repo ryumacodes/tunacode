@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import difflib
+import os
+from typing import Any
+
+from tunacode.tools.utils.text_match import replace
 from tunacode.types import ToolArgs, ToolConfirmationRequest, ToolName
 
 
@@ -8,4 +13,33 @@ class ConfirmationRequestFactory:
 
     def create(self, tool_name: ToolName, args: ToolArgs) -> ToolConfirmationRequest:
         filepath = args.get("filepath")
-        return ToolConfirmationRequest(tool_name=tool_name, args=args, filepath=filepath)
+        diff_content: str | None = None
+
+        if tool_name == "update_file" and filepath and os.path.exists(filepath):
+            target = args.get("target")
+            patch = args.get("patch")
+            if target and patch:
+                try:
+                    with open(filepath, encoding="utf-8") as f:
+                        original = f.read()
+                    
+                    # Attempt to generate what the new content will look like
+                    new_content = replace(original, target, patch, replace_all=False)
+                    
+                    diff_lines = list(
+                        difflib.unified_diff(
+                            original.splitlines(keepends=True),
+                            new_content.splitlines(keepends=True),
+                            fromfile=f"a/{filepath}",
+                            tofile=f"b/{filepath}",
+                        )
+                    )
+                    if diff_lines:
+                        diff_content = "".join(diff_lines)
+                except Exception:
+                    # If anything fails (file read, fuzzy match, etc), we just don't show the diff
+                    pass
+
+        return ToolConfirmationRequest(
+            tool_name=tool_name, args=args, filepath=filepath, diff_content=diff_content
+        )

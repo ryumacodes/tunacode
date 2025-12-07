@@ -10,6 +10,7 @@ from typing import Any
 from rich.console import Group, RenderableType
 from rich.panel import Panel
 from rich.style import Style
+from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
@@ -147,6 +148,57 @@ class RichPanelRenderer:
         return Panel(
             content,
             title=f"[{styles['title']}]{data.tool_name}[/] [{status_suffix}]",
+            subtitle=subtitle,
+            border_style=Style(color=styles["border"]),
+            padding=(0, 1),
+            expand=False,
+        )
+
+    @staticmethod
+    def render_diff_tool(
+        tool_name: str,
+        message: str,
+        diff: str,
+        args: dict[str, Any] | None = None,
+        duration_ms: float | None = None,
+        timestamp: datetime | None = None,
+    ) -> RenderableType:
+        styles = PANEL_STYLES[PanelType.SUCCESS]
+
+        content_parts: list[RenderableType] = []
+
+        if args:
+            args_table = Table.grid(padding=(0, 1))
+            args_table.add_column(style="dim")
+            args_table.add_column()
+            for key, value in args.items():
+                display_value = _truncate_value(value, max_length=60)
+                args_table.add_row(f"{key}:", display_value)
+            content_parts.append(args_table)
+            content_parts.append(Text("\n"))
+
+        if message:
+            content_parts.append(Text(message))
+            content_parts.append(Text("\n"))
+
+        # Use Syntax highlighter for the diff
+        diff_syntax = Syntax(diff, "diff", theme="monokai", word_wrap=True)
+        content_parts.append(diff_syntax)
+
+        if duration_ms is not None:
+            footer = Text(f"\n{duration_ms:.0f}ms", style="dim")
+            content_parts.append(footer)
+
+        content = Group(*content_parts)
+
+        subtitle = None
+        if timestamp:
+            time_str = timestamp.strftime("%H:%M:%S")
+            subtitle = f"[{styles['subtitle']}]{time_str}[/]"
+
+        return Panel(
+            content,
+            title=f"[{styles['title']}]{tool_name}[/] [done]",
             subtitle=subtitle,
             border_style=Style(color=styles["border"]),
             padding=(0, 1),
@@ -428,12 +480,29 @@ def tool_panel_smart(
     result: str | None = None,
     duration_ms: float | None = None,
 ) -> RenderableType:
+    # Handle search tools
     if name.lower() in ("grep", "glob") and result and status == "completed":
         parsed = _try_parse_search_result(name, args, result)
         if parsed:
             if duration_ms is not None:
                 parsed.search_time_ms = duration_ms
             return RichPanelRenderer.render_search_results(parsed)
+
+    # Handle update_file diffs
+    if name == "update_file" and status == "completed" and result:
+        # Check if result contains a diff
+        if "\n--- a/" in result and "\n+++ b/" in result:
+            parts = result.split("\n--- a/", 1)
+            message = parts[0].strip()
+            diff_content = "--- a/" + parts[1]
+            return RichPanelRenderer.render_diff_tool(
+                name,
+                message,
+                diff_content,
+                args=args,
+                duration_ms=duration_ms,
+                timestamp=datetime.now(),
+            )
 
     return tool_panel(name, status, args, result, duration_ms)
 

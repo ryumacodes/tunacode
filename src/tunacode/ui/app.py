@@ -9,6 +9,7 @@ from typing import Any
 
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.syntax import Syntax
 from rich.text import Text
 from textual import events
 from textual.app import App, ComposeResult
@@ -381,26 +382,46 @@ class TextualReplApp(App[None]):
 
     def _show_inline_confirmation(self, request: ToolConfirmationRequest) -> None:
         """Display inline confirmation prompt in RichLog."""
-        content = Text()
-        content.append(f"Confirm: {request.tool_name}\n", style=STYLE_SUBHEADING)
+        content_parts = []
+        
+        # Header
+        header = Text()
+        header.append(f"Confirm: {request.tool_name}\n", style=STYLE_SUBHEADING)
+        content_parts.append(header)
 
+        # Arguments
+        args_text = Text()
         for key, value in request.args.items():
             display_value = str(value)
             if len(display_value) > 60:
                 display_value = display_value[:57] + "..."
-            content.append(f"  {key}: ", style=STYLE_MUTED)
-            content.append(f"{display_value}\n")
+            args_text.append(f"  {key}: ", style=STYLE_MUTED)
+            args_text.append(f"{display_value}\n")
+        content_parts.append(args_text)
 
-        content.append("\n")
-        content.append("[1]", style=f"bold {STYLE_SUCCESS}")
-        content.append(" Yes  ")
-        content.append("[2]", style=f"bold {STYLE_WARNING}")
-        content.append(" Yes + Skip  ")
-        content.append("[3]", style=f"bold {STYLE_ERROR}")
-        content.append(" No")
+        # Diff Preview (if available)
+        if request.diff_content:
+            content_parts.append(Text("\nPreview changes:\n", style="bold"))
+            content_parts.append(
+                Syntax(request.diff_content, "diff", theme="monokai", word_wrap=True)
+            )
+            content_parts.append(Text("\n"))
 
+        # Footer Actions
+        actions = Text()
+        actions.append("\n")
+        actions.append("[1]", style=f"bold {STYLE_SUCCESS}")
+        actions.append(" Yes  ")
+        actions.append("[2]", style=f"bold {STYLE_WARNING}")
+        actions.append(" Yes + Skip  ")
+        actions.append("[3]", style=f"bold {STYLE_ERROR}")
+        actions.append(" No")
+        content_parts.append(actions)
+
+        # Use Group to stack components vertically
+        from rich.console import Group
         panel = Panel(
-            content,
+            Group(*content_parts),
             border_style=STYLE_PRIMARY,
             padding=(0, 1),
             expand=False,

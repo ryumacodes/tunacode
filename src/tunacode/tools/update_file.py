@@ -1,5 +1,6 @@
 """File update tool for agent operations."""
 
+import difflib
 import os
 
 from pydantic_ai.exceptions import ModelRetry
@@ -18,7 +19,7 @@ async def update_file(filepath: str, target: str, patch: str) -> str:
         patch: The new block of text to insert.
 
     Returns:
-        A message indicating success.
+        A message indicating success and the diff of changes.
     """
     if not os.path.exists(filepath):
         raise ModelRetry(
@@ -48,4 +49,15 @@ async def update_file(filepath: str, target: str, patch: str) -> str:
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(new_content)
 
-    return f"File '{filepath}' updated successfully."
+    # Generate diff
+    diff_lines = list(
+        difflib.unified_diff(
+            original.splitlines(keepends=True),
+            new_content.splitlines(keepends=True),
+            fromfile=f"a/{filepath}",
+            tofile=f"b/{filepath}",
+        )
+    )
+    diff_text = "".join(diff_lines)
+
+    return f"File '{filepath}' updated successfully.\n\n{diff_text}"

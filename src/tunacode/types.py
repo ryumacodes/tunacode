@@ -77,6 +77,7 @@ class ToolConfirmationRequest:
     tool_name: str
     args: dict[str, Any]
     filepath: str | None = None
+    diff_content: str | None = None
 
 
 @dataclass
