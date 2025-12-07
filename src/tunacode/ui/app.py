@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -12,7 +13,7 @@ from rich.text import Text
 from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import LoadingIndicator, RichLog
+from textual.widgets import LoadingIndicator, RichLog, Static
 
 from tunacode.constants import (
     RICHLOG_CLASS_PAUSED,
@@ -21,6 +22,7 @@ from tunacode.constants import (
     build_tunacode_theme,
 )
 from tunacode.core.agents.main import process_request
+from tunacode.indexing import CodeIndex
 from tunacode.tools.authorization.handler import ToolHandler
 from tunacode.types import (
     ModelName,
@@ -47,6 +49,9 @@ from tunacode.ui.widgets import (
     StatusBar,
     ToolResultDisplay,
 )
+
+# Throttle streaming display updates to reduce visual churn
+STREAM_THROTTLE_MS: float = 200.0
 
 
 @dataclass
@@ -79,21 +84,25 @@ class TextualReplApp(App[None]):
         self.current_stream_text: str = ""
         self._current_request_task: asyncio.Task | None = None
         self._loading_indicator_shown: bool = False
+        self._last_display_update: float = 0.0
 
         self.rich_log: RichLog
         self.editor: Editor
         self.resource_bar: ResourceBar
         self.status_bar: StatusBar
+        self.streaming_output: Static
 
     def compose(self) -> ComposeResult:
         self.resource_bar = ResourceBar()
         self.rich_log = RichLog(wrap=True, markup=True, highlight=True, auto_scroll=True)
+        self.streaming_output = Static("", id="streaming-output")
         self.loading_indicator = LoadingIndicator()
         self.editor = Editor()
         self.status_bar = StatusBar()
 
         yield self.resource_bar
         yield self.rich_log
+        yield self.streaming_output
         yield self.loading_indicator
         yield self.editor
         yield FileAutoComplete(self.editor)
@@ -133,8 +142,48 @@ class TextualReplApp(App[None]):
         """Initialize REPL components after setup."""
         self.set_focus(self.editor)
         self.run_worker(self._request_worker, exclusive=False)
+        self.run_worker(self._startup_index_worker, exclusive=False)
         self._update_resource_bar()
         self._show_welcome()
+
+    async def _startup_index_worker(self) -> None:
+        """Build startup index with dynamic sizing."""
+        import asyncio
+
+        def do_index() -> tuple[int, int | None, bool]:
+            """Returns (indexed_count, total_or_none, is_partial)."""
+            index = CodeIndex.get_instance()
+            total = index.quick_count()
+
+            if total < CodeIndex.QUICK_INDEX_THRESHOLD:
+                index.build_index()
+                return len(index._all_files), None, False
+            else:
+                count = index.build_priority_index()
+                return count, total, True
+
+        loop = asyncio.get_event_loop()
+        indexed, total, is_partial = await loop.run_in_executor(None, do_index)
+
+        if is_partial:
+            msg = Text()
+            msg.append(f"Code cache: {indexed}/{total} files indexed, expanding...", style=STYLE_MUTED)
+            self.rich_log.write(msg)
+
+            # Expand in background
+            def do_expand() -> int:
+                index = CodeIndex.get_instance()
+                index.expand_index()
+                return len(index._all_files)
+
+            final_count = await loop.run_in_executor(None, do_expand)
+            done_msg = Text()
+            done_msg.append(f"Code cache built: {final_count} files indexed ✓", style=STYLE_SUCCESS)
+            self.rich_log.write(done_msg)
+        else:
+            msg = Text()
+            msg.append(f"Code cache built: {indexed} files indexed ✓", style=STYLE_SUCCESS)
+            self.rich_log.write(msg)
 
     def _show_welcome(self) -> None:
         welcome = Text()
@@ -162,6 +211,7 @@ class TextualReplApp(App[None]):
 
     async def _process_request(self, message: str) -> None:
         self.current_stream_text = ""
+        self._last_display_update = 0.0
         self._streaming_cancelled = False
         self.rich_log.add_class(RICHLOG_CLASS_STREAMING)
 
@@ -199,6 +249,8 @@ class TextualReplApp(App[None]):
             self.loading_indicator.remove_class("active")
             self.rich_log.remove_class(RICHLOG_CLASS_STREAMING)
             self.rich_log.remove_class(RICHLOG_CLASS_PAUSED)
+            self.streaming_output.update("")
+            self.streaming_output.remove_class("active")
 
             if self.current_stream_text and not self._streaming_cancelled:
                 self.rich_log.write("")
@@ -250,8 +302,19 @@ class TextualReplApp(App[None]):
     async def streaming_callback(self, chunk: str) -> None:
         if self._streaming_paused:
             self._stream_buffer.append(chunk)
-        else:
-            self.current_stream_text += chunk
+            return
+
+        # Always accumulate immediately
+        self.current_stream_text += chunk
+
+        # Throttle display updates to reduce visual churn
+        now = time.monotonic()
+        elapsed_ms = (now - self._last_display_update) * 1000
+
+        if elapsed_ms >= STREAM_THROTTLE_MS:
+            self._last_display_update = now
+            self.streaming_output.update(Markdown(self.current_stream_text))
+            self.streaming_output.add_class("active")
             self.rich_log.scroll_end()
 
     def action_toggle_pause(self) -> None:
@@ -274,6 +337,10 @@ class TextualReplApp(App[None]):
             buffered_text = "".join(self._stream_buffer)
             self.current_stream_text += buffered_text
             self._stream_buffer.clear()
+
+        # Force immediate display update on resume
+        self._last_display_update = time.monotonic()
+        self.streaming_output.update(Markdown(self.current_stream_text))
 
     def action_cancel_stream(self) -> None:
         # If confirmation is pending, Escape rejects it

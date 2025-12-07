@@ -57,6 +57,23 @@ LoadingIndicator.active {
 }
 
 /* ============================================
+ * STREAMING OUTPUT - Live text display during generation
+ * RichLog border provides mode indication; this blends seamlessly
+ * ============================================ */
+#streaming-output {
+    height: auto;
+    max-height: 50%;
+    display: none;
+    background: $background;
+    padding: 0 1;
+    overflow-y: auto;
+}
+
+#streaming-output.active {
+    display: block;
+}
+
+/* ============================================
  * EDITOR - Input bar (compact)
  * ============================================ */
 Editor {
@@ -359,6 +376,12 @@ ToolConfirmationModal {
 /* --- Loading Indicator --- */
 .theme-nextstep LoadingIndicator {
     background: #c8c8c8;
+    color: #000000;
+}
+
+/* --- Streaming Output --- */
+.theme-nextstep #streaming-output {
+    background: #d0d0d0;
     color: #000000;
 }
 

@@ -89,20 +89,23 @@ async def glob(
 
     # Try CodeIndex for faster lookup
     code_index = _get_code_index(directory)
+    source = "filesystem"
+
     if code_index and not include_hidden and recursive:
         matches = await _glob_with_index(
             code_index, patterns, root_path, all_exclude, max_results, case_sensitive
         )
+        source = "index"
     else:
         matches = await _glob_filesystem(
             root_path, patterns, recursive, include_hidden, all_exclude, max_results, case_sensitive
         )
 
     if not matches:
-        return f"No files found matching pattern: {pattern}"
+        return f"[source:{source}]\nNo files found matching pattern: {pattern}"
 
     matches = await _sort_matches(matches, sort_order)
-    return _format_output(pattern, matches, max_results)
+    return _format_output(pattern, matches, max_results, source)
 
 
 def _parse_sort_order(sort_by: str) -> SortOrder:
@@ -323,8 +326,28 @@ async def _sort_matches(matches: list[str], sort_by: SortOrder) -> list[str]:
     return await asyncio.get_event_loop().run_in_executor(None, sort_sync)
 
 
-def _format_output(pattern: str, matches: list[str], max_results: int) -> str:
-    """Format glob results as simple file list."""
-    if len(matches) == max_results:
-        return "\n".join(matches) + f"\n(truncated at {max_results})"
-    return "\n".join(matches)
+def _format_output(pattern: str, matches: list[str], max_results: int, source: str) -> str:
+    """Format glob results with source marker and header for rich panel parsing.
+
+    Args:
+        pattern: The glob pattern used.
+        matches: List of matching file paths.
+        max_results: Maximum results limit.
+        source: "index" or "filesystem" to indicate cache hit/miss.
+
+    Returns:
+        Formatted output with source marker and file count header.
+    """
+    parts = [f"[source:{source}]"]
+    file_count = len(matches)
+    file_word = "file" if file_count == 1 else "files"
+    parts.append(f"Found {file_count} {file_word} matching pattern: {pattern}")
+
+    if matches:
+        parts.append("")  # Blank line
+        parts.extend(matches)
+
+    if file_count == max_results:
+        parts.append(f"(truncated at {max_results})")
+
+    return "\n".join(parts)

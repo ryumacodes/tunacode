@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, TypeVar
 
 from rich.console import RenderableType
@@ -227,7 +228,18 @@ class SearchDisplayRenderer:
 
     @staticmethod
     def parse_glob_output(text: str, pattern: str | None = None) -> SearchResultData | None:
-        if not text or "Found" not in text:
+        if not text:
+            return None
+
+        # Extract source marker if present
+        source: str | None = None
+        lines = text.split("\n")
+        if lines and lines[0].startswith("[source:"):
+            marker = lines[0]
+            source = marker[8:-1]  # Extract between "[source:" and "]"
+            text = "\n".join(lines[1:])  # Remove marker from text
+
+        if "Found" not in text:
             return None
 
         header_match = re.match(r"Found (\d+) files? matching pattern: (.+)", text)
@@ -239,26 +251,22 @@ class SearchDisplayRenderer:
         final_pattern = pattern or detected_pattern
 
         results: list[dict[str, Any]] = []
-        dir_pattern = re.compile(r"📁 (.+)/")
-        file_pattern = re.compile(r"^\s+-\s+(.+)$")
 
-        current_dir: str | None = None
-
+        # Parse file paths - supports both plain paths and formatted output
         for line in text.split("\n"):
-            dir_match = dir_pattern.search(line)
-            if dir_match:
-                current_dir = dir_match.group(1)
+            line = line.strip()
+            # Skip header line, empty lines, and truncation notice
+            if not line or line.startswith("Found ") or line.startswith("(truncated"):
                 continue
 
-            file_match = file_pattern.match(line)
-            if file_match and current_dir is not None:
-                filename = file_match.group(1)
-                full_path = f"{current_dir}/{filename}"
+            # Handle plain file paths (new format)
+            if line.startswith("/") or line.startswith("./") or "/" in line:
+                path = Path(line)
                 results.append(
                     {
-                        "title": full_path,
-                        "file": full_path,
-                        "snippet": filename,
+                        "title": line,
+                        "file": line,
+                        "snippet": path.name,
                     }
                 )
 
@@ -271,6 +279,7 @@ class SearchDisplayRenderer:
             total_count=total_count,
             current_page=1,
             page_size=len(results),
+            source=source,
         )
 
 

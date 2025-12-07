@@ -1,6 +1,5 @@
 """Node processing functionality for agent responses."""
 
-import json
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -79,6 +78,20 @@ async def _process_node(
 
     if hasattr(node, "request"):
         state_manager.session.messages.append(node.request)
+
+        # Display tool returns from previous iteration (they're in node.request)
+        if tool_result_callback and hasattr(node.request, "parts"):
+            for part in node.request.parts:
+                if hasattr(part, "part_kind") and part.part_kind == "tool-return":
+                    tool_name = getattr(part, "tool_name", "unknown")
+                    content = getattr(part, "content", None)
+                    result_str = str(content) if content is not None else None
+                    tool_result_callback(
+                        tool_name=tool_name,
+                        status="completed",
+                        args={},  # Args not available in return part
+                        result=result_str,
+                    )
 
     if hasattr(node, "thought") and node.thought:
         state_manager.session.messages.append({"thought": node.thought})
@@ -292,20 +305,7 @@ async def _process_tool_calls(
             tool_start_callback("research")
 
         await execute_tools_parallel(research_agent_tasks, tool_callback)
-
-        if tool_result_callback:
-            for part, _ in research_agent_tasks:
-                tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
-                if isinstance(tool_args, str):
-                    try:
-                        tool_args = json.loads(tool_args)
-                    except (json.JSONDecodeError, TypeError):
-                        tool_args = {}
-                tool_result_callback(
-                    tool_name=part.tool_name,
-                    status="completed",
-                    args=tool_args,
-                )
+        # Note: tool_result_callback is called when we see tool-return parts in node.request
 
     # Phase 3: Execute read-only tools in ONE parallel batch
     if read_only_tasks and tool_callback:
@@ -320,41 +320,18 @@ async def _process_tool_calls(
             tool_start_callback(", ".join(names) + suffix)
 
         await execute_tools_parallel(read_only_tasks, tool_callback)
-
-        if tool_result_callback:
-            for part, _ in read_only_tasks:
-                tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
-                if isinstance(tool_args, str):
-                    try:
-                        tool_args = json.loads(tool_args)
-                    except (json.JSONDecodeError, TypeError):
-                        tool_args = {}
-                tool_result_callback(
-                    tool_name=part.tool_name,
-                    status="completed",
-                    args=tool_args,
-                )
+        # Note: tool_result_callback is called when we see tool-return parts in node.request
 
     # Phase 4: Execute write/execute tools sequentially
     for part, node in write_execute_tasks:
-        tool_args = getattr(part, "args", {}) if hasattr(part, "args") else {}
-        if isinstance(tool_args, str):
-            try:
-                tool_args = json.loads(tool_args)
-            except (json.JSONDecodeError, TypeError):
-                tool_args = {}
-
         if tool_start_callback:
             tool_start_callback(part.tool_name)
 
-        tool_status = "completed"
         try:
             await tool_callback(part, node)
         except UserAbortError:
-            tool_status = "failed"
             raise
         except Exception as tool_err:
-            tool_status = "failed"
             logger.error(
                 "Tool callback failed: tool=%s iter=%s err=%s",
                 getattr(part, "tool_name", "<unknown>"),
@@ -366,13 +343,8 @@ async def _process_tool_calls(
         finally:
             tool_name = getattr(part, "tool_name", "<unknown>")
             logger.debug("Tool execution completed: tool=%s", tool_name)
-
-            if tool_result_callback:
-                tool_result_callback(
-                    tool_name=tool_name,
-                    status=tool_status,
-                    args=tool_args,
-                )
+            # Note: tool_result_callback with full result is called when we see
+            # tool-return parts in node.request
 
     # Track tool calls in session
     if is_processing_tools:

@@ -60,6 +60,12 @@ class CodeIndex:
         "temp",
     }
 
+    # Threshold for quick vs progressive indexing
+    QUICK_INDEX_THRESHOLD = 1000
+
+    # Priority directories for progressive indexing
+    PRIORITY_DIRS = {"src", "lib", "app", "packages", "core", "internal"}
+
     # File extensions to index
     INDEXED_EXTENSIONS = {
         ".py",
@@ -131,6 +137,7 @@ class CodeIndex:
         self._cache_ttl = 5.0  # 5 seconds TTL for directory cache
 
         self._indexed = False
+        self._partial_indexed = False
 
     @classmethod
     def get_instance(cls, root_dir: str | None = None) -> "CodeIndex":
@@ -233,6 +240,102 @@ class CodeIndex:
         self._function_definitions.clear()
         self._dir_cache.clear()
         self._cache_timestamps.clear()
+
+    def quick_count(self) -> int:
+        """Fast file count without full indexing.
+
+        Uses os.scandir for speed and exits early at threshold.
+        Does not acquire lock - read-only filesystem scan.
+
+        Returns:
+            File count, capped at QUICK_INDEX_THRESHOLD + 1.
+        """
+        count = 0
+        stack = [self.root_dir]
+
+        while stack and count <= self.QUICK_INDEX_THRESHOLD:
+            current = stack.pop()
+            try:
+                for entry in os.scandir(current):
+                    if entry.is_dir(follow_symlinks=False):
+                        if entry.name not in self.IGNORE_DIRS and not entry.name.startswith("."):
+                            stack.append(entry.path)
+                    elif entry.is_file(follow_symlinks=False):
+                        ext = Path(entry.name).suffix.lower()
+                        if ext in self.INDEXED_EXTENSIONS:
+                            count += 1
+                            if count > self.QUICK_INDEX_THRESHOLD:
+                                break
+            except (PermissionError, OSError):
+                continue
+
+        return count
+
+    def build_priority_index(self) -> int:
+        """Build index for priority directories only.
+
+        Indexes top-level files and PRIORITY_DIRS subdirectories.
+        Sets _partial_indexed = True to indicate background expansion needed.
+
+        Returns:
+            Number of files indexed.
+        """
+        with self._lock:
+            logger.info(f"Building priority index for {self.root_dir}")
+            self._clear_indices()
+
+            try:
+                # Index top-level files only (not subdirectories)
+                for entry in os.scandir(self.root_dir):
+                    if entry.is_file(follow_symlinks=False):
+                        file_path = Path(entry.path)
+                        if self._should_index_file(file_path):
+                            self._index_file(file_path)
+
+                # Index priority subdirectories fully
+                for name in self.PRIORITY_DIRS:
+                    priority_path = self.root_dir / name
+                    if priority_path.is_dir():
+                        self._scan_directory(priority_path)
+
+                self._partial_indexed = True
+                self._indexed = False
+                logger.info(f"Priority indexed {len(self._all_files)} files")
+                return len(self._all_files)
+
+            except Exception as e:
+                logger.error(f"Error building priority index: {e}")
+                raise
+
+    def expand_index(self) -> None:
+        """Expand partial index to full index.
+
+        Safe to call in background. Only runs if _partial_indexed is True.
+        Scans remaining non-priority directories.
+        """
+        with self._lock:
+            if not self._partial_indexed:
+                return
+
+            logger.info("Expanding partial index to full index")
+
+            try:
+                # Scan remaining directories (non-priority)
+                for entry in os.scandir(self.root_dir):
+                    if entry.is_dir(follow_symlinks=False):
+                        dir_name = entry.name
+                        if dir_name in self.IGNORE_DIRS or dir_name.startswith("."):
+                            continue
+                        if dir_name not in self.PRIORITY_DIRS:
+                            self._scan_directory(Path(entry.path))
+
+                self._partial_indexed = False
+                self._indexed = True
+                logger.info(f"Full index complete: {len(self._all_files)} files")
+
+            except Exception as e:
+                logger.error(f"Error expanding index: {e}")
+                raise
 
     def _should_ignore_path(self, path: Path) -> bool:
         """Check if a path should be ignored during indexing."""

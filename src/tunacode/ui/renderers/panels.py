@@ -87,6 +87,7 @@ class SearchResultData:
     current_page: int = 1
     page_size: int = 10
     search_time_ms: float | None = None
+    source: str | None = None  # "index" or "filesystem" for glob cache status
 
 
 class RichPanelRenderer:
@@ -234,6 +235,10 @@ class RichPanelRenderer:
         subtitle = None
         if total_pages > 1:
             subtitle = f"[{styles['subtitle']}]Use arrows to navigate[/]"
+        elif data.source == "index":
+            subtitle = f"[{UI_COLORS['success']}]Indexed[/]"
+        elif data.source == "filesystem":
+            subtitle = f"[{styles['subtitle']}]Scanned[/]"
 
         return Panel(
             content,
