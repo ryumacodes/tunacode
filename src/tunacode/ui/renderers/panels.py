@@ -489,20 +489,24 @@ def tool_panel_smart(
             return RichPanelRenderer.render_search_results(parsed)
 
     # Handle update_file diffs
-    if name == "update_file" and status == "completed" and result:
-        # Check if result contains a diff
-        if "\n--- a/" in result and "\n+++ b/" in result:
-            parts = result.split("\n--- a/", 1)
-            message = parts[0].strip()
-            diff_content = "--- a/" + parts[1]
-            return RichPanelRenderer.render_diff_tool(
-                name,
-                message,
-                diff_content,
-                args=args,
-                duration_ms=duration_ms,
-                timestamp=datetime.now(),
-            )
+    if (
+        name == "update_file"
+        and status == "completed"
+        and result
+        and "\n--- a/" in result
+        and "\n+++ b/" in result
+    ):
+        parts = result.split("\n--- a/", 1)
+        message = parts[0].strip()
+        diff_content = "--- a/" + parts[1]
+        return RichPanelRenderer.render_diff_tool(
+            name,
+            message,
+            diff_content,
+            args=args,
+            duration_ms=duration_ms,
+            timestamp=datetime.now(),
+        )
 
     return tool_panel(name, status, args, result, duration_ms)
 

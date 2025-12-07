@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import difflib
 import os
-from typing import Any
 
 from tunacode.tools.utils.text_match import replace
 from tunacode.types import ToolArgs, ToolConfirmationRequest, ToolName

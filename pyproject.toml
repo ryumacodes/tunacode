@@ -59,6 +59,7 @@ dev = [
     "hatch>=1.6.0",
     "mypy",
     "bandit",
+    
 ]
 
 [project.urls]
@@ -183,6 +184,8 @@ security = "bandit -r src/ -ll"
 
 # Version management
 version = "0.1.4"
+
+
 
 # Release workflow
 release = [

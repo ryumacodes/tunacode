@@ -16,6 +16,7 @@ from tunacode.core.agents.agent_components.tool_executor import (
 )
 from tunacode.exceptions import (
     ConfigurationError,
+    FileOperationError,
     ToolExecutionError,
     UserAbortError,
     ValidationError,
@@ -69,6 +70,14 @@ class TestNonRetryableErrors:
         """KeyboardInterrupt should not be retried."""
         assert KeyboardInterrupt in NON_RETRYABLE_ERRORS
 
+    def test_tool_execution_error_not_retried(self):
+        """ToolExecutionError should not be retried (already handled)."""
+        assert ToolExecutionError in NON_RETRYABLE_ERRORS
+
+    def test_file_operation_error_not_retried(self):
+        """FileOperationError should not be retried (unrecoverable)."""
+        assert FileOperationError in NON_RETRYABLE_ERRORS
+
 
 class TestExecuteToolsParallel:
     """Tests for execute_tools_parallel retry behavior."""
@@ -97,7 +106,7 @@ class TestExecuteToolsParallel:
 
     async def test_success_on_second_attempt(self, mock_part, mock_node):
         """Retry on failure, succeed on second attempt."""
-        callback = AsyncMock(side_effect=[ToolExecutionError("test", "fail"), "success"])
+        callback = AsyncMock(side_effect=[RuntimeError("transient"), "success"])
         tool_calls = [(mock_part, mock_node)]
 
         results = await execute_tools_parallel(tool_calls, callback)
@@ -109,8 +118,8 @@ class TestExecuteToolsParallel:
         """Retry twice on failure, succeed on third attempt."""
         callback = AsyncMock(
             side_effect=[
-                ToolExecutionError("test", "fail1"),
-                ToolExecutionError("test", "fail2"),
+                RuntimeError("transient1"),
+                RuntimeError("transient2"),
                 "success",
             ]
         )
@@ -123,11 +132,11 @@ class TestExecuteToolsParallel:
 
     async def test_fails_after_max_retries(self, mock_part, mock_node):
         """Error raised after all retry attempts exhausted."""
-        error = ToolExecutionError("test", "persistent failure")
+        error = RuntimeError("persistent failure")
         callback = AsyncMock(side_effect=error)
         tool_calls = [(mock_part, mock_node)]
 
-        with pytest.raises(ToolExecutionError, match="persistent failure"):
+        with pytest.raises(RuntimeError, match="persistent failure"):
             await execute_tools_parallel(tool_calls, callback)
 
         assert callback.call_count == TOOL_MAX_RETRIES
@@ -172,6 +181,28 @@ class TestExecuteToolsParallel:
 
         assert callback.call_count == 1
 
+    async def test_tool_execution_error_not_retried(self, mock_part, mock_node):
+        """ToolExecutionError propagates immediately without retry."""
+        callback = AsyncMock(side_effect=ToolExecutionError("test", "tool failed"))
+        tool_calls = [(mock_part, mock_node)]
+
+        with pytest.raises(ToolExecutionError):
+            await execute_tools_parallel(tool_calls, callback)
+
+        assert callback.call_count == 1
+
+    async def test_file_operation_error_not_retried(self, mock_part, mock_node):
+        """FileOperationError propagates immediately without retry."""
+        callback = AsyncMock(
+            side_effect=FileOperationError("read", "/path", "permission denied")
+        )
+        tool_calls = [(mock_part, mock_node)]
+
+        with pytest.raises(FileOperationError):
+            await execute_tools_parallel(tool_calls, callback)
+
+        assert callback.call_count == 1
+
     async def test_multiple_tools_all_succeed(self, mock_node):
         """Multiple tools all succeed on first attempt."""
         parts = [MagicMock(tool_name=f"tool_{i}") for i in range(3)]
@@ -185,12 +216,12 @@ class TestExecuteToolsParallel:
     async def test_multiple_tools_one_fails(self, mock_node):
         """One failing tool causes entire batch to fail after retries."""
         parts = [MagicMock(tool_name=f"tool_{i}") for i in range(2)]
-        # First tool succeeds, second always fails
-        error = ToolExecutionError("tool_1", "always fails")
+        # First tool succeeds, second always fails with retryable error
+        error = RuntimeError("always fails")
         callback = AsyncMock(side_effect=["success", error, error, error])
         tool_calls = [(p, mock_node) for p in parts]
 
-        with pytest.raises(ToolExecutionError, match="always fails"):
+        with pytest.raises(RuntimeError, match="always fails"):
             await execute_tools_parallel(tool_calls, callback)
 
     async def test_generic_exception_is_retried(self, mock_part, mock_node):

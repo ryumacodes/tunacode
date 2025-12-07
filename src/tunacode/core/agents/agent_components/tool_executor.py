@@ -15,6 +15,8 @@ from tunacode.constants import (
 from tunacode.core.logging.logger import get_logger
 from tunacode.exceptions import (
     ConfigurationError,
+    FileOperationError,
+    ToolExecutionError,
     UserAbortError,
     ValidationError,
 )
@@ -30,6 +32,8 @@ NON_RETRYABLE_ERRORS = (
     SystemExit,
     ValidationError,
     ConfigurationError,
+    ToolExecutionError,
+    FileOperationError,
 )
 
 

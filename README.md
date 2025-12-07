@@ -1,12 +1,21 @@
 # tunacode-cli
 
+[![PyPI version](https://badge.fury.io/py/tunacode-cli.svg)](https://badge.fury.io/py/tunacode-cli)
+[![Downloads](https://pepy.tech/badge/tunacode-cli)](https://pepy.tech/project/tunacode-cli)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A TUI code agent.
+
+> **Development Status:** This project is under heavy active development. The tool is stable and the current architecture is final, serving as the foundation for future improvements. However, you may still encounter bugs. This is a personal project developed in my spare time, so your patience is appreciated.
+
+> "The best thing about a boolean is even if you are wrong, you are only off by a bit."
 
 ## Interface
 
 ![TUI Interface](docs/images/tui.png)
 
-The Textual-based terminal user interface provides a clean, interactive environment for AI-assisted coding.
+The Textual-based terminal user interface provides a clean, interactive environment for AI-assisted coding, with a design heavily inspired by the classic NeXTSTEP user interface.
 
 ## Theme Support
 

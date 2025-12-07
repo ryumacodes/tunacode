@@ -8,6 +8,16 @@ src/tunacode/tools is the tools that are used to code and debug code or general 
 
 Curretly we only have two test one that tests the tool decorators and one that tests the tool conformance. For now this is all we need to test.
 
+## Design Philosophy
+
+The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. This choice reflects a commitment to **"the next step of uniformity"**.
+
+- **Uniformity:** The interface should provide a consistent and predictable experience across all interactions.
+- **User Informed:** A core tenet is to keep the user constantly informed of the agent's state, actions, and reasoning. No "magic" should happen in the background without visual feedback.
+- **Aesthetic:** The look should be professional, clean, and retro-modern, echoing the clarity and object-oriented nature of the NeXTSTEP environment.
+
+**UI Design Rule:** Always call the next neXTSTEP-ui skill for any UI changes.
+
 ## Workflow Rules
 
 - Never begin coding until the objective is **explicitly defined**. If unclear, ask questions or use best practices.
