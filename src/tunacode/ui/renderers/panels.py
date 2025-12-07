@@ -13,7 +13,12 @@ from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
-from tunacode.constants import UI_COLORS
+from tunacode.constants import (
+    MAX_PANEL_LINE_WIDTH,
+    MAX_PANEL_LINES,
+    MAX_SEARCH_RESULTS_DISPLAY,
+    UI_COLORS,
+)
 
 
 class PanelType(str, Enum):
@@ -102,6 +107,7 @@ class RichPanelRenderer:
         styles = PANEL_STYLES[panel_type]
 
         content_parts: list[RenderableType] = []
+        footer_parts: list[str] = []
 
         if data.arguments:
             args_table = Table.grid(padding=(0, 1))
@@ -113,14 +119,23 @@ class RichPanelRenderer:
             content_parts.append(args_table)
 
         if data.result:
+            truncated_result, shown, total = _truncate_content(data.result)
             result_text = Text()
             result_text.append("\n")
-            result_text.append(_truncate_value(data.result, max_length=200))
+            result_text.append(truncated_result)
             content_parts.append(result_text)
 
+            # Add line count to footer if truncated
+            if shown < total:
+                footer_parts.append(f"{shown}/{total} lines")
+
         if data.duration_ms is not None:
-            duration_text = Text(f"\n{data.duration_ms:.0f}ms", style="dim")
-            content_parts.append(duration_text)
+            footer_parts.append(f"{data.duration_ms:.0f}ms")
+
+        # Build footer from parts
+        if footer_parts:
+            footer_text = Text("\n" + " • ".join(footer_parts), style="dim")
+            content_parts.append(footer_text)
 
         content = Group(*content_parts) if content_parts else Text("...")
 
@@ -194,12 +209,16 @@ class RichPanelRenderer:
         query_text.append(data.query, style="bold")
         content_parts.append(query_text)
 
+        # Apply search result limiting
+        display_results, shown_count, actual_total = _truncate_search_results(data.results)
+        total_count = max(data.total_count, actual_total)
+
         start_idx = (data.current_page - 1) * data.page_size + 1
-        end_idx = min(start_idx + len(data.results) - 1, data.total_count)
-        total_pages = (data.total_count + data.page_size - 1) // data.page_size
+        end_idx = min(start_idx + shown_count - 1, total_count)
+        total_pages = (total_count + data.page_size - 1) // data.page_size
 
         stats_text = Text()
-        stats_text.append(f"\nShowing {start_idx}-{end_idx} of {data.total_count}", style="dim")
+        stats_text.append(f"\nShowing {start_idx}-{end_idx} of {total_count}", style="dim")
         if total_pages > 1:
             stats_text.append(f" (page {data.current_page}/{total_pages})", style="dim")
         content_parts.append(stats_text)
@@ -214,7 +233,7 @@ class RichPanelRenderer:
         results_table.add_column(width=3, style="dim")
         results_table.add_column()
 
-        for i, result in enumerate(data.results, start=start_idx):
+        for i, result in enumerate(display_results, start=start_idx):
             title = result.get("title", result.get("file", result.get("name", "...")))
             snippet = result.get("snippet", result.get("content", ""))
             relevance = result.get("relevance", result.get("score"))
@@ -227,6 +246,11 @@ class RichPanelRenderer:
                 result_text.append(f"\n  {_truncate_value(snippet, 80)}", style="dim")
 
             results_table.add_row(f"{i}.", result_text)
+
+        # Show "+N more" indicator if truncated
+        if shown_count < actual_total:
+            more_count = actual_total - shown_count
+            results_table.add_row("", Text(f"+{more_count} more results", style="dim italic"))
 
         content_parts.append(results_table)
 
@@ -294,6 +318,55 @@ def _truncate_value(value: Any, max_length: int = 50) -> str:
     if len(str_value) <= max_length:
         return str_value
     return str_value[: max_length - 3] + "..."
+
+
+def _truncate_content(
+    content: str,
+    max_lines: int = MAX_PANEL_LINES,
+    max_line_width: int = MAX_PANEL_LINE_WIDTH,
+) -> tuple[str, int, int]:
+    """
+    Line-aware truncation preserving structure.
+
+    Returns: (truncated_content, shown_lines, total_lines)
+    """
+    lines = content.splitlines()
+    total = len(lines)
+
+    if total <= max_lines:
+        # Still truncate individual long lines
+        truncated = []
+        for line in lines:
+            if len(line) > max_line_width:
+                truncated.append(line[:max_line_width] + "...")
+            else:
+                truncated.append(line)
+        return "\n".join(truncated), total, total
+
+    # Take first max_lines, truncate individual lines if too wide
+    truncated = []
+    for line in lines[:max_lines]:
+        if len(line) > max_line_width:
+            truncated.append(line[:max_line_width] + "...")
+        else:
+            truncated.append(line)
+
+    return "\n".join(truncated), max_lines, total
+
+
+def _truncate_search_results(
+    results: list[dict[str, Any]],
+    max_display: int = MAX_SEARCH_RESULTS_DISPLAY,
+) -> tuple[list[dict[str, Any]], int, int]:
+    """
+    Truncate search results list with count info.
+
+    Returns: (truncated_results, shown_count, total_count)
+    """
+    total = len(results)
+    if total <= max_display:
+        return results, total, total
+    return results[:max_display], max_display, total
 
 
 def tool_panel(

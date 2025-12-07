@@ -27,6 +27,12 @@ MAX_FILES_IN_DIR = 50
 MAX_TOTAL_DIR_SIZE = 2 * 1024 * 1024  # 2 MB
 DEFAULT_CONTEXT_WINDOW = 200000  # 200k tokens
 
+# Display truncation limits (NeXTSTEP information hierarchy)
+MAX_CALLBACK_CONTENT = 50_000  # Emergency safety - prevents UI freeze
+MAX_PANEL_LINES = 30  # Focus zone limit for tool results
+MAX_PANEL_LINE_WIDTH = 200  # Individual line truncation
+MAX_SEARCH_RESULTS_DISPLAY = 20  # Search results shown before "+N more"
+
 # File autocomplete settings
 AUTOCOMPLETE_MAX_DEPTH = 3  # Levels deep from current prefix (sliding window)
 AUTOCOMPLETE_RESULT_LIMIT = 50

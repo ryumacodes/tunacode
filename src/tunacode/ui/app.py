@@ -16,6 +16,7 @@ from textual.binding import Binding
 from textual.widgets import LoadingIndicator, RichLog, Static
 
 from tunacode.constants import (
+    MAX_CALLBACK_CONTENT,
     RICHLOG_CLASS_PAUSED,
     RICHLOG_CLASS_STREAMING,
     build_nextstep_theme,
@@ -167,7 +168,10 @@ class TextualReplApp(App[None]):
 
         if is_partial:
             msg = Text()
-            msg.append(f"Code cache: {indexed}/{total} files indexed, expanding...", style=STYLE_MUTED)
+            msg.append(
+                f"Code cache: {indexed}/{total} files indexed, expanding...",
+                style=STYLE_MUTED,
+            )
             self.rich_log.write(msg)
 
             # Expand in background
@@ -452,6 +456,15 @@ def build_textual_tool_callback(app: TextualReplApp, state_manager: StateManager
 FILE_EDIT_TOOLS = frozenset({"write_file", "update_file"})
 
 
+def _truncate_for_safety(content: str | None) -> str | None:
+    """Emergency truncation - prevents UI freeze on massive outputs."""
+    if content is None:
+        return None
+    if len(content) <= MAX_CALLBACK_CONTENT:
+        return content
+    return content[:MAX_CALLBACK_CONTENT] + "\n... [truncated for safety]"
+
+
 def build_tool_result_callback(app: TextualReplApp):
     def _callback(
         tool_name: str,
@@ -467,12 +480,15 @@ def build_tool_result_callback(app: TextualReplApp):
 
         app.status_bar.update_last_action(tool_name)
 
+        # Emergency safety truncation before display processing
+        safe_result = _truncate_for_safety(result)
+
         app.post_message(
             ToolResultDisplay(
                 tool_name=tool_name,
                 status=status,
                 args=args,
-                result=result,
+                result=safe_result,
                 duration_ms=duration_ms,
             )
         )
