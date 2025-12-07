@@ -16,7 +16,6 @@ from tunacode.types import ModelName, UserConfig
 if TYPE_CHECKING:
     from tunacode.core.state import StateManager
 
-
 import hashlib
 
 _config_fingerprint = None
@@ -95,26 +94,3 @@ def _ensure_onboarding_defaults(config: UserConfig) -> None:
     """Ensure onboarding-related default settings are present in config."""
     if "settings" not in config:
         config["settings"] = {}
-
-
-def initialize_first_time_user(state_manager: "StateManager") -> None:
-    """Initialize first-time user settings and save configuration."""
-    from datetime import datetime
-
-    # Ensure settings section exists
-    if "settings" not in state_manager.session.user_config:
-        state_manager.session.user_config["settings"] = {}
-
-    settings = state_manager.session.user_config["settings"]
-
-    # Only set installation date if it doesn't exist (true first-time)
-    if "first_installation_date" not in settings:
-        settings["first_installation_date"] = datetime.now().isoformat()
-        settings["enable_tutorial"] = True
-
-        # Save the updated configuration
-        try:
-            save_config(state_manager)
-        except ConfigurationError:
-            # Non-critical error, continue without failing
-            pass
