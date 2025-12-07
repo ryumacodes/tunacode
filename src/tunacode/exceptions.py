@@ -230,3 +230,12 @@ class ToolBatchingJSONError(TunaCodeError):
             f"JSON parsing failed after {retry_count} retries. "
             f"Invalid JSON: {display_content}"
         )
+
+
+class AggregateToolError(TunaCodeError):
+    """Raised when multiple tools fail in parallel execution after retries exhausted."""
+
+    def __init__(self, failures: list[tuple[str, Exception]]):
+        self.failures = failures
+        tool_names = [name for name, _ in failures]
+        super().__init__(f"Multiple tools failed: {', '.join(tool_names)}")

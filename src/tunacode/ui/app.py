@@ -13,6 +13,7 @@ from rich.text import Text
 from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.containers import Container
 from textual.widgets import LoadingIndicator, RichLog, Static
 
 from tunacode.constants import (
@@ -102,9 +103,10 @@ class TextualReplApp(App[None]):
         self.status_bar = StatusBar()
 
         yield self.resource_bar
-        yield self.rich_log
-        yield self.streaming_output
-        yield self.loading_indicator
+        with Container(id="viewport"):
+            yield self.rich_log
+            yield self.streaming_output
+            yield self.loading_indicator
         yield self.editor
         yield FileAutoComplete(self.editor)
         yield self.status_bar
@@ -217,7 +219,7 @@ class TextualReplApp(App[None]):
         self.current_stream_text = ""
         self._last_display_update = 0.0
         self._streaming_cancelled = False
-        self.rich_log.add_class(RICHLOG_CLASS_STREAMING)
+        self.query_one("#viewport").add_class(RICHLOG_CLASS_STREAMING)
 
         self._loading_indicator_shown = True
         self.loading_indicator.add_class("active")
@@ -251,8 +253,8 @@ class TextualReplApp(App[None]):
             self._current_request_task = None
             self._loading_indicator_shown = False
             self.loading_indicator.remove_class("active")
-            self.rich_log.remove_class(RICHLOG_CLASS_STREAMING)
-            self.rich_log.remove_class(RICHLOG_CLASS_PAUSED)
+            self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
+            self.query_one("#viewport").remove_class(RICHLOG_CLASS_PAUSED)
             self.streaming_output.update("")
             self.streaming_output.remove_class("active")
 
@@ -329,12 +331,12 @@ class TextualReplApp(App[None]):
 
     def pause_streaming(self) -> None:
         self._streaming_paused = True
-        self.rich_log.add_class(RICHLOG_CLASS_PAUSED)
+        self.query_one("#viewport").add_class(RICHLOG_CLASS_PAUSED)
         self.notify("Streaming paused...")
 
     def resume_streaming(self) -> None:
         self._streaming_paused = False
-        self.rich_log.remove_class(RICHLOG_CLASS_PAUSED)
+        self.query_one("#viewport").remove_class(RICHLOG_CLASS_PAUSED)
         self.notify("Streaming resumed...")
 
         if self._stream_buffer:

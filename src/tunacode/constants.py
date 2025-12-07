@@ -197,6 +197,11 @@ JSON_PARSE_MAX_RETRIES = 10
 JSON_PARSE_BASE_DELAY = 0.1  # Initial delay in seconds
 JSON_PARSE_MAX_DELAY = 5.0  # Maximum delay in seconds
 
+# Tool execution retry configuration
+TOOL_MAX_RETRIES = 3
+TOOL_RETRY_BASE_DELAY = 0.5  # seconds
+TOOL_RETRY_MAX_DELAY = 5.0  # seconds
+
 
 # Textual TUI Theme
 THEME_NAME = "tunacode"

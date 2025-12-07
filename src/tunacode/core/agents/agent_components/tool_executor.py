@@ -1,20 +1,53 @@
-"""Tool execution and parallelization functionality."""
+"""Tool execution and parallelization functionality with automatic retry."""
 
 import asyncio
 import os
+import random
 from typing import Any
 
+from pydantic_ai import ModelRetry
+
+from tunacode.constants import (
+    TOOL_MAX_RETRIES,
+    TOOL_RETRY_BASE_DELAY,
+    TOOL_RETRY_MAX_DELAY,
+)
 from tunacode.core.logging.logger import get_logger
+from tunacode.exceptions import (
+    ConfigurationError,
+    UserAbortError,
+    ValidationError,
+)
 from tunacode.types import ToolCallback
 
 logger = get_logger(__name__)
+
+# Errors that should NOT be retried - they represent user intent or unrecoverable states
+NON_RETRYABLE_ERRORS = (
+    UserAbortError,
+    ModelRetry,
+    KeyboardInterrupt,
+    SystemExit,
+    ValidationError,
+    ConfigurationError,
+)
+
+
+def _calculate_backoff(attempt: int) -> float:
+    """Exponential backoff with jitter."""
+    delay = min(TOOL_RETRY_BASE_DELAY * (2 ** (attempt - 1)), TOOL_RETRY_MAX_DELAY)
+    jitter = random.uniform(0, delay * 0.1)
+    return delay + jitter
 
 
 async def execute_tools_parallel(
     tool_calls: list[tuple[Any, Any]], callback: ToolCallback
 ) -> list[Any]:
     """
-    Execute multiple tool calls in parallel using asyncio.
+    Execute multiple tool calls in parallel using asyncio with automatic retry.
+
+    Each tool gets up to TOOL_MAX_RETRIES attempts before failing.
+    Non-retryable errors (user abort, validation, etc.) propagate immediately.
 
     Args:
         tool_calls: List of (part, node) tuples
@@ -24,41 +57,66 @@ async def execute_tools_parallel(
         List of results in the same order as input
 
     Raises:
-        Exception: Re-raises the first exception encountered during tool execution
+        Exception: Re-raises after all retry attempts exhausted
     """
-    # Get max parallel from environment or default to CPU count
     max_parallel = int(os.environ.get("TUNACODE_MAX_PARALLEL", os.cpu_count() or 4))
 
-    async def execute_with_error_handling(part, node):
+    async def execute_with_retry(part, node):
         tool_name = getattr(part, "tool_name", "<unknown>")
-        try:
-            return await callback(part, node)
-        except Exception as e:
-            logger.error(f"Error executing parallel tool {tool_name}: {e}", exc_info=True)
-            raise  # Re-raise to fail fast
-        finally:
-            logger.debug(
-                "Parallel tool execution completed (success or failure): tool=%s",
-                tool_name,
-            )
 
-    # If we have more tools than max_parallel, execute in batches
+        for attempt in range(1, TOOL_MAX_RETRIES + 1):
+            try:
+                result = await callback(part, node)
+                if attempt > 1:
+                    logger.info(
+                        "Tool '%s' succeeded on attempt %d/%d",
+                        tool_name,
+                        attempt,
+                        TOOL_MAX_RETRIES,
+                    )
+                return result
+            except NON_RETRYABLE_ERRORS:
+                raise
+            except Exception as e:
+                if attempt == TOOL_MAX_RETRIES:
+                    logger.error(
+                        "Tool '%s' failed after %d attempts: %s",
+                        tool_name,
+                        attempt,
+                        e,
+                        exc_info=True,
+                    )
+                    raise
+                backoff = _calculate_backoff(attempt)
+                logger.warning(
+                    "Tool '%s' failed (attempt %d/%d), retrying in %.1fs: %s",
+                    tool_name,
+                    attempt,
+                    TOOL_MAX_RETRIES,
+                    backoff,
+                    e,
+                )
+                await asyncio.sleep(backoff)
+
+        raise AssertionError("unreachable")
+
+    # Execute in batches if we have more tools than max_parallel
     if len(tool_calls) > max_parallel:
         results = []
         for i in range(0, len(tool_calls), max_parallel):
             batch = tool_calls[i : i + max_parallel]
-            batch_tasks = [execute_with_error_handling(part, node) for part, node in batch]
+            batch_tasks = [execute_with_retry(part, node) for part, node in batch]
             batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
             results.extend(batch_results)
-            # Check for errors after each batch - fail fast
+            # Check for errors after each batch
             for result in batch_results:
                 if isinstance(result, Exception):
                     raise result
         return results
     else:
-        tasks = [execute_with_error_handling(part, node) for part, node in tool_calls]
+        tasks = [execute_with_retry(part, node) for part, node in tool_calls]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        # Check for errors - fail fast, raise the first one
+        # Check for errors - raise the first one
         for result in results:
             if isinstance(result, Exception):
                 raise result

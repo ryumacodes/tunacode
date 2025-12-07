@@ -22,25 +22,30 @@ ResourceBar {
 }
 
 /* ============================================
- * PRIMARY VIEWPORT - Thin border, dark bg
- * NeXTSTEP: "Maximum real estate, user focus"
+ * PRIMARY VIEWPORT - Unified container for RichLog + streaming
+ * NeXTSTEP: "Objects stay where put" - content lives in ONE zone
  * ============================================ */
-RichLog {
+#viewport {
     height: 1fr;
-    background: $background;
     border: solid $border;
-    padding: 1;
-    scrollbar-gutter: stable;
 }
 
-/* Streaming - accent border during generation */
-RichLog.streaming {
+/* Streaming mode - accent border on viewport (not RichLog) */
+#viewport.streaming {
     border: solid $accent;
 }
 
 /* Pause mode - NeXTSTEP: "Modes must be visually apparent" */
-RichLog.paused {
+#viewport.paused {
     border: solid $warning;
+}
+
+/* RichLog - inside viewport, no border */
+RichLog {
+    height: 1fr;
+    background: $background;
+    padding: 1;
+    scrollbar-gutter: stable;
 }
 
 /* ============================================
@@ -58,15 +63,16 @@ LoadingIndicator.active {
 
 /* ============================================
  * STREAMING OUTPUT - Live text display during generation
- * RichLog border provides mode indication; this blends seamlessly
+ * Inside viewport container; dashed separator distinguishes live content
  * ============================================ */
 #streaming-output {
     height: auto;
-    max-height: 50%;
+    max-height: 30%;
     display: none;
     background: $background;
     padding: 0 1;
     overflow-y: auto;
+    border-top: dashed #6272a4;
 }
 
 #streaming-output.active {
@@ -316,10 +322,8 @@ ToolConfirmationModal {
     color: #e0e0e0;
 }
 
-/* --- Main Viewport (RichLog - Window Content) --- */
-.theme-nextstep RichLog {
-    background: #d0d0d0;
-    color: #000000;
+/* --- Main Viewport (Container - Window Content) --- */
+.theme-nextstep #viewport {
     /* Raised 3D bevel: light top/left, dark bottom/right */
     border-top: solid #e8e8e8;
     border-left: solid #e8e8e8;
@@ -327,7 +331,7 @@ ToolConfirmationModal {
     border-right: solid #606060;
 }
 
-.theme-nextstep RichLog.streaming {
+.theme-nextstep #viewport.streaming {
     /* Inverted bevel = pressed/active state */
     border-top: solid #606060;
     border-left: solid #606060;
@@ -335,8 +339,13 @@ ToolConfirmationModal {
     border-right: solid #e8e8e8;
 }
 
-.theme-nextstep RichLog.paused {
+.theme-nextstep #viewport.paused {
     border: double #2a2a2a;
+}
+
+.theme-nextstep RichLog {
+    background: #d0d0d0;
+    color: #000000;
 }
 
 /* --- Editor (Inset Input Field) --- */
