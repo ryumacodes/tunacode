@@ -1,3 +1,24 @@
+## [0.1.6] - 2025-12-08
+
+### Added
+- Session resume feature (`/resume`) to restore previous conversation sessions
+- Write file preview in confirmation dialog showing file contents before creation
+- CONTRIBUTING.md for open source contributors
+
+### Changed
+- Consolidated ruff config and removed redundant .ruffignore
+- Removed stale documentation and knowledge base files
+- Removed unused command security constants and XML schema loader
+
+## [0.1.5] - 2025-12-07
+
+### Added
+- CHANGELOG.md for tracking version history
+- Enhanced update_file tool with diff preview and result display
+
+### Fixed
+- Additional lint error fixes
+
 ## [0.1.4] - 2025-12-06
 
 ### Added
