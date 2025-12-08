@@ -30,5 +30,3 @@ def load_prompt_from_xml(tool_name: str) -> str | None:
     except Exception as e:
         logger.warning(f"Failed to load XML prompt for {tool_name}: {e}")
     return None
-
-

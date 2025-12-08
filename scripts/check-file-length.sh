@@ -48,6 +48,7 @@ done < <(find . -type f \
     -not -path "./reports/*" \
     -not -path "./node_modules/*" \
     -not -path "./llm-agent-tools/*" \
+    -not -path "./.osgrep/*" \
     -not -name "*.pyc" \
     -not -name "*.pyo" \
     -not -name "*.so" \
@@ -65,8 +66,10 @@ done < <(find . -type f \
     -not -name "*.ico" \
     -not -name "*.webp" \
     -not -name "*.md" \
+    -not -name "*.lance" \
     -not -name ".coverage" \
     -not -name "uv.lock" \
+    -not -name ".osgrepignore" \
     -print0)
 
 exit $FOUND_LONG_FILES

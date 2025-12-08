@@ -21,10 +21,10 @@ class ConfirmationRequestFactory:
                 try:
                     with open(filepath, encoding="utf-8") as f:
                         original = f.read()
-                    
+
                     # Attempt to generate what the new content will look like
                     new_content = replace(original, target, patch, replace_all=False)
-                    
+
                     diff_lines = list(
                         difflib.unified_diff(
                             original.splitlines(keepends=True),

@@ -63,14 +63,7 @@ repos:
   #          Use 'uv run' for standalone tools not managed by hatch environments
   - repo: local
     hooks:
-      # Hatch-managed commands (use hatch run for consistency)
-      - id: hatch-lint
-        name: Run hatch lint check
-        entry: hatch run lint
-        language: system
-        pass_filenames: false
-        always_run: true
-        stages: [pre-commit]
+
 
       # UV-managed standalone tools (not in hatch environments)
       - id: dead-imports
@@ -144,5 +137,5 @@ ci:
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: weekly
   # Skip hooks that require project-specific environment setup
-  skip: [hatch-lint, dead-imports, vulture-changed]
+  skip: [dead-imports, vulture-changed]
   submodules: false

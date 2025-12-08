@@ -9,7 +9,7 @@ A TUI code agent.
 
 > **Development Status:** This project is under heavy active development. The tool is stable and the current architecture is final, serving as the foundation for future improvements. However, you may still encounter bugs. This is a personal project developed in my spare time, so your patience is appreciated.
 
-> "The best thing about a boolean is even if you are wrong, you are only off by a bit."
+
 
 ## Interface
 

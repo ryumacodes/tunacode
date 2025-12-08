@@ -79,7 +79,7 @@ async def stream_model_request_node(
                             return v
                     # Parts-based result
                     parts = getattr(obj, "parts", None)
-                    if isinstance(parts, (list, tuple)) and parts:
+                    if isinstance(parts, list | tuple) and parts:
                         texts: list[str] = []
                         for p in parts:
                             c = getattr(p, "content", None)
@@ -145,7 +145,7 @@ async def stream_model_request_node(
                                 elif isinstance(r_text, str):
                                     rpreview = repr(r_text[:20])
                                     rplen = len(r_text)
-                                elif isinstance(r_parts, (list, tuple)) and r_parts:
+                                elif isinstance(r_parts, list | tuple) and r_parts:
                                     # render a compact preview of first textual part
                                     for _rp in r_parts:
                                         rc = getattr(_rp, "content", None)

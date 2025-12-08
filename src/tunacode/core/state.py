@@ -6,8 +6,12 @@ Handles user preferences, conversation history, and runtime state.
 CLAUDE_ANCHOR[state-module]: Central state management and session tracking
 """
 
+import json
+import logging
 import uuid
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
@@ -21,6 +25,8 @@ from tunacode.types import (
     UserConfig,
 )
 from tunacode.utils.messaging import estimate_tokens, get_message_content
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from tunacode.tools.authorization.handler import ToolHandler
@@ -47,6 +53,11 @@ class SessionState:
     device_id: DeviceId | None = None
     input_sessions: InputSessions = field(default_factory=dict)
     current_task: Any | None = None
+    # Persistence fields
+    project_id: str = ""
+    created_at: str = ""
+    last_modified: str = ""
+    working_directory: str = ""
     # CLAUDE_ANCHOR[react-scratchpad]: Session scratchpad for ReAct tooling
     react_scratchpad: dict[str, Any] = field(default_factory=lambda: {"timeline": []})
     react_forced_calls: int = 0
@@ -200,3 +211,182 @@ class StateManager:
     def reset_session(self) -> None:
         """Reset the session to a fresh state."""
         self._session = SessionState()
+
+    # Session persistence methods
+
+    def _get_session_file_path(self) -> Path:
+        """Get the file path for current session."""
+        from tunacode.utils.system.paths import get_session_storage_dir
+
+        storage_dir = get_session_storage_dir()
+        return storage_dir / f"{self._session.project_id}_{self._session.session_id}.json"
+
+    def _serialize_messages(self) -> list[dict]:
+        """Serialize mixed message list to JSON-compatible dicts."""
+        try:
+            from pydantic import TypeAdapter
+            from pydantic_ai.messages import ModelMessage
+
+            msg_adapter = TypeAdapter(ModelMessage)
+        except ImportError:
+            logger.warning("pydantic_ai not available for serialization")
+            msg_adapter = None
+
+        result = []
+        for msg in self._session.messages:
+            if isinstance(msg, dict):
+                result.append(msg)
+            elif msg_adapter is not None:
+                try:
+                    result.append(msg_adapter.dump_python(msg, mode="json"))
+                except Exception as e:
+                    logger.warning("Failed to serialize message: %s", e)
+            else:
+                logger.warning("Cannot serialize message of type %s", type(msg))
+        return result
+
+    def _deserialize_messages(self, data: list[dict]) -> list:
+        """Deserialize JSON dicts back to message objects."""
+        try:
+            from pydantic import TypeAdapter
+            from pydantic_ai.messages import ModelMessage
+
+            msg_adapter = TypeAdapter(ModelMessage)
+        except ImportError:
+            logger.warning("pydantic_ai not available, keeping messages as dicts")
+            return data
+
+        result = []
+        for item in data:
+            if not isinstance(item, dict):
+                result.append(item)
+                continue
+
+            if "thought" in item:
+                result.append(item)
+            elif item.get("kind") in ("request", "response"):
+                try:
+                    result.append(msg_adapter.validate_python(item))
+                except Exception as e:
+                    logger.warning("Failed to deserialize message: %s", e)
+                    result.append(item)
+            else:
+                result.append(item)
+        return result
+
+    def save_session(self) -> bool:
+        """Save current session to disk."""
+        if not self._session.project_id:
+            logger.debug("No project_id set, skipping session save")
+            return False
+
+        self._session.last_modified = datetime.now(UTC).isoformat()
+
+        session_data = {
+            "version": 1,
+            "session_id": self._session.session_id,
+            "project_id": self._session.project_id,
+            "created_at": self._session.created_at,
+            "last_modified": self._session.last_modified,
+            "working_directory": self._session.working_directory,
+            "current_model": self._session.current_model,
+            "total_tokens": self._session.total_tokens,
+            "session_total_usage": self._session.session_total_usage,
+            "tool_ignore": self._session.tool_ignore,
+            "yolo": self._session.yolo,
+            "react_scratchpad": self._session.react_scratchpad,
+            "messages": self._serialize_messages(),
+        }
+
+        try:
+            session_file = self._get_session_file_path()
+            session_file.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with open(session_file, "w") as f:
+                json.dump(session_data, f, indent=2)
+            logger.debug("Session saved to %s", session_file)
+            return True
+        except PermissionError as e:
+            logger.error("Permission denied saving session: %s", e)
+            return False
+        except OSError as e:
+            logger.error("OS error saving session: %s", e)
+            return False
+        except Exception as e:
+            logger.error("Failed to save session: %s", e)
+            return False
+
+    def load_session(self, session_id: str) -> bool:
+        """Load a session from disk."""
+        from tunacode.utils.system.paths import get_session_storage_dir
+
+        storage_dir = get_session_storage_dir()
+
+        session_file = None
+        for file in storage_dir.glob(f"*_{session_id}.json"):
+            session_file = file
+            break
+
+        if not session_file or not session_file.exists():
+            logger.warning("Session file not found for %s", session_id)
+            return False
+
+        try:
+            with open(session_file) as f:
+                data = json.load(f)
+
+            self._session.session_id = data.get("session_id", session_id)
+            self._session.project_id = data.get("project_id", "")
+            self._session.created_at = data.get("created_at", "")
+            self._session.last_modified = data.get("last_modified", "")
+            self._session.working_directory = data.get("working_directory", "")
+            self._session.current_model = data.get(
+                "current_model", DEFAULT_USER_CONFIG["default_model"]
+            )
+            self._session.total_tokens = data.get("total_tokens", 0)
+            self._session.session_total_usage = data.get(
+                "session_total_usage",
+                {"prompt_tokens": 0, "completion_tokens": 0, "cost": 0.0},
+            )
+            self._session.tool_ignore = data.get("tool_ignore", [])
+            self._session.yolo = data.get("yolo", False)
+            self._session.react_scratchpad = data.get("react_scratchpad", {"timeline": []})
+            self._session.messages = self._deserialize_messages(data.get("messages", []))
+
+            logger.info("Session loaded from %s", session_file)
+            return True
+        except json.JSONDecodeError as e:
+            logger.error("Invalid JSON in session file: %s", e)
+            return False
+        except Exception as e:
+            logger.error("Failed to load session: %s", e)
+            return False
+
+    def list_sessions(self) -> list[dict]:
+        """List available sessions for current project."""
+        from tunacode.utils.system.paths import get_session_storage_dir
+
+        storage_dir = get_session_storage_dir()
+        sessions: list[dict[str, Any]] = []
+
+        if not self._session.project_id:
+            return sessions
+
+        for file in storage_dir.glob(f"{self._session.project_id}_*.json"):
+            try:
+                with open(file) as f:
+                    data = json.load(f)
+                sessions.append(
+                    {
+                        "session_id": data.get("session_id", ""),
+                        "created_at": data.get("created_at", ""),
+                        "last_modified": data.get("last_modified", ""),
+                        "message_count": len(data.get("messages", [])),
+                        "current_model": data.get("current_model", ""),
+                        "file_path": str(file),
+                    }
+                )
+            except Exception as e:
+                logger.warning("Failed to read session file %s: %s", file, e)
+
+        sessions.sort(key=lambda x: x.get("last_modified", ""), reverse=True)
+        return sessions

@@ -3,7 +3,6 @@ Extended result formatter with multiple output modes for flexible presentation.
 Result formatting functionality for the grep tool.
 """
 
-
 from .search_result import SearchConfig, SearchResult
 
 

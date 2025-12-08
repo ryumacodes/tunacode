@@ -59,7 +59,7 @@ dev = [
     "hatch>=1.6.0",
     "mypy",
     "bandit",
-    
+
 ]
 
 [project.urls]
@@ -95,16 +95,20 @@ exclude = [
     ".tox",
     ".venv",
     "__pypackages__",
+    "__pycache__",
     "build",
     "dist",
     "venv",
     "vulture_whitelist.py",
+    ".osgrep",
+    "*.lance",
+    "*.egg-info",
 ]
 
 [tool.vulture]
 min_confidence = 80
 paths = ["src", "tests"]
-exclude = ["venv/", "build/", "dist/", ".git/", "__pycache__/", "*.egg-info/"]
+exclude = ["venv/", "build/", "dist/", ".git/", "__pycache__/", "*.egg-info/", ".osgrep/"]
 # Whitelist of false positives
 ignore_names = [
     # TYPE_CHECKING imports
@@ -209,7 +213,7 @@ vulture-check = "python -m vulture --config pyproject.toml --min-confidence 100"
 dead-code-check = [
     "python -c \"print('Running comprehensive dead code analysis...')\"",
     "python -c \"print('\\n=== Vulture (unused code) ===')\"",
-    "python -m vulture . --min-confidence 80 --exclude '*/test/*,*/tests/*,venv/*,build/*,dist/*' || true",
+    "python -m vulture . --min-confidence 80 --exclude '*/test/*,*/tests/*,venv/*,build/*,dist/*,.osgrep/*' || true",
     "python -c \"print('\\n=== Unimport (unused imports) ===')\"",
     "python -m unimport --check . || true",
     "python -c \"print('\\n=== Dead (dead code detector) ===')\"",

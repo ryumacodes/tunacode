@@ -14,6 +14,11 @@ def get_message_content(message: Any) -> str:
             if isinstance(content, list):
                 return " ".join(get_message_content(item) for item in content)
             return str(content)
+        if "parts" in message:
+            parts = message["parts"]
+            if isinstance(parts, list):
+                return " ".join(get_message_content(part) for part in parts)
+            return str(parts)
         if "thought" in message:
             return str(message["thought"])
     if hasattr(message, "content"):

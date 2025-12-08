@@ -8,7 +8,7 @@ The Tunacode TUI (Terminal User Interface) is built upon a strong design philoso
 
 1.  **Uniformity**: Every interaction should feel consistent. Whether you are configuring a model, reviewing a code diff, or reading an error log, the interface behaves in a predictable manner. The "widget" styling, keybindings, and layout logic are shared across the entire application.
 
-2.  **Transparency (Keep the User Informed)**: 
+2.  **Transparency (Keep the User Informed)**:
     - **No Magic**: In the era of AI, "magic" is often a synonym for "unpredictable behavior". Tunacode strives to show you exactly what is happening.
     - **State Visibility**: The user should always know the agent's current state (Thinking, Coding, Waiting, Error).
     - **Visual Feedback**: Every action—from a file write to a network request—should have a corresponding visual indicator in the UI.

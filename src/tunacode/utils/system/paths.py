@@ -4,6 +4,7 @@ Module: tunacode.utils.system.paths
 Provides path utilities, session management, device identification, and update checking.
 """
 
+import hashlib
 import os
 import subprocess
 import uuid
@@ -46,6 +47,41 @@ def get_cwd():
     return os.getcwd()
 
 
+def get_project_id() -> str:
+    """
+    Get a project identifier based on the git repository root or cwd.
+
+    Returns:
+        str: A 16-character hash identifying the current project.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0:
+            repo_root = result.stdout.strip()
+            return hashlib.sha256(repo_root.encode()).hexdigest()[:16]
+    except Exception:
+        pass
+    return hashlib.sha256(os.getcwd().encode()).hexdigest()[:16]
+
+
+def get_session_storage_dir() -> Path:
+    """
+    Get the XDG-compliant session storage directory.
+
+    Returns:
+        Path: The directory where session files are stored.
+    """
+    xdg_data = os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
+    storage_dir = Path(xdg_data) / "tunacode" / "sessions"
+    storage_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    return storage_dir
+
+
 def get_device_id():
     """
     Get the device ID from the ~/.tunacode/device_id file.
@@ -74,8 +110,8 @@ def get_device_id():
 
 def cleanup_session(state_manager):
     """
-    Clean up the session directory after the CLI exits.
-    Removes the session directory completely.
+    Clean up temporary session runtime files after the CLI exits.
+    Session data is preserved in XDG_DATA_HOME for persistence.
 
     Args:
         state_manager: The StateManager instance containing session info.
@@ -97,6 +133,28 @@ def cleanup_session(state_manager):
         return True
     except Exception as e:
         print(f"Error cleaning up session: {e}")
+        return False
+
+
+def delete_session_file(project_id: str, session_id: str) -> bool:
+    """
+    Delete a persisted session file.
+
+    Args:
+        project_id: The project identifier.
+        session_id: The session identifier.
+
+    Returns:
+        bool: True if deletion was successful, False otherwise.
+    """
+    try:
+        storage_dir = get_session_storage_dir()
+        session_file = storage_dir / f"{project_id}_{session_id}.json"
+        if session_file.exists():
+            session_file.unlink()
+        return True
+    except Exception as e:
+        print(f"Error deleting session file: {e}")
         return False
 
 

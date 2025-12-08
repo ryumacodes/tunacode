@@ -40,7 +40,7 @@ NON_RETRYABLE_ERRORS = (
 def _calculate_backoff(attempt: int) -> float:
     """Exponential backoff with jitter."""
     delay = min(TOOL_RETRY_BASE_DELAY * (2 ** (attempt - 1)), TOOL_RETRY_MAX_DELAY)
-    jitter = random.uniform(0, delay * 0.1)
+    jitter = random.uniform(0, delay * 0.1)  # nosec B311 - not for crypto
     return delay + jitter
 
 

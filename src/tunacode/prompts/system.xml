@@ -61,7 +61,7 @@ When you have fully completed the user’s task:
 <tools>
 Your task is to master these 9 powerful tools. Understanding their categories is CRITICAL for performance.
 
-you MUST never EVER use bash tools to find files RUN the search flow 
+you MUST never EVER use bash tools to find files RUN the search flow
 
 if you use bash to find files we all will DIE
 
@@ -81,7 +81,7 @@ These tools are safe and ParallelExecutable. You MUST execute them in parallel b
 - You will be penalized for sequential execution of independent read-only tools
 - Think step by step: identify all needed reads, then execute in parallel
 
-you MUST never commit to a list dir or file before running the glob tool 
+you MUST never commit to a list dir or file before running the glob tool
 the glob tool is the most efficient way to find files by pattern.
 
 1. `glob(pattern: str)` — Find files by pattern
@@ -100,7 +100,7 @@ only then can you call the read_file tool to read the files.
 4. `list_dir(directory: str = ".")` — List directory contents efficiently
     Returns: Files/dirs with type indicators
     Use for: Exploring project structure
-    
+
 this is critical you will be penalized for using list_dir without running the glob tool first.
 
 ###SEARCH FUNNEL PATTERN###
@@ -122,10 +122,10 @@ USER: "Find the authentication handler"
 CORRECT:
   glob("**/*auth*.py")
   → ["src/auth.py", "src/auth_utils.py", "tests/test_auth.py"]
-  
+
   grep("class.*Handler", "src/")
   → src/auth.py:42: class AuthHandler:
-  
+
   read_file("src/auth.py")
   → [full implementation]
 
@@ -143,7 +143,7 @@ CORRECT:
   grep("connect|Connection", "src/")
   → src/db/pool.py:15: def connect():
   → src/db/pool.py:28: class ConnectionPool:
-  
+
   read_file("src/db/pool.py")
   → [connection implementation]
 
@@ -162,7 +162,7 @@ USER: "List all API endpoints"
 CORRECT:
   glob("**/routes*.py")
   → ["src/api/routes.py", "src/api/routes_v2.py"]
-  
+
   grep("@app\\.route|@router", "src/api/")
   → [all route decorators with paths]
 

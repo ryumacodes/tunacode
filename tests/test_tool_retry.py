@@ -193,9 +193,7 @@ class TestExecuteToolsParallel:
 
     async def test_file_operation_error_not_retried(self, mock_part, mock_node):
         """FileOperationError propagates immediately without retry."""
-        callback = AsyncMock(
-            side_effect=FileOperationError("read", "/path", "permission denied")
-        )
+        callback = AsyncMock(side_effect=FileOperationError("read", "/path", "permission denied"))
         tool_calls = [(mock_part, mock_node)]
 
         with pytest.raises(FileOperationError):

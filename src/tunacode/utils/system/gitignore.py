@@ -43,7 +43,6 @@ def _load_gitignore_patterns(filepath=".gitignore"):
     """Loads patterns from a .gitignore file."""
     patterns = set()
     try:
-
         with open(filepath, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()

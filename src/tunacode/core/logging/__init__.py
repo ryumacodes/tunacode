@@ -11,7 +11,7 @@ def thought(self: logging.Logger, message: str, *args: Any, **kwargs: Any) -> No
         self._log(THOUGHT, message, args, **kwargs)
 
 
-logging.Logger.thought = thought
+logging.Logger.thought = thought  # type: ignore[attr-defined]  # Runtime extension for custom log level
 
 
 def setup_logging(config_path=None):

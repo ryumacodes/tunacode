@@ -88,9 +88,7 @@ def split_concatenated_json(json_string: str, strict_mode: bool = True) -> list[
     return objects
 
 
-def validate_tool_args_safety(
-    objects: list[dict[str, Any]], tool_name: str | None = None
-) -> bool:
+def validate_tool_args_safety(objects: list[dict[str, Any]], tool_name: str | None = None) -> bool:
     """
     Validate whether it's safe to execute multiple JSON objects for a given tool.
 

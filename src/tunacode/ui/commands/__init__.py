@@ -181,6 +181,112 @@ class ThemeCommand(Command):
             )
 
 
+class ResumeCommand(Command):
+    name = "resume"
+    description = "Resume a previous session"
+    usage = "/resume [load <id>|delete <id>]"
+
+    async def execute(self, app: TextualReplApp, args: str) -> None:
+        from tunacode.ui.screens import SessionPickerScreen
+        from tunacode.utils.system.paths import delete_session_file
+
+        parts = args.split(maxsplit=1) if args else []
+        subcommand = parts[0].lower() if parts else ""
+
+        # No args or "list" -> open picker
+        if subcommand in ("", "list"):
+            sessions = app.state_manager.list_sessions()
+            if not sessions:
+                app.notify("No saved sessions found")
+                return
+
+            current_session_id = app.state_manager.session.session_id
+
+            def on_session_selected(session_id: str | None) -> None:
+                if not session_id:
+                    return
+                self._load_session(app, session_id, sessions)
+
+            app.push_screen(
+                SessionPickerScreen(sessions, current_session_id),
+                on_session_selected,
+            )
+
+        elif subcommand == "load":
+            if len(parts) < 2:
+                app.notify("Usage: /resume load <session-id>", severity="warning")
+                return
+
+            session_id_prefix = parts[1].strip()
+            sessions = app.state_manager.list_sessions()
+
+            matching = [s for s in sessions if s["session_id"].startswith(session_id_prefix)]
+            if not matching:
+                app.notify(f"No session found matching: {session_id_prefix}", severity="error")
+                return
+            if len(matching) > 1:
+                app.notify("Multiple sessions match, be more specific", severity="warning")
+                return
+
+            self._load_session(app, matching[0]["session_id"], sessions)
+
+        elif subcommand == "delete":
+            if len(parts) < 2:
+                app.notify("Usage: /resume delete <session-id>", severity="warning")
+                return
+
+            session_id_prefix = parts[1].strip()
+            sessions = app.state_manager.list_sessions()
+
+            matching = [s for s in sessions if s["session_id"].startswith(session_id_prefix)]
+            if not matching:
+                app.notify(f"No session found matching: {session_id_prefix}", severity="error")
+                return
+            if len(matching) > 1:
+                app.notify("Multiple sessions match, be more specific", severity="warning")
+                return
+
+            target_session = matching[0]
+            if target_session["session_id"] == app.state_manager.session.session_id:
+                app.notify("Cannot delete current session", severity="error")
+                return
+
+            project_id = app.state_manager.session.project_id
+            if delete_session_file(project_id, target_session["session_id"]):
+                app.notify(f"Deleted session {target_session['session_id'][:8]}")
+            else:
+                app.notify("Failed to delete session", severity="error")
+
+        else:
+            app.notify(f"Unknown subcommand: {subcommand}", severity="warning")
+
+    def _load_session(self, app: TextualReplApp, session_id: str, sessions: list[dict]) -> None:
+        """Load a session by ID."""
+        from rich.text import Text
+
+        target = next((s for s in sessions if s["session_id"] == session_id), None)
+        if not target:
+            app.notify("Session not found", severity="error")
+            return
+
+        app.state_manager.save_session()
+
+        if app.state_manager.load_session(session_id):
+            app.rich_log.clear()
+            app._replay_session_messages()
+            app._update_resource_bar()
+
+            loaded_msg = Text()
+            loaded_msg.append(
+                f"Loaded session {session_id[:8]} ({target['message_count']} messages)\n",
+                style="green",
+            )
+            app.rich_log.write(loaded_msg)
+            app.notify("Session loaded")
+        else:
+            app.notify("Failed to load session", severity="error")
+
+
 COMMANDS: dict[str, Command] = {
     "help": HelpCommand(),
     "clear": ClearCommand(),
@@ -189,6 +295,7 @@ COMMANDS: dict[str, Command] = {
     "branch": BranchCommand(),
     "plan": PlanCommand(),
     "theme": ThemeCommand(),
+    "resume": ResumeCommand(),
 }
 
 

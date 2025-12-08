@@ -80,3 +80,5 @@ node_modules/
 # Task files
 vendor/
 .beads/
+.osgrep
+.osgrep*

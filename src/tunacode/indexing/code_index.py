@@ -259,7 +259,7 @@ class CodeIndex:
                 for entry in os.scandir(current):
                     if entry.is_dir(follow_symlinks=False):
                         if entry.name not in self.IGNORE_DIRS and not entry.name.startswith("."):
-                            stack.append(entry.path)
+                            stack.append(Path(entry.path))
                     elif entry.is_file(follow_symlinks=False):
                         ext = Path(entry.name).suffix.lower()
                         if ext in self.INDEXED_EXTENSIONS:

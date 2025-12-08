@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from rich.markdown import Markdown
@@ -122,12 +124,25 @@ class TextualReplApp(App[None]):
         saved_theme = user_config.get("settings", {}).get("theme", "dracula")
         self.theme = saved_theme if saved_theme in self.available_themes else "dracula"
 
+        # Initialize session persistence metadata
+        from tunacode.utils.system.paths import get_project_id
+
+        session = self.state_manager.session
+        session.project_id = get_project_id()
+        session.working_directory = os.getcwd()
+        if not session.created_at:
+            session.created_at = datetime.now(UTC).isoformat()
+
         if self._show_setup:
             from tunacode.ui.screens import SetupScreen
 
             self.push_screen(SetupScreen(self.state_manager), self._on_setup_complete)
         else:
             self._start_repl()
+
+    async def on_unmount(self) -> None:
+        """Save session before app exits."""
+        self.state_manager.save_session()
 
     def watch_theme(self, old_theme: str, new_theme: str) -> None:
         """Toggle CSS class when theme changes for theme-specific styling."""
@@ -268,6 +283,9 @@ class TextualReplApp(App[None]):
             self._streaming_cancelled = False
             self._update_resource_bar()
 
+            # Auto-save session after processing
+            self.state_manager.save_session()
+
     async def on_editor_submit_requested(self, message: EditorSubmitRequested) -> None:
         from tunacode.ui.commands import handle_command
 
@@ -305,6 +323,29 @@ class TextualReplApp(App[None]):
             duration_ms=message.duration_ms,
         )
         self.rich_log.write(panel)
+
+    def _replay_session_messages(self) -> None:
+        """Render loaded session messages to RichLog."""
+        from pydantic_ai.messages import ModelRequest, ModelResponse
+
+        from tunacode.utils.messaging.message_utils import get_message_content
+
+        for msg in self.state_manager.session.messages:
+            if isinstance(msg, dict) and "thought" in msg:
+                continue  # Skip internal thoughts
+
+            content = get_message_content(msg)
+            if not content:
+                continue
+
+            if isinstance(msg, ModelRequest):
+                user_block = Text()
+                user_block.append(f"| {content}\n", style=STYLE_PRIMARY)
+                user_block.append("| (restored)", style=f"dim {STYLE_PRIMARY}")
+                self.rich_log.write(user_block)
+            elif isinstance(msg, ModelResponse):
+                self.rich_log.write(Text("agent:", style="accent"))
+                self.rich_log.write(Markdown(content))
 
     async def streaming_callback(self, chunk: str) -> None:
         if self._streaming_paused:
@@ -382,8 +423,8 @@ class TextualReplApp(App[None]):
 
     def _show_inline_confirmation(self, request: ToolConfirmationRequest) -> None:
         """Display inline confirmation prompt in RichLog."""
-        content_parts = []
-        
+        content_parts: list[Text | Syntax] = []
+
         # Header
         header = Text()
         header.append(f"Confirm: {request.tool_name}\n", style=STYLE_SUBHEADING)
@@ -420,6 +461,7 @@ class TextualReplApp(App[None]):
 
         # Use Group to stack components vertically
         from rich.console import Group
+
         panel = Panel(
             Group(*content_parts),
             border_style=STYLE_PRIMARY,
