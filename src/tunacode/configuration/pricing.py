@@ -1,17 +1,9 @@
 """Pricing utilities for cost calculation and model pricing lookup."""
 
-from tunacode.configuration.models import load_models_registry
+from tunacode.configuration.models import load_models_registry, parse_model_string
 from tunacode.types import ModelPricing
 
 TOKENS_PER_MILLION = 1_000_000
-
-
-def parse_model_string(model_string: str) -> tuple[str, str]:
-    """Parse 'provider:model_id' into (provider_id, model_id)."""
-    if ":" not in model_string:
-        raise ValueError(f"Invalid model string format: {model_string}")
-    parts = model_string.split(":", 1)
-    return (parts[0], parts[1])
 
 
 def get_model_pricing(model_string: str) -> ModelPricing | None:

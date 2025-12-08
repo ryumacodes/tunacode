@@ -4,9 +4,29 @@ Module: tunacode.configuration.models
 Configuration for loading model data from models_registry.json.
 """
 
+from tunacode.constants import DEFAULT_CONTEXT_WINDOW
+
 # --- Models.dev Registry Functions ---
 
 _models_registry_cache: dict | None = None
+
+
+def parse_model_string(model_string: str) -> tuple[str, str]:
+    """Parse 'provider:model_id' into (provider_id, model_id).
+
+    Args:
+        model_string: Full model identifier (e.g., "openrouter:openai/gpt-4.1")
+
+    Returns:
+        Tuple of (provider_id, model_id)
+
+    Raises:
+        ValueError: If model_string doesn't contain a colon separator
+    """
+    if ":" not in model_string:
+        raise ValueError(f"Invalid model string format: {model_string}")
+    parts = model_string.split(":", 1)
+    return (parts[0], parts[1])
 
 
 def load_models_registry() -> dict:
@@ -82,3 +102,30 @@ def get_provider_base_url(provider_id: str) -> str | None:
     registry = load_models_registry()
     provider = registry.get(provider_id, {})
     return provider.get("api")
+
+
+def get_model_context_window(model_string: str) -> int:
+    """Get context window limit for a model from models_registry.json.
+
+    Args:
+        model_string: Full model identifier (e.g., "openrouter:openai/gpt-4.1")
+
+    Returns:
+        Context window size in tokens. Falls back to DEFAULT_CONTEXT_WINDOW
+        if model not found or limit not specified in registry.
+    """
+    try:
+        provider_id, model_id = parse_model_string(model_string)
+    except ValueError:
+        return DEFAULT_CONTEXT_WINDOW
+
+    registry = load_models_registry()
+    provider = registry.get(provider_id, {})
+    model = provider.get("models", {}).get(model_id, {})
+    limit = model.get("limit", {})
+
+    context = limit.get("context")
+    if context is None:
+        return DEFAULT_CONTEXT_WINDOW
+
+    return context
