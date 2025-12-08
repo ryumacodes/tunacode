@@ -11,38 +11,6 @@ from tunacode.core.logging.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Dangerous shell metacharacters that indicate potential injection
-DANGEROUS_CHARS = [
-    ";",
-    "&",
-    "|",
-    "`",
-    "$",
-    "(",
-    ")",
-    "{",
-    "}",
-    "<",
-    ">",
-    "\n",
-    "\r",
-    "\\",
-    '"',
-    "'",
-]
-
-# Common injection patterns
-INJECTION_PATTERNS = [
-    r";\s*\w+",  # Command chaining with semicolon
-    r"&&\s*\w+",  # Command chaining with &&
-    r"\|\s*\w+",  # Piping to another command
-    r"`[^`]+`",  # Command substitution with backticks
-    r"\$\([^)]+\)",  # Command substitution with $()
-    r">\s*[/\w]",  # Output redirection
-    r"<\s*[/\w]",  # Input redirection
-]
-
-
 class CommandSecurityError(Exception):
     """Raised when a command fails security validation."""
 
