@@ -6,7 +6,7 @@ src/tunacode/ui is the TUI interface that is used to interact with the user.
 src/tunacode/core is the core agent that is used to code and debug code or general agentic tasks.
 src/tunacode/tools is the tools that are used to code and debug code or general agentic tasks.
 
-Curretly we only have two test one that tests the tool decorators and one that tests the tool conformance. For now this is all we need to test.
+Tests are located in the `tests/` directory covering tool decorators, tool conformance, compaction, and tool retry logic.
 
 ## Design Philosophy
 
@@ -48,7 +48,7 @@ The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. T
 ## Dependencies
 
 - Avoid new core dependencies. Tiny deps OK if widely reused.
-- Run with: `pytest`.
+- Run tests with: `uv run pytest`.
 
 ## Scope & Maintenance
 
@@ -81,5 +81,5 @@ Patterns → keep canonical patterns + empirical usage. Add reliability metrics.
 QA Database → solved queries indexed by file/component/error type.
 Docs → model-friendly explanations of purposes & relationships.
 Delta Summaries → record API/behavior shifts with reasoning.
-you can use MD or JSON format to store the information.
+
 We are currently in the middle of a large rewrite few test exist and documentation and that is okay. We will build the test and documentation as we go.

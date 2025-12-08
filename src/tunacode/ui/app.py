@@ -255,6 +255,12 @@ class TextualReplApp(App[None]):
             )
             await self._current_request_task
         except asyncio.CancelledError:
+            from tunacode.core.agents.agent_components import patch_tool_messages
+
+            patch_tool_messages(
+                "Operation cancelled by user",
+                state_manager=self.state_manager,
+            )
             self.notify("Cancelled")
         except Exception as e:
             from tunacode.core.agents.agent_components import patch_tool_messages

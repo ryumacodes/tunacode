@@ -1,4 +1,0 @@
-Main agent refactoring with compatibility layers
-API alignment for tool recovery
-CLI import adjustments
-Documentation updates

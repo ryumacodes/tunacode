@@ -13,7 +13,7 @@
 
 ## Testing
 <!-- Describe the tests you ran to verify your changes -->
-- [ ] All existing tests pass (`hatch run test`)
+- [ ] All existing tests pass (`uv run pytest`)
 - [ ] New tests have been added to cover the changes
 - [ ] Tests have been run locally
 - [ ] Golden/character tests established for new features

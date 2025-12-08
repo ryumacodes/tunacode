@@ -43,7 +43,7 @@ repos:
     hooks:
       - id: ruff
         args: ['--fix', '--show-fixes']
-      # - id: ruff-format  # Disabled - hatch-lint already handles formatting
+      # - id: ruff-format  # Disabled - ruff check handles formatting
 
   # Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -59,13 +59,9 @@ repos:
 
 
   # Local hooks for project-specific checks
-  # Strategy: Use 'hatch run' for commands defined in pyproject.toml scripts
-  #          Use 'uv run' for standalone tools not managed by hatch environments
   - repo: local
     hooks:
-
-
-      # UV-managed standalone tools (not in hatch environments)
+      # UV-managed tools
       - id: dead-imports
         name: Check for unused imports in changed files
         entry: scripts/run-dead-imports.sh
