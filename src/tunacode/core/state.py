@@ -124,6 +124,7 @@ class StateManager:
     def _load_user_configuration(self) -> None:
         """Load user configuration from file and merge with defaults."""
         from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
+        from tunacode.configuration.models import get_model_context_window
         from tunacode.utils.config import load_config
 
         # Load user config from file
@@ -148,9 +149,8 @@ class StateManager:
         if self._session.user_config.get("default_model"):
             self._session.current_model = self._session.user_config["default_model"]
 
-        # Initialize max_tokens from config's context_window_size
-        settings = self._session.user_config.get("settings", {})
-        self._session.max_tokens = settings.get("context_window_size", 200000)
+        # Initialize max_tokens from model's registry context window
+        self._session.max_tokens = get_model_context_window(self._session.current_model)
 
     @property
     def session(self) -> SessionState:
@@ -317,6 +317,7 @@ class StateManager:
 
     def load_session(self, session_id: str) -> bool:
         """Load a session from disk."""
+        from tunacode.configuration.models import get_model_context_window
         from tunacode.utils.system.paths import get_session_storage_dir
 
         storage_dir = get_session_storage_dir()
@@ -342,6 +343,8 @@ class StateManager:
             self._session.current_model = data.get(
                 "current_model", DEFAULT_USER_CONFIG["default_model"]
             )
+            # Update max_tokens based on loaded model's context window
+            self._session.max_tokens = get_model_context_window(self._session.current_model)
             self._session.total_tokens = data.get("total_tokens", 0)
             self._session.session_total_usage = data.get(
                 "session_total_usage",

@@ -72,12 +72,14 @@ class ModelCommand(Command):
     usage = "/model [provider:model-name]"
 
     async def execute(self, app: TextualReplApp, args: str) -> None:
+        from tunacode.configuration.models import get_model_context_window
         from tunacode.utils.config.user_configuration import save_config
 
         if args:
             model_name = args.strip()
             app.state_manager.session.current_model = model_name
             app.state_manager.session.user_config["default_model"] = model_name
+            app.state_manager.session.max_tokens = get_model_context_window(model_name)
             save_config(app.state_manager)
             app._update_resource_bar()
             app.notify(f"Model: {model_name}")
@@ -93,6 +95,7 @@ class ModelCommand(Command):
                 if full_model is not None:
                     app.state_manager.session.current_model = full_model
                     app.state_manager.session.user_config["default_model"] = full_model
+                    app.state_manager.session.max_tokens = get_model_context_window(full_model)
                     save_config(app.state_manager)
                     app._update_resource_bar()
                     app.notify(f"Model: {full_model}")
