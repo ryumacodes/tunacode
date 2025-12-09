@@ -217,8 +217,11 @@ class TextualReplApp(App[None]):
         welcome.append("  /help    - Show all commands\n", style="")
         welcome.append("  /clear   - Clear conversation\n", style="")
         welcome.append("  /yolo    - Toggle auto-confirm\n", style="")
+        welcome.append("  /branch  - Create git branch\n", style="")
+        welcome.append("  /plan    - Toggle planning mode\n", style="")
         welcome.append("  /model   - Switch model\n", style="")
         welcome.append("  /theme   - Switch theme\n", style="")
+        welcome.append("  /resume  - Load saved session\n", style="")
         welcome.append("  !<cmd>   - Run shell command\n", style="")
         self.rich_log.write(welcome)
 

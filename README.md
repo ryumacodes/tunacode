@@ -77,13 +77,18 @@ Config file location: `~/.config/tunacode.json`
 
 ## Commands
 
-| Command  | Description             |
-| -------- | ----------------------- |
-| /help    | Show available commands |
-| /model   | Change AI model         |
-| /clear   | Clear conversation      |
-| /compact | Compress context        |
-| exit     | Quit tunacode           |
+| Command  | Description                  |
+| -------- | ---------------------------- |
+| /help    | Show available commands      |
+| /model   | Change AI model              |
+| /clear   | Clear conversation history   |
+| /yolo    | Toggle auto-confirm mode     |
+| /branch  | Create and switch git branch |
+| /plan    | Toggle read-only planning    |
+| /theme   | Change UI theme              |
+| /resume  | Load/delete saved sessions   |
+| !<cmd>   | Run shell command            |
+| exit     | Quit tunacode                |
 
 ## License
 
