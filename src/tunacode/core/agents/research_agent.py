@@ -4,6 +4,13 @@ from pathlib import Path
 
 from pydantic_ai import Agent, Tool
 
+from tunacode.core.prompting import (
+    RESEARCH_TEMPLATE,
+    SectionLoader,
+    SystemPromptSection,
+    compose_prompt,
+    resolve_prompt,
+)
 from tunacode.core.state import StateManager
 from tunacode.tools.glob import glob
 from tunacode.tools.grep import grep
@@ -13,26 +20,34 @@ from tunacode.types import ModelName
 
 
 def _load_research_prompt() -> str:
-    """Load research-specific system prompt from prompts/research/system.xml.
+    """Load research-specific system prompt with section-based composition.
+
+    Loads individual section files from prompts/research/sections/ and
+    composes them using RESEARCH_TEMPLATE.
 
     Returns:
         Research system prompt content
 
     Raises:
-        FileNotFoundError: If system.xml does not exist in prompts/research directory
+        FileNotFoundError: If prompts/research/sections/ does not exist
     """
     # Navigate from this file: core/agents/research_agent.py -> src/tunacode/prompts/research
     base_path = Path(__file__).parent.parent.parent
     prompts_dir = base_path / "prompts" / "research"
-    prompt_path = prompts_dir / "system.xml"
+    sections_dir = prompts_dir / "sections"
 
-    if not prompt_path.exists():
+    if not sections_dir.exists():
         raise FileNotFoundError(
-            f"Required research prompt file not found: {prompt_path}. "
-            "The system.xml file must exist in the prompts/research directory."
+            f"Required sections directory not found: {sections_dir}. "
+            "The prompts/research/sections/ directory must exist."
         )
 
-    return prompt_path.read_text(encoding="utf-8").strip()
+    loader = SectionLoader(sections_dir)
+    sections = {s.value: loader.load_section(s) for s in SystemPromptSection}
+
+    # Compose sections into research template, then resolve dynamic placeholders
+    prompt = compose_prompt(RESEARCH_TEMPLATE, sections)
+    return resolve_prompt(prompt)
 
 
 def _create_limited_read_file(max_files: int):

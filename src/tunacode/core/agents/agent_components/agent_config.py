@@ -17,6 +17,14 @@ from tenacity import retry_if_exception_type, stop_after_attempt
 
 from tunacode.constants import UI_THINKING_MESSAGE
 from tunacode.core.agents.delegation_tools import create_research_codebase_tool
+from tunacode.core.prompting import (
+    MAIN_TEMPLATE,
+    TEMPLATE_OVERRIDES,
+    SectionLoader,
+    SystemPromptSection,
+    compose_prompt,
+    resolve_prompt,
+)
 from tunacode.core.state import StateManager
 from tunacode.tools.bash import bash
 from tunacode.tools.glob import glob
@@ -165,22 +173,37 @@ def _read_prompt_from_path(prompt_path: Path) -> str:
     return content
 
 
-def load_system_prompt(base_path: Path) -> str:
-    """Load the system prompt from system.xml file with caching.
+def load_system_prompt(base_path: Path, model: str | None = None) -> str:
+    """Load the system prompt with section-based composition.
+
+    Loads individual section files from prompts/sections/ and composes them
+    using the template system.
+
+    Args:
+        base_path: Base path to the tunacode package
+        model: Optional model name for template overrides
 
     Raises:
-        FileNotFoundError: If system.xml does not exist in the prompts directory.
+        FileNotFoundError: If prompts/sections/ does not exist.
     """
     prompts_dir = base_path / "prompts"
-    prompt_path = prompts_dir / "system.xml"
+    sections_dir = prompts_dir / "sections"
 
-    if not prompt_path.exists():
+    if not sections_dir.exists():
         raise FileNotFoundError(
-            f"Required system prompt file not found: {prompt_path}. "
-            "The system.xml file must exist in the prompts directory."
+            f"Required sections directory not found: {sections_dir}. "
+            "The prompts/sections/ directory must exist."
         )
 
-    return _read_prompt_from_path(prompt_path)
+    loader = SectionLoader(sections_dir)
+    sections = {s.value: loader.load_section(s) for s in SystemPromptSection}
+
+    # Get template (model-specific override or default)
+    template = TEMPLATE_OVERRIDES.get(model, MAIN_TEMPLATE) if model else MAIN_TEMPLATE
+
+    # Compose sections into template, then resolve dynamic placeholders
+    prompt = compose_prompt(template, sections)
+    return resolve_prompt(prompt)
 
 
 def load_tunacode_context() -> str:
@@ -308,9 +331,9 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         # Lazy import Agent and Tool
         Agent, Tool = get_agent_tool()
 
-        # Load system prompt
+        # Load system prompt (with optional model-specific template override)
         base_path = Path(__file__).parent.parent.parent.parent
-        system_prompt = load_system_prompt(base_path)
+        system_prompt = load_system_prompt(base_path, model=model)
 
         # Load AGENTS.md context
         system_prompt += load_tunacode_context()

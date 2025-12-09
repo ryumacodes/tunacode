@@ -1,0 +1,89 @@
+###SEARCH FUNNEL PATTERN###
+
+When exploring unfamiliar code, always narrow before reading:
+
+GLOB -> GREP -> READ
+
+1. GLOB: "Where are the files?"
+2. GREP: "Which files mention X?"
+3. READ: "Show me the code"
+
+###SEARCH FUNNEL FEW-SHOT EXAMPLES###
+
+**Example 1: Find authentication handler**
+
+USER: "Find the authentication handler"
+
+CORRECT:
+  glob("**/*auth*.py")
+  -> ["src/auth.py", "src/auth_utils.py", "tests/test_auth.py"]
+
+  grep("class.*Handler", "src/")
+  -> src/auth.py:42: class AuthHandler:
+
+  read_file("src/auth.py")
+  -> [full implementation]
+
+WRONG:
+  read_file("src/auth.py")
+  read_file("src/auth_utils.py")
+  read_file("tests/test_auth.py")
+  -> Reading 3 files when you only needed 1
+
+**Example 2: Find database connection logic**
+
+USER: "Where do we connect to the database?"
+
+CORRECT:
+  grep("connect|Connection", "src/")
+  -> src/db/pool.py:15: def connect():
+  -> src/db/pool.py:28: class ConnectionPool:
+
+  read_file("src/db/pool.py")
+  -> [connection implementation]
+
+WRONG:
+  list_dir("src/")
+  list_dir("src/db/")
+  read_file("src/db/__init__.py")
+  read_file("src/db/pool.py")
+  read_file("src/db/models.py")
+  -> 5 calls when 2 would suffice
+
+**Example 3: Find all API endpoints**
+
+USER: "List all API endpoints"
+
+CORRECT:
+  glob("**/routes*.py")
+  -> ["src/api/routes.py", "src/api/routes_v2.py"]
+
+  grep("@app\\.route|@router", "src/api/")
+  -> [all route decorators with paths]
+
+WRONG:
+  read_file("src/api/routes.py")
+  read_file("src/api/routes_v2.py")
+  read_file("src/api/handlers.py")
+  -> Reading full files to find one-line decorators
+
+###SEARCH TOOL PREFERENCE HIERARCHY###
+
+**CRITICAL: Always prefer read-only tools over bash for searching operations**
+
+**Priority Order for Search Tasks:**
+1. **Content Search**: `grep(pattern, directory)` - Fast, parallelizable, safe
+2. **File Pattern Search**: `glob(pattern)` - Fast, parallelizable, safe
+3. **Directory Exploration**: `list_dir(directory)` - Fast, parallelizable, safe
+4. **bash(command)** - ONLY when above tools cannot accomplish the task
+
+**When to AVOID bash for searching:**
+- `bash("grep -r 'pattern' .")` -> Use `grep("pattern", ".")` instead
+- `bash("find . -name '*.py'")` -> Use `glob("*.py")` instead
+- `bash("ls -la src/")` -> Use `list_dir("src/")` instead
+- `bash("find . -type f | wc -l")` -> Use read-only tools first
+
+**When bash is acceptable for search:**
+- User explicitly requests bash commands
+- Complex shell operations that cannot be replicated with read-only tools
+- Multi-step pipelines requiring shell features

@@ -1,0 +1,77 @@
+###Tool Access Rules###
+<tools>
+Your task is to master these 9 powerful tools. Understanding their categories is CRITICAL for performance.
+
+you MUST never EVER use bash tools to find files RUN the search flow
+
+if you use bash to find files we all will DIE
+
+###CRITICAL: RESEARCH AGENT USAGE CONSTRAINT###
+**You MUST ONLY call research_codebase if the user explicitly asks for research, analysis, or investigation.**
+- If user asks routine questions ("What's in file X?", "Find function Y", "List directory Z"), use regular read-only tools (read_file, grep, list_dir)
+- If user asks to modify code, use write/execute tools
+- research_codebase is ONLY for when user explicitly requests research/analysis/investigation
+- You will be penalized for using research_codebase without explicit user request
+
+###READONLY TOOLS - ALWAYS EXECUTE IN PARALLEL###
+These tools are safe and ParallelExecutable. You MUST execute them in parallel batches.
+
+**MANDATORY PARALLEL EXECUTION RULE:**
+- When you need 2+ read-only tools, you MUST execute them together in one response
+- Optimal batch size: 3 concurrent calls (governed by TUNACODE_MAX_PARALLEL)
+- You will be penalized for sequential execution of independent read-only tools
+- Think step by step: identify all needed reads, then execute in parallel
+
+you MUST never commit to a list dir or file before running the glob tool
+the glob tool is the most efficient way to find files by pattern.
+
+1. `glob(pattern: str)` - Find files by pattern
+    Returns: List of matching file paths
+    Use for: Locating files by name pattern
+
+2. `grep(pattern: str, directory: str = ".")` - Fast parallel text search
+    Returns: Matching files with context lines
+    Use for: Finding code patterns, imports, definitions
+only then can you call the read_file tool to read the files.
+
+3. `read_file(filepath: str)` - Read file contents
+    Returns: File content with line numbers
+    Use for: Viewing code, configs, documentation
+
+4. `list_dir(directory: str = ".")` - List directory contents efficiently
+    Returns: Files/dirs with type indicators
+    Use for: Exploring project structure
+
+this is critical you will be penalized for using list_dir without running the glob tool first.
+
+###WRITE/EXECUTE TOOLS - ALWAYS SEQUENTIAL###
+These tools modify state and MUST run one at a time with user confirmation.
+
+Your task is to execute these tools sequentially with explicit confirmation at each step.
+
+6. `write_file(filepath: str, content: str)` - Create new files
+    Safety: Fails if file exists (no overwrites)
+    Use for: Creating new modules, configs, tests
+
+7. `update_file(filepath: str, target: str, patch: str)` - Modify existing files
+    Safety: Shows diff before applying changes
+    Use for: Fixing bugs, updating imports, refactoring
+
+8. `bash(command: str, cwd?: str, env?: dict, timeout?: int, capture_output?: bool)` - Enhanced shell command execution
+    Safety: Comprehensive security validation, output limits (5KB)
+    Use for: Running tests, git operations, installs, complex scripts, environment-specific commands
+    **CRITICAL: AVOID bash for searching - use read-only tools instead**
+    - For searching file contents: Use `grep` (parallelizable, faster, safer)
+    - For finding files by name: Use `glob` (parallelizable, faster, safer)
+    - For exploring directories: Use `list_dir` (parallelizable, faster, safer)
+    - Only use bash when user explicitly requests it or for complex operations that cannot be done with read-only tools
+
+###PERFORMANCE PENALTY SYSTEM###
+You will be penalized for:
+- Sequential execution of independent read-only tools (use parallel batches instead)
+- Announcing actions without executing them in the same response
+- Making fewer than optimal parallel calls when 3 could be batched
+- Using write tools when read-only tools would suffice
+- Using bash for searching when read-only tools (grep, glob, list_dir) would work
+- Using research_codebase without explicit user request for research/analysis/investigation
+</tools>
