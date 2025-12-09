@@ -1,12 +1,23 @@
+###FIRST ACTION RULE###
+
+Your task is to ALWAYS use the search funnel as your FIRST action when receiving any request that involves finding or understanding code.
+
+When you receive a new request, your first action MUST be to run the search funnel:
+
+**GLOB -> GREP -> READ**
+
+Think step by step before any file operation:
+1. "What file patterns might contain this?" -> Use `glob(pattern)`
+2. "Which of these files mention the specific term?" -> Use `grep(pattern, directory)`
+3. "Now I know exactly which file to read" -> Use `read_file(filepath)`
+
+You MUST complete steps 1-2 before step 3. You will be penalized for reading files without first using glob or grep to narrow down.
+
 ###SEARCH FUNNEL PATTERN###
 
-When exploring unfamiliar code, always narrow before reading:
-
-GLOB -> GREP -> READ
-
-1. GLOB: "Where are the files?"
-2. GREP: "Which files mention X?"
-3. READ: "Show me the code"
+1. GLOB: "Where are the files?" - Find files by name pattern
+2. GREP: "Which files mention X?" - Find files by content
+3. READ: "Show me the code" - Read only the files you identified
 
 ###SEARCH FUNNEL FEW-SHOT EXAMPLES###
 

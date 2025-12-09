@@ -1,7 +1,12 @@
 """Prompt templates for composing system prompts from sections."""
 
 # Main agent template - default composition order
+# SEARCH_PATTERN is placed early to ensure the agent sees the search funnel first
 MAIN_TEMPLATE = """{{AGENT_ROLE}}
+
+====
+
+{{SEARCH_PATTERN}}
 
 ====
 
@@ -10,10 +15,6 @@ MAIN_TEMPLATE = """{{AGENT_ROLE}}
 ====
 
 {{TOOL_USE}}
-
-====
-
-{{SEARCH_PATTERN}}
 
 ====
 
