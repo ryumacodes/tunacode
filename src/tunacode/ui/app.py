@@ -47,6 +47,7 @@ from tunacode.ui.styles import (
     STYLE_WARNING,
 )
 from tunacode.ui.widgets import (
+    CommandAutoComplete,
     Editor,
     EditorSubmitRequested,
     FileAutoComplete,
@@ -112,6 +113,7 @@ class TextualReplApp(App[None]):
             yield self.loading_indicator
         yield self.editor
         yield FileAutoComplete(self.editor)
+        yield CommandAutoComplete(self.editor)
         yield self.status_bar
 
     def on_mount(self) -> None:
