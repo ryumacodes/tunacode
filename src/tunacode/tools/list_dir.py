@@ -96,8 +96,17 @@ def _collect_files(
     return files
 
 
-def _render_tree(base_name: str, files: list[str]) -> str:
-    """Build tree structure from file list."""
+TREE_BRANCH = "├── "
+TREE_LAST = "└── "
+TREE_PIPE = "│   "
+TREE_SPACE = "    "
+
+
+def _render_tree(base_name: str, files: list[str]) -> tuple[str, int, int]:
+    """Build tree structure with connectors from file list.
+
+    Returns: (tree_output, file_count, dir_count)
+    """
     dirs: set[str] = set()
     files_by_dir: dict[str, list[str]] = {}
 
@@ -105,41 +114,45 @@ def _render_tree(base_name: str, files: list[str]) -> str:
         dir_path = os.path.dirname(file)
         parts = dir_path.split("/") if dir_path else []
 
-        # Add all parent directories
         for i in range(len(parts) + 1):
             parent = "/".join(parts[:i]) if i > 0 else "."
             dirs.add(parent)
 
-        # Group files by directory
         key = dir_path if dir_path else "."
         if key not in files_by_dir:
             files_by_dir[key] = []
         files_by_dir[key].append(os.path.basename(file))
 
-    def render_dir(dir_path: str, depth: int) -> str:
-        indent = "  " * depth
+    file_count = len(files)
+    dir_count = len(dirs) - 1  # exclude root "."
+
+    def render_dir(dir_path: str, prefix: str) -> str:
         output = ""
-
-        if depth > 0:
-            output += f"{indent}{os.path.basename(dir_path)}/\n"
-
-        child_indent = "  " * (depth + 1)
-
-        # Get child directories (handle root "." specially)
         parent_match = "" if dir_path == "." else dir_path
-        children = sorted(d for d in dirs if d != dir_path and os.path.dirname(d) == parent_match)
+        child_dirs = sorted(d for d in dirs if d != dir_path and os.path.dirname(d) == parent_match)
+        child_files = sorted(files_by_dir.get(dir_path, []))
 
-        # Render subdirectories first
-        for child in children:
-            output += render_dir(child, depth + 1)
+        items: list[tuple[str, bool]] = []  # (name, is_dir)
+        for d in child_dirs:
+            items.append((os.path.basename(d), True))
+        for f in child_files:
+            items.append((f, False))
 
-        # Render files
-        for filename in sorted(files_by_dir.get(dir_path, [])):
-            output += f"{child_indent}{filename}\n"
+        for i, (name, is_dir) in enumerate(items):
+            is_last = i == len(items) - 1
+            connector = TREE_LAST if is_last else TREE_BRANCH
+            child_prefix = prefix + (TREE_SPACE if is_last else TREE_PIPE)
+
+            if is_dir:
+                full_path = f"{parent_match}/{name}".lstrip("/") if parent_match else name
+                output += f"{prefix}{connector}{name}/\n"
+                output += render_dir(full_path, child_prefix)
+            else:
+                output += f"{prefix}{connector}{name}\n"
 
         return output
 
-    return f"{base_name}/\n" + render_dir(".", 0)
+    return f"{base_name}/\n" + render_dir(".", ""), file_count, dir_count
 
 
 @base_tool
@@ -179,11 +192,12 @@ async def list_dir(
     )
 
     if not files:
-        return f"{dir_path.name}/ (empty)"
+        return f"{dir_path.name}/\n0 files  0 dirs"
 
-    output = _render_tree(dir_path.name, files)
+    tree_output, file_count, dir_count = _render_tree(dir_path.name, files)
+    summary = f"{file_count} files  {dir_count} dirs"
 
     if len(files) >= max_files:
-        output += f"\n(truncated at {max_files} files)"
+        summary += " (truncated)"
 
-    return output
+    return f"{summary}\n{tree_output}"

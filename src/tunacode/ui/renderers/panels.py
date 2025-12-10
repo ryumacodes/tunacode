@@ -480,6 +480,14 @@ def tool_panel_smart(
     result: str | None = None,
     duration_ms: float | None = None,
 ) -> RenderableType:
+    # Handle list_dir with NeXTSTEP zoned layout
+    if name == "list_dir" and status == "completed" and result:
+        from tunacode.ui.renderers.tools.list_dir import render_list_dir
+
+        panel = render_list_dir(args, result, duration_ms)
+        if panel:
+            return panel
+
     # Handle search tools
     if name.lower() in ("grep", "glob") and result and status == "completed":
         parsed = _try_parse_search_result(name, args, result)
