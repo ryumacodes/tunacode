@@ -1,6 +1,6 @@
 ###Tool Access Rules###
 <tools>
-Your task is to master these 9 powerful tools. Understanding their categories is CRITICAL for performance.
+Your task is to master these 10 powerful tools. Understanding their categories is CRITICAL for performance.
 
 ###SEARCH-FIRST DIRECTIVE###
 Your task is to use glob, grep, and list_dir for ALL file discovery operations.
@@ -44,6 +44,12 @@ only then can you call the read_file tool to read the files.
     Use for: Exploring project structure
 
 this is critical you will be penalized for using list_dir without running the glob tool first.
+
+###EXTERNAL WEB CONTENT###
+5. `web_fetch(url: str, timeout: int = 60)` - Fetch web content
+    Returns: Readable text extracted from HTML pages
+    Use for: Reading documentation, API references, external resources
+    Safety: Blocks localhost/private IPs, 5MB content limit, 100KB output truncation
 
 ###WRITE/EXECUTE TOOLS - ALWAYS SEQUENTIAL###
 These tools modify state and MUST run one at a time with user confirmation.
