@@ -37,6 +37,7 @@ dependencies = [
     "textual>=4.0.0,<5.0.0",
     "pathspec>=0.12.1",
     "textual-autocomplete>=4.0.6",
+    "html2text>=2024.2.26",
 ]
 
 [project.scripts]

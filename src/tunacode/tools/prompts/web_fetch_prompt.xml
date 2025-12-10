@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tool_prompt>
+    <description>
+Fetch web content from a URL and return as readable text.
+- Converts HTML pages to plain text for easier reading
+- Blocks localhost and private IP addresses for security
+- Maximum content size: 5MB
+- Default timeout: 60 seconds
+Use for fetching documentation, API references, or web resources.
+    </description>
+</tool_prompt>

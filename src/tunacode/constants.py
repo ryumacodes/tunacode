@@ -55,6 +55,7 @@ class ToolName(str, Enum):
     GLOB = "glob"
     REACT = "react"
     RESEARCH_CODEBASE = "research_codebase"
+    WEB_FETCH = "web_fetch"
 
 
 # Tool names (backward compatibility)
@@ -74,6 +75,7 @@ READ_ONLY_TOOLS = [
     ToolName.GLOB,
     ToolName.REACT,
     ToolName.RESEARCH_CODEBASE,
+    ToolName.WEB_FETCH,
 ]
 WRITE_TOOLS = [ToolName.WRITE_FILE, ToolName.UPDATE_FILE]
 EXECUTE_TOOLS = [ToolName.BASH]
