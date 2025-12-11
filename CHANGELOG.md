@@ -1,3 +1,24 @@
+## [0.1.7] - 2025-12-11
+
+### Added
+- NeXTSTEP-style tool panel renderers for consistent UI (#165)
+- web_fetch tool for HTTP GET with HTML-to-text conversion
+- list_dir tree connectors for better directory visualization
+- Section-based prompting engine with template composition
+- Slash command autocompletion in TUI (#160) - thanks @coltonsteinbeck
+- Model-specific context window from registry (#158) - thanks @vincitamore
+
+### Changed
+- Tightened XML prompt loading (#164)
+- Removed Python loggers in favor of structured output (#159) - thanks @xan
+
+### Contributors
+Thanks to our community contributors for this release:
+- @coltonsteinbeck - slash command autocompletion
+- @xan - logger cleanup
+- @vincitamore - model context windows
+- @ryu - real pricing and Textual repl improvements
+
 ## [0.1.6] - 2025-12-08
 
 ### Added
