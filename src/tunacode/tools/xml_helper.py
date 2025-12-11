@@ -3,7 +3,8 @@
 from functools import lru_cache
 from pathlib import Path
 
-import defusedxml.ElementTree as ET
+from defusedxml.ElementTree import ParseError
+from defusedxml.ElementTree import parse as xml_parse
 
 
 @lru_cache(maxsize=32)
@@ -16,14 +17,18 @@ def load_prompt_from_xml(tool_name: str) -> str | None:
     Returns:
         str: The loaded prompt from XML or None if not found
     """
+    prompt_file = Path(__file__).parent / "prompts" / f"{tool_name}_prompt.xml"
+    if not prompt_file.exists():
+        return None
+
     try:
-        prompt_file = Path(__file__).parent / "prompts" / f"{tool_name}_prompt.xml"
-        if prompt_file.exists():
-            tree = ET.parse(prompt_file)
-            root = tree.getroot()
-            description = root.find("description")
-            if description is not None:
-                return description.text.strip()
-    except Exception:
-        pass
-    return None
+        tree = xml_parse(prompt_file)
+    except ParseError:
+        return None
+
+    root = tree.getroot()
+    description = root.find("description")
+    if description is None or description.text is None:
+        return None
+
+    return description.text.strip()
