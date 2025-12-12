@@ -1,3 +1,8 @@
+## [0.1.8] - 2025-12-12
+
+### Added
+- Multi-line paste support with collapsed display (#168)
+
 ## [0.1.7] - 2025-12-11
 
 ### Added
