@@ -19,10 +19,11 @@ class EditorCompletionsAvailable(Message):
 class EditorSubmitRequested(Message):
     """Submit event for the current editor content."""
 
-    def __init__(self, *, text: str, raw_text: str) -> None:
+    def __init__(self, *, text: str, raw_text: str, was_pasted: bool = False) -> None:
         super().__init__()
         self.text = text
         self.raw_text = raw_text
+        self.was_pasted = was_pasted
 
 
 class ToolResultDisplay(Message):

@@ -59,6 +59,34 @@ from tunacode.ui.widgets import (
 # Throttle streaming display updates to reduce visual churn
 STREAM_THROTTLE_MS: float = 200.0
 
+# Collapse threshold for pasted content display
+COLLAPSE_THRESHOLD = 10
+
+
+def _format_collapsed_message(text: str, style: str) -> Text:
+    """Format long pasted text with collapsed middle section.
+
+    Shows first 3 lines, collapse indicator, and last 2 lines.
+    """
+    lines = text.split("\n")
+    line_count = len(lines)
+
+    if line_count <= COLLAPSE_THRESHOLD:
+        block = Text()
+        block.append(f"│ {text}\n", style=style)
+        return block
+
+    # Show first 3 and last 2 lines with collapse indicator
+    preview = "\n│ ".join(lines[:3])
+    suffix = "\n│ ".join(lines[-2:])
+    collapsed = line_count - 5
+
+    block = Text()
+    block.append(f"│ {preview}\n", style=style)
+    block.append(f"│ [[ {collapsed} more lines ]]\n", style=f"dim {style}")
+    block.append(f"│ {suffix}\n", style=style)
+    return block
+
 
 @dataclass
 class PendingConfirmationState:
@@ -308,9 +336,17 @@ class TextualReplApp(App[None]):
         from datetime import datetime
 
         timestamp = datetime.now().strftime("%I:%M %p").lstrip("0")
+        line_count = message.text.count("\n") + 1
+
         self.rich_log.write("")
-        user_block = Text()
-        user_block.append(f"│ {message.text}\n", style=STYLE_PRIMARY)
+
+        # Collapse only if pasted AND exceeds threshold
+        if message.was_pasted and line_count > COLLAPSE_THRESHOLD:
+            user_block = _format_collapsed_message(message.text, STYLE_PRIMARY)
+        else:
+            user_block = Text()
+            user_block.append(f"│ {message.text}\n", style=STYLE_PRIMARY)
+
         user_block.append(f"│ you {timestamp}", style=f"dim {STYLE_PRIMARY}")
         self.rich_log.write(user_block)
 
