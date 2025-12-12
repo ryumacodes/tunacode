@@ -22,6 +22,8 @@ class Editor(Input):
     def __init__(self) -> None:
         super().__init__(placeholder="we await...")
         self._placeholder_cleared: bool = False
+        self._was_pasted: bool = False
+        self._pasted_content: str = ""
 
     def on_key(self, event: events.Key) -> None:
         """Handle key events for confirmation and bash-mode auto-spacing."""
@@ -44,16 +46,61 @@ class Editor(Input):
             self.cursor_position = len(self.value)
 
     def action_submit(self) -> None:
-        text = self.value.strip()
+        # Use full pasted content if available, otherwise use input value
+        if self._was_pasted and self._pasted_content:
+            text = self._pasted_content.strip()
+            raw_text = self._pasted_content
+        else:
+            text = self.value.strip()
+            raw_text = self.value
+
         if not text:
             return
 
-        self.post_message(EditorSubmitRequested(text=text, raw_text=self.value))
+        self.post_message(
+            EditorSubmitRequested(text=text, raw_text=raw_text, was_pasted=self._was_pasted)
+        )
         self.value = ""
+        self.placeholder = ""  # Reset placeholder after paste submit
+        self._was_pasted = False
+        self._pasted_content = ""
+
+        # Reset StatusBar mode
+        try:
+            status_bar = self.app.query_one(StatusBar)
+            status_bar.set_mode(None)
+        except Exception:
+            pass
+
+    def _on_paste(self, event: events.Paste) -> None:
+        """Capture full paste content before Input truncates to first line."""
+        lines = event.text.splitlines()
+        line_count = len(lines)
+
+        if line_count > 1:
+            # Store full content for submission
+            self._was_pasted = True
+            self._pasted_content = event.text
+
+            # Show paste indicator in Input
+            self.value = f"[[PASTED {line_count} LINES]]"
+
+            # Also update StatusBar
+            try:
+                status_bar = self.app.query_one(StatusBar)
+                status_bar.set_mode(f"pasted {line_count} lines")
+            except Exception:
+                pass
+
+            event.stop()  # Prevent parent from processing
+        else:
+            # Single line - let parent handle normally
+            super()._on_paste(event)
 
     def watch_value(self, value: str) -> None:
         """Toggle bash-mode class and clear placeholder on first input."""
-        if value and not self._placeholder_cleared:
+        # Don't clear placeholder if we just set it for paste feedback
+        if value and not self._placeholder_cleared and not self._was_pasted:
             self.placeholder = ""
             self._placeholder_cleared = True
 
