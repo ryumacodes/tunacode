@@ -1,12 +1,12 @@
 ## Tunacode
 
-this project is tunacode, much like you! it is a TUI code agent that can be used to code and debug code or general agentic tasks.
+This project is tunacode, much like you! It's a TUI code agent that can be used to code and debug code or general agentic tasks.
 
 src/tunacode/ui is the TUI interface that is used to interact with the user.
 src/tunacode/core is the core agent that is used to code and debug code or general agentic tasks.
 src/tunacode/tools is the tools that are used to code and debug code or general agentic tasks.
 
-Curretly we only have two test one that tests the tool decorators and one that tests the tool conformance. For now this is all we need to test.
+Tests are located in the `tests/` directory covering tool decorators, tool conformance, compaction, and tool retry logic.
 
 ## Design Philosophy
 
@@ -15,6 +15,8 @@ The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. T
 - **Uniformity:** The interface should provide a consistent and predictable experience across all interactions.
 - **User Informed:** A core tenet is to keep the user constantly informed of the agent's state, actions, and reasoning. No "magic" should happen in the background without visual feedback.
 - **Aesthetic:** The look should be professional, clean, and retro-modern, echoing the clarity and object-oriented nature of the NeXTSTEP environment.
+
+**UI Design Rule:** Always call the next neXTSTEP-ui skill for any UI changes.
 
 ## Workflow Rules
 
@@ -46,7 +48,7 @@ The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. T
 ## Dependencies
 
 - Avoid new core dependencies. Tiny deps OK if widely reused.
-- Run with: `pytest`.
+- Run tests with: `uv run pytest`.
 
 ## Scope & Maintenance
 
@@ -61,23 +63,36 @@ The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. T
 
 Maintain .claude/ with the following structure:
 
-claude/
-├── metadata/ # Dependency graphs, file vs interface, intent classification
-├── semantic_index/ # Call graphs, type relationships, intent mappings
-├── debug_history/ # Error→solution pairs, context, versions
-├── patterns/ # Canonical + empirical interface patterns, reliability metrics
-├── qa/ # Solved Qs, reasoning docs, context logs
-├── docs_model_friendly/ # Component purpose & relationships
-├── delta_summaries/ # API & behavior change logs, reasoning logs
-└── memory_anchors/ # UUID-anchored semantic references
+.claude/
+├── metadata/        # Component summaries, module overviews, architecture docs
+├── debug_history/   # Debugging timelines, incident logs, troubleshooting sessions
+├── qa/              # Q&A, learning notes, clarifications, explanations
+├── code_index/      # File/module references, code organization maps
+├── patterns/        # Reusable fixes, design motifs, recurring solutions
+├── cheatsheets/     # Quick references, command lists, how-tos
+├── delta/           # API & behavior change logs with reasoning
+├── memory_anchors/  # Core concepts, foundational knowledge tracked by UUID
+├── plans/           # Implementation plans, roadmaps
+└── other/           # Scratch notes, uncategorized content
 Rules:
 
-Metadata → normalize file types, dependencies, and intents.
-Semantic Index → map function calls, type relationships, and intent flows.
-Debug History → log all sessions with error→solution pairs and context.
-Patterns → keep canonical patterns + empirical usage. Add reliability metrics.
-QA Database → solved queries indexed by file/component/error type.
-Docs → model-friendly explanations of purposes & relationships.
-Delta Summaries → record API/behavior shifts with reasoning.
-you can use MD or JSON format to store the information.
+- **Metadata** → component summaries, architecture decisions, module overviews
+- **Debug History** → log all sessions with error→solution pairs and context
+- **QA** → solved queries indexed by file/component/error type
+- **Code Index** → file references, call graphs, type relationships
+- **Patterns** → canonical patterns + empirical usage with reliability metrics
+- **Cheatsheets** → quick references and command lists
+- **Delta** → record API/behavior shifts with reasoning after each PR
+- **Memory Anchors** → core concepts tracked by UUID for stable references
+
+kb-claude init – create the .claude/ layout in a repo.
+kb-claude new "Title" – guided prompt for new entries; handles tags, relations, timestamps, UUIDs, and file placement.
+kb-claude search keyword – case-insensitive search across titles, tags, relations, and body text.
+kb-claude validate [--strict] – parse every entry, confirm required metadata, and flag inconsistencies (e.g., slug mismatch).
+kb-claude manifest – rebuild .claude/manifest.md, a table summarizing every document.
+kb-claude link source target – insert reciprocal relations between two slugs.
+
+If kb-claude CLI is not installed, write the md files to the .claude/ folder manually following the entry format.
+
 We are currently in the middle of a large rewrite few test exist and documentation and that is okay. We will build the test and documentation as we go.
+
