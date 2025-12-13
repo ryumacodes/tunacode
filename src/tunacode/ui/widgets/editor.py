@@ -25,6 +25,15 @@ class Editor(Input):
         self._was_pasted: bool = False
         self._pasted_content: str = ""
 
+    @property
+    def _status_bar(self) -> StatusBar | None:
+        """Get status bar or None if not available."""
+        from textual.css.query import NoMatches
+        try:
+            return self.app.query_one(StatusBar)
+        except NoMatches:
+            return None
+
     def on_key(self, event: events.Key) -> None:
         """Handle key events for confirmation and bash-mode auto-spacing."""
         if event.key in ("1", "2", "3"):
@@ -66,11 +75,8 @@ class Editor(Input):
         self._pasted_content = ""
 
         # Reset StatusBar mode
-        try:
-            status_bar = self.app.query_one(StatusBar)
+        if status_bar := self._status_bar:
             status_bar.set_mode(None)
-        except Exception:
-            pass
 
     def _on_paste(self, event: events.Paste) -> None:
         """Capture full paste content before Input truncates to first line."""
@@ -85,12 +91,9 @@ class Editor(Input):
             # Show paste indicator in Input
             self.value = f"[[PASTED {line_count} LINES]]"
 
-            # Also update StatusBar
-            try:
-                status_bar = self.app.query_one(StatusBar)
+            # Update StatusBar
+            if status_bar := self._status_bar:
                 status_bar.set_mode(f"pasted {line_count} lines")
-            except Exception:
-                pass
 
             event.stop()  # Prevent parent from processing
         else:
@@ -98,19 +101,26 @@ class Editor(Input):
             super()._on_paste(event)
 
     def watch_value(self, value: str) -> None:
-        """Toggle bash-mode class and clear placeholder on first input."""
-        # Don't clear placeholder if we just set it for paste feedback
+        """React to value changes."""
+        self._maybe_clear_placeholder(value)
+        self._update_bash_mode(value)
+
+    def _maybe_clear_placeholder(self, value: str) -> None:
+        """Clear placeholder on first non-paste input."""
         if value and not self._placeholder_cleared and not self._was_pasted:
             self.placeholder = ""
             self._placeholder_cleared = True
 
+    def _update_bash_mode(self, value: str) -> None:
+        """Toggle bash-mode class and status bar indicator."""
         self.remove_class("bash-mode")
-        try:
-            status_bar = self.app.query_one(StatusBar)
-        except Exception:
+
+        if self._was_pasted:
             return
+
         if value.startswith("!"):
             self.add_class("bash-mode")
-            status_bar.set_mode("bash mode")
-        else:
-            status_bar.set_mode(None)
+
+        if status_bar := self._status_bar:
+            mode = "bash mode" if value.startswith("!") else None
+            status_bar.set_mode(mode)
