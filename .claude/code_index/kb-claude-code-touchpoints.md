@@ -4,12 +4,13 @@ link: kb-claude-code-touchpoints
 type: code_index
 ontological_relations:
   - relates_to: [[kb-claude-overview]]
+  - relates_to: [[research-agent-state-manager-fix]]
 tags:
   - kb-claude
   - repo-index
   - docs
 created_at: 2025-12-09T19:54:08Z
-updated_at: 2025-12-09T19:54:08Z
+updated_at: 2025-12-13T23:45:00Z
 uuid: c6f44eee-36dc-4b47-aa0c-df28589ecfaa
 ---
 File references that matter for the kb-claude knowledge base inside this repository.
