@@ -1,7 +1,11 @@
-## [0.1.8] - 2025-12-12
+## [0.1.9] - 2025-12-12
 
 ### Added
 - Multi-line paste support with collapsed display (#168)
+
+### Changed
+- Refactored watch_value editor for better single responsibility (#169)
+- Export screen classes from ui/screens package for external access
 
 ## [0.1.7] - 2025-12-11
 
