@@ -13,7 +13,6 @@ APP_VERSION = "0.1.9"
 
 
 # File patterns
-GUIDE_FILE_PATTERN = "{name}.md"
 GUIDE_FILE_NAME = "AGENTS.md"
 ENV_FILE = ".env"
 CONFIG_FILE_NAME = "tunacode.json"
