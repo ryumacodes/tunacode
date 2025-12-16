@@ -47,7 +47,7 @@ tunacode = "tunacode.ui.main:app"
 dev = [
     "build",
     "twine",
-    "ruff",
+    "ruff==0.14.9",
     "pytest",
     "pytest-cov",
     "pytest-asyncio",
