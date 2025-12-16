@@ -33,61 +33,104 @@ def _handle_background_task_error(task: asyncio.Task) -> None:
         pass
 
 
-@app.command()
+def _print_version() -> None:
+    from tunacode.constants import APP_VERSION
+
+    print(f"tunacode {APP_VERSION}")
+
+
+async def _run_textual_app(*, model: str | None, show_setup: bool) -> None:
+    update_task = asyncio.create_task(asyncio.to_thread(check_for_updates), name="update_check")
+    update_task.add_done_callback(_handle_background_task_error)
+
+    if model:
+        state_manager.session.current_model = model
+
+    try:
+        tool_handler = ToolHandler(state_manager)
+        state_manager.set_tool_handler(tool_handler)
+
+        await run_textual_repl(state_manager, show_setup=show_setup)
+    except (KeyboardInterrupt, UserAbortError):
+        update_task.cancel()
+        return
+    except Exception as exc:
+        from tunacode.exceptions import ConfigurationError
+
+        if isinstance(exc, ConfigurationError):
+            print(f"Error: {exc}")
+            update_task.cancel()
+            return
+
+        import traceback
+
+        print(f"Error: {exc}\n\nTraceback:\n{traceback.format_exc()}")
+        update_task.cancel()
+        return
+
+    try:
+        has_update, latest_version = await update_task
+        if has_update:
+            print(f"Update available: {latest_version}")
+    except asyncio.CancelledError:
+        return
+
+
+def _run_textual_cli(*, model: str | None, show_setup: bool) -> None:
+    asyncio.run(_run_textual_app(model=model, show_setup=show_setup))
+
+
+@app.callback(invoke_without_command=True)
+def _default_command(
+    ctx: typer.Context,
+    version: bool = typer.Option(False, "--version", "-v", help="Show version and exit."),
+    setup: bool = typer.Option(False, "--setup", help="Run setup wizard"),
+    _baseurl: str = typer.Option(  # noqa: ARG001 - reserved for future use
+        None, "--baseurl", help="API base URL (e.g., https://openrouter.ai/api/v1)"
+    ),
+    model: str | None = typer.Option(
+        None, "--model", help="Default model to use (e.g., openai/gpt-4)"
+    ),
+    _key: str = typer.Option(None, "--key", help="API key for the provider"),  # noqa: ARG001
+    _context: int = typer.Option(  # noqa: ARG001 - reserved for future use
+        None, "--context", help="Maximum context window size for custom models"
+    ),
+) -> None:
+    if version:
+        _print_version()
+        raise typer.Exit(code=0)
+
+    if ctx.invoked_subcommand is not None:
+        if setup:
+            raise typer.BadParameter("Use `tunacode --setup` without a subcommand.")
+        if model:
+            state_manager.session.current_model = model
+        return
+
+    _run_textual_cli(model=model, show_setup=setup)
+
+
+@app.command(hidden=True)
 def main(
     version: bool = typer.Option(False, "--version", "-v", help="Show version and exit."),
     _baseurl: str = typer.Option(  # noqa: ARG001 - reserved for future use
         None, "--baseurl", help="API base URL (e.g., https://openrouter.ai/api/v1)"
     ),
-    model: str = typer.Option(None, "--model", help="Default model to use (e.g., openai/gpt-4)"),
+    model: str | None = typer.Option(
+        None, "--model", help="Default model to use (e.g., openai/gpt-4)"
+    ),
     _key: str = typer.Option(None, "--key", help="API key for the provider"),  # noqa: ARG001
     _context: int = typer.Option(  # noqa: ARG001 - reserved for future use
         None, "--context", help="Maximum context window size for custom models"
     ),
     setup: bool = typer.Option(False, "--setup", help="Run setup wizard"),
-):
-    """Start TunaCode - Your AI-powered development assistant"""
+) -> None:
+    """Deprecated alias for `tunacode`."""
+    if version:
+        _print_version()
+        raise typer.Exit(code=0)
 
-    async def async_main():
-        if version:
-            from tunacode.constants import APP_VERSION
-
-            print(f"tunacode {APP_VERSION}")
-            return
-
-        update_task = asyncio.create_task(asyncio.to_thread(check_for_updates), name="update_check")
-        update_task.add_done_callback(_handle_background_task_error)
-
-        if model:
-            state_manager.session.current_model = model
-
-        try:
-            tool_handler = ToolHandler(state_manager)
-            state_manager.set_tool_handler(tool_handler)
-
-            await run_textual_repl(state_manager, show_setup=setup)
-        except (KeyboardInterrupt, UserAbortError):
-            update_task.cancel()
-            return
-        except Exception as e:
-            from tunacode.exceptions import ConfigurationError
-
-            if isinstance(e, ConfigurationError):
-                print(f"Error: {e}")
-                update_task.cancel()
-                return
-            import traceback
-
-            print(f"Error: {e}\n\nTraceback:\n{traceback.format_exc()}")
-
-        try:
-            has_update, latest_version = await update_task
-            if has_update:
-                print(f"Update available: {latest_version}")
-        except asyncio.CancelledError:
-            pass
-
-    asyncio.run(async_main())
+    _run_textual_cli(model=model, show_setup=setup)
 
 
 @app.command(name="run")
@@ -102,8 +145,8 @@ def run_headless(
     timeout: int = typer.Option(
         DEFAULT_TIMEOUT_SECONDS, "--timeout", help="Execution timeout in seconds"
     ),
-    cwd: str = typer.Option(None, "--cwd", help="Working directory for execution"),
-    model: str = typer.Option(None, "--model", "-m", help="Model to use"),
+    cwd: str | None = typer.Option(None, "--cwd", help="Working directory for execution"),
+    model: str | None = typer.Option(None, "--model", "-m", help="Model to use"),
 ) -> None:
     """Run TunaCode in non-interactive headless mode."""
     from tunacode.core.agents.main import process_request
