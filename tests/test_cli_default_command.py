@@ -27,4 +27,3 @@ def test_cli_help_hides_main_alias() -> None:
     )
     assert result.returncode == 0
     assert "\n│ main" not in result.stdout
-
