@@ -284,6 +284,7 @@ class TextualReplApp(App[None]):
                     tool_callback=build_textual_tool_callback(self, self.state_manager),
                     streaming_callback=self.streaming_callback,
                     tool_result_callback=build_tool_result_callback(self),
+                    tool_start_callback=build_tool_start_callback(self),
                 )
             )
             await self._current_request_task
@@ -604,5 +605,14 @@ def build_tool_result_callback(app: TextualReplApp):
                 duration_ms=duration_ms,
             )
         )
+
+    return _callback
+
+
+def build_tool_start_callback(app: TextualReplApp):
+    """Build callback for tool start notifications."""
+
+    def _callback(tool_name: str) -> None:
+        app.status_bar.update_last_action(f"Running: {tool_name}")
 
     return _callback
