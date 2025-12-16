@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -609,10 +610,10 @@ def build_tool_result_callback(app: TextualReplApp):
     return _callback
 
 
-def build_tool_start_callback(app: TextualReplApp):
+def build_tool_start_callback(app: TextualReplApp) -> Callable[[str], None]:
     """Build callback for tool start notifications."""
 
     def _callback(tool_name: str) -> None:
-        app.status_bar.update_last_action(f"Running: {tool_name}")
+        app.status_bar.update_running_action(tool_name)
 
     return _callback

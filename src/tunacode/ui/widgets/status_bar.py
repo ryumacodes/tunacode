@@ -21,7 +21,7 @@ class StatusBar(Horizontal):
     def compose(self) -> ComposeResult:
         yield Static("main ● ~/proj", id="status-left")
         yield Static("edited: -", id="status-mid")
-        yield Static("last action: -", id="status-right")
+        yield Static("last: -", id="status-right")
 
     def on_mount(self) -> None:
         self._refresh_location()
@@ -44,6 +44,9 @@ class StatusBar(Horizontal):
 
     def update_last_action(self, tool_name: str) -> None:
         self.query_one("#status-right", Static).update(f"last: {tool_name}")
+
+    def update_running_action(self, tool_name: str) -> None:
+        self.query_one("#status-right", Static).update(f"running: {tool_name}")
 
     def add_edited_file(self, filepath: str) -> None:
         """Track an edited file and update display."""
