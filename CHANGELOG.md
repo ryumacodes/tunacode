@@ -1,3 +1,19 @@
+## [0.1.10] - 2025-12-16
+
+### Added
+- Subagent UI loading states with progress feedback (#180)
+- Tool start callback for UI feedback (#177)
+- Headless CLI mode for benchmark execution (#174)
+
+### Fixed
+- Default tunacode to TUI when no subcommand (#178)
+- Pass parent state_manager to research agent for API key access (#170)
+
+### Changed
+- Pin ruff to 0.14.9 (#179)
+- Remove unused GUIDE_FILE_PATTERN constant (#173)
+- Remove unused typing scaffolding from state transition (#171)
+
 ## [0.1.9] - 2025-12-12
 
 ### Added
