@@ -7,33 +7,39 @@ from textual.containers import Vertical
 from textual.screen import Screen
 from textual.widgets import Static
 
+# Modal layout constants
+MODAL_WIDTH = 50
+MODAL_PADDING_VERTICAL = 1
+MODAL_PADDING_HORIZONTAL = 2
+SECTION_MARGIN_BOTTOM = 1
+
 
 class UpdateConfirmScreen(Screen[bool]):
     """Modal screen to confirm update installation."""
 
-    CSS = """
-    UpdateConfirmScreen {
+    CSS = f"""
+    UpdateConfirmScreen {{
         align: center middle;
-    }
+    }}
 
-    #update-container {
-        width: 50;
+    #update-container {{
+        width: {MODAL_WIDTH};
         height: auto;
         border: solid $primary;
         background: $surface;
-        padding: 1 2;
-    }
+        padding: {MODAL_PADDING_VERTICAL} {MODAL_PADDING_HORIZONTAL};
+    }}
 
-    #update-title {
+    #update-title {{
         text-style: bold;
         color: $accent;
         text-align: center;
-        margin-bottom: 1;
-    }
+        margin-bottom: {SECTION_MARGIN_BOTTOM};
+    }}
 
-    #update-info {
-        margin-bottom: 1;
-    }
+    #update-info {{
+        margin-bottom: {SECTION_MARGIN_BOTTOM};
+    }}
     """
 
     BINDINGS = [

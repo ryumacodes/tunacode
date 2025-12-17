@@ -10,6 +10,29 @@ if TYPE_CHECKING:
 
 from tunacode.ui.styles import STYLE_PRIMARY
 
+# Update command constants
+PACKAGE_NAME = "tunacode-cli"
+UPDATE_INSTALL_TIMEOUT_SECONDS = 120
+
+
+def _get_package_manager_command(package: str) -> tuple[list[str], str] | None:
+    """Get package manager command and name.
+
+    Returns:
+        Tuple of (command_list, manager_name) or None if no manager found.
+    """
+    import shutil
+
+    uv_path = shutil.which("uv")
+    if uv_path:
+        return ([uv_path, "pip", "install", "--upgrade", package], "uv")
+
+    pip_path = shutil.which("pip")
+    if pip_path:
+        return ([pip_path, "install", "--upgrade", package], "pip")
+
+    return None
+
 
 class Command(ABC):
     """Base class for REPL commands."""
@@ -297,7 +320,6 @@ class UpdateCommand(Command):
 
     async def execute(self, app: TextualReplApp, args: str) -> None:
         import asyncio
-        import shutil
         import subprocess
 
         from tunacode.constants import APP_VERSION
@@ -334,19 +356,12 @@ class UpdateCommand(Command):
                 app.notify("Update cancelled")
                 return
 
-            uv_path = shutil.which("uv")
-            pip_path = shutil.which("pip")
-
-            if uv_path:
-                cmd = [uv_path, "pip", "install", "--upgrade", "tunacode-cli"]
-                pkg_mgr = "uv"
-            elif pip_path:
-                cmd = [pip_path, "install", "--upgrade", "tunacode-cli"]
-                pkg_mgr = "pip"
-            else:
+            pkg_cmd_result = _get_package_manager_command(PACKAGE_NAME)
+            if not pkg_cmd_result:
                 app.notify("No package manager found (uv or pip)", severity="error")
                 return
 
+            cmd, pkg_mgr = pkg_cmd_result
             app.notify(f"Installing with {pkg_mgr}...")
 
             try:
@@ -355,7 +370,7 @@ class UpdateCommand(Command):
                     cmd,
                     capture_output=True,
                     text=True,
-                    timeout=120,
+                    timeout=UPDATE_INSTALL_TIMEOUT_SECONDS,
                 )
 
                 if result.returncode == 0:
