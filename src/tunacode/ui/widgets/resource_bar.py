@@ -21,9 +21,10 @@ def _check_lsp_status() -> tuple[bool, str | None]:
     Returns:
         Tuple of (is_enabled, server_name_or_none)
     """
-    from shutil import which
+    from pathlib import Path
 
     from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
+    from tunacode.lsp.servers import get_server_command
 
     settings = DEFAULT_USER_CONFIG.get("settings", {})
     lsp_config = settings.get("lsp", {})
@@ -32,17 +33,22 @@ def _check_lsp_status() -> tuple[bool, str | None]:
     if not is_enabled:
         return False, None
 
-    # Check which language server is available (return first found)
-    servers = [
-        ("pyright-langserver", "pyright"),
-        ("pylsp", "pylsp"),
-        ("typescript-language-server", "tsserver"),
-        ("gopls", "gopls"),
-        ("rust-analyzer", "rust-analyzer"),
-    ]
-    for binary, name in servers:
-        if which(binary) is not None:
-            return True, name
+    # Check what server would actually be used for a .py file
+    # This reflects the real LSP config, not just what's installed
+    command = get_server_command(Path("test.py"))
+    if command:
+        # Extract server name from command (e.g., "ruff" from ["ruff", "server", "--stdio"])
+        binary = command[0]
+        # Friendly name mapping
+        name_map = {
+            "ruff": "ruff",
+            "pyright-langserver": "pyright",
+            "pylsp": "pylsp",
+            "typescript-language-server": "tsserver",
+            "gopls": "gopls",
+            "rust-analyzer": "rust-analyzer",
+        }
+        return True, name_map.get(binary, binary)
 
     return True, None
 
