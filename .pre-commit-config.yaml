@@ -133,5 +133,5 @@ ci:
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: weekly
   # Skip hooks that require project-specific environment setup
-  skip: [dead-imports, vulture-changed]
+  skip: [vulture-changed]
   submodules: false
