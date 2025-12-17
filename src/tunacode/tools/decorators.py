@@ -54,7 +54,7 @@ async def _get_lsp_diagnostics(filepath: str) -> str:
             timeout=timeout + 1.0,  # Extra second for orchestration overhead
         )
         return format_diagnostics(diagnostics)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.debug("LSP diagnostics timed out for %s", filepath)
         return ""
     except Exception as e:

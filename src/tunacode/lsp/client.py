@@ -7,6 +7,7 @@ Implements just enough of the Language Server Protocol to:
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 from dataclasses import dataclass
@@ -77,7 +78,7 @@ class LSPClient:
             await asyncio.wait_for(self._initialize(), timeout=DEFAULT_TIMEOUT)
             self._initialized = True
             return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.debug("LSP server %s initialization timed out", self.command[0])
             await self.shutdown()
             return False
@@ -207,7 +208,7 @@ class LSPClient:
             )
             return json.loads(body.decode("utf-8"))
 
-        except (asyncio.TimeoutError, asyncio.IncompleteReadError, json.JSONDecodeError):
+        except (TimeoutError, asyncio.IncompleteReadError, json.JSONDecodeError):
             return None
 
     async def _read_messages(self) -> None:
@@ -273,7 +274,9 @@ class LSPClient:
             },
         )
 
-    async def get_diagnostics(self, path: Path, timeout: float = DEFAULT_TIMEOUT) -> list[Diagnostic]:
+    async def get_diagnostics(
+        self, path: Path, timeout: float = DEFAULT_TIMEOUT
+    ) -> list[Diagnostic]:
         """Get diagnostics for a file.
 
         Opens the file and waits for diagnostics to be published.
@@ -306,10 +309,8 @@ class LSPClient:
         """Shutdown the language server."""
         if self._reader_task is not None:
             self._reader_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._reader_task
-            except asyncio.CancelledError:
-                pass
 
         if self.process is not None:
             try:
@@ -322,7 +323,7 @@ class LSPClient:
                 self.process.terminate()
                 try:
                     await asyncio.wait_for(self.process.wait(), timeout=2.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     self.process.kill()
 
         self.process = None
