@@ -4,6 +4,7 @@ from tunacode.ui.screens.model_picker import ModelPickerScreen, ProviderPickerSc
 from tunacode.ui.screens.session_picker import SessionPickerScreen
 from tunacode.ui.screens.setup import SetupScreen
 from tunacode.ui.screens.theme_picker import ThemePickerScreen
+from tunacode.ui.screens.update_confirm import UpdateConfirmScreen
 
 __all__ = [
     "ModelPickerScreen",
@@ -11,4 +12,5 @@ __all__ = [
     "SessionPickerScreen",
     "SetupScreen",
     "ThemePickerScreen",
+    "UpdateConfirmScreen",
 ]
