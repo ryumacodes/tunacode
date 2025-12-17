@@ -15,11 +15,11 @@ from tunacode.ui.styles import (
 )
 
 
-def _check_lsp_status() -> tuple[bool, bool]:
+def _check_lsp_status() -> tuple[bool, str | None]:
     """Check LSP configuration and server availability.
 
     Returns:
-        Tuple of (is_enabled, has_server_available)
+        Tuple of (is_enabled, server_name_or_none)
     """
     from shutil import which
 
@@ -30,19 +30,21 @@ def _check_lsp_status() -> tuple[bool, bool]:
     is_enabled = lsp_config.get("enabled", False)
 
     if not is_enabled:
-        return False, False
+        return False, None
 
-    # Check if any supported language server is available
+    # Check which language server is available (return first found)
     servers = [
-        "pyright-langserver",
-        "pylsp",
-        "typescript-language-server",
-        "gopls",
-        "rust-analyzer",
+        ("pyright-langserver", "pyright"),
+        ("pylsp", "pylsp"),
+        ("typescript-language-server", "tsserver"),
+        ("gopls", "gopls"),
+        ("rust-analyzer", "rust-analyzer"),
     ]
-    has_server = any(which(s) is not None for s in servers)
+    for binary, name in servers:
+        if which(binary) is not None:
+            return True, name
 
-    return is_enabled, has_server
+    return True, None
 
 
 class ResourceBar(Static):
@@ -56,10 +58,10 @@ class ResourceBar(Static):
         self._cost: float = 0.0
         self._session_cost: float = 0.0
         self._lsp_enabled: bool = False
-        self._lsp_available: bool = False
+        self._lsp_server: str | None = None
 
     def on_mount(self) -> None:
-        self._lsp_enabled, self._lsp_available = _check_lsp_status()
+        self._lsp_enabled, self._lsp_server = _check_lsp_status()
         self._refresh_display()
 
     def update_stats(
@@ -114,10 +116,10 @@ class ResourceBar(Static):
             Tuple of (indicator_text, style)
         """
         if not self._lsp_enabled:
-            return "LSP off", STYLE_MUTED
-        if self._lsp_available:
-            return "LSP on", STYLE_SUCCESS
-        return "LSP no server", STYLE_WARNING
+            return "", STYLE_MUTED  # Don't show anything if LSP is off
+        if self._lsp_server:
+            return f"LSP: {self._lsp_server}", STYLE_SUCCESS
+        return "LSP: no server", STYLE_WARNING
 
     def _refresh_display(self) -> None:
         sep = RESOURCE_BAR_SEPARATOR
@@ -129,14 +131,19 @@ class ResourceBar(Static):
 
         lsp_text, lsp_style = self._get_lsp_indicator()
 
-        content = Text.assemble(
+        parts: list[tuple[str, str]] = [
             (self._model, STYLE_PRIMARY),
             (sep, STYLE_MUTED),
             (circle_char, circle_color),
             (f" {remaining_pct:.0f}%", circle_color),
             (sep, STYLE_MUTED),
             (session_cost_str, STYLE_SUCCESS),
-            (sep, STYLE_MUTED),
-            (lsp_text, lsp_style),
-        )
+        ]
+
+        # Only show LSP indicator if enabled
+        if lsp_text:
+            parts.append((sep, STYLE_MUTED))
+            parts.append((lsp_text, lsp_style))
+
+        content = Text.assemble(*parts)
         self.update(content)
