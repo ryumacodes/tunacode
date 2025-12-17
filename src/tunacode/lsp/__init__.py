@@ -4,10 +4,13 @@ This module provides the public API for getting diagnostics from language server
 It manages server lifecycle and provides formatted diagnostic output.
 """
 
+import asyncio
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from tunacode.lsp.client import LSPClient
+from tunacode.lsp.diagnostics import truncate_diagnostic_message
 from tunacode.lsp.servers import get_server_command
 
 if TYPE_CHECKING:
@@ -15,8 +18,32 @@ if TYPE_CHECKING:
 
 __all__ = ["get_diagnostics", "format_diagnostics"]
 
+logger = logging.getLogger(__name__)
+
 # Cache of active LSP clients by server command
 _clients: dict[str, LSPClient] = {}
+
+WORKSPACE_MARKERS: tuple[str, ...] = (
+    ".git",
+    "pyproject.toml",
+    "setup.cfg",
+    "setup.py",
+    "requirements.txt",
+    "Pipfile",
+    "package.json",
+    "Cargo.toml",
+    "go.mod",
+)
+
+
+def _resolve_workspace_root(path: Path) -> Path:
+    start_dir = path if path.is_dir() else path.parent
+
+    for candidate in (start_dir, *start_dir.parents):
+        if any((candidate / marker).exists() for marker in WORKSPACE_MARKERS):
+            return candidate
+
+    return start_dir
 
 
 async def get_diagnostics(filepath: Path | str, timeout: float = 5.0) -> list["Diagnostic"]:
@@ -34,21 +61,26 @@ async def get_diagnostics(filepath: Path | str, timeout: float = 5.0) -> list["D
     if not path.exists():
         return []
 
+    root = _resolve_workspace_root(path)
     command = get_server_command(path)
     if command is None:
         return []
 
     command_key = " ".join(command)
+    client_key = f"{root}::{command_key}"
 
-    if command_key not in _clients:
-        client = LSPClient(command=command, root=path.parent)
+    if client_key not in _clients:
+        client = LSPClient(command=command, root=root)
         started = await client.start()
         if not started:
             return []
-        _clients[command_key] = client
+        _clients[client_key] = client
 
-    client = _clients[command_key]
+    client = _clients[client_key]
     return await client.get_diagnostics(path, timeout=timeout)
+
+
+MAX_DIAGNOSTICS_COUNT = 10
 
 
 def format_diagnostics(diagnostics: list["Diagnostic"]) -> str:
@@ -63,12 +95,21 @@ def format_diagnostics(diagnostics: list["Diagnostic"]) -> str:
     if not diagnostics:
         return ""
 
+    # Count by severity for summary
+    errors = sum(1 for d in diagnostics if d.severity == "error")
+    warnings = sum(1 for d in diagnostics if d.severity == "warning")
+
     lines: list[str] = ["<file_diagnostics>"]
-    for diag in diagnostics[:20]:  # Limit to 20 diagnostics
+
+    # Add summary line (helps agent understand severity quickly)
+    lines.append(f"Summary: {errors} errors, {warnings} warnings")
+
+    for diag in diagnostics[:MAX_DIAGNOSTICS_COUNT]:
         severity = diag.severity.capitalize()
         line = diag.line
-        message = diag.message
+        message = truncate_diagnostic_message(diag.message)
         lines.append(f"{severity} (line {line}): {message}")
+
     lines.append("</file_diagnostics>")
 
     return "\n".join(lines)
@@ -76,6 +117,17 @@ def format_diagnostics(diagnostics: list["Diagnostic"]) -> str:
 
 async def shutdown_all() -> None:
     """Shutdown all active LSP clients."""
-    for client in _clients.values():
-        await client.shutdown()
+    clients = list(_clients.values())
     _clients.clear()
+
+    if not clients:
+        return
+
+    results = await asyncio.gather(
+        *(client.shutdown() for client in clients),
+        return_exceptions=True,
+    )
+
+    exceptions = [result for result in results if isinstance(result, Exception)]
+    for exc in exceptions:
+        logger.exception("Failed to shutdown LSP client", exc_info=exc)
