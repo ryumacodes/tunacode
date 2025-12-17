@@ -31,7 +31,7 @@ from tunacode.tools.glob import glob
 from tunacode.tools.grep import grep
 from tunacode.tools.list_dir import list_dir
 from tunacode.tools.read_file import read_file
-from tunacode.tools.todo import create_todoread_tool, create_todowrite_tool
+from tunacode.tools.todo import create_todoclear_tool, create_todoread_tool, create_todowrite_tool
 from tunacode.tools.update_file import update_file
 from tunacode.tools.web_fetch import web_fetch
 from tunacode.tools.write_file import write_file
@@ -365,12 +365,10 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         # Add todo tools (task tracking)
         todowrite = create_todowrite_tool(state_manager)
         todoread = create_todoread_tool(state_manager)
-        tools_list.append(
-            Tool(todowrite, max_retries=max_retries, strict=tool_strict_validation)
-        )
-        tools_list.append(
-            Tool(todoread, max_retries=max_retries, strict=tool_strict_validation)
-        )
+        todoclear = create_todoclear_tool(state_manager)
+        tools_list.append(Tool(todowrite, max_retries=max_retries, strict=tool_strict_validation))
+        tools_list.append(Tool(todoread, max_retries=max_retries, strict=tool_strict_validation))
+        tools_list.append(Tool(todoclear, max_retries=max_retries, strict=tool_strict_validation))
 
         # Configure HTTP client with retry logic at transport layer
         # This handles retries BEFORE node creation, avoiding pydantic-ai's

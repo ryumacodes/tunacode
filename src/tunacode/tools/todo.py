@@ -10,18 +10,30 @@ from pydantic_ai.exceptions import ModelRetry
 from tunacode.core.state import StateManager
 from tunacode.tools.xml_helper import load_prompt_from_xml
 
+TODO_FIELD_ACTIVE_FORM = "activeForm"
+TODO_FIELD_CONTENT = "content"
+TODO_FIELD_STATUS = "status"
+
+TODO_STATUS_COMPLETED = "completed"
+TODO_STATUS_IN_PROGRESS = "in_progress"
+TODO_STATUS_PENDING = "pending"
+
+MAX_IN_PROGRESS_TODOS = 1
+NO_TODOS_MESSAGE = "No todos in list."
+TODO_LIST_CLEARED_MESSAGE = "Todo list cleared."
+
 # Valid status values
-VALID_STATUSES = frozenset({"pending", "in_progress", "completed"})
+VALID_STATUSES = frozenset({TODO_STATUS_PENDING, TODO_STATUS_IN_PROGRESS, TODO_STATUS_COMPLETED})
 
 # Status display symbols
 STATUS_SYMBOLS = {
-    "pending": "[ ]",
-    "in_progress": "[>]",
-    "completed": "[x]",
+    TODO_STATUS_PENDING: "[ ]",
+    TODO_STATUS_IN_PROGRESS: "[>]",
+    TODO_STATUS_COMPLETED: "[x]",
 }
 
 
-def _validate_todo(todo: dict[str, Any], index: int) -> None:
+def _validate_todo(todo: Any, index: int) -> dict[str, Any]:
     """Validate a single todo item has required fields.
 
     Args:
@@ -34,22 +46,49 @@ def _validate_todo(todo: dict[str, Any], index: int) -> None:
     if not isinstance(todo, dict):
         raise ModelRetry(f"Todo at index {index} must be a dictionary, got {type(todo).__name__}")
 
-    required_fields = ("content", "status", "activeForm")
+    required_fields = (TODO_FIELD_CONTENT, TODO_FIELD_STATUS, TODO_FIELD_ACTIVE_FORM)
     missing = [f for f in required_fields if f not in todo]
     if missing:
         raise ModelRetry(f"Todo at index {index} missing required fields: {', '.join(missing)}")
 
-    if todo["status"] not in VALID_STATUSES:
+    status = todo[TODO_FIELD_STATUS]
+    if not isinstance(status, str) or not status:
+        raise ModelRetry(f"Todo at index {index} must have non-empty string '{TODO_FIELD_STATUS}'")
+    if status not in VALID_STATUSES:
         raise ModelRetry(
-            f"Todo at index {index} has invalid status '{todo['status']}'. "
+            f"Todo at index {index} has invalid status '{status}'. "
             f"Must be one of: {', '.join(sorted(VALID_STATUSES))}"
         )
 
-    if not todo["content"] or not isinstance(todo["content"], str):
-        raise ModelRetry(f"Todo at index {index} must have non-empty string 'content'")
+    content = todo[TODO_FIELD_CONTENT]
+    if not isinstance(content, str) or not content:
+        raise ModelRetry(f"Todo at index {index} must have non-empty string '{TODO_FIELD_CONTENT}'")
 
-    if not todo["activeForm"] or not isinstance(todo["activeForm"], str):
-        raise ModelRetry(f"Todo at index {index} must have non-empty string 'activeForm'")
+    active_form = todo[TODO_FIELD_ACTIVE_FORM]
+    if not isinstance(active_form, str) or not active_form:
+        raise ModelRetry(
+            f"Todo at index {index} must have non-empty string '{TODO_FIELD_ACTIVE_FORM}'"
+        )
+
+    return todo
+
+
+def _validate_todos(todos: Any) -> list[dict[str, Any]]:
+    if not isinstance(todos, list):
+        raise ModelRetry(f"todos must be a list, got {type(todos).__name__}")
+
+    validated = [_validate_todo(todo, index) for index, todo in enumerate(todos)]
+
+    in_progress_count = sum(
+        1 for todo in validated if todo[TODO_FIELD_STATUS] == TODO_STATUS_IN_PROGRESS
+    )
+    if in_progress_count > MAX_IN_PROGRESS_TODOS:
+        raise ModelRetry(
+            f"Only {MAX_IN_PROGRESS_TODOS} todo may be '{TODO_STATUS_IN_PROGRESS}' at a time, "
+            f"got {in_progress_count}"
+        )
+
+    return validated
 
 
 def _format_todos(todos: list[dict[str, Any]]) -> str:
@@ -62,15 +101,16 @@ def _format_todos(todos: list[dict[str, Any]]) -> str:
         Formatted string representation of the todo list.
     """
     if not todos:
-        return "No todos in list."
+        return NO_TODOS_MESSAGE
 
     lines = []
     for i, todo in enumerate(todos, 1):
-        symbol = STATUS_SYMBOLS.get(todo["status"], "[ ]")
-        content = todo["content"]
-        active_form = todo.get("activeForm", "")
+        status = todo[TODO_FIELD_STATUS]
+        symbol = STATUS_SYMBOLS[status]
+        content = todo[TODO_FIELD_CONTENT]
+        active_form = todo[TODO_FIELD_ACTIVE_FORM]
 
-        if todo["status"] == "in_progress" and active_form:
+        if status == TODO_STATUS_IN_PROGRESS:
             lines.append(f"{i}. {symbol} {content} ({active_form})")
         else:
             lines.append(f"{i}. {symbol} {content}")
@@ -103,14 +143,10 @@ def create_todowrite_tool(state_manager: StateManager) -> Callable:
         Returns:
             Formatted display of the updated todo list.
         """
-        if not isinstance(todos, list):
-            raise ModelRetry(f"todos must be a list, got {type(todos).__name__}")
+        validated = _validate_todos(todos)
 
-        for i, todo in enumerate(todos):
-            _validate_todo(todo, i)
-
-        state_manager.set_todos(todos)
-        return _format_todos(todos)
+        state_manager.set_todos(validated)
+        return _format_todos(validated)
 
     # Load prompt from XML if available
     prompt = load_prompt_from_xml("todowrite")
@@ -139,7 +175,8 @@ def create_todoread_tool(state_manager: StateManager) -> Callable:
             Formatted display of the current todo list, or a message if empty.
         """
         todos = state_manager.get_todos()
-        return _format_todos(todos)
+        validated = _validate_todos(todos)
+        return _format_todos(validated)
 
     # Load prompt from XML if available
     prompt = load_prompt_from_xml("todoread")
@@ -168,6 +205,11 @@ def create_todoclear_tool(state_manager: StateManager) -> Callable:
             Confirmation message.
         """
         state_manager.clear_todos()
-        return "Todo list cleared."
+        return TODO_LIST_CLEARED_MESSAGE
+
+    # Load prompt from XML if available
+    prompt = load_prompt_from_xml("todoclear")
+    if prompt:
+        todoclear.__doc__ = prompt
 
     return todoclear
