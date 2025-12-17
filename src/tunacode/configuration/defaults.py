@@ -35,5 +35,10 @@ DEFAULT_USER_CONFIG: UserConfig = {
             "enable_metrics": False,  # Enable performance metrics collection
             "debug": False,  # Enable debug logging for ripgrep operations
         },
+        "lsp": {
+            "enabled": True,  # Enable LSP diagnostics after file modifications
+            "timeout": 5.0,  # Maximum seconds to wait for diagnostics
+            "max_diagnostics": 20,  # Maximum number of diagnostics to show
+        },
     },
 }

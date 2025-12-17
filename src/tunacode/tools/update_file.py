@@ -9,7 +9,7 @@ from tunacode.tools.decorators import file_tool
 from tunacode.tools.utils.text_match import replace
 
 
-@file_tool
+@file_tool(writes=True)
 async def update_file(filepath: str, target: str, patch: str) -> str:
     """Update an existing file by replacing a target text block with a patch.
 
