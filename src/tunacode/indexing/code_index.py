@@ -7,6 +7,13 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
+from tunacode.indexing.constants import (
+    IGNORE_DIRS,
+    INDEXED_EXTENSIONS,
+    PRIORITY_DIRS,
+    QUICK_INDEX_THRESHOLD,
+)
+
 
 class CodeIndex:
     """Fast in-memory code index for repository file lookups.
@@ -15,98 +22,8 @@ class CodeIndex:
     grep searches that can timeout in large repositories.
     """
 
-    # Singleton instance
     _instance: Optional["CodeIndex"] = None
     _instance_lock = threading.RLock()
-
-    # Directories to ignore during indexing
-    IGNORE_DIRS = {
-        ".git",
-        ".hg",
-        ".svn",
-        ".bzr",
-        "__pycache__",
-        ".pytest_cache",
-        ".mypy_cache",
-        "node_modules",
-        "bower_components",
-        ".venv",
-        "venv",
-        "env",
-        ".env",
-        "build",
-        "dist",
-        "_build",
-        "target",
-        ".idea",
-        ".vscode",
-        ".vs",
-        "htmlcov",
-        ".coverage",
-        ".tox",
-        ".eggs",
-        "*.egg-info",
-        ".bundle",
-        "vendor",
-        ".terraform",
-        ".serverless",
-        ".next",
-        ".nuxt",
-        "coverage",
-        "tmp",
-        "temp",
-    }
-
-    # Threshold for quick vs progressive indexing
-    QUICK_INDEX_THRESHOLD = 1000
-
-    # Priority directories for progressive indexing
-    PRIORITY_DIRS = {"src", "lib", "app", "packages", "core", "internal"}
-
-    # File extensions to index
-    INDEXED_EXTENSIONS = {
-        ".py",
-        ".js",
-        ".jsx",
-        ".ts",
-        ".tsx",
-        ".java",
-        ".c",
-        ".cpp",
-        ".cc",
-        ".cxx",
-        ".h",
-        ".hpp",
-        ".rs",
-        ".go",
-        ".rb",
-        ".php",
-        ".cs",
-        ".swift",
-        ".kt",
-        ".scala",
-        ".sh",
-        ".bash",
-        ".zsh",
-        ".json",
-        ".yaml",
-        ".yml",
-        ".toml",
-        ".xml",
-        ".md",
-        ".rst",
-        ".txt",
-        ".html",
-        ".css",
-        ".scss",
-        ".sass",
-        ".sql",
-        ".graphql",
-        ".dockerfile",
-        ".containerfile",
-        ".gitignore",
-        ".env.example",
-    }
 
     def __init__(self, root_dir: str | None = None):
         """Initialize the code index.
@@ -244,18 +161,18 @@ class CodeIndex:
         count = 0
         stack = [self.root_dir]
 
-        while stack and count <= self.QUICK_INDEX_THRESHOLD:
+        while stack and count <= QUICK_INDEX_THRESHOLD:
             current = stack.pop()
             try:
                 for entry in os.scandir(current):
                     if entry.is_dir(follow_symlinks=False):
-                        if entry.name not in self.IGNORE_DIRS and not entry.name.startswith("."):
+                        if entry.name not in IGNORE_DIRS and not entry.name.startswith("."):
                             stack.append(Path(entry.path))
                     elif entry.is_file(follow_symlinks=False):
                         ext = Path(entry.name).suffix.lower()
-                        if ext in self.INDEXED_EXTENSIONS:
+                        if ext in INDEXED_EXTENSIONS:
                             count += 1
-                            if count > self.QUICK_INDEX_THRESHOLD:
+                            if count > QUICK_INDEX_THRESHOLD:
                                 break
             except (PermissionError, OSError):
                 continue
@@ -282,7 +199,7 @@ class CodeIndex:
                         self._index_file(file_path)
 
             # Index priority subdirectories fully
-            for name in self.PRIORITY_DIRS:
+            for name in PRIORITY_DIRS:
                 priority_path = self.root_dir / name
                 if priority_path.is_dir():
                     self._scan_directory(priority_path)
@@ -305,9 +222,9 @@ class CodeIndex:
             for entry in os.scandir(self.root_dir):
                 if entry.is_dir(follow_symlinks=False):
                     dir_name = entry.name
-                    if dir_name in self.IGNORE_DIRS or dir_name.startswith("."):
+                    if dir_name in IGNORE_DIRS or dir_name.startswith("."):
                         continue
-                    if dir_name not in self.PRIORITY_DIRS:
+                    if dir_name not in PRIORITY_DIRS:
                         self._scan_directory(Path(entry.path))
 
             self._partial_indexed = False
@@ -318,7 +235,7 @@ class CodeIndex:
         # Check against ignore patterns
         parts = path.parts
         for part in parts:
-            if part in self.IGNORE_DIRS:
+            if part in IGNORE_DIRS:
                 return True
             if part.startswith(".") and part != ".":
                 # Skip hidden directories except current directory
@@ -354,7 +271,7 @@ class CodeIndex:
     def _should_index_file(self, file_path: Path) -> bool:
         """Check if a file should be indexed."""
         # Check extension
-        if file_path.suffix.lower() not in self.INDEXED_EXTENSIONS:
+        if file_path.suffix.lower() not in INDEXED_EXTENSIONS:
             # Also index files with no extension if they might be scripts
             if file_path.suffix == "":
                 # Check for shebang or common script names
