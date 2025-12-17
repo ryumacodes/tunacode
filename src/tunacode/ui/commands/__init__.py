@@ -290,6 +290,89 @@ class ResumeCommand(Command):
             app.notify("Failed to load session", severity="error")
 
 
+class UpdateCommand(Command):
+    name = "update"
+    description = "Check for or install updates"
+    usage = "/update [check|install]"
+
+    async def execute(self, app: TextualReplApp, args: str) -> None:
+        import asyncio
+        import shutil
+        import subprocess
+
+        from tunacode.constants import APP_VERSION
+        from tunacode.utils.system.paths import check_for_updates
+
+        parts = args.split(maxsplit=1) if args else []
+        subcommand = parts[0].lower() if parts else "check"
+
+        if subcommand == "check":
+            app.notify("Checking for updates...")
+            has_update, latest_version = await asyncio.to_thread(check_for_updates)
+
+            if has_update:
+                app.rich_log.write(f"Current version: {APP_VERSION}")
+                app.rich_log.write(f"Latest version:  {latest_version}")
+                app.notify(f"Update available: {latest_version}")
+                app.rich_log.write("Run /update install to upgrade")
+            else:
+                app.notify(f"Already on latest version ({APP_VERSION})")
+
+        elif subcommand == "install":
+            from tunacode.ui.screens.update_confirm import UpdateConfirmScreen
+
+            app.notify("Checking for updates...")
+            has_update, latest_version = await asyncio.to_thread(check_for_updates)
+
+            if not has_update:
+                app.notify(f"Already on latest version ({APP_VERSION})")
+                return
+
+            confirmed = await app.push_screen_wait(UpdateConfirmScreen(APP_VERSION, latest_version))
+
+            if not confirmed:
+                app.notify("Update cancelled")
+                return
+
+            uv_path = shutil.which("uv")
+            pip_path = shutil.which("pip")
+
+            if uv_path:
+                cmd = [uv_path, "pip", "install", "--upgrade", "tunacode-cli"]
+                pkg_mgr = "uv"
+            elif pip_path:
+                cmd = [pip_path, "install", "--upgrade", "tunacode-cli"]
+                pkg_mgr = "pip"
+            else:
+                app.notify("No package manager found (uv or pip)", severity="error")
+                return
+
+            app.notify(f"Installing with {pkg_mgr}...")
+
+            try:
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                )
+
+                if result.returncode == 0:
+                    app.notify(f"Updated to {latest_version}!")
+                    app.rich_log.write("Restart tunacode to use the new version")
+                else:
+                    app.notify("Update failed", severity="error")
+                    if result.stderr:
+                        app.rich_log.write(result.stderr.strip())
+            except Exception as e:
+                app.rich_log.write(f"Error: {e}")
+
+        else:
+            app.notify(f"Unknown subcommand: {subcommand}", severity="warning")
+            app.notify("Usage: /update [check|install]")
+
+
 COMMANDS: dict[str, Command] = {
     "help": HelpCommand(),
     "clear": ClearCommand(),
@@ -299,6 +382,7 @@ COMMANDS: dict[str, Command] = {
     "plan": PlanCommand(),
     "theme": ThemeCommand(),
     "resume": ResumeCommand(),
+    "update": UpdateCommand(),
 }
 
 
