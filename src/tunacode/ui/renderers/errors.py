@@ -104,20 +104,21 @@ def render_tool_error(
     context = {}
     if file_path:
         context["Path"] = file_path
+        recovery_commands = [
+            f"Check file exists: ls -la {file_path}",
+            "Try with different arguments",
+        ]
+    else:
+        recovery_commands = ["Try with different arguments"]
 
     data = ErrorDisplayData(
         error_type=f"{tool_name} Error",
         message=message,
         suggested_fix=suggested_fix,
-        recovery_commands=[
-            f"Check file exists: ls -la {file_path}" if file_path else None,
-            "Try with different arguments",
-        ],
+        recovery_commands=recovery_commands,
         context=context if context else None,
         severity="error",
     )
-    if data.recovery_commands:
-        data.recovery_commands = [cmd for cmd in data.recovery_commands if cmd]
 
     return RichPanelRenderer.render_error(data)
 

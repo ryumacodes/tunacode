@@ -100,6 +100,15 @@ class SessionState:
     task_hierarchy: dict[str, Any] = field(default_factory=dict)
     iteration_budgets: dict[str, int] = field(default_factory=dict)
     recursive_context_stack: list[dict[str, Any]] = field(default_factory=list)
+    # Streaming debug instrumentation (see core/agents/agent_components/streaming.py)
+    _debug_events: list[str] = field(default_factory=list)
+    _debug_raw_stream_accum: str = ""
+    # Request lifecycle metadata
+    request_id: str = ""
+    original_query: str = ""
+    # Agent execution counters
+    consecutive_empty_responses: int = 0
+    batch_counter: int = 0
 
     def update_token_count(self) -> None:
         """Calculate total token count from conversation messages."""

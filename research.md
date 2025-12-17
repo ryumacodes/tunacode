@@ -1,6 +1,6 @@
 # Research: LSP diagnostics feedback (agent vs UI)
 
-Status: research mode (no pushing).  
+Status: research mode (no pushing).
 Last updated: 2025-12-17
 
 ## Context (from ongoing work)

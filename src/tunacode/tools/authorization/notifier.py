@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tunacode.constants import ToolName
-from tunacode.types import ToolConfirmationResponse
+from tunacode.types import ToolConfirmationResponse, ToolName
 
 if TYPE_CHECKING:
     from tunacode.core.state import StateManager

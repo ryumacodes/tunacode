@@ -18,7 +18,7 @@ class TunaCodeError(Exception):
 class ConfigurationError(TunaCodeError):
     """Raised when there's a configuration issue."""
 
-    def __init__(self, message: str, suggested_fix: str = None, help_url: str = None):
+    def __init__(self, message: str, suggested_fix: str | None = None, help_url: str | None = None):
         self.suggested_fix = suggested_fix
         self.help_url = help_url
 
@@ -42,7 +42,12 @@ class UserAbortError(TunaCodeError):
 class ValidationError(TunaCodeError):
     """Raised when input validation fails."""
 
-    def __init__(self, message: str, suggested_fix: str = None, valid_examples: list = None):
+    def __init__(
+        self,
+        message: str,
+        suggested_fix: str | None = None,
+        valid_examples: list | None = None,
+    ):
         self.suggested_fix = suggested_fix
         self.valid_examples = valid_examples or []
 
@@ -66,8 +71,8 @@ class ToolExecutionError(TunaCodeError):
         tool_name: ToolName,
         message: ErrorMessage,
         original_error: OriginalError = None,
-        suggested_fix: str = None,
-        recovery_commands: list = None,
+        suggested_fix: str | None = None,
+        recovery_commands: list | None = None,
     ):
         self.tool_name = tool_name
         self.original_error = original_error
@@ -88,7 +93,12 @@ class ToolExecutionError(TunaCodeError):
 class AgentError(TunaCodeError):
     """Raised when agent operations fail."""
 
-    def __init__(self, message: str, suggested_fix: str = None, troubleshooting_steps: list = None):
+    def __init__(
+        self,
+        message: str,
+        suggested_fix: str | None = None,
+        troubleshooting_steps: list | None = None,
+    ):
         self.suggested_fix = suggested_fix
         self.troubleshooting_steps = troubleshooting_steps or []
 
@@ -148,7 +158,7 @@ class FileOperationError(TunaCodeError):
 class ModelConfigurationError(ConfigurationError):
     """Raised when model configuration is invalid."""
 
-    def __init__(self, model: str, issue: str, valid_models: list = None):
+    def __init__(self, model: str, issue: str, valid_models: list | None = None):
         self.model = model
         self.issue = issue
         self.valid_models = valid_models or []
@@ -167,7 +177,7 @@ class ModelConfigurationError(ConfigurationError):
 class SetupValidationError(ValidationError):
     """Raised when setup validation fails."""
 
-    def __init__(self, validation_type: str, details: str, quick_fixes: list = None):
+    def __init__(self, validation_type: str, details: str, quick_fixes: list | None = None):
         self.validation_type = validation_type
         self.details = details
         self.quick_fixes = quick_fixes or []

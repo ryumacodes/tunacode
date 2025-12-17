@@ -47,8 +47,8 @@ def load_config() -> UserConfig | None:
     except JSONDecodeError as err:
         msg = f"Invalid JSON in config file at {app_settings.paths.config_file}"
         raise ConfigurationError(msg) from err
-    except Exception as e:
-        raise ConfigurationError(e) from e
+    except Exception as err:
+        raise ConfigurationError(f"Failed to load configuration: {err}") from err
 
 
 def save_config(state_manager: "StateManager") -> bool:

@@ -85,9 +85,12 @@ async def bash(
         stdout_text = stdout.decode("utf-8", errors="replace").strip() if stdout else ""
         stderr_text = stderr.decode("utf-8", errors="replace").strip() if stderr else ""
 
-        _check_common_errors(command, process.returncode, stderr_text)
+        return_code = process.returncode
+        assert return_code is not None
 
-        return _format_output(command, process.returncode, stdout_text, stderr_text, exec_cwd)
+        _check_common_errors(command, return_code, stderr_text)
+
+        return _format_output(command, return_code, stdout_text, stderr_text, exec_cwd)
 
     except FileNotFoundError as err:
         raise ModelRetry(

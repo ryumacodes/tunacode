@@ -55,7 +55,7 @@ class Editor(Input):
             self.value = f"! {event.character}"
             self.cursor_position = len(self.value)
 
-    def action_submit(self) -> None:
+    async def action_submit(self) -> None:
         # Use full pasted content if available, otherwise use input value
         if self._was_pasted and self._pasted_content:
             text = self._pasted_content.strip()

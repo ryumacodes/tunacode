@@ -7,14 +7,10 @@ It manages server lifecycle and provides formatted diagnostic output.
 import asyncio
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-from tunacode.lsp.client import LSPClient
+from tunacode.lsp.client import Diagnostic, LSPClient
 from tunacode.lsp.diagnostics import truncate_diagnostic_message
 from tunacode.lsp.servers import get_server_command
-
-if TYPE_CHECKING:
-    from tunacode.lsp.client import Diagnostic
 
 __all__ = ["get_diagnostics", "format_diagnostics"]
 
@@ -46,7 +42,7 @@ def _resolve_workspace_root(path: Path) -> Path:
     return start_dir
 
 
-async def get_diagnostics(filepath: Path | str, timeout: float = 5.0) -> list["Diagnostic"]:
+async def get_diagnostics(filepath: Path | str, timeout: float = 5.0) -> list[Diagnostic]:
     """Get diagnostics for a file from the appropriate language server.
 
     Args:
@@ -83,7 +79,7 @@ async def get_diagnostics(filepath: Path | str, timeout: float = 5.0) -> list["D
 MAX_DIAGNOSTICS_COUNT = 10
 
 
-def format_diagnostics(diagnostics: list["Diagnostic"]) -> str:
+def format_diagnostics(diagnostics: list[Diagnostic]) -> str:
     """Format diagnostics as XML block for tool output.
 
     Args:

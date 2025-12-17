@@ -165,7 +165,7 @@ def render_update_file(
     status = Text("  ".join(status_items), style="dim") if status_items else Text("")
 
     # Zone 5: Diagnostics (if present)
-    diagnostics_content = None
+    diagnostics_content: RenderableType | None = None
     if data.diagnostics_block:
         from tunacode.ui.renderers.tools.diagnostics import (
             parse_diagnostics_block,
@@ -177,7 +177,7 @@ def render_update_file(
             diagnostics_content = render_diagnostics_inline(diag_data)
 
     # Compose
-    content_parts = [
+    content_parts: list[RenderableType] = [
         header,
         Text("\n"),
         params,
