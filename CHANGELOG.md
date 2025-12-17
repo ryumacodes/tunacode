@@ -3,6 +3,9 @@
 ### Added
 - `/update` command to check for and install updates from TUI (#182) - thanks @ryumacodes
 
+### Changed
+- Simplify concatenated JSON parsing with fail-loud error handling (#175)
+
 ## [0.1.10] - 2025-12-16
 
 ### Added
