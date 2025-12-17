@@ -62,7 +62,7 @@ from tunacode.ui.widgets import (
 )
 
 # Throttle streaming display updates to reduce visual churn
-STREAM_THROTTLE_MS: float = 200.0
+STREAM_THROTTLE_MS: float = 100.0
 
 
 class TextualReplApp(App[None]):
