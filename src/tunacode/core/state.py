@@ -62,6 +62,8 @@ class SessionState:
     react_scratchpad: dict[str, Any] = field(default_factory=lambda: {"timeline": []})
     react_forced_calls: int = 0
     react_guidance: list[str] = field(default_factory=list)
+    # CLAUDE_ANCHOR[todos]: Session todo list for task tracking
+    todos: list[dict[str, Any]] = field(default_factory=list)
     # Operation state tracking
     operation_cancelled: bool = False
     # Enhanced tracking for thoughts display
@@ -208,6 +210,19 @@ class StateManager:
     def clear_react_scratchpad(self) -> None:
         self._session.react_scratchpad = {"timeline": []}
 
+    # Todo list helpers
+    def get_todos(self) -> list[dict[str, Any]]:
+        """Return the current todo list."""
+        return self._session.todos
+
+    def set_todos(self, todos: list[dict[str, Any]]) -> None:
+        """Replace the entire todo list."""
+        self._session.todos = todos
+
+    def clear_todos(self) -> None:
+        """Clear the todo list."""
+        self._session.todos = []
+
     def reset_session(self) -> None:
         """Reset the session to a fresh state."""
         self._session = SessionState()
@@ -288,6 +303,7 @@ class StateManager:
             "tool_ignore": self._session.tool_ignore,
             "yolo": self._session.yolo,
             "react_scratchpad": self._session.react_scratchpad,
+            "todos": self._session.todos,
             "messages": self._serialize_messages(),
         }
 
@@ -341,6 +357,7 @@ class StateManager:
             self._session.tool_ignore = data.get("tool_ignore", [])
             self._session.yolo = data.get("yolo", False)
             self._session.react_scratchpad = data.get("react_scratchpad", {"timeline": []})
+            self._session.todos = data.get("todos", [])
             self._session.messages = self._deserialize_messages(data.get("messages", []))
 
             return True
