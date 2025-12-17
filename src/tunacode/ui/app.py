@@ -26,6 +26,7 @@ from tunacode.constants import (
 )
 from tunacode.core.agents.main import process_request
 from tunacode.indexing import CodeIndex
+from tunacode.indexing.constants import QUICK_INDEX_THRESHOLD
 from tunacode.types import (
     ModelName,
     StateManager,
@@ -213,7 +214,7 @@ class TextualReplApp(App[None]):
             index = CodeIndex.get_instance()
             total = index.quick_count()
 
-            if total < CodeIndex.QUICK_INDEX_THRESHOLD:
+            if total < QUICK_INDEX_THRESHOLD:
                 index.build_index()
                 return len(index._all_files), None, False
             else:
