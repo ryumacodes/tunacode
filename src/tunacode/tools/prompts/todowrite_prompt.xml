@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tool_prompt>
+    <description>
+Create or update the task list for tracking progress during complex operations.
+
+When to use:
+- Complex multi-step tasks (3+ steps)
+- User provides multiple tasks (numbered or comma-separated)
+- After receiving new instructions to capture requirements
+- When starting work on a task (mark as in_progress)
+- After completing a task (mark as completed)
+
+When NOT to use:
+- Single, straightforward tasks
+- Trivial tasks under 3 steps
+- Purely conversational or informational requests
+
+Schema:
+- content: Task description in imperative form (e.g., "Fix the bug")
+- status: "pending" | "in_progress" | "completed"
+- activeForm: Present continuous form (e.g., "Fixing the bug")
+
+Rules:
+- Only ONE task should be in_progress at a time
+- Mark tasks completed IMMEDIATELY after finishing
+- Never mark incomplete work as completed
+    </description>
+</tool_prompt>
