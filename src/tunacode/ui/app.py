@@ -5,10 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import time
-from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
 
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -21,7 +18,6 @@ from textual.containers import Container
 from textual.widgets import LoadingIndicator, RichLog, Static
 
 from tunacode.constants import (
-    MAX_CALLBACK_CONTENT,
     RICHLOG_CLASS_PAUSED,
     RICHLOG_CLASS_STREAMING,
     build_nextstep_theme,
@@ -29,7 +25,6 @@ from tunacode.constants import (
 )
 from tunacode.core.agents.main import process_request
 from tunacode.indexing import CodeIndex
-from tunacode.tools.authorization.handler import ToolHandler
 from tunacode.types import (
     ModelName,
     StateManager,
@@ -38,6 +33,15 @@ from tunacode.types import (
 )
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
+from tunacode.ui.repl_support import (
+    COLLAPSE_THRESHOLD,
+    PendingConfirmationState,
+    build_textual_tool_callback,
+    build_tool_progress_callback,
+    build_tool_result_callback,
+    build_tool_start_callback,
+    format_collapsed_message,
+)
 from tunacode.ui.styles import (
     STYLE_ERROR,
     STYLE_HEADING,
@@ -59,42 +63,6 @@ from tunacode.ui.widgets import (
 
 # Throttle streaming display updates to reduce visual churn
 STREAM_THROTTLE_MS: float = 200.0
-
-# Collapse threshold for pasted content display
-COLLAPSE_THRESHOLD = 10
-
-
-def _format_collapsed_message(text: str, style: str) -> Text:
-    """Format long pasted text with collapsed middle section.
-
-    Shows first 3 lines, collapse indicator, and last 2 lines.
-    """
-    lines = text.split("\n")
-    line_count = len(lines)
-
-    if line_count <= COLLAPSE_THRESHOLD:
-        block = Text()
-        block.append(f"│ {text}\n", style=style)
-        return block
-
-    # Show first 3 and last 2 lines with collapse indicator
-    preview = "\n│ ".join(lines[:3])
-    suffix = "\n│ ".join(lines[-2:])
-    collapsed = line_count - 5
-
-    block = Text()
-    block.append(f"│ {preview}\n", style=style)
-    block.append(f"│ [[ {collapsed} more lines ]]\n", style=f"dim {style}")
-    block.append(f"│ {suffix}\n", style=style)
-    return block
-
-
-@dataclass
-class PendingConfirmationState:
-    """Tracks pending tool confirmation state."""
-
-    future: asyncio.Future[ToolConfirmationResponse]
-    request: ToolConfirmationRequest
 
 
 class TextualReplApp(App[None]):
@@ -347,7 +315,7 @@ class TextualReplApp(App[None]):
 
         # Collapse only if pasted AND exceeds threshold
         if message.was_pasted and line_count > COLLAPSE_THRESHOLD:
-            user_block = _format_collapsed_message(message.text, STYLE_PRIMARY)
+            user_block = format_collapsed_message(message.text, STYLE_PRIMARY)
         else:
             user_block = Text()
             user_block.append(f"│ {message.text}\n", style=STYLE_PRIMARY)
@@ -543,96 +511,3 @@ class TextualReplApp(App[None]):
             self.pending_confirmation.future.set_result(response)
             self.pending_confirmation = None
             event.stop()
-
-
-async def run_textual_repl(state_manager: StateManager, show_setup: bool = False) -> None:
-    app = TextualReplApp(state_manager=state_manager, show_setup=show_setup)
-    await app.run_async()
-
-
-def build_textual_tool_callback(app: TextualReplApp, state_manager: StateManager):
-    async def _callback(part: Any, _node: Any = None) -> None:
-        tool_handler = state_manager.tool_handler or ToolHandler(state_manager)
-        state_manager.set_tool_handler(tool_handler)
-
-        if not tool_handler.should_confirm(part.tool_name):
-            return
-
-        from tunacode.exceptions import UserAbortError
-        from tunacode.utils.parsing.command_parser import parse_args
-
-        args = parse_args(part.args)
-        request = tool_handler.create_confirmation_request(part.tool_name, args)
-        response = await app.request_tool_confirmation(request)
-        if not tool_handler.process_confirmation(response, part.tool_name):
-            raise UserAbortError("User aborted tool execution")
-
-    return _callback
-
-
-FILE_EDIT_TOOLS = frozenset({"write_file", "update_file"})
-
-
-def _truncate_for_safety(content: str | None) -> str | None:
-    """Emergency truncation - prevents UI freeze on massive outputs."""
-    if content is None:
-        return None
-    if len(content) <= MAX_CALLBACK_CONTENT:
-        return content
-    return content[:MAX_CALLBACK_CONTENT] + "\n... [truncated for safety]"
-
-
-def build_tool_result_callback(app: TextualReplApp):
-    def _callback(
-        tool_name: str,
-        status: str,
-        args: dict,
-        result: str | None = None,
-        duration_ms: float | None = None,
-    ) -> None:
-        if tool_name in FILE_EDIT_TOOLS and status == "completed":
-            filepath = args.get("filepath")
-            if filepath:
-                app.status_bar.add_edited_file(filepath)
-
-        app.status_bar.update_last_action(tool_name)
-
-        # Emergency safety truncation before display processing
-        safe_result = _truncate_for_safety(result)
-
-        app.post_message(
-            ToolResultDisplay(
-                tool_name=tool_name,
-                status=status,
-                args=args,
-                result=safe_result,
-                duration_ms=duration_ms,
-            )
-        )
-
-    return _callback
-
-
-def build_tool_start_callback(app: TextualReplApp) -> Callable[[str], None]:
-    """Build callback for tool start notifications."""
-
-    def _callback(tool_name: str) -> None:
-        app.status_bar.update_running_action(tool_name)
-
-    return _callback
-
-
-def build_tool_progress_callback(app: TextualReplApp) -> Callable[[str, str, int, int], None]:
-    """Build callback for subagent tool progress notifications.
-
-    Args:
-        app: The TextualReplApp instance
-
-    Returns:
-        Callback function that updates status bar with subagent progress
-    """
-
-    def _callback(subagent: str, operation: str, current: int, total: int) -> None:
-        app.status_bar.update_subagent_progress(subagent, operation, current, total)
-
-    return _callback
