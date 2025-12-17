@@ -25,7 +25,7 @@ IGNORE_DIRS = {
     ".coverage",
     ".tox",
     ".eggs",
-    "*.egg-info",
+    ".egg-info",
     ".bundle",
     "vendor",
     ".terraform",

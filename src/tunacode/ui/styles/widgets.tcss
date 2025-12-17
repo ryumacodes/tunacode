@@ -1,42 +1,4 @@
 /* ============================================
- * TEST BAR - Simple test bar to debug text visibility
- * ============================================ */
-TestBar {
-    height: 3;
-    width: 100%;
-    background: $surface;
-    border: solid $border;
-}
-
-TestBar Static {
-    color: $text;
-    text-style: bold;
-}
-
-#test-left {
-    width: 1fr;
-    height: 3;
-    padding: 1 1;
-    text-align: left;
-}
-
-#test-mid {
-    width: 1fr;
-    height: 3;
-    text-align: center;
-    border-left: solid $primary;
-    border-right: solid $primary;
-    padding: 1 0;
-}
-
-#test-right {
-    width: 1fr;
-    height: 3;
-    text-align: right;
-    padding: 1 1;
-}
-
-/* ============================================
  * STATUS BAR - 3-column bottom status (no borders)
  * NeXTSTEP: "left=identity, center=metrics, right=state"
  * ============================================ */

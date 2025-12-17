@@ -6,8 +6,10 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from tunacode.constants import MAX_CALLBACK_CONTENT
+from tunacode.exceptions import UserAbortError
 from tunacode.tools.authorization.handler import ToolHandler
 from tunacode.ui.widgets import ToolResultDisplay
+from tunacode.utils.parsing.command_parser import parse_args
 
 if TYPE_CHECKING:
     from tunacode.types import StateManager
@@ -33,9 +35,6 @@ def build_textual_tool_callback(app: TextualReplApp, state_manager: StateManager
 
         if not tool_handler.should_confirm(part.tool_name):
             return
-
-        from tunacode.exceptions import UserAbortError
-        from tunacode.utils.parsing.command_parser import parse_args
 
         args = parse_args(part.args)
         request = tool_handler.create_confirmation_request(part.tool_name, args)
