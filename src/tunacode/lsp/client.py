@@ -36,6 +36,7 @@ class LSPClient:
     """Minimal LSP client for diagnostic feedback.
 
     Communicates with language servers via JSON-RPC over stdin/stdout.
+    Uses a single reader task to avoid concurrent stream access.
     """
 
     def __init__(self, command: list[str], root: Path):
@@ -52,6 +53,8 @@ class LSPClient:
         self._diagnostics: dict[str, list[Diagnostic]] = {}
         self._initialized = False
         self._reader_task: asyncio.Task[None] | None = None
+        self._pending_requests: dict[int, asyncio.Future[dict[str, Any] | None]] = {}
+        self._shutdown_requested = False
 
     async def start(self) -> bool:
         """Start the language server process and initialize.
@@ -71,7 +74,7 @@ class LSPClient:
             logger.debug("Failed to start LSP server %s: %s", self.command[0], e)
             return False
 
-        # Start background reader for notifications
+        # Start the single reader task
         self._reader_task = asyncio.create_task(self._read_messages())
 
         try:
@@ -123,6 +126,11 @@ class LSPClient:
         self._request_id += 1
         request_id = self._request_id
 
+        # Create a future to receive the response
+        loop = asyncio.get_event_loop()
+        future: asyncio.Future[dict[str, Any] | None] = loop.create_future()
+        self._pending_requests[request_id] = future
+
         message = {
             "jsonrpc": "2.0",
             "id": request_id,
@@ -130,18 +138,13 @@ class LSPClient:
             "params": params,
         }
 
-        await self._send(message)
-
-        # Wait for response with matching ID
-        timeout = DEFAULT_TIMEOUT
-        start = asyncio.get_event_loop().time()
-
-        while (asyncio.get_event_loop().time() - start) < timeout:
-            response = await self._receive_one(timeout=0.1)
-            if response and response.get("id") == request_id:
-                return response.get("result")
-
-        return None
+        try:
+            await self._send(message)
+            return await asyncio.wait_for(future, timeout=DEFAULT_TIMEOUT)
+        except TimeoutError:
+            return None
+        finally:
+            self._pending_requests.pop(request_id, None)
 
     async def _notify(self, method: str, params: dict[str, Any]) -> None:
         """Send a JSON-RPC notification (no response expected).
@@ -173,11 +176,33 @@ class LSPClient:
         self.process.stdin.write(data)
         await self.process.stdin.drain()
 
-    async def _receive_one(self, timeout: float = 1.0) -> dict[str, Any] | None:
-        """Receive a single JSON-RPC message.
+    async def _read_messages(self) -> None:
+        """Single reader task that processes all incoming messages."""
+        while not self._shutdown_requested:
+            if self.process is None or self.process.stdout is None:
+                break
+            if self.process.returncode is not None:
+                break
 
-        Args:
-            timeout: Maximum time to wait
+            message = await self._receive_one()
+            if message is None:
+                continue
+
+            # Check if this is a response to a pending request
+            msg_id = message.get("id")
+            if msg_id is not None and msg_id in self._pending_requests:
+                future = self._pending_requests.get(msg_id)
+                if future and not future.done():
+                    future.set_result(message.get("result"))
+                continue
+
+            # Handle notifications
+            method = message.get("method")
+            if method == "textDocument/publishDiagnostics":
+                self._handle_diagnostics(message.get("params", {}))
+
+    async def _receive_one(self) -> dict[str, Any] | None:
+        """Receive a single JSON-RPC message.
 
         Returns:
             Parsed message or None
@@ -187,9 +212,7 @@ class LSPClient:
 
         try:
             # Read Content-Length header
-            header_line = await asyncio.wait_for(
-                self.process.stdout.readline(), timeout=timeout
-            )
+            header_line = await asyncio.wait_for(self.process.stdout.readline(), timeout=0.5)
             if not header_line:
                 return None
 
@@ -204,23 +227,12 @@ class LSPClient:
 
             # Read body
             body = await asyncio.wait_for(
-                self.process.stdout.readexactly(content_length), timeout=timeout
+                self.process.stdout.readexactly(content_length), timeout=5.0
             )
             return json.loads(body.decode("utf-8"))
 
         except (TimeoutError, asyncio.IncompleteReadError, json.JSONDecodeError):
             return None
-
-    async def _read_messages(self) -> None:
-        """Background task to read and process server notifications."""
-        while self.process is not None and self.process.returncode is None:
-            message = await self._receive_one(timeout=0.5)
-            if message is None:
-                continue
-
-            method = message.get("method")
-            if method == "textDocument/publishDiagnostics":
-                self._handle_diagnostics(message.get("params", {}))
 
     def _handle_diagnostics(self, params: dict[str, Any]) -> None:
         """Handle publishDiagnostics notification.
@@ -307,6 +319,14 @@ class LSPClient:
 
     async def shutdown(self) -> None:
         """Shutdown the language server."""
+        self._shutdown_requested = True
+
+        # Cancel any pending requests
+        for future in self._pending_requests.values():
+            if not future.done():
+                future.set_result(None)
+        self._pending_requests.clear()
+
         if self._reader_task is not None:
             self._reader_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
