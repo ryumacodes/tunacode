@@ -15,8 +15,38 @@ from tunacode.ui.styles import (
 )
 
 
+def _check_lsp_status() -> tuple[bool, bool]:
+    """Check LSP configuration and server availability.
+
+    Returns:
+        Tuple of (is_enabled, has_server_available)
+    """
+    from shutil import which
+
+    from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
+
+    settings = DEFAULT_USER_CONFIG.get("settings", {})
+    lsp_config = settings.get("lsp", {})
+    is_enabled = lsp_config.get("enabled", False)
+
+    if not is_enabled:
+        return False, False
+
+    # Check if any supported language server is available
+    servers = [
+        "pyright-langserver",
+        "pylsp",
+        "typescript-language-server",
+        "gopls",
+        "rust-analyzer",
+    ]
+    has_server = any(which(s) is not None for s in servers)
+
+    return is_enabled, has_server
+
+
 class ResourceBar(Static):
-    """Top bar showing resources: tokens, model, cost."""
+    """Top bar showing resources: tokens, model, cost, LSP status."""
 
     def __init__(self) -> None:
         super().__init__("Loading...")
@@ -25,8 +55,11 @@ class ResourceBar(Static):
         self._model: str = "---"
         self._cost: float = 0.0
         self._session_cost: float = 0.0
+        self._lsp_enabled: bool = False
+        self._lsp_available: bool = False
 
     def on_mount(self) -> None:
+        self._lsp_enabled, self._lsp_available = _check_lsp_status()
         self._refresh_display()
 
     def update_stats(
@@ -74,6 +107,18 @@ class ResourceBar(Static):
             return "◔"
         return "○"
 
+    def _get_lsp_indicator(self) -> tuple[str, str]:
+        """Get LSP status indicator character and color.
+
+        Returns:
+            Tuple of (indicator_text, style)
+        """
+        if not self._lsp_enabled:
+            return "LSP off", STYLE_MUTED
+        if self._lsp_available:
+            return "LSP on", STYLE_SUCCESS
+        return "LSP no server", STYLE_WARNING
+
     def _refresh_display(self) -> None:
         sep = RESOURCE_BAR_SEPARATOR
         session_cost_str = RESOURCE_BAR_COST_FORMAT.format(cost=self._session_cost)
@@ -82,6 +127,8 @@ class ResourceBar(Static):
         circle_char = self._get_circle_char(remaining_pct)
         circle_color = self._get_circle_color(remaining_pct)
 
+        lsp_text, lsp_style = self._get_lsp_indicator()
+
         content = Text.assemble(
             (self._model, STYLE_PRIMARY),
             (sep, STYLE_MUTED),
@@ -89,5 +136,7 @@ class ResourceBar(Static):
             (f" {remaining_pct:.0f}%", circle_color),
             (sep, STYLE_MUTED),
             (session_cost_str, STYLE_SUCCESS),
+            (sep, STYLE_MUTED),
+            (lsp_text, lsp_style),
         )
         self.update(content)
