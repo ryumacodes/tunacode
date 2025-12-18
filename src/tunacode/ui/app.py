@@ -69,6 +69,7 @@ SHELL_COMMAND_TIMEOUT_SECONDS: float = 30.0
 SHELL_COMMAND_CANCEL_GRACE_SECONDS: float = 0.5
 SHELL_COMMAND_USAGE_TEXT = "Usage: !<command>"
 SHELL_OUTPUT_ENCODING = "utf-8"
+SHELL_CANCEL_SIGNAL = signal.SIGINT
 
 
 class TextualReplApp(App[None]):
@@ -477,21 +478,22 @@ class TextualReplApp(App[None]):
             return
 
         try:
-            process.send_signal(signal.SIGINT)
+            process.send_signal(SHELL_CANCEL_SIGNAL)
         except ProcessLookupError:
             self._shell_command_task.cancel()
             return
 
         self._shell_command_task.cancel()
-        asyncio.create_task(self._force_kill_shell_process(process))
 
-    async def _force_kill_shell_process(self, process: asyncio.subprocess.Process) -> None:
-        await asyncio.sleep(SHELL_COMMAND_CANCEL_GRACE_SECONDS)
+    async def _wait_or_kill_shell_process(self, process: asyncio.subprocess.Process) -> None:
         if process.returncode is not None:
             return
 
-        process.kill()
-        await process.wait()
+        try:
+            await asyncio.wait_for(process.wait(), timeout=SHELL_COMMAND_CANCEL_GRACE_SECONDS)
+        except TimeoutError:
+            process.kill()
+            await process.wait()
 
     async def _run_shell_command(self, cmd: str) -> None:
         self.status_bar.update_running_action("shell")
@@ -516,11 +518,9 @@ class TextualReplApp(App[None]):
             self.notify("Command timed out", severity="error")
             return
         except asyncio.CancelledError:
-            if process.returncode is None:
-                process.kill()
-                await process.wait()
+            await self._wait_or_kill_shell_process(process)
             self.notify("Shell command cancelled", severity="warning")
-            return
+            raise
         finally:
             self._shell_command_process = None
             self.status_bar.update_last_action("shell")
