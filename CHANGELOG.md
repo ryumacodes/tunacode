@@ -1,10 +1,23 @@
 ## [Unreleased]
 
+## [0.1.11] - 2025-12-18
+
 ### Added
 - `/update` command to check for and install updates from TUI (#182) - thanks @ryumacodes
+- TodoWrite and TodoRead tools for task tracking (#181)
+- LSP status indicator in resource bar showing server name
+- Switched Python LSP from pyright to ruff for better integration
+
+### Fixed
+- Paste buffer flow with improved user input wrapping (#188)
+- LSP diagnostics display with NeXTSTEP 4-zone layout (#186)
+- Escape key now cancels shell command input (#187)
+- Paste indicator shows inline with "..." for continued content
 
 ### Changed
 - Simplify concatenated JSON parsing with fail-loud error handling (#175)
+- Reduced streaming throttle for smoother output
+- Refactored app.py under 600 lines
 
 ## [0.1.10] - 2025-12-16
 
