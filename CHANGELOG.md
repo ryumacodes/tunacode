@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.1.12] - 2025-12-18
+
 ### Fixed
 - Prevent TUI hangs when rendering large tool confirmation diffs (e.g., `write_file` with minified content)
 
