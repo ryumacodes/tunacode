@@ -346,14 +346,12 @@ class Editor(Input):
             if self._paste_after_typed_text:
                 uses_cursor_padding_for_spacing = self.cursor_at_end and not show_suggestion
                 separator = (
-                    ""
-                    if uses_cursor_padding_for_spacing
-                    else self.PASTE_INDICATOR_SEPARATOR
+                    "" if uses_cursor_padding_for_spacing else self.PASTE_INDICATOR_SEPARATOR
                 )
-                result.append(f"{separator}{paste_summary}", style=indicator_style)
+                result.append(f"...{separator}{paste_summary}", style=indicator_style)
             else:
                 prefix = Text(
-                    f"{paste_summary}{self.PASTE_INDICATOR_SEPARATOR}",
+                    f"{paste_summary}...{self.PASTE_INDICATOR_SEPARATOR}",
                     style=indicator_style,
                     end="",
                     overflow="fold",
