@@ -15,6 +15,9 @@ class Editor(Input):
 
     value: str  # type re-declaration for mypy (inherited reactive from Input)
 
+    BASH_MODE_PREFIX = "!"
+    BASH_MODE_PREFIX_WITH_SPACE = "! "
+
     BINDINGS = [
         Binding("enter", "submit", "Submit", show=False),
     ]
@@ -45,6 +48,22 @@ class Editor(Input):
                 and not app.pending_confirmation.future.done()
             ):
                 event.prevent_default()
+                return
+
+        if event.character == self.BASH_MODE_PREFIX:
+            if self.value.startswith(self.BASH_MODE_PREFIX):
+                event.prevent_default()
+                value = self.value[len(self.BASH_MODE_PREFIX) :]
+                if value.startswith(" "):
+                    value = value[1:]
+                self.value = value
+                self.cursor_position = len(self.value)
+                return
+
+            if not self.value:
+                event.prevent_default()
+                self.value = self.BASH_MODE_PREFIX_WITH_SPACE
+                self.cursor_position = len(self.value)
                 return
 
         # Auto-insert space after ! prefix
@@ -127,9 +146,9 @@ class Editor(Input):
         if self._was_pasted:
             return
 
-        if value.startswith("!"):
+        if value.startswith(self.BASH_MODE_PREFIX):
             self.add_class("bash-mode")
 
         if status_bar := self._status_bar:
-            mode = "bash mode" if value.startswith("!") else None
+            mode = "bash mode" if value.startswith(self.BASH_MODE_PREFIX) else None
             status_bar.set_mode(mode)
