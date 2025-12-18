@@ -339,13 +339,28 @@ class Editor(Input):
                 cursor = self.cursor_position
                 result.stylize(cursor_style, cursor, cursor + 1)
 
+        cursor_index = self.cursor_position
+
         if self.has_paste_buffer and (paste_summary := self.paste_summary):
             indicator_style = self.get_component_rich_style("input--placeholder")
-            uses_cursor_padding_for_spacing = self.cursor_at_end and not show_suggestion
-            separator = "" if uses_cursor_padding_for_spacing else self.PASTE_INDICATOR_SEPARATOR
-            result.append(f"{separator}{paste_summary}", style=indicator_style)
+            if self._paste_after_typed_text:
+                uses_cursor_padding_for_spacing = self.cursor_at_end and not show_suggestion
+                separator = (
+                    ""
+                    if uses_cursor_padding_for_spacing
+                    else self.PASTE_INDICATOR_SEPARATOR
+                )
+                result.append(f"{separator}{paste_summary}", style=indicator_style)
+            else:
+                prefix = Text(
+                    f"{paste_summary}{self.PASTE_INDICATOR_SEPARATOR}",
+                    style=indicator_style,
+                    end="",
+                    overflow="fold",
+                )
+                cursor_index += len(prefix.plain)
+                result = prefix + result
 
-        cursor_index = self.cursor_position
         return result, cursor_index
 
     def _cursor_offset_in_wrapped_lines(
