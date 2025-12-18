@@ -34,13 +34,11 @@ from tunacode.types import (
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
 from tunacode.ui.repl_support import (
-    COLLAPSE_THRESHOLD,
     PendingConfirmationState,
     build_textual_tool_callback,
     build_tool_progress_callback,
     build_tool_result_callback,
     build_tool_start_callback,
-    format_collapsed_message,
     format_user_message,
 )
 from tunacode.ui.shell_runner import ShellRunner
@@ -313,16 +311,11 @@ class TextualReplApp(App[None]):
         from datetime import datetime
 
         timestamp = datetime.now().strftime("%I:%M %p").lstrip("0")
-        line_count = message.text.count("\n") + 1
 
         self.rich_log.write("")
         render_width = max(1, self.rich_log.size.width - 2)
 
-        # Collapse only if pasted AND exceeds threshold
-        if message.was_pasted and line_count > COLLAPSE_THRESHOLD:
-            user_block = format_collapsed_message(message.text, STYLE_PRIMARY, width=render_width)
-        else:
-            user_block = format_user_message(message.text, STYLE_PRIMARY, width=render_width)
+        user_block = format_user_message(message.text, STYLE_PRIMARY, width=render_width)
 
         user_block.append(f"│ you {timestamp}", style=f"dim {STYLE_PRIMARY}")
         self.rich_log.write(user_block)

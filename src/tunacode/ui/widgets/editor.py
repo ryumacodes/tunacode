@@ -33,6 +33,9 @@ class Editor(Input):
     BASH_MODE_PREFIX_WITH_SPACE = "! "
     PASTE_BUFFER_LONG_LINE_THRESHOLD: int = 400
     PASTE_BUFFER_SEPARATOR: str = "\n\n"
+    PASTE_INDICATOR_LINES_TEMPLATE: str = "[[ {line_count} lines ]]"
+    PASTE_INDICATOR_CHARS_TEMPLATE: str = "[[ {char_count} chars ]]"
+    PASTE_INDICATOR_SEPARATOR: str = " "
 
     BINDINGS = [
         Binding("enter", "submit", "Submit", show=False),
@@ -57,8 +60,10 @@ class Editor(Input):
             return None
         line_count = max(1, len(self._pasted_content.splitlines()))
         if line_count > 1:
-            return f"pasted {line_count} lines"
-        return f"pasted {len(self._pasted_content)} chars"
+            return self.PASTE_INDICATOR_LINES_TEMPLATE.format(line_count=line_count)
+
+        char_count = len(self._pasted_content)
+        return self.PASTE_INDICATOR_CHARS_TEMPLATE.format(char_count=char_count)
 
     @property
     def _status_bar(self) -> StatusBar | None:
@@ -151,8 +156,6 @@ class Editor(Input):
 
         if paste_summary := self.paste_summary:
             self.placeholder = paste_summary
-            if status_bar := self._status_bar:
-                status_bar.set_mode(paste_summary)
 
         event.stop()
 
@@ -295,6 +298,15 @@ class Editor(Input):
             if self.has_focus and self._cursor_visible:
                 if len(placeholder) == 0:
                     placeholder = Text(" ", end="", overflow="fold")
+                    placeholder.stylize(cursor_style, 0, 1)
+                    return placeholder, 0
+
+                if self.has_paste_buffer:
+                    placeholder.pad_right(1)
+                    cursor_index = len(placeholder) - 1
+                    placeholder.stylize(cursor_style, cursor_index, cursor_index + 1)
+                    return placeholder, cursor_index
+
                 placeholder.stylize(cursor_style, 0, 1)
             return placeholder, 0
 
@@ -326,6 +338,12 @@ class Editor(Input):
             if self._cursor_visible:
                 cursor = self.cursor_position
                 result.stylize(cursor_style, cursor, cursor + 1)
+
+        if self.has_paste_buffer and (paste_summary := self.paste_summary):
+            indicator_style = self.get_component_rich_style("input--placeholder")
+            uses_cursor_padding_for_spacing = self.cursor_at_end and not show_suggestion
+            separator = "" if uses_cursor_padding_for_spacing else self.PASTE_INDICATOR_SEPARATOR
+            result.append(f"{separator}{paste_summary}", style=indicator_style)
 
         cursor_index = self.cursor_position
         return result, cursor_index
