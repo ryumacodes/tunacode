@@ -15,6 +15,9 @@ class Editor(Input):
 
     value: str  # type re-declaration for mypy (inherited reactive from Input)
 
+    BASH_MODE_PREFIX = "!"
+    BASH_MODE_PREFIX_WITH_SPACE = "! "
+
     BINDINGS = [
         Binding("enter", "submit", "Submit", show=False),
     ]
@@ -47,6 +50,22 @@ class Editor(Input):
                 event.prevent_default()
                 return
 
+        if event.character == self.BASH_MODE_PREFIX:
+            if self.value.startswith(self.BASH_MODE_PREFIX):
+                event.prevent_default()
+                value = self.value[len(self.BASH_MODE_PREFIX) :]
+                if value.startswith(" "):
+                    value = value[1:]
+                self.value = value
+                self.cursor_position = len(self.value)
+                return
+
+            if not self.value:
+                event.prevent_default()
+                self.value = self.BASH_MODE_PREFIX_WITH_SPACE
+                self.cursor_position = len(self.value)
+                return
+
         # Auto-insert space after ! prefix
         # When value is "!" and user types a non-space character,
         # insert space between ! and the character
@@ -54,6 +73,14 @@ class Editor(Input):
             event.prevent_default()
             self.value = f"! {event.character}"
             self.cursor_position = len(self.value)
+
+    def clear_input(self) -> None:
+        self.value = ""
+        self._was_pasted = False
+        self._pasted_content = ""
+
+        if status_bar := self._status_bar:
+            status_bar.set_mode(None)
 
     async def action_submit(self) -> None:
         # Use full pasted content if available, otherwise use input value
@@ -119,9 +146,9 @@ class Editor(Input):
         if self._was_pasted:
             return
 
-        if value.startswith("!"):
+        if value.startswith(self.BASH_MODE_PREFIX):
             self.add_class("bash-mode")
 
         if status_bar := self._status_bar:
-            mode = "bash mode" if value.startswith("!") else None
+            mode = "bash mode" if value.startswith(self.BASH_MODE_PREFIX) else None
             status_bar.set_mode(mode)

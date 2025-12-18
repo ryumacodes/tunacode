@@ -42,6 +42,7 @@ from tunacode.ui.repl_support import (
     build_tool_start_callback,
     format_collapsed_message,
 )
+from tunacode.ui.shell_runner import ShellRunner
 from tunacode.ui.styles import (
     STYLE_ERROR,
     STYLE_HEADING,
@@ -88,6 +89,8 @@ class TextualReplApp(App[None]):
         self._current_request_task: asyncio.Task | None = None
         self._loading_indicator_shown: bool = False
         self._last_display_update: float = 0.0
+
+        self.shell_runner = ShellRunner(self)
 
         self.rich_log: RichLog
         self.editor: Editor
@@ -420,12 +423,34 @@ class TextualReplApp(App[None]):
             return
 
         # Otherwise, cancel the stream
-        if self._current_request_task is None:
+        if self._current_request_task is not None:
+            self._streaming_cancelled = True
+            self._stream_buffer.clear()
+            self.current_stream_text = ""
+            self._current_request_task.cancel()
             return
-        self._streaming_cancelled = True
-        self._stream_buffer.clear()
-        self.current_stream_text = ""
-        self._current_request_task.cancel()
+
+        if self.shell_runner.is_running():
+            self.shell_runner.cancel()
+            return
+
+        if self.editor.value:
+            self.editor.clear_input()
+            return
+
+        return
+
+    def start_shell_command(self, raw_cmd: str) -> None:
+        self.shell_runner.start(raw_cmd)
+
+    def write_shell_output(self, renderable: Text) -> None:
+        self.rich_log.write(renderable)
+
+    def shell_status_running(self) -> None:
+        self.status_bar.update_running_action("shell")
+
+    def shell_status_last(self) -> None:
+        self.status_bar.update_last_action("shell")
 
     def _update_resource_bar(self) -> None:
         session = self.state_manager.session
