@@ -7,7 +7,7 @@
 
 A TUI code agent.
 
-> **Development Status:** This project is under heavy active development. The tool is stable and the current architecture is final, serving as the foundation for future improvements. However, you may still encounter bugs. This is a personal project developed in my spare time, so your patience is appreciated.
+> **Note:** Under active development - expect bugs.
 
 
 
