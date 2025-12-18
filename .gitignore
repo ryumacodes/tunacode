@@ -32,7 +32,6 @@ venv/
 ENV/
 .env
 .deploy_venv/
-uv.lock
 
 # IDE files
 .idea/
