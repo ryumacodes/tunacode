@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import os
+import signal
+import subprocess
 import time
 from datetime import UTC, datetime
 
@@ -63,6 +65,10 @@ from tunacode.ui.widgets import (
 
 # Throttle streaming display updates to reduce visual churn
 STREAM_THROTTLE_MS: float = 100.0
+SHELL_COMMAND_TIMEOUT_SECONDS: float = 30.0
+SHELL_COMMAND_CANCEL_GRACE_SECONDS: float = 0.5
+SHELL_COMMAND_USAGE_TEXT = "Usage: !<command>"
+SHELL_OUTPUT_ENCODING = "utf-8"
 
 
 class TextualReplApp(App[None]):
@@ -88,6 +94,9 @@ class TextualReplApp(App[None]):
         self._current_request_task: asyncio.Task | None = None
         self._loading_indicator_shown: bool = False
         self._last_display_update: float = 0.0
+
+        self._shell_command_task: asyncio.Task[None] | None = None
+        self._shell_command_process: asyncio.subprocess.Process | None = None
 
         self.rich_log: RichLog
         self.editor: Editor
@@ -420,12 +429,108 @@ class TextualReplApp(App[None]):
             return
 
         # Otherwise, cancel the stream
-        if self._current_request_task is None:
+        if self._current_request_task is not None:
+            self._streaming_cancelled = True
+            self._stream_buffer.clear()
+            self.current_stream_text = ""
+            self._current_request_task.cancel()
             return
-        self._streaming_cancelled = True
-        self._stream_buffer.clear()
-        self.current_stream_text = ""
-        self._current_request_task.cancel()
+
+        if self._shell_command_task is not None and not self._shell_command_task.done():
+            self._cancel_shell_command()
+            return
+
+        if self.editor.value:
+            self.editor.clear_input()
+            return
+
+        return
+
+    def start_shell_command(self, raw_cmd: str) -> None:
+        cmd = raw_cmd.strip()
+        if not cmd:
+            self.notify(SHELL_COMMAND_USAGE_TEXT, severity="warning")
+            return
+
+        if self._shell_command_task is not None and not self._shell_command_task.done():
+            self.notify("Shell command already running (Esc to cancel)", severity="warning")
+            return
+
+        self._shell_command_task = asyncio.create_task(self._run_shell_command(cmd))
+        self._shell_command_task.add_done_callback(self._on_shell_command_done)
+
+    def _on_shell_command_done(self, task: asyncio.Task[None]) -> None:
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            return
+        except Exception as exc:
+            self.rich_log.write(Text(f"Shell error: {exc}", style=STYLE_ERROR))
+
+    def _cancel_shell_command(self) -> None:
+        if self._shell_command_task is None or self._shell_command_task.done():
+            return
+
+        process = self._shell_command_process
+        if process is None:
+            self._shell_command_task.cancel()
+            return
+
+        try:
+            process.send_signal(signal.SIGINT)
+        except ProcessLookupError:
+            self._shell_command_task.cancel()
+            return
+
+        self._shell_command_task.cancel()
+        asyncio.create_task(self._force_kill_shell_process(process))
+
+    async def _force_kill_shell_process(self, process: asyncio.subprocess.Process) -> None:
+        await asyncio.sleep(SHELL_COMMAND_CANCEL_GRACE_SECONDS)
+        if process.returncode is not None:
+            return
+
+        process.kill()
+        await process.wait()
+
+    async def _run_shell_command(self, cmd: str) -> None:
+        self.status_bar.update_running_action("shell")
+        self.notify(f"Running: {cmd}")
+
+        process = await asyncio.create_subprocess_shell(
+            cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+        )
+        self._shell_command_process = process
+
+        try:
+            stdout, _ = await asyncio.wait_for(
+                process.communicate(),
+                timeout=SHELL_COMMAND_TIMEOUT_SECONDS,
+            )
+        except TimeoutError:
+            process.kill()
+            await process.wait()
+            self.notify("Command timed out", severity="error")
+            return
+        except asyncio.CancelledError:
+            if process.returncode is None:
+                process.kill()
+                await process.wait()
+            self.notify("Shell command cancelled", severity="warning")
+            return
+        finally:
+            self._shell_command_process = None
+            self.status_bar.update_last_action("shell")
+
+        output = (stdout or b"").decode(SHELL_OUTPUT_ENCODING, errors="replace").rstrip()
+        if output:
+            self.rich_log.write(Text(output))
+
+        if process.returncode is not None and process.returncode != 0:
+            self.notify(f"Exit code: {process.returncode}", severity="warning")
 
     def _update_resource_bar(self) -> None:
         session = self.state_manager.session

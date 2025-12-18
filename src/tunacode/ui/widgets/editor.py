@@ -55,6 +55,14 @@ class Editor(Input):
             self.value = f"! {event.character}"
             self.cursor_position = len(self.value)
 
+    def clear_input(self) -> None:
+        self.value = ""
+        self._was_pasted = False
+        self._pasted_content = ""
+
+        if status_bar := self._status_bar:
+            status_bar.set_mode(None)
+
     async def action_submit(self) -> None:
         # Use full pasted content if available, otherwise use input value
         if self._was_pasted and self._pasted_content:

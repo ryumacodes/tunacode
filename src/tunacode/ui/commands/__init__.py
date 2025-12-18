@@ -407,7 +407,7 @@ async def handle_command(app: TextualReplApp, text: str) -> bool:
     Returns True if command was handled, False otherwise.
     """
     if text.startswith("!"):
-        await run_shell_command(app, text[1:])
+        app.start_shell_command(text[1:])
         return True
 
     if text.startswith("/"):
@@ -427,32 +427,3 @@ async def handle_command(app: TextualReplApp, text: str) -> bool:
         return True
 
     return False
-
-
-async def run_shell_command(app: TextualReplApp, cmd: str) -> None:
-    """Run a shell command and display output."""
-    import asyncio
-    import subprocess
-
-    if not cmd.strip():
-        app.notify("Usage: !<command>", severity="warning")
-        return
-
-    try:
-        result = await asyncio.to_thread(
-            subprocess.run,
-            cmd,
-            shell=True,  # noqa: S602 - intentional shell command from user
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        output = result.stdout or result.stderr
-        if output:
-            app.rich_log.write(output.rstrip())
-        if result.returncode != 0:
-            app.notify(f"Exit code: {result.returncode}", severity="warning")
-    except subprocess.TimeoutExpired:
-        app.notify("Command timed out", severity="error")
-    except Exception as e:
-        app.rich_log.write(f"Error: {e}")
