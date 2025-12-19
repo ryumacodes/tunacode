@@ -1,5 +1,24 @@
 ## [Unreleased]
 
+## [0.1.16] - 2025-12-19
+
+### Added
+- Minimum viewport padding to tool panels for better readability (#192) - thanks @larock22
+- Standardized tool panel viewport sizing across all renderers (#190)
+
+### Fixed
+- Eliminate UI freezes during update_file operations
+- LSP diagnostics truncation and hardened diff rendering (#191)
+- Tool return arg hydration issue (#189)
+
+### Changed
+- Remove inline comments from LSP module for cleaner code
+
+### Contributors
+Thanks to our community contributors for this release:
+- @larock22 - viewport padding improvements and subagent loading states
+- @ryumacodes - update command implementation
+
 ## [0.1.12] - 2025-12-18
 
 ### Fixed
