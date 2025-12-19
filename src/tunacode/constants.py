@@ -32,6 +32,10 @@ MAX_PANEL_LINES = 30  # Focus zone limit for tool results
 MAX_PANEL_LINE_WIDTH = 200  # Individual line truncation
 MAX_SEARCH_RESULTS_DISPLAY = 20  # Search results shown before "+N more"
 
+# Tool panel viewport sizing (standardized across all renderers)
+LINES_RESERVED_FOR_HEADER_FOOTER = 4  # Header, params, separators, status
+TOOL_VIEWPORT_LINES = MAX_PANEL_LINES - LINES_RESERVED_FOR_HEADER_FOOTER  # 26 lines
+
 # File autocomplete settings
 AUTOCOMPLETE_MAX_DEPTH = 3  # Levels deep from current prefix (sliding window)
 AUTOCOMPLETE_RESULT_LIMIT = 50
