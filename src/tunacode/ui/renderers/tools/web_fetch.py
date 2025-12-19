@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINE_WIDTH, MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import MAX_PANEL_LINE_WIDTH, TOOL_VIEWPORT_LINES, UI_COLORS
 
 BOX_HORIZONTAL = "\u2500"
 SEPARATOR_WIDTH = 52
@@ -78,7 +78,7 @@ def _truncate_content(content: str) -> tuple[str, int, int]:
     lines = content.splitlines()
     total = len(lines)
 
-    max_lines = MAX_PANEL_LINES - 4  # Reserve space for header/footer
+    max_lines = TOOL_VIEWPORT_LINES
 
     if total <= max_lines:
         return "\n".join(_truncate_line(ln) for ln in lines), total, total

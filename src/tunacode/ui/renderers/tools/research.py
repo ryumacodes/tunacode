@@ -13,7 +13,11 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINE_WIDTH, MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import (
+    MAX_PANEL_LINE_WIDTH,
+    TOOL_VIEWPORT_LINES,
+    UI_COLORS,
+)
 
 BOX_HORIZONTAL = "\u2500"
 SEPARATOR_WIDTH = 52
@@ -24,7 +28,6 @@ DEFAULT_MAX_FILES = 3
 ELLIPSIS_LENGTH = 3
 MAX_QUERY_DISPLAY_LENGTH = 60
 MAX_DIRECTORIES_DISPLAY = 3
-LINES_RESERVED_FOR_HEADER_FOOTER = 4
 MIN_LINES_FOR_RECOMMENDATIONS = 2
 MAX_FALLBACK_RESULT_LENGTH = 500
 
@@ -164,7 +167,7 @@ def render_research_codebase(
     # Zone 3: Primary viewport
     viewport_lines: list[Text] = []
     lines_used = 0
-    max_viewport_lines = MAX_PANEL_LINES - LINES_RESERVED_FOR_HEADER_FOOTER
+    max_viewport_lines = TOOL_VIEWPORT_LINES
 
     # Error state
     if data.is_error:
