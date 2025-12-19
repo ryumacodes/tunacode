@@ -14,7 +14,7 @@ from rich.style import Style
 from rich.syntax import Syntax
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import TOOL_VIEWPORT_LINES, UI_COLORS
 
 BOX_HORIZONTAL = "\u2500"
 SEPARATOR_WIDTH = 52
@@ -104,8 +104,7 @@ def _truncate_diff(diff: str) -> tuple[str, int, int]:
     lines = diff.splitlines()
     total = len(lines)
 
-    # Reserve 4 lines for header (---, +++, @@)
-    max_content = MAX_PANEL_LINES - 4
+    max_content = TOOL_VIEWPORT_LINES
 
     if total <= max_content:
         return diff, total, total

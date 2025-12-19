@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINE_WIDTH, MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import MAX_PANEL_LINE_WIDTH, TOOL_VIEWPORT_LINES, UI_COLORS
 
 DEFAULT_IGNORE_COUNT = 38
 BOX_HORIZONTAL = "─"
@@ -88,7 +88,7 @@ def parse_result(args: dict[str, Any] | None, result: str) -> ListDirData | None
 def _truncate_line(line: str) -> str:
     """Truncate a single line if too wide."""
     if len(line) > MAX_PANEL_LINE_WIDTH:
-        return line[:MAX_PANEL_LINE_WIDTH] + "..."
+        return line[: MAX_PANEL_LINE_WIDTH - 3] + "..."
     return line
 
 
@@ -97,11 +97,11 @@ def _truncate_tree(content: str) -> tuple[str, int, int]:
     lines = content.splitlines()
     total = len(lines)
 
-    if total <= MAX_PANEL_LINES:
+    if total <= TOOL_VIEWPORT_LINES:
         return "\n".join(_truncate_line(ln) for ln in lines), total, total
 
-    truncated = [_truncate_line(ln) for ln in lines[:MAX_PANEL_LINES]]
-    return "\n".join(truncated), MAX_PANEL_LINES, total
+    truncated = [_truncate_line(ln) for ln in lines[:TOOL_VIEWPORT_LINES]]
+    return "\n".join(truncated), TOOL_VIEWPORT_LINES, total
 
 
 def render_list_dir(

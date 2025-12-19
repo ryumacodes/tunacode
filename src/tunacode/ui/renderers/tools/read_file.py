@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINE_WIDTH, MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import MAX_PANEL_LINE_WIDTH, TOOL_VIEWPORT_LINES, UI_COLORS
 
 BOX_HORIZONTAL = "\u2500"
 SEPARATOR_WIDTH = 52
@@ -160,7 +160,7 @@ def render_read_file(
 
     # Zone 3: Content viewport
     viewport_lines: list[str] = []
-    max_display = MAX_PANEL_LINES - 2
+    max_display = TOOL_VIEWPORT_LINES
 
     for i, (line_num, line_content) in enumerate(data.content_lines):
         if i >= max_display:
