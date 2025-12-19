@@ -231,5 +231,5 @@ def render_update_file(
         subtitle=f"[{UI_COLORS['muted']}]{timestamp}[/]",
         border_style=Style(color=UI_COLORS["success"]),
         padding=(0, 1),
-        expand=False,
+        expand=True,
     )

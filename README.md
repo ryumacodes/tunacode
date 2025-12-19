@@ -90,6 +90,21 @@ Config file location: `~/.config/tunacode.json`
 | !<cmd>   | Run shell command            |
 | exit     | Quit tunacode                |
 
+## LSP Integration (Beta)
+
+TunaCode includes experimental Language Server Protocol support for real-time diagnostics. When an LSP server is detected in your PATH, it activates automatically.
+
+**Supported languages:**
+| Language   | LSP Server                    |
+| ---------- | ----------------------------- |
+| Python     | `ruff server`                 |
+| TypeScript | `typescript-language-server`  |
+| JavaScript | `typescript-language-server`  |
+| Go         | `gopls`                       |
+| Rust       | `rust-analyzer`               |
+
+Diagnostics appear in the UI when editing files. This feature is beta - expect rough edges.
+
 ## License
 
 MIT

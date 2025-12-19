@@ -151,7 +151,7 @@ class RichPanelRenderer:
             subtitle=subtitle,
             border_style=Style(color=styles["border"]),
             padding=(0, 1),
-            expand=False,
+            expand=True,
         )
 
     @staticmethod
@@ -202,7 +202,7 @@ class RichPanelRenderer:
             subtitle=subtitle,
             border_style=Style(color=styles["border"]),
             padding=(0, 1),
-            expand=False,
+            expand=True,
         )
 
     @staticmethod
