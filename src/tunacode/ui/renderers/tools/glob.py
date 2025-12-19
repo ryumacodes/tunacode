@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINE_WIDTH, MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import MAX_PANEL_LINE_WIDTH, TOOL_VIEWPORT_LINES, UI_COLORS
 
 BOX_HORIZONTAL = "\u2500"
 SEPARATOR_WIDTH = 52
@@ -159,7 +159,7 @@ def render_glob(
 
     # Zone 3: File list viewport
     viewport_lines: list[str] = []
-    max_display = MAX_PANEL_LINES - 2
+    max_display = TOOL_VIEWPORT_LINES
 
     for i, filepath in enumerate(data.files):
         if i >= max_display:
@@ -203,8 +203,7 @@ def render_glob(
 
     timestamp = datetime.now().strftime("%H:%M:%S")
 
-    # Use accent color for index hits, muted for filesystem scans
-    border_color = UI_COLORS["success"] if data.source == "index" else UI_COLORS["success"]
+    border_color = UI_COLORS["success"]
 
     return Panel(
         content,

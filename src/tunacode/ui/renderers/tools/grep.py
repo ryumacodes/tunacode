@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINE_WIDTH, MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import MAX_PANEL_LINE_WIDTH, TOOL_VIEWPORT_LINES, UI_COLORS
 
 BOX_HORIZONTAL = "\u2500"
 SEPARATOR_WIDTH = 52
@@ -162,7 +162,7 @@ def render_grep(
     shown_matches = 0
 
     for match in data.matches:
-        if shown_matches >= MAX_PANEL_LINES - 2:
+        if shown_matches >= TOOL_VIEWPORT_LINES:
             break
 
         if match["file"] != current_file:
