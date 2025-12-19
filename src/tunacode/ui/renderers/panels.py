@@ -18,6 +18,7 @@ from tunacode.constants import (
     MAX_PANEL_LINE_WIDTH,
     MAX_PANEL_LINES,
     MAX_SEARCH_RESULTS_DISPLAY,
+    TOOL_PANEL_WIDTH,
     UI_COLORS,
 )
 
@@ -151,7 +152,8 @@ class RichPanelRenderer:
             subtitle=subtitle,
             border_style=Style(color=styles["border"]),
             padding=(0, 1),
-            expand=True,
+            expand=False,
+            width=TOOL_PANEL_WIDTH,
         )
 
     @staticmethod
@@ -202,7 +204,8 @@ class RichPanelRenderer:
             subtitle=subtitle,
             border_style=Style(color=styles["border"]),
             padding=(0, 1),
-            expand=True,
+            expand=False,
+            width=TOOL_PANEL_WIDTH,
         )
 
     @staticmethod

@@ -15,6 +15,7 @@ from rich.text import Text
 from tunacode.constants import (
     MAX_PANEL_LINE_WIDTH,
     MIN_VIEWPORT_LINES,
+    TOOL_PANEL_WIDTH,
     TOOL_VIEWPORT_LINES,
     UI_COLORS,
 )
@@ -222,5 +223,6 @@ def render_grep(
         subtitle=f"[{UI_COLORS['muted']}]{timestamp}[/]",
         border_style=Style(color=UI_COLORS["success"]),
         padding=(0, 1),
-        expand=True,
+        expand=False,
+        width=TOOL_PANEL_WIDTH,
     )

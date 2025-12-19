@@ -36,6 +36,7 @@ MAX_SEARCH_RESULTS_DISPLAY = 20  # Search results shown before "+N more"
 LINES_RESERVED_FOR_HEADER_FOOTER = 4  # Header, params, separators, status
 TOOL_VIEWPORT_LINES = 10  # Fixed viewport height for uniform panels
 MIN_VIEWPORT_LINES = TOOL_VIEWPORT_LINES  # Min equals max for consistency
+TOOL_PANEL_WIDTH = 100  # Fixed width for uniform panels
 
 # File autocomplete settings
 AUTOCOMPLETE_MAX_DEPTH = 3  # Levels deep from current prefix (sliding window)
