@@ -13,6 +13,7 @@ from rich.style import Style
 from rich.text import Text
 
 from tunacode.constants import (
+    DEFAULT_IGNORE_PATTERNS_COUNT,
     MAX_PANEL_LINE_WIDTH,
     MIN_VIEWPORT_LINES,
     TOOL_PANEL_WIDTH,
@@ -20,7 +21,6 @@ from tunacode.constants import (
     UI_COLORS,
 )
 
-DEFAULT_IGNORE_COUNT = 38
 BOX_HORIZONTAL = "─"
 SEPARATOR_WIDTH = 52
 
@@ -77,7 +77,11 @@ def parse_result(args: dict[str, Any] | None, result: str) -> ListDirData | None
     max_files = args.get("max_files", 100)
     show_hidden = args.get("show_hidden", False)
     ignore_list = args.get("ignore", [])
-    ignore_count = DEFAULT_IGNORE_COUNT + len(ignore_list) if ignore_list else DEFAULT_IGNORE_COUNT
+    ignore_count = (
+        DEFAULT_IGNORE_PATTERNS_COUNT + len(ignore_list)
+        if ignore_list
+        else DEFAULT_IGNORE_PATTERNS_COUNT
+    )
 
     return ListDirData(
         directory=directory,
