@@ -13,7 +13,7 @@ From CLAUDE.md:
 
 Every tool panel MUST follow this standardized architecture:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  ZONE 1 (HEADER)                                                 │
 │  tool_name [status]                                              │ ← tool name + status badge
