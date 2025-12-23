@@ -18,6 +18,7 @@ from tunacode.constants import (
     TOOL_PANEL_WIDTH,
     TOOL_VIEWPORT_LINES,
     UI_COLORS,
+    URL_DISPLAY_MAX_LENGTH,
 )
 
 BOX_HORIZONTAL = "\u2500"
@@ -118,8 +119,8 @@ def render_web_fetch(
     # Zone 2: Full URL + parameters
     params = Text()
     url_display = data.url
-    if len(url_display) > 70:
-        url_display = url_display[:67] + "..."
+    if len(url_display) > URL_DISPLAY_MAX_LENGTH:
+        url_display = url_display[: URL_DISPLAY_MAX_LENGTH - 3] + "..."
     params.append("url:", style="dim")
     params.append(f" {url_display}", style="dim bold")
     params.append("\n", style="")
