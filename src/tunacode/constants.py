@@ -36,7 +36,7 @@ MAX_SEARCH_RESULTS_DISPLAY = 20  # Search results shown before "+N more"
 LINES_RESERVED_FOR_HEADER_FOOTER = 4  # Header, params, separators, status
 TOOL_VIEWPORT_LINES = MAX_PANEL_LINES - LINES_RESERVED_FOR_HEADER_FOOTER  # 26
 MIN_VIEWPORT_LINES = 5  # Moderate minimum - reduces padding while keeping some consistency
-TOOL_PANEL_WIDTH = 100  # Fixed width for uniform panels
+TOOL_PANEL_WIDTH = 80
 URL_DISPLAY_MAX_LENGTH = 70
 
 # File autocomplete settings
