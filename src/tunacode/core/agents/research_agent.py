@@ -20,7 +20,7 @@ from tunacode.tools.glob import glob
 from tunacode.tools.grep import grep
 from tunacode.tools.list_dir import list_dir
 from tunacode.tools.read_file import read_file
-from tunacode.types import ModelName, ToolProgressCallback
+from tunacode.types import ModelName, ToolProgress, ToolProgressCallback
 
 # Maximum wait time in seconds for retry backoff
 MAX_RETRY_WAIT_SECONDS = 60
@@ -113,12 +113,13 @@ class ProgressTracker:
         """Emit progress event for current operation."""
         self.operation_count += 1
         if self.callback:
-            self.callback(
-                self.subagent_name,
-                operation,
-                self.operation_count,
-                self.total_operations,
+            progress = ToolProgress(
+                subagent=self.subagent_name,
+                operation=operation,
+                current=self.operation_count,
+                total=self.total_operations,
             )
+            self.callback(progress)
 
     def wrap_tool(self, tool_func, tool_name: str):
         """Wrap a tool function to emit progress before execution."""
