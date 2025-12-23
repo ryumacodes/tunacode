@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import UI_COLORS
+from tunacode.constants import TOOL_PANEL_WIDTH, UI_COLORS
 from tunacode.ui.renderers.panels import RichPanelRenderer, SearchResultData
 
 T = TypeVar("T")
@@ -171,7 +171,8 @@ class SearchDisplayRenderer:
             title=f"[{UI_COLORS['warning']}]No Results[/]",
             border_style=Style(color=UI_COLORS["warning"]),
             padding=(0, 1),
-            expand=False,
+            expand=True,
+            width=TOOL_PANEL_WIDTH,
         )
 
     @staticmethod

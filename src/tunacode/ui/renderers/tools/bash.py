@@ -242,6 +242,6 @@ def render_bash(
         subtitle=f"[{UI_COLORS['muted']}]{timestamp}[/]",
         border_style=Style(color=border_color),
         padding=(0, 1),
-        expand=False,
+        expand=True,
         width=TOOL_PANEL_WIDTH,
     )

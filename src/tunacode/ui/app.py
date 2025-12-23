@@ -20,6 +20,7 @@ from textual.widgets import LoadingIndicator, RichLog, Static
 from tunacode.constants import (
     RICHLOG_CLASS_PAUSED,
     RICHLOG_CLASS_STREAMING,
+    TOOL_PANEL_WIDTH,
     build_nextstep_theme,
     build_tunacode_theme,
 )
@@ -506,7 +507,8 @@ class TextualReplApp(App[None]):
             Group(*content_parts),
             border_style=STYLE_PRIMARY,
             padding=(0, 1),
-            expand=False,
+            expand=True,
+            width=TOOL_PANEL_WIDTH,
         )
         self.rich_log.write(panel)
 
