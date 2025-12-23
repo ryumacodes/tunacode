@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from tunacode.types import ToolConfirmationResponse, ToolName
 
 if TYPE_CHECKING:
-    from tunacode.core.state import StateManager
+    from tunacode.types import StateManager
 
 
 class ToolRejectionNotifier:
