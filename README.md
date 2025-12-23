@@ -4,10 +4,11 @@
 [![Downloads](https://pepy.tech/badge/tunacode-cli)](https://pepy.tech/project/tunacode-cli)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Discord Shield](https://discord.com/api/guilds/1447688577126367346/widget.png?style=shield)](https://discord.gg/TN7Fpynv6H)
 
 A TUI code agent.
 
-> **Development Status:** This project is under heavy active development. The tool is stable and the current architecture is final, serving as the foundation for future improvements. However, you may still encounter bugs. This is a personal project developed in my spare time, so your patience is appreciated.
+> **Note:** Under active development - expect bugs.
 
 
 
@@ -89,6 +90,27 @@ Config file location: `~/.config/tunacode.json`
 | /resume  | Load/delete saved sessions   |
 | !<cmd>   | Run shell command            |
 | exit     | Quit tunacode                |
+
+## LSP Integration (Beta)
+
+TunaCode includes experimental Language Server Protocol support for real-time diagnostics. When an LSP server is detected in your PATH, it activates automatically.
+
+**Supported languages:**
+| Language   | LSP Server                    |
+| ---------- | ----------------------------- |
+| Python     | `ruff server`                 |
+| TypeScript | `typescript-language-server`  |
+| JavaScript | `typescript-language-server`  |
+| Go         | `gopls`                       |
+| Rust       | `rust-analyzer`               |
+
+Diagnostics appear in the UI when editing files. This feature is beta - expect rough edges.
+
+## Discord Server
+
+Join our official discord server to receive help, show us how you're using tunacode, and chat about anything LLM.
+
+[<img src="https://discord.com/api/guilds/1447688577126367346/widget.png?style=banner3" alt="Discord Banner 3"/>](https://discord.gg/TN7Fpynv6H)
 
 ## License
 

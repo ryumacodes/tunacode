@@ -12,13 +12,13 @@ SERVER_CONFIG: dict[str, tuple[str, list[list[str]]]] = {
     ".py": (
         "python",
         [
-            ["ruff", "server", "--stdio"],
+            ["ruff", "server"],
         ],
     ),
     ".pyi": (
         "python",
         [
-            ["ruff", "server", "--stdio"],
+            ["ruff", "server"],
         ],
     ),
     ".ts": (

@@ -12,7 +12,14 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINE_WIDTH, MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import (
+    MAX_PANEL_LINE_WIDTH,
+    MIN_VIEWPORT_LINES,
+    TOOL_PANEL_WIDTH,
+    TOOL_VIEWPORT_LINES,
+    UI_COLORS,
+    URL_DISPLAY_MAX_LENGTH,
+)
 
 BOX_HORIZONTAL = "\u2500"
 SEPARATOR_WIDTH = 52
@@ -78,7 +85,7 @@ def _truncate_content(content: str) -> tuple[str, int, int]:
     lines = content.splitlines()
     total = len(lines)
 
-    max_lines = MAX_PANEL_LINES - 4  # Reserve space for header/footer
+    max_lines = TOOL_VIEWPORT_LINES
 
     if total <= max_lines:
         return "\n".join(_truncate_line(ln) for ln in lines), total, total
@@ -112,8 +119,8 @@ def render_web_fetch(
     # Zone 2: Full URL + parameters
     params = Text()
     url_display = data.url
-    if len(url_display) > 70:
-        url_display = url_display[:67] + "..."
+    if len(url_display) > URL_DISPLAY_MAX_LENGTH:
+        url_display = url_display[: URL_DISPLAY_MAX_LENGTH - 3] + "..."
     params.append("url:", style="dim")
     params.append(f" {url_display}", style="dim bold")
     params.append("\n", style="")
@@ -124,6 +131,13 @@ def render_web_fetch(
 
     # Zone 3: Content viewport
     truncated_content, shown, total = _truncate_content(data.content)
+
+    # Pad viewport to minimum height for visual consistency
+    content_lines = truncated_content.split("\n")
+    while len(content_lines) < MIN_VIEWPORT_LINES:
+        content_lines.append("")
+    truncated_content = "\n".join(content_lines)
+
     viewport = Text(truncated_content)
 
     # Zone 4: Status
@@ -163,5 +177,6 @@ def render_web_fetch(
         subtitle=f"[{UI_COLORS['muted']}]{timestamp}[/]",
         border_style=Style(color=UI_COLORS["success"]),
         padding=(0, 1),
-        expand=False,
+        expand=True,
+        width=TOOL_PANEL_WIDTH,
     )

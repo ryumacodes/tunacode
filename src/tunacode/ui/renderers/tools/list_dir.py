@@ -12,9 +12,15 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINE_WIDTH, MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import (
+    MAX_PANEL_LINE_WIDTH,
+    MIN_VIEWPORT_LINES,
+    TOOL_PANEL_WIDTH,
+    TOOL_VIEWPORT_LINES,
+    UI_COLORS,
+)
+from tunacode.tools.list_dir import IGNORE_PATTERNS_COUNT
 
-DEFAULT_IGNORE_COUNT = 38
 BOX_HORIZONTAL = "─"
 SEPARATOR_WIDTH = 52
 
@@ -71,7 +77,11 @@ def parse_result(args: dict[str, Any] | None, result: str) -> ListDirData | None
     max_files = args.get("max_files", 100)
     show_hidden = args.get("show_hidden", False)
     ignore_list = args.get("ignore", [])
-    ignore_count = DEFAULT_IGNORE_COUNT + len(ignore_list) if ignore_list else DEFAULT_IGNORE_COUNT
+    ignore_count = (
+        IGNORE_PATTERNS_COUNT + len(ignore_list)
+        if ignore_list
+        else IGNORE_PATTERNS_COUNT
+    )
 
     return ListDirData(
         directory=directory,
@@ -88,7 +98,7 @@ def parse_result(args: dict[str, Any] | None, result: str) -> ListDirData | None
 def _truncate_line(line: str) -> str:
     """Truncate a single line if too wide."""
     if len(line) > MAX_PANEL_LINE_WIDTH:
-        return line[:MAX_PANEL_LINE_WIDTH] + "..."
+        return line[: MAX_PANEL_LINE_WIDTH - 3] + "..."
     return line
 
 
@@ -97,11 +107,11 @@ def _truncate_tree(content: str) -> tuple[str, int, int]:
     lines = content.splitlines()
     total = len(lines)
 
-    if total <= MAX_PANEL_LINES:
+    if total <= TOOL_VIEWPORT_LINES:
         return "\n".join(_truncate_line(ln) for ln in lines), total, total
 
-    truncated = [_truncate_line(ln) for ln in lines[:MAX_PANEL_LINES]]
-    return "\n".join(truncated), MAX_PANEL_LINES, total
+    truncated = [_truncate_line(ln) for ln in lines[:TOOL_VIEWPORT_LINES]]
+    return "\n".join(truncated), TOOL_VIEWPORT_LINES, total
 
 
 def render_list_dir(
@@ -142,6 +152,13 @@ def render_list_dir(
     tree_lines = data.tree_content.splitlines()[1:]  # skip dirname, already in header
     tree_only = "\n".join(tree_lines) if tree_lines else "(empty)"
     truncated_tree, shown, total = _truncate_tree(tree_only)
+
+    # Pad viewport to minimum height for visual consistency
+    tree_line_list = truncated_tree.split("\n")
+    while len(tree_line_list) < MIN_VIEWPORT_LINES:
+        tree_line_list.append("")
+    truncated_tree = "\n".join(tree_line_list)
+
     viewport = Text(truncated_tree)
 
     # Zone 4: Status
@@ -178,5 +195,6 @@ def render_list_dir(
         subtitle=f"[{UI_COLORS['muted']}]{timestamp}[/]",
         border_style=Style(color=UI_COLORS["success"]),
         padding=(0, 1),
-        expand=False,
+        expand=True,
+        width=TOOL_PANEL_WIDTH,
     )

@@ -11,7 +11,7 @@ KB = 1024
 MB = KB * 1024
 
 APP_NAME = "TunaCode"
-APP_VERSION = "0.1.10"
+APP_VERSION = "0.1.18"
 
 
 GUIDE_FILE_NAME = "AGENTS.md"
@@ -30,6 +30,13 @@ MAX_CALLBACK_CONTENT = 50_000
 MAX_PANEL_LINES = 30
 MAX_PANEL_LINE_WIDTH = 200
 MAX_SEARCH_RESULTS_DISPLAY = 20
+
+# Tool panel viewport sizing (standardized across all renderers)
+LINES_RESERVED_FOR_HEADER_FOOTER = 4
+TOOL_VIEWPORT_LINES = MAX_PANEL_LINES - LINES_RESERVED_FOR_HEADER_FOOTER
+MIN_VIEWPORT_LINES = 5
+TOOL_PANEL_WIDTH = 80
+URL_DISPLAY_MAX_LENGTH = 70
 
 AUTOCOMPLETE_MAX_DEPTH = 3
 AUTOCOMPLETE_RESULT_LIMIT = 50
@@ -148,6 +155,9 @@ ERROR_COMMAND_NOT_FOUND = "Error: Command not found or failed to execute:"
 ERROR_COMMAND_EXECUTION = (
     "Error: Command not found or failed to execute: {command}. Details: {error}"
 )
+ERROR_TOOL_CALL_ID_MISSING = "Tool return missing tool_call_id."
+ERROR_TOOL_ARGS_MISSING = "Tool args missing for tool_call_id '{tool_call_id}'."
+
 ERROR_DIR_TOO_LARGE = (
     "Error: Directory '{path}' expansion aborted. Total size exceeds {limit_mb:.1f} MB limit."
 )

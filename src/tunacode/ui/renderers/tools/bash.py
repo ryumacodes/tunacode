@@ -12,7 +12,13 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINE_WIDTH, MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import (
+    MAX_PANEL_LINE_WIDTH,
+    MIN_VIEWPORT_LINES,
+    TOOL_PANEL_WIDTH,
+    TOOL_VIEWPORT_LINES,
+    UI_COLORS,
+)
 
 BOX_HORIZONTAL = "\u2500"
 SEPARATOR_WIDTH = 52
@@ -100,7 +106,7 @@ def _truncate_output(output: str) -> tuple[str, int, int]:
     lines = output.splitlines()
     total = len(lines)
 
-    max_lines = MAX_PANEL_LINES - 6  # Reserve space for header/footer
+    max_lines = TOOL_VIEWPORT_LINES
 
     if total <= max_lines:
         return "\n".join(_truncate_line(ln) for ln in lines), total, total
@@ -176,6 +182,14 @@ def render_bash(
     if not viewport_parts:
         viewport_parts.append(Text("(no output)", style="dim"))
 
+    # Pad viewport to minimum height for visual consistency
+    viewport_line_count = sum(
+        1 + str(part).count("\n") for part in viewport_parts if isinstance(part, Text)
+    )
+    while viewport_line_count < MIN_VIEWPORT_LINES:
+        viewport_parts.append(Text(""))
+        viewport_line_count += 1
+
     viewport = Group(*viewport_parts)
 
     # Zone 4: Status
@@ -228,5 +242,6 @@ def render_bash(
         subtitle=f"[{UI_COLORS['muted']}]{timestamp}[/]",
         border_style=Style(color=border_color),
         padding=(0, 1),
-        expand=False,
+        expand=True,
+        width=TOOL_PANEL_WIDTH,
     )

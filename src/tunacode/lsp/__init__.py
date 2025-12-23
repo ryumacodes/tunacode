@@ -16,7 +16,7 @@ __all__ = ["get_diagnostics", "format_diagnostics"]
 
 logger = logging.getLogger(__name__)
 
-# Cache of active LSP clients by server command
+
 _clients: dict[str, LSPClient] = {}
 
 WORKSPACE_MARKERS: tuple[str, ...] = (
@@ -91,14 +91,17 @@ def format_diagnostics(diagnostics: list[Diagnostic]) -> str:
     if not diagnostics:
         return ""
 
-    # Count by severity for summary
     errors = sum(1 for d in diagnostics if d.severity == "error")
     warnings = sum(1 for d in diagnostics if d.severity == "warning")
 
     lines: list[str] = ["<file_diagnostics>"]
 
-    # Add summary line (helps agent understand severity quickly)
-    lines.append(f"Summary: {errors} errors, {warnings} warnings")
+    if errors > 0:
+        lines.append(f"ACTION REQUIRED: {errors} error(s) found - fix before continuing")
+        if warnings > 0:
+            lines.append(f"Additional: {warnings} warning(s)")
+    else:
+        lines.append(f"Summary: {warnings} warning(s)")
 
     for diag in diagnostics[:MAX_DIAGNOSTICS_COUNT]:
         severity = diag.severity.capitalize()

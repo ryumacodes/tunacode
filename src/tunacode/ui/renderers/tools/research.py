@@ -13,7 +13,13 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINE_WIDTH, MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import (
+    MAX_PANEL_LINE_WIDTH,
+    MIN_VIEWPORT_LINES,
+    TOOL_PANEL_WIDTH,
+    TOOL_VIEWPORT_LINES,
+    UI_COLORS,
+)
 
 BOX_HORIZONTAL = "\u2500"
 SEPARATOR_WIDTH = 52
@@ -24,7 +30,6 @@ DEFAULT_MAX_FILES = 3
 ELLIPSIS_LENGTH = 3
 MAX_QUERY_DISPLAY_LENGTH = 60
 MAX_DIRECTORIES_DISPLAY = 3
-LINES_RESERVED_FOR_HEADER_FOOTER = 4
 MIN_LINES_FOR_RECOMMENDATIONS = 2
 MAX_FALLBACK_RESULT_LENGTH = 500
 
@@ -164,7 +169,7 @@ def render_research_codebase(
     # Zone 3: Primary viewport
     viewport_lines: list[Text] = []
     lines_used = 0
-    max_viewport_lines = MAX_PANEL_LINES - LINES_RESERVED_FOR_HEADER_FOOTER
+    max_viewport_lines = TOOL_VIEWPORT_LINES
 
     # Error state
     if data.is_error:
@@ -234,6 +239,11 @@ def render_research_codebase(
             viewport_lines.append(rec_line)
             lines_used += 1
 
+    # Pad viewport to minimum height for visual consistency
+    while lines_used < MIN_VIEWPORT_LINES:
+        viewport_lines.append(Text(""))
+        lines_used += 1
+
     # Combine viewport
     viewport = Text("\n").join(viewport_lines) if viewport_lines else Text("(no findings)")
 
@@ -279,5 +289,6 @@ def render_research_codebase(
         subtitle=f"[{UI_COLORS['muted']}]{timestamp}[/]",
         border_style=Style(color=border_color),
         padding=(0, 1),
-        expand=False,
+        expand=True,
+        width=TOOL_PANEL_WIDTH,
     )

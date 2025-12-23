@@ -13,6 +13,13 @@ Replacers are tried in order from strict to fuzzy until one succeeds.
 
 from collections.abc import Callable, Generator
 
+try:
+    from Levenshtein import distance as _levenshtein_c
+
+    _USE_C_LEVENSHTEIN = True
+except ImportError:
+    _USE_C_LEVENSHTEIN = False
+
 # Type alias for replacer functions
 Replacer = Callable[[str, str], Generator[str, None, None]]
 
@@ -22,15 +29,10 @@ MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD = 0.3
 
 
 def levenshtein(a: str, b: str) -> int:
-    """Levenshtein distance algorithm for fuzzy matching.
+    """Levenshtein edit distance between two strings."""
+    if _USE_C_LEVENSHTEIN:
+        return _levenshtein_c(a, b)
 
-    Args:
-        a: First string
-        b: Second string
-
-    Returns:
-        Edit distance between the two strings
-    """
     if not a or not b:
         return max(len(a), len(b))
 
@@ -144,7 +146,14 @@ def indentation_flexible_replacer(content: str, find: str) -> Generator[str, Non
     # Normalize find AFTER trimming trailing empty line
     normalized_find = remove_indentation("\n".join(find_lines))
 
+    # Pre-compute first line stripped for fail-fast check
+    first_find_stripped = find_lines[0].strip()
+
     for i in range(len(content_lines) - len(find_lines) + 1):
+        # Fail-fast: skip if first line doesn't match (ignoring indentation)
+        if content_lines[i].strip() != first_find_stripped:
+            continue
+
         block = "\n".join(content_lines[i : i + len(find_lines)])
         if remove_indentation(block) == normalized_find:
             yield block
@@ -177,17 +186,22 @@ def block_anchor_replacer(content: str, find: str) -> Generator[str, None, None]
     last_line_search = search_lines[-1].strip()
     search_block_size = len(search_lines)
 
-    # Collect all candidate positions where both anchors match
-    candidates: list[tuple[int, int]] = []
-    for i in range(len(original_lines)):
-        if original_lines[i].strip() != first_line_search:
-            continue
+    # Build indices in O(n) instead of O(n^2) nested loop
+    first_indices = [
+        i for i, line in enumerate(original_lines) if line.strip() == first_line_search
+    ]
+    last_indices = [j for j, line in enumerate(original_lines) if line.strip() == last_line_search]
 
-        # Look for matching last line after this first line
-        for j in range(i + 2, len(original_lines)):
-            if original_lines[j].strip() == last_line_search:
+    if not first_indices or not last_indices:
+        return
+
+    # Find valid pairs in O(k^2) where k << n typically
+    candidates: list[tuple[int, int]] = []
+    for i in first_indices:
+        for j in last_indices:
+            if j > i + 1:  # Need at least one line between anchors
                 candidates.append((i, j))
-                break  # Only match first occurrence of last line
+                break  # Only first matching last anchor after this first
 
     if not candidates:
         return
