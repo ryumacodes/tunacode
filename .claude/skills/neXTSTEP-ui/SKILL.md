@@ -1,216 +1,190 @@
-# NeXTSTEP-UI Skill
+---
+name: neXTSTEP-ui
+description: Design philosophy and UI guidelines based on NeXTSTEP User Interface Guidelines (1993). Use when designing interfaces (TUI, GUI, web apps, dashboards) that need clear information hierarchy, intuitive controls, and user-respecting interaction patterns. Especially relevant for developer tools, data-dense interfaces, and applications requiring high information density without cognitive overload.
+---
 
-This skill provides design guidelines for creating and modifying tool panel renderers in Tunacode. All UI changes should follow these principles to maintain visual uniformity.
+# NeXTSTEP Design Philosophy
 
-## Core Design Philosophy
+Principles from the NeXTSTEP User Interface Guidelines (Release 3, 1993)—the DNA of modern computing interfaces.
 
-From CLAUDE.md:
-- **Uniformity**: Consistent, predictable experience across all interactions
-- **User Informed**: Keep user constantly aware of agent state, actions, and reasoning
-- **Aesthetic**: Professional, clean, retro-modern look echoing NeXTSTEP clarity
+## Core Principles
 
-## 4-Zone Panel Layout
+### Consistency
+Objects that look the same should act the same. Objects that act the same should look the same. Users build mental models; reward them.
 
-Every tool panel MUST follow this standardized architecture:
+### User Control
+The user decides what happens next. The computer extends the user's will—it never obstructs it.
 
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│  ZONE 1 (HEADER)                                                 │
-│  tool_name [status]                                              │ ← tool name + status badge
-├──────────────────────────────────────────────────────────────────┤
-│  ZONE 2 (CONTEXT)                                                │
-│  key1: value1    key2: value2    key3: value3                    │ ← input parameters
-├──────────────────────────────────────────────────────────────────┤
-│  ZONE 3 (PRIMARY VIEWPORT)                                       │
-│  [Primary Content - The "Hero"]                                  │
-│  • Text output, diffs, tables, results                           │
-│  • Bounded to TOOL_VIEWPORT_LINES (10 lines)                     │
-├──────────────────────────────────────────────────────────────────┤
-│  ZONE 4 (STATUS)                                                 │
-│  123ms • [12/50 lines] • (truncated)                             │ ← metrics & metadata
-└──────────────────────────────────────────────────────────────────┘
-  09:41:32 AM                                                       ← subtitle (timestamp)
+**On modes:** Avoid arbitrary modes (periods when only certain actions are permitted). Modes usurp the user's prerogative. When modes are necessary, they must be:
+- Freely chosen by the user
+- Visually apparent at all times
+- Easy to exit
+- Keep user in control
+
+### Acting for the User
+When in doubt, don't. Better to do too little than too much. If acting on user's behalf, the result must be identical to if the user had acted themselves.
+
+### Naturalness
+Graphical objects don't need to resemble physical objects superficially—but they must *behave* as real-world experience would predict. Objects stay where put. Controls feel like controls. This is what "intuitive" means.
+
+## Action Paradigms
+
+Every interaction falls into one of three paradigms:
+
+### 1. Direct Manipulation
+Objects respond directly to mouse/pointer actions. A window comes forward when clicked. A slider knob moves when dragged. Most intuitive paradigm—use for position, size, arrangement.
+
+### 2. Targeted Action  
+Controls (buttons, commands) act on a target. User selects target first, then chooses action. Example: select text → click Bold. Powerful because one control can act on many target types.
+
+### 3. Modal Tool
+User selects tool from palette; subsequent actions interpreted through that tool. Acceptable when:
+- Mode is visible (cursor changes, tool highlighted)
+- Mode is user-chosen
+- Exit is obvious and immediate
+- Mimics real-world tool selection
+
+**Use modal tools when:** An operation type will be repeated many times (drawing lines, placing objects).  
+**Don't use when:** User would constantly switch tools between actions.
+
+## Information Hierarchy & Zoning
+
+Divide interface into zones with distinct purposes. Users learn where to look.
+
+```
+┌─────────────────────────────────────────────────┐
+│              PERSISTENT STATUS                  │  Glanceable, rarely changes
+│         (resources, mode, identity)             │  Top or very top
+├─────────────────────────────────────────────────┤
+│                                                 │
+│                 PRIMARY VIEWPORT                │  Maximum real estate
+│              (content, workspace)               │  User focus lives here
+│                                                 │
+├───────────┬─────────────────────┬───────────────┤
+│  SPATIAL  │     SELECTION       │   AVAILABLE   │  Context for next action
+│  CONTEXT  │     CONTEXT         │   ACTIONS     │  What's loaded, what's possible
+│  (where)  │     (what)          │   (can do)    │
+├───────────┴─────────────────────┴───────────────┤
+│                 INPUT / COMMAND                 │  Muscle memory location
+│               (user action zone)                │  Bottom for CLI patterns
+└─────────────────────────────────────────────────┘
 ```
 
-### Zone Requirements
+**Key insight from StarCraft UI:** High information density works when zones are consistent and purpose is clear. Resources always top-right. Minimap always bottom-left. Selection always bottom-center. Actions always bottom-right. Users never hunt.
 
-**Zone 1 (Header)**: Primary identifier + summary
-- Tool-specific identifier (filename, command, pattern)
-- Summary counts or status in `dim` style
-- Example: `"*.py"   45 files`
+## Control Selection Guide
 
-**Zone 2 (Context)**: Key parameters
-- Display relevant execution parameters
-- Format: `key: value` pairs separated by double spaces
-- Use `dim` for labels, `dim bold` for values
-- Example: `recursive: on  hidden: off  sort: modified`
+### Use Buttons When:
+- Starting an action (one-state/action button)
+- Toggling a binary state (two-state button)
+- **Never** use buttons with more than two states—too hard to convey meaning
 
-**Zone 3 (Viewport)**: Primary content
-- Main output (file content, command output, search results)
-- Fixed height: `TOOL_VIEWPORT_LINES = 10` lines
-- Pad with empty lines if content is shorter
-- Truncate if content is longer, show truncation in Zone 4
+### Button Labels:
+- One-state: verb or verb phrase ("Find", "Save", "Print")
+- Label describes what *will happen*, not current state
+- Dim (gray out) when action unavailable—disabled button must not respond at all
+- Add "..." suffix if button opens a panel/dialog
 
-**Zone 4 (Status)**: Metrics and metadata
-- Truncation info: `[shown/total]`
-- Duration: `123ms`
-- Additional metrics as appropriate
-- All in `dim` style
+### Use Pop-up Lists When:
+- Setting state from multiple options (one-of-many)
+- Space is constrained
+- The current selection should be visible
 
-## Viewport Sizing Constants
+### Use Radio Buttons When:
+- One-of-many selection
+- All options should be visible simultaneously  
+- Small number of options (2-5)
 
-From `src/tunacode/constants.py`:
+### Use Switches/Checkboxes When:
+- Independent on/off options
+- Multiple can be selected (unrestricted relationship)
 
-```python
-LINES_RESERVED_FOR_HEADER_FOOTER = 4   # Header, params, separators, status
-TOOL_VIEWPORT_LINES = 10               # Fixed viewport height
-MIN_VIEWPORT_LINES = TOOL_VIEWPORT_LINES  # Min equals max for consistency
-TOOL_PANEL_WIDTH = 100                 # Fixed width for uniform panels
-MAX_PANEL_LINE_WIDTH = 200             # Individual line truncation
+### Use Text Fields When:
+- Impossible to enumerate all valid values
+- Free-form input needed
+- Always pair with a button showing what Return does
+
+### Use Sliders When:
+- Setting a value in a bounded range
+- Direct feedback on continuous scale
+- Alternate-drag should enable fine-tuning mode
+
+### Use Browsers/Lists When:
+- Hierarchical data (browser)
+- Selection from enumerable set (list)
+- Double-click should equal Return key action
+
+## Feedback Principles
+
+### Visual Feedback
+- Controls change appearance immediately on mouse-down
+- Appearance during click reflects what's about to happen
+- User must always see result of their action
+
+### State Indication
+- Current state shown through highlighting, position, or imagery
+- Never rely solely on labels to show state
+- Disabled controls are dimmed AND non-responsive
+
+### Scrolling
+- Knob size represents visible portion relative to whole
+- Knob position represents current location
+- Alternate-drag enables fine-tuning mode
+- Scroll buttons: click = one line, press = continuous, Alternate = one page
+
+## Text & Labels
+
+- Capitalize like titles (first word, last word, and principal words)
+- Be succinct—labels are shorthand
+- Commands that open panels end with "..."
+- Avoid jargon; prefer familiar terms
+
+## Window Behavior
+
+- Windows stay where user puts them
+- Active window receives keyboard input
+- Clicking a window brings it forward
+- Close, minimize, resize controls in consistent locations
+- Panels (secondary windows) support main window's task
+
+## Anti-Patterns to Avoid
+
+1. **Hidden modes** — User doesn't know different rules apply
+2. **Inconsistent controls** — Same-looking things behave differently  
+3. **Surprising automation** — System acts without user initiation
+4. **Disabled without indication** — Controls that silently fail
+5. **Fighting muscle memory** — Putting input where users don't expect
+6. **Information hunting** — Critical info in inconsistent locations
+7. **Modal dialogs for non-critical info** — Interrupting user flow unnecessarily
+
+## TUI-Specific Adaptations
+
+For terminal user interfaces, adapt these principles:
+
+```
+┌─ Model: gpt-4 ─┬─ Tokens: 1.2k ─┬─ Status: ready ─┐  ← status bar
+│                                                    │
+│  Main content area                                 │  ← viewport
+│  (conversation, output, editor)                    │
+│                                                    │
+├──────────┬─────────────────┬──────────────────────┤
+│ ~/proj   │ files.py        │ ● search  ● bash     │  ← context zones
+│          │ config.json     │ ● read    ● write    │
+├──────────┴─────────────────┴──────────────────────┤
+│ >                                                  │  ← input (CLI convention)
+└────────────────────────────────────────────────────┘
 ```
 
-## UI Color Palette
+- Respect CLI convention: input at bottom, output scrolls up
+- Use box-drawing characters for clear zone separation
+- Status bar: left=identity, center=metrics, right=state
+- Color sparingly: highlight actionable items and state changes
+- Keyboard shortcuts visible but not cluttering
 
-From `UI_COLORS` in `constants.py`:
+## Testing Principle
 
-| Color | Hex | Usage |
-|-------|-----|-------|
-| background | `#1a1a1a` | Near black |
-| surface | `#252525` | Panel background |
-| border | `#ff6b9d` | Magenta borders |
-| text | `#e0e0e0` | Primary text (light gray) |
-| muted | `#808080` | Secondary text, parameters |
-| primary | `#00d7d7` | Cyan (model, tokens) |
-| accent | `#ff6b9d` | Magenta (brand, research) |
-| success | `#4ec9b0` | Green (completion) |
-| warning | `#c3e88d` | Yellow/lime |
-| error | `#f44747` | Red |
+> "The success of an application's interface depends on real users. There's no substitute for having users try out the interface—even before there's any functionality behind it—to see whether it makes sense to them."
 
-### Border Color Guidelines
-- **success**: Completed operations, successful results
-- **error**: Failed operations, error states
-- **accent**: Research/search operations (research_codebase)
-- **warning**: Partial success, non-zero exit codes (bash)
+Test early. Test with real users. Test before implementation.
 
-## Standard Renderer Pattern
-
-All tool renderers follow this structure:
-
-### 1. Dataclass for Parsed Data
-```python
-@dataclass
-class ToolNameData:
-    """Parsed tool result for structured display."""
-    field1: str
-    field2: int
-    # ... extracted fields
-```
-
-### 2. Parse Function
-```python
-def parse_result(args: dict[str, Any] | None, result: str) -> ToolNameData | None:
-    """Extract structured data from tool output."""
-    # Parse result string into dataclass
-    # Return None if parsing fails
-```
-
-### 3. Truncation Helper
-```python
-def _truncate_line(line: str) -> str:
-    """Truncate a single line if too wide."""
-    if len(line) > MAX_PANEL_LINE_WIDTH:
-        return line[: MAX_PANEL_LINE_WIDTH - 3] + "..."
-    return line
-```
-
-### 4. Main Render Function
-```python
-def render_tool_name(
-    args: dict[str, Any] | None,
-    result: str,
-    duration_ms: float | None = None,
-) -> RenderableType | None:
-    """Render tool with NeXTSTEP zoned layout."""
-    data = parse_result(args, result)
-    if not data:
-        return None
-
-    # Zone 1: Header
-    header = Text()
-    header.append(data.identifier, style="bold")
-    header.append(f"   {data.count} items", style="dim")
-
-    # Zone 2: Parameters
-    params = Text()
-    params.append("key:", style="dim")
-    params.append(f" {value}", style="dim bold")
-
-    separator = Text(BOX_HORIZONTAL * SEPARATOR_WIDTH, style="dim")
-
-    # Zone 3: Viewport with padding
-    viewport_lines: list[str] = []
-    # ... populate viewport_lines
-    while len(viewport_lines) < MIN_VIEWPORT_LINES:
-        viewport_lines.append("")
-    viewport = Text("\n".join(viewport_lines))
-
-    # Zone 4: Status
-    status_items: list[str] = []
-    if shown < total:
-        status_items.append(f"[{shown}/{total}]")
-    if duration_ms:
-        status_items.append(f"{duration_ms:.0f}ms")
-    status = Text("  ".join(status_items), style="dim")
-
-    # Compose all zones
-    content = Group(
-        header, Text("\n"),
-        params, Text("\n"),
-        separator, Text("\n"),
-        viewport, Text("\n"),
-        separator, Text("\n"),
-        status,
-    )
-
-    timestamp = datetime.now().strftime("%H:%M:%S")
-
-    return Panel(
-        content,
-        title=f"[{UI_COLORS['success']}]tool_name[/] [done]",
-        subtitle=f"[{UI_COLORS['muted']}]{timestamp}[/]",
-        border_style=Style(color=UI_COLORS["success"]),
-        padding=(0, 1),
-        expand=False,
-        width=TOOL_PANEL_WIDTH,
-    )
-```
-
-## Module Constants
-
-Every renderer should define:
-```python
-BOX_HORIZONTAL = "\u2500"  # Unicode box-drawing character
-SEPARATOR_WIDTH = 52       # Standard separator line width
-```
-
-## Checklist for New Renderers
-
-- [ ] Create dataclass for parsed data
-- [ ] Implement parse_result() function
-- [ ] Implement _truncate_line() helper
-- [ ] Implement render_tool_name() with 4 zones
-- [ ] Use TOOL_VIEWPORT_LINES for viewport height
-- [ ] Pad viewport to MIN_VIEWPORT_LINES
-- [ ] Use TOOL_PANEL_WIDTH for panel width
-- [ ] Add renderer to `tool_panel_smart()` router in `panels.py`
-- [ ] Export from `tools/__init__.py`
-- [ ] Run `ruff check --fix .`
-
-## Files Reference
-
-| File | Purpose |
-|------|---------|
-| `src/tunacode/constants.py` | All UI constants |
-| `src/tunacode/ui/renderers/panels.py` | Panel rendering base, tool_panel_smart() |
-| `src/tunacode/ui/renderers/tools/*.py` | Tool-specific renderers |
-| `src/tunacode/ui/styles.py` | Style definitions |
+You can also read the PDF version of the NeXTSTEP User Interface Guidelines (1993) for more detailed information. IN skills/neXTSTEP-ui/NeXTSTEP_User_Interface_Guidelines_Release_3_Nov93.pdf
