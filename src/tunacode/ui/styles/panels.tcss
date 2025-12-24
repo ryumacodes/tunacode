@@ -1,0 +1,81 @@
+/* ============================================
+ * RICH PANELS - Tool/Error/Search Display
+ * NeXTSTEP: "Objects that look the same should act the same"
+ * ============================================ */
+
+/* Tool execution panels - cyan accent */
+.tool-panel {
+    border: solid $primary;
+    background: $surface;
+    padding: 0 1;
+    margin: 0 0 1 0;
+}
+
+.tool-panel.running {
+    border: solid $accent;
+}
+
+.tool-panel.completed {
+    border: solid $success;
+}
+
+.tool-panel.failed {
+    border: solid $error;
+}
+
+/* Error panels - red border, recovery actions */
+.error-panel {
+    border: solid $error;
+    background: $surface;
+    padding: 0 1;
+    margin: 0 0 1 0;
+}
+
+.error-panel.warning {
+    border: solid $warning;
+}
+
+.error-panel.info {
+    border: solid $secondary;
+}
+
+/* Search result panels - accent border */
+.search-panel {
+    border: solid $accent;
+    background: $surface;
+    padding: 0 1;
+    margin: 0 0 1 0;
+}
+
+/* Pagination controls in search */
+.pagination {
+    height: 1;
+    padding: 0 1;
+    color: $text-muted;
+}
+
+/* Result item highlighting */
+.result-item {
+    padding: 0 1;
+}
+
+.result-item:hover {
+    background: $surface;
+}
+
+.result-item.selected {
+    background: $primary 20%;
+    border-left: solid $primary;
+}
+
+/* Recovery command styling */
+.recovery-command {
+    color: $primary;
+    text-style: underline;
+}
+
+/* Context detail styling */
+.context-detail {
+    color: $text-muted;
+    padding-left: 2;
+}

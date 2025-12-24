@@ -26,20 +26,23 @@ from tunacode.constants import (
 )
 from tunacode.core.agents.main import process_request
 from tunacode.indexing import CodeIndex
+from tunacode.indexing.constants import QUICK_INDEX_THRESHOLD
 from tunacode.types import (
     ModelName,
     StateManager,
     ToolConfirmationRequest,
     ToolConfirmationResponse,
 )
-from tunacode.ui.renderers.errors import render_exception
-from tunacode.ui.renderers.panels import tool_panel_smart
-from tunacode.ui.repl_support import (
-    PendingConfirmationState,
+from tunacode.ui.callbacks import (
     build_textual_tool_callback,
     build_tool_progress_callback,
     build_tool_result_callback,
     build_tool_start_callback,
+)
+from tunacode.ui.renderers.errors import render_exception
+from tunacode.ui.renderers.panels import tool_panel_smart
+from tunacode.ui.repl_support import (
+    PendingConfirmationState,
     format_user_message,
 )
 from tunacode.ui.shell_runner import ShellRunner
@@ -68,7 +71,13 @@ STREAM_THROTTLE_MS: float = 100.0
 
 class TextualReplApp(App[None]):
     TITLE = "TunaCode"
-    CSS_PATH = "app.tcss"
+    CSS_PATH = [
+        "styles/layout.tcss",
+        "styles/widgets.tcss",
+        "styles/modals.tcss",
+        "styles/panels.tcss",
+        "styles/theme-nextstep.tcss",
+    ]
 
     BINDINGS = [
         Binding("ctrl+p", "toggle_pause", "Pause/Resume Stream", show=False, priority=True),
@@ -176,7 +185,7 @@ class TextualReplApp(App[None]):
             index = CodeIndex.get_instance()
             total = index.quick_count()
 
-            if total < CodeIndex.QUICK_INDEX_THRESHOLD:
+            if total < QUICK_INDEX_THRESHOLD:
                 index.build_index()
                 return len(index._all_files), None, False
             else:
