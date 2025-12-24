@@ -11,7 +11,7 @@ from tunacode.configuration.settings import ApplicationSettings
 from tunacode.core.state import StateManager
 from tunacode.exceptions import UserAbortError
 from tunacode.tools.authorization.handler import ToolHandler
-from tunacode.ui.app import run_textual_repl
+from tunacode.ui.repl_support import run_textual_repl
 from tunacode.utils.system import check_for_updates
 
 DEFAULT_TIMEOUT_SECONDS = 600

@@ -53,7 +53,7 @@ class SearchResultsTable(Static):
         search_time_ms: float | None = None,
     ) -> None:
         super().__init__()
-        self.query = query
+        self.search_query = query
         self.results = results
         self.total_count = total_count or len(results)
         self.search_time_ms = search_time_ms
@@ -62,14 +62,14 @@ class SearchResultsTable(Static):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="search-header"):
-            yield Static(f"Query: {self.query}", classes="search-query")
+            yield Static(f"Query: {self.search_query}", classes="search-query")
 
             stats = f"Found {self.total_count} results"
             if self.search_time_ms is not None:
                 stats += f" in {self.search_time_ms:.0f}ms"
             yield Static(stats, classes="search-stats")
 
-        table = DataTable()
+        table: DataTable = DataTable()
         table.add_columns("#", "File", "Match")
         table.cursor_type = "row"
 

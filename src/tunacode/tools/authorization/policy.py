@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tunacode.constants import ToolName
+from tunacode.types import ToolName
 
 from .context import AuthContext
 from .rules import AuthorizationRule

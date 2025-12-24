@@ -7,7 +7,7 @@ from pydantic_ai.exceptions import ModelRetry
 from tunacode.tools.decorators import file_tool
 
 
-@file_tool
+@file_tool(writes=True)
 async def write_file(filepath: str, content: str) -> str:
     """Write content to a new file. Fails if the file already exists.
 

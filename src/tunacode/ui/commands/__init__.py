@@ -10,6 +10,29 @@ if TYPE_CHECKING:
 
 from tunacode.ui.styles import STYLE_PRIMARY
 
+# Update command constants
+PACKAGE_NAME = "tunacode-cli"
+UPDATE_INSTALL_TIMEOUT_SECONDS = 120
+
+
+def _get_package_manager_command(package: str) -> tuple[list[str], str] | None:
+    """Get package manager command and name.
+
+    Returns:
+        Tuple of (command_list, manager_name) or None if no manager found.
+    """
+    import shutil
+
+    uv_path = shutil.which("uv")
+    if uv_path:
+        return ([uv_path, "pip", "install", "--upgrade", package], "uv")
+
+    pip_path = shutil.which("pip")
+    if pip_path:
+        return ([pip_path, "install", "--upgrade", package], "pip")
+
+    return None
+
 
 class Command(ABC):
     """Base class for REPL commands."""
@@ -290,6 +313,81 @@ class ResumeCommand(Command):
             app.notify("Failed to load session", severity="error")
 
 
+class UpdateCommand(Command):
+    name = "update"
+    description = "Check for or install updates"
+    usage = "/update [check|install]"
+
+    async def execute(self, app: TextualReplApp, args: str) -> None:
+        import asyncio
+        import subprocess
+
+        from tunacode.constants import APP_VERSION
+        from tunacode.utils.system.paths import check_for_updates
+
+        parts = args.split(maxsplit=1) if args else []
+        subcommand = parts[0].lower() if parts else "check"
+
+        if subcommand == "check":
+            app.notify("Checking for updates...")
+            has_update, latest_version = await asyncio.to_thread(check_for_updates)
+
+            if has_update:
+                app.rich_log.write(f"Current version: {APP_VERSION}")
+                app.rich_log.write(f"Latest version:  {latest_version}")
+                app.notify(f"Update available: {latest_version}")
+                app.rich_log.write("Run /update install to upgrade")
+            else:
+                app.notify(f"Already on latest version ({APP_VERSION})")
+
+        elif subcommand == "install":
+            from tunacode.ui.screens.update_confirm import UpdateConfirmScreen
+
+            app.notify("Checking for updates...")
+            has_update, latest_version = await asyncio.to_thread(check_for_updates)
+
+            if not has_update:
+                app.notify(f"Already on latest version ({APP_VERSION})")
+                return
+
+            confirmed = await app.push_screen_wait(UpdateConfirmScreen(APP_VERSION, latest_version))
+
+            if not confirmed:
+                app.notify("Update cancelled")
+                return
+
+            pkg_cmd_result = _get_package_manager_command(PACKAGE_NAME)
+            if not pkg_cmd_result:
+                app.notify("No package manager found (uv or pip)", severity="error")
+                return
+
+            cmd, pkg_mgr = pkg_cmd_result
+            app.notify(f"Installing with {pkg_mgr}...")
+
+            try:
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=UPDATE_INSTALL_TIMEOUT_SECONDS,
+                )
+
+                if result.returncode == 0:
+                    app.notify(f"Updated to {latest_version}!")
+                    app.rich_log.write("Restart tunacode to use the new version")
+                else:
+                    app.notify("Update failed", severity="error")
+                    if result.stderr:
+                        app.rich_log.write(result.stderr.strip())
+            except Exception as e:
+                app.rich_log.write(f"Error: {e}")
+
+        else:
+            app.notify(f"Unknown subcommand: {subcommand}", severity="warning")
+            app.notify("Usage: /update [check|install]")
+
+
 COMMANDS: dict[str, Command] = {
     "help": HelpCommand(),
     "clear": ClearCommand(),
@@ -299,6 +397,7 @@ COMMANDS: dict[str, Command] = {
     "plan": PlanCommand(),
     "theme": ThemeCommand(),
     "resume": ResumeCommand(),
+    "update": UpdateCommand(),
 }
 
 
@@ -308,7 +407,7 @@ async def handle_command(app: TextualReplApp, text: str) -> bool:
     Returns True if command was handled, False otherwise.
     """
     if text.startswith("!"):
-        await run_shell_command(app, text[1:])
+        app.start_shell_command(text[1:])
         return True
 
     if text.startswith("/"):
@@ -328,32 +427,3 @@ async def handle_command(app: TextualReplApp, text: str) -> bool:
         return True
 
     return False
-
-
-async def run_shell_command(app: TextualReplApp, cmd: str) -> None:
-    """Run a shell command and display output."""
-    import asyncio
-    import subprocess
-
-    if not cmd.strip():
-        app.notify("Usage: !<command>", severity="warning")
-        return
-
-    try:
-        result = await asyncio.to_thread(
-            subprocess.run,
-            cmd,
-            shell=True,  # noqa: S602 - intentional shell command from user
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        output = result.stdout or result.stderr
-        if output:
-            app.rich_log.write(output.rstrip())
-        if result.returncode != 0:
-            app.notify(f"Exit code: {result.returncode}", severity="warning")
-    except subprocess.TimeoutExpired:
-        app.notify("Command timed out", severity="error")
-    except Exception as e:
-        app.rich_log.write(f"Error: {e}")

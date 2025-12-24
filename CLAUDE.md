@@ -16,7 +16,12 @@ The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. T
 - **User Informed:** A core tenet is to keep the user constantly informed of the agent's state, actions, and reasoning. No "magic" should happen in the background without visual feedback.
 - **Aesthetic:** The look should be professional, clean, and retro-modern, echoing the clarity and object-oriented nature of the NeXTSTEP environment.
 
-**UI Design Rule:** Always call the next neXTSTEP-ui skill for any UI changes.
+**UI Design Rule:** Always call the neXTSTEP-ui skill for any UI changes.
+
+**Skill Location:** `.claude/skills/neXTSTEP-ui/`
+- `SKILL.md` - Design philosophy and guidelines
+- `NeXTSTEP_User_Interface_Guidelines_Release_3_Nov93.pdf` - Original 198-page reference
+- `read_pdf.py` - Chunked PDF reader (`uv run python read_pdf.py --help`)
 
 ## Workflow Rules
 
@@ -95,4 +100,3 @@ kb-claude link source target – insert reciprocal relations between two slugs.
 If kb-claude CLI is not installed, write the md files to the .claude/ folder manually following the entry format.
 
 We are currently in the middle of a large rewrite few test exist and documentation and that is okay. We will build the test and documentation as we go.
-

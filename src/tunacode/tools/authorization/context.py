@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from tunacode.constants import ToolName
+from tunacode.types import ToolName
 
 if TYPE_CHECKING:
-    from tunacode.core.state import StateManager
     from tunacode.templates.loader import Template
+    from tunacode.types import StateManager
 
 
 @dataclass(frozen=True)

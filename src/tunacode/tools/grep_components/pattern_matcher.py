@@ -4,9 +4,15 @@ Pattern matching functionality for the grep tool.
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import Protocol
 
 from .search_result import SearchConfig, SearchResult
+
+
+class MatchLike(Protocol):
+    def start(self) -> int: ...
+
+    def end(self) -> int: ...
 
 
 class SimpleMatch:
@@ -38,13 +44,13 @@ class PatternMatcher:
             with file_path.open("r", encoding="utf-8", errors="ignore") as f:
                 lines = f.readlines()
 
-            results = []
+            results: list[SearchResult] = []
             for i, line in enumerate(lines):
                 line = line.rstrip("\n\r")
 
                 # Search for pattern
                 if regex_pattern:
-                    matches = list(regex_pattern.finditer(line))
+                    matches: list[MatchLike] = list(regex_pattern.finditer(line))
                 else:
                     # Simple string search
                     search_line = line if config.case_sensitive else line.lower()
@@ -79,8 +85,8 @@ class PatternMatcher:
                         file_path=str(file_path),
                         line_number=i + 1,
                         line_content=line,
-                        match_start=match.start() if hasattr(match, "start") else match.start(),
-                        match_end=match.end() if hasattr(match, "end") else match.end(),
+                        match_start=match.start(),
+                        match_end=match.end(),
                         context_before=context_before,
                         context_after=context_after,
                         relevance_score=relevance,
@@ -93,7 +99,7 @@ class PatternMatcher:
             return []
 
     @staticmethod
-    def calculate_relevance(file_path: str, line: str, pattern: str, match: Any) -> float:
+    def calculate_relevance(file_path: str, line: str, pattern: str, match: MatchLike) -> float:
         """Calculate relevance score for a search result."""
         score = 0.0
 

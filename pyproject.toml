@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "tunacode-cli"
 
-version = "0.1.10"
+version = "0.1.18"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
@@ -38,6 +38,8 @@ dependencies = [
     "pathspec>=0.12.1",
     "textual-autocomplete>=4.0.6",
     "html2text>=2024.2.26",
+    "python-Levenshtein>=0.21.0",
+    "ruff>=0.14.0",
 ]
 
 [project.scripts]
@@ -170,3 +172,9 @@ disable_error_code = ["annotation-unchecked"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tunacode"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+    "pytest-asyncio>=1.3.0",
+]

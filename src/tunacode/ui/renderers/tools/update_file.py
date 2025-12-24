@@ -14,10 +14,17 @@ from rich.style import Style
 from rich.syntax import Syntax
 from rich.text import Text
 
-from tunacode.constants import MAX_PANEL_LINES, UI_COLORS
+from tunacode.constants import (
+    MAX_PANEL_LINE_WIDTH,
+    MIN_VIEWPORT_LINES,
+    TOOL_PANEL_WIDTH,
+    TOOL_VIEWPORT_LINES,
+    UI_COLORS,
+)
 
 BOX_HORIZONTAL = "\u2500"
 SEPARATOR_WIDTH = 52
+LINE_TRUNCATION_SUFFIX: str = "..."
 
 
 @dataclass
@@ -31,6 +38,7 @@ class UpdateFileData:
     additions: int
     deletions: int
     hunks: int
+    diagnostics_block: str | None = None
 
 
 def parse_result(args: dict[str, Any] | None, result: str) -> UpdateFileData | None:
@@ -43,15 +51,24 @@ def parse_result(args: dict[str, Any] | None, result: str) -> UpdateFileData | N
         +++ b/path/to/file.py
         @@ -10,5 +10,7 @@
         ...diff content...
+
+        <file_diagnostics>
+        Error (line 10): type mismatch
+        </file_diagnostics>
     """
     if not result:
         return None
 
+    # Extract diagnostics block before parsing diff
+    from tunacode.ui.renderers.tools.diagnostics import extract_diagnostics_from_result
+
+    result_clean, diagnostics_block = extract_diagnostics_from_result(result)
+
     # Split message from diff
-    if "\n--- a/" not in result:
+    if "\n--- a/" not in result_clean:
         return None
 
-    parts = result.split("\n--- a/", 1)
+    parts = result_clean.split("\n--- a/", 1)
     message = parts[0].strip()
     diff_content = "--- a/" + parts[1]
 
@@ -85,22 +102,29 @@ def parse_result(args: dict[str, Any] | None, result: str) -> UpdateFileData | N
         additions=additions,
         deletions=deletions,
         hunks=hunks,
+        diagnostics_block=diagnostics_block,
     )
+
+
+def _truncate_line_width(line: str, max_line_width: int) -> str:
+    if len(line) <= max_line_width:
+        return line
+    line_prefix = line[:max_line_width]
+    return f"{line_prefix}{LINE_TRUNCATION_SUFFIX}"
 
 
 def _truncate_diff(diff: str) -> tuple[str, int, int]:
     """Truncate diff content, return (truncated, shown, total)."""
     lines = diff.splitlines()
     total = len(lines)
+    max_content = TOOL_VIEWPORT_LINES
+    max_line_width = MAX_PANEL_LINE_WIDTH
 
-    # Reserve 4 lines for header (---, +++, @@)
-    max_content = MAX_PANEL_LINES - 4
+    capped_lines = [_truncate_line_width(line, max_line_width) for line in lines[:max_content]]
 
     if total <= max_content:
-        return diff, total, total
-
-    truncated = lines[:max_content]
-    return "\n".join(truncated), max_content, total
+        return "\n".join(capped_lines), total, total
+    return "\n".join(capped_lines), max_content, total
 
 
 def render_update_file(
@@ -137,6 +161,13 @@ def render_update_file(
 
     # Zone 3: Diff viewport with syntax highlighting
     truncated_diff, shown, total = _truncate_diff(data.diff_content)
+
+    # Pad viewport to minimum height for visual consistency
+    diff_lines = truncated_diff.split("\n")
+    while len(diff_lines) < MIN_VIEWPORT_LINES:
+        diff_lines.append("")
+    truncated_diff = "\n".join(diff_lines)
+
     diff_syntax = Syntax(truncated_diff, "diff", theme="monokai", word_wrap=True)
 
     # Zone 4: Status
@@ -153,8 +184,20 @@ def render_update_file(
 
     status = Text("  ".join(status_items), style="dim") if status_items else Text("")
 
+    # Zone 5: Diagnostics (if present)
+    diagnostics_content: RenderableType | None = None
+    if data.diagnostics_block:
+        from tunacode.ui.renderers.tools.diagnostics import (
+            parse_diagnostics_block,
+            render_diagnostics_inline,
+        )
+
+        diag_data = parse_diagnostics_block(data.diagnostics_block)
+        if diag_data and diag_data.items:
+            diagnostics_content = render_diagnostics_inline(diag_data)
+
     # Compose
-    content = Group(
+    content_parts: list[RenderableType] = [
         header,
         Text("\n"),
         params,
@@ -166,7 +209,20 @@ def render_update_file(
         separator,
         Text("\n"),
         status,
-    )
+    ]
+
+    # Add diagnostics zone if present
+    if diagnostics_content:
+        content_parts.extend(
+            [
+                Text("\n"),
+                separator,
+                Text("\n"),
+                diagnostics_content,
+            ]
+        )
+
+    content = Group(*content_parts)
 
     timestamp = datetime.now().strftime("%H:%M:%S")
 
@@ -176,5 +232,6 @@ def render_update_file(
         subtitle=f"[{UI_COLORS['muted']}]{timestamp}[/]",
         border_style=Style(color=UI_COLORS["success"]),
         padding=(0, 1),
-        expand=False,
+        expand=True,
+        width=TOOL_PANEL_WIDTH,
     )

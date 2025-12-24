@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import os
 import subprocess
+from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Static
+
+if TYPE_CHECKING:
+    from tunacode.types import ToolProgress
 
 # Maximum length for operation text in status bar
 MAX_STATUS_OPERATION_LEN = 25
@@ -51,20 +55,18 @@ class StatusBar(Horizontal):
     def update_running_action(self, tool_name: str) -> None:
         self.query_one("#status-right", Static).update(f"running: {tool_name}")
 
-    def update_subagent_progress(
-        self, subagent: str, operation: str, current: int, _total: int
-    ) -> None:
+    def update_subagent_progress(self, progress: ToolProgress) -> None:
         """Update status with subagent progress.
 
         Shows format: running: research [3] grep pattern...
         """
+        operation = progress.operation
         # Truncate operation to fit status bar
         if len(operation) > MAX_STATUS_OPERATION_LEN:
             operation = operation[: MAX_STATUS_OPERATION_LEN - 3] + "..."
 
         # Format: running: subagent [current/?] operation
-        # Use ? for total since we don't know upfront how many operations
-        progress_text = f"running: {subagent} [{current}] {operation}"
+        progress_text = f"running: {progress.subagent} [{progress.current}] {operation}"
         self.query_one("#status-right", Static).update(progress_text)
 
     def add_edited_file(self, filepath: str) -> None:

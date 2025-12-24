@@ -69,6 +69,7 @@ uv run pre-commit install
 3. **Commit frequently** with clear messages
 4. Run checks locally before pushing:
    ```bash
+   uv run pre-commit run --all-files --show-diff-on-failure  # Required before opening a PR
    uv run ruff check . && uv run ruff format .   # Lint and format
    uv run mypy src/                               # Type checking
    uv run pytest                                  # Run tests
@@ -104,6 +105,7 @@ The maintainers can tell the difference. Put in the effort.
 
 1. **Fill out the PR template** completely
 2. Ensure all checks pass:
+   - Run `uv run pre-commit run --all-files --show-diff-on-failure` locally before opening a PR
    - Pre-commit hooks
    - Ruff lint and format checks
    - File length validation (600 lines max)
@@ -114,7 +116,7 @@ The maintainers can tell the difference. Put in the effort.
 ### PR Checklist
 
 - [ ] Code follows project style (type hints, no magic numbers, etc.)
-- [ ] All pre-commit hooks pass
+- [ ] All pre-commit hooks pass (`uv run pre-commit run --all-files --show-diff-on-failure`)
 - [ ] Tests pass locally
 - [ ] No file exceeds 600 lines
 - [ ] Documentation updated (if applicable)
@@ -126,6 +128,7 @@ The maintainers can tell the difference. Put in the effort.
 |---------|-------------|
 | `uv sync` | Install dependencies |
 | `uv run pre-commit install` | Setup git hooks |
+| `uv run pre-commit run --all-files --show-diff-on-failure` | Run all hooks (required before PR) |
 | `uv run ruff check .` | Lint code |
 | `uv run ruff format .` | Format code |
 | `uv run ruff check . && uv run ruff format .` | Lint and format |

@@ -45,26 +45,23 @@ class ParallelGrep:
 
     def _load_ripgrep_config(self) -> dict[str, Any]:
         """Load ripgrep configuration from defaults."""
-        try:
-            settings = DEFAULT_USER_CONFIG.get_section("tools", {})
-            return settings.get(
-                "ripgrep",
-                {
-                    "timeout": 10,
-                    "max_buffer_size": 1048576,
-                    "max_results": 100,
-                    "enable_metrics": False,
-                    "debug": False,
-                },
-            )
-        except Exception:
-            return {
-                "timeout": 10,
-                "max_buffer_size": 1048576,
-                "max_results": 100,
-                "enable_metrics": False,
-                "debug": False,
-            }
+        default_ripgrep_config = {
+            "timeout": 10,
+            "max_buffer_size": 1048576,
+            "max_results": 100,
+            "enable_metrics": False,
+            "debug": False,
+        }
+        settings = DEFAULT_USER_CONFIG.get("settings", {})
+        if not isinstance(settings, dict):
+            return default_ripgrep_config
+
+        config = settings.get("ripgrep", default_ripgrep_config)
+        if not isinstance(config, dict):
+            return default_ripgrep_config
+
+        merged = default_ripgrep_config | config
+        return merged
 
     async def execute(
         self,
@@ -160,7 +157,9 @@ class ParallelGrep:
             elif search_type == "hybrid":
                 results = await self._hybrid_search_filtered(pattern, candidates, config)
             else:
-                raise ToolExecutionError(f"Unknown search type: {search_type}")
+                raise ToolExecutionError(
+                    tool_name="grep", message=f"Unknown search type: {search_type}"
+                )
 
             # 5️⃣ Format and return results with strategy info
             strategy_info = (
@@ -192,8 +191,10 @@ class ParallelGrep:
         except TooBroadPatternError:
             # Re-raise TooBroadPatternError without wrapping it
             raise
-        except Exception as e:
-            raise ToolExecutionError(f"Grep search failed: {str(e)}") from e
+        except Exception as err:
+            raise ToolExecutionError(
+                tool_name="grep", message=f"Grep search failed: {err}"
+            ) from err
 
     # ====== SEARCH METHODS ======
 

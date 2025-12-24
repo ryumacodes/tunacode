@@ -20,7 +20,7 @@ from tunacode.tools.glob import glob
 from tunacode.tools.grep import grep
 from tunacode.tools.list_dir import list_dir
 from tunacode.tools.read_file import read_file
-from tunacode.types import ModelName, ToolProgressCallback
+from tunacode.types import ModelName, ToolProgress, ToolProgressCallback
 
 # Maximum wait time in seconds for retry backoff
 MAX_RETRY_WAIT_SECONDS = 60
@@ -68,7 +68,7 @@ def _create_limited_read_file(max_files: int):
     """
     call_count = {"count": 0}
 
-    async def limited_read_file(file_path: str) -> dict:
+    async def limited_read_file(file_path: str) -> str:
         """Read file with enforced limit on number of calls.
 
         Args:
@@ -82,13 +82,13 @@ def _create_limited_read_file(max_files: int):
             allowing the agent to complete with partial results.
         """
         if call_count["count"] >= max_files:
-            return {
-                "content": f"FILE READ LIMIT REACHED ({max_files} files maximum)\n\n"
+            return (
+                "<file>\n"
+                f"FILE READ LIMIT REACHED ({max_files} files maximum)\n\n"
                 f"Cannot read '{file_path}' - you have already read {max_files} files.\n"
-                "Please complete your research with the files you have analyzed.",
-                "lines": 0,
-                "size": 0,
-            }
+                "Please complete your research with the files you have analyzed.\n"
+                "</file>"
+            )
 
         call_count["count"] += 1
         return await read_file(file_path)
@@ -113,12 +113,13 @@ class ProgressTracker:
         """Emit progress event for current operation."""
         self.operation_count += 1
         if self.callback:
-            self.callback(
-                self.subagent_name,
-                operation,
-                self.operation_count,
-                self.total_operations,
+            progress = ToolProgress(
+                subagent=self.subagent_name,
+                operation=operation,
+                current=self.operation_count,
+                total=self.total_operations,
             )
+            self.callback(progress)
 
     def wrap_tool(self, tool_func, tool_name: str):
         """Wrap a tool function to emit progress before execution."""
@@ -150,7 +151,7 @@ def create_research_agent(
     state_manager: StateManager,
     max_files: int = 3,
     progress_callback: ToolProgressCallback | None = None,
-) -> Agent:
+) -> Agent[dict[str, Any]]:
     """Create research agent with read-only tools and file read limit.
 
     IMPORTANT: Uses same model as main agent - do NOT hardcode model selection.

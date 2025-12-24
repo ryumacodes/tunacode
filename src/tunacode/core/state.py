@@ -21,6 +21,8 @@ from tunacode.types import (
     MessageHistory,
     ModelName,
     SessionId,
+    ToolArgs,
+    ToolCallId,
     ToolName,
     ToolProgressCallback,
     UserConfig,
@@ -62,11 +64,14 @@ class SessionState:
     react_scratchpad: dict[str, Any] = field(default_factory=lambda: {"timeline": []})
     react_forced_calls: int = 0
     react_guidance: list[str] = field(default_factory=list)
+    # CLAUDE_ANCHOR[todos]: Session todo list for task tracking
+    todos: list[dict[str, Any]] = field(default_factory=list)
     # Operation state tracking
     operation_cancelled: bool = False
     # Enhanced tracking for thoughts display
     files_in_context: set[str] = field(default_factory=set)
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
+    tool_call_args_by_id: dict[ToolCallId, ToolArgs] = field(default_factory=dict)
     iteration_count: int = 0
     current_iteration: int = 0
     # Track streaming state to prevent spinner conflicts
@@ -98,6 +103,15 @@ class SessionState:
     task_hierarchy: dict[str, Any] = field(default_factory=dict)
     iteration_budgets: dict[str, int] = field(default_factory=dict)
     recursive_context_stack: list[dict[str, Any]] = field(default_factory=list)
+    # Streaming debug instrumentation (see core/agents/agent_components/streaming.py)
+    _debug_events: list[str] = field(default_factory=list)
+    _debug_raw_stream_accum: str = ""
+    # Request lifecycle metadata
+    request_id: str = ""
+    original_query: str = ""
+    # Agent execution counters
+    consecutive_empty_responses: int = 0
+    batch_counter: int = 0
 
     def update_token_count(self) -> None:
         """Calculate total token count from conversation messages."""
@@ -208,6 +222,19 @@ class StateManager:
     def clear_react_scratchpad(self) -> None:
         self._session.react_scratchpad = {"timeline": []}
 
+    # Todo list helpers
+    def get_todos(self) -> list[dict[str, Any]]:
+        """Return the current todo list."""
+        return self._session.todos
+
+    def set_todos(self, todos: list[dict[str, Any]]) -> None:
+        """Replace the entire todo list."""
+        self._session.todos = todos
+
+    def clear_todos(self) -> None:
+        """Clear the todo list."""
+        self._session.todos = []
+
     def reset_session(self) -> None:
         """Reset the session to a fresh state."""
         self._session = SessionState()
@@ -288,6 +315,7 @@ class StateManager:
             "tool_ignore": self._session.tool_ignore,
             "yolo": self._session.yolo,
             "react_scratchpad": self._session.react_scratchpad,
+            "todos": self._session.todos,
             "messages": self._serialize_messages(),
         }
 
@@ -341,6 +369,7 @@ class StateManager:
             self._session.tool_ignore = data.get("tool_ignore", [])
             self._session.yolo = data.get("yolo", False)
             self._session.react_scratchpad = data.get("react_scratchpad", {"timeline": []})
+            self._session.todos = data.get("todos", [])
             self._session.messages = self._deserialize_messages(data.get("messages", []))
 
             return True

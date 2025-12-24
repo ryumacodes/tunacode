@@ -10,7 +10,7 @@ from tunacode.types import AgentState
 class InvalidStateTransitionError(Exception):
     """Raised when an invalid state transition is attempted."""
 
-    def __init__(self, from_state: Enum, to_state: Enum, message: str = None):
+    def __init__(self, from_state: Enum, to_state: Enum, message: str | None = None):
         self.from_state = from_state
         self.to_state = to_state
         self.message = message or f"Invalid state transition: {from_state.value} → {to_state.value}"

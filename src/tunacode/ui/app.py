@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import os
 import time
-from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from rich.markdown import Markdown
@@ -21,6 +20,7 @@ from textual.widgets import LoadingIndicator, RichLog, Static
 from tunacode.constants import (
     RICHLOG_CLASS_PAUSED,
     RICHLOG_CLASS_STREAMING,
+    TOOL_PANEL_WIDTH,
     build_nextstep_theme,
     build_tunacode_theme,
 )
@@ -41,6 +41,11 @@ from tunacode.ui.callbacks import (
 )
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
+from tunacode.ui.repl_support import (
+    PendingConfirmationState,
+    format_user_message,
+)
+from tunacode.ui.shell_runner import ShellRunner
 from tunacode.ui.styles import (
     STYLE_ERROR,
     STYLE_HEADING,
@@ -61,43 +66,7 @@ from tunacode.ui.widgets import (
 )
 
 # Throttle streaming display updates to reduce visual churn
-STREAM_THROTTLE_MS: float = 200.0
-
-# Collapse threshold for pasted content display
-COLLAPSE_THRESHOLD = 10
-
-
-def _format_collapsed_message(text: str, style: str) -> Text:
-    """Format long pasted text with collapsed middle section.
-
-    Shows first 3 lines, collapse indicator, and last 2 lines.
-    """
-    lines = text.split("\n")
-    line_count = len(lines)
-
-    if line_count <= COLLAPSE_THRESHOLD:
-        block = Text()
-        block.append(f"│ {text}\n", style=style)
-        return block
-
-    # Show first 3 and last 2 lines with collapse indicator
-    preview = "\n│ ".join(lines[:3])
-    suffix = "\n│ ".join(lines[-2:])
-    collapsed = line_count - 5
-
-    block = Text()
-    block.append(f"│ {preview}\n", style=style)
-    block.append(f"│ [[ {collapsed} more lines ]]\n", style=f"dim {style}")
-    block.append(f"│ {suffix}\n", style=style)
-    return block
-
-
-@dataclass
-class PendingConfirmationState:
-    """Tracks pending tool confirmation state."""
-
-    future: asyncio.Future[ToolConfirmationResponse]
-    request: ToolConfirmationRequest
+STREAM_THROTTLE_MS: float = 100.0
 
 
 class TextualReplApp(App[None]):
@@ -129,6 +98,8 @@ class TextualReplApp(App[None]):
         self._current_request_task: asyncio.Task | None = None
         self._loading_indicator_shown: bool = False
         self._last_display_update: float = 0.0
+
+        self.shell_runner = ShellRunner(self)
 
         self.rich_log: RichLog
         self.editor: Editor
@@ -350,16 +321,11 @@ class TextualReplApp(App[None]):
         from datetime import datetime
 
         timestamp = datetime.now().strftime("%I:%M %p").lstrip("0")
-        line_count = message.text.count("\n") + 1
 
         self.rich_log.write("")
+        render_width = max(1, self.rich_log.size.width - 2)
 
-        # Collapse only if pasted AND exceeds threshold
-        if message.was_pasted and line_count > COLLAPSE_THRESHOLD:
-            user_block = _format_collapsed_message(message.text, STYLE_PRIMARY)
-        else:
-            user_block = Text()
-            user_block.append(f"│ {message.text}\n", style=STYLE_PRIMARY)
+        user_block = format_user_message(message.text, STYLE_PRIMARY, width=render_width)
 
         user_block.append(f"│ you {timestamp}", style=f"dim {STYLE_PRIMARY}")
         self.rich_log.write(user_block)
@@ -461,12 +427,35 @@ class TextualReplApp(App[None]):
             return
 
         # Otherwise, cancel the stream
-        if self._current_request_task is None:
+        if self._current_request_task is not None:
+            self._streaming_cancelled = True
+            self._stream_buffer.clear()
+            self.current_stream_text = ""
+            self._current_request_task.cancel()
             return
-        self._streaming_cancelled = True
-        self._stream_buffer.clear()
-        self.current_stream_text = ""
-        self._current_request_task.cancel()
+
+        shell_runner = getattr(self, "shell_runner", None)
+        if shell_runner is not None and shell_runner.is_running():
+            shell_runner.cancel()
+            return
+
+        if self.editor.value or self.editor.has_paste_buffer:
+            self.editor.clear_input()
+            return
+
+        return
+
+    def start_shell_command(self, raw_cmd: str) -> None:
+        self.shell_runner.start(raw_cmd)
+
+    def write_shell_output(self, renderable: Text) -> None:
+        self.rich_log.write(renderable)
+
+    def shell_status_running(self) -> None:
+        self.status_bar.update_running_action("shell")
+
+    def shell_status_last(self) -> None:
+        self.status_bar.update_last_action("shell")
 
     def _update_resource_bar(self) -> None:
         session = self.state_manager.session
@@ -527,7 +516,8 @@ class TextualReplApp(App[None]):
             Group(*content_parts),
             border_style=STYLE_PRIMARY,
             padding=(0, 1),
-            expand=False,
+            expand=True,
+            width=TOOL_PANEL_WIDTH,
         )
         self.rich_log.write(panel)
 
@@ -552,8 +542,3 @@ class TextualReplApp(App[None]):
             self.pending_confirmation.future.set_result(response)
             self.pending_confirmation = None
             event.stop()
-
-
-async def run_textual_repl(state_manager: StateManager, show_setup: bool = False) -> None:
-    app = TextualReplApp(state_manager=state_manager, show_setup=show_setup)
-    await app.run_async()

@@ -2,8 +2,7 @@
 
 from typing import Any
 
-from tunacode.core.state import StateManager
-from tunacode.types import FallbackResponse
+from tunacode.types import FallbackResponse, StateManager
 
 
 class UserPromptPartFallback:

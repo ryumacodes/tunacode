@@ -17,7 +17,7 @@ DEFAULT_USER_CONFIG: UserConfig = {
         "OPENROUTER_API_KEY": "",
     },
     "settings": {
-        "max_retries": 10,
+        "max_retries": 3,
         "max_iterations": 40,
         "request_delay": 0.0,
         "global_request_timeout": 90.0,
@@ -34,6 +34,11 @@ DEFAULT_USER_CONFIG: UserConfig = {
             "max_results": 100,  # Maximum results per search
             "enable_metrics": False,  # Enable performance metrics collection
             "debug": False,  # Enable debug logging for ripgrep operations
+        },
+        "lsp": {
+            "enabled": True,  # Requires pyright: uv pip install pyright
+            "timeout": 5.0,  # Maximum seconds to wait for diagnostics
+            "max_diagnostics": 20,  # Maximum number of diagnostics to show
         },
     },
 }

@@ -1,3 +1,48 @@
+## [Unreleased]
+
+## [0.1.16] - 2025-12-19
+
+### Added
+- Minimum viewport padding to tool panels for better readability (#192) - thanks @larock22
+- Standardized tool panel viewport sizing across all renderers (#190)
+
+### Fixed
+- Eliminate UI freezes during update_file operations
+- LSP diagnostics truncation and hardened diff rendering (#191)
+- Tool return arg hydration issue (#189)
+
+### Changed
+- Remove inline comments from LSP module for cleaner code
+
+### Contributors
+Thanks to our community contributors for this release:
+- @larock22 - viewport padding improvements and subagent loading states
+- @ryumacodes - update command implementation
+
+## [0.1.12] - 2025-12-18
+
+### Fixed
+- Prevent TUI hangs when rendering large tool confirmation diffs (e.g., `write_file` with minified content)
+
+## [0.1.11] - 2025-12-18
+
+### Added
+- `/update` command to check for and install updates from TUI (#182) - thanks @ryumacodes
+- TodoWrite and TodoRead tools for task tracking (#181)
+- LSP status indicator in resource bar showing server name
+- Switched Python LSP from pyright to ruff for better integration
+
+### Fixed
+- Paste buffer flow with improved user input wrapping (#188)
+- LSP diagnostics display with NeXTSTEP 4-zone layout (#186)
+- Escape key now cancels shell command input (#187)
+- Paste indicator shows inline with "..." for continued content
+
+### Changed
+- Simplify concatenated JSON parsing with fail-loud error handling (#175)
+- Reduced streaming throttle for smoother output
+- Refactored app.py under 600 lines
+
 ## [0.1.10] - 2025-12-16
 
 ### Added

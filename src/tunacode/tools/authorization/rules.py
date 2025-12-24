@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from tunacode.constants import READ_ONLY_TOOLS, ToolName
+from tunacode.constants import READ_ONLY_TOOLS
+from tunacode.types import ToolName
 
 from .context import AuthContext
+
+READ_ONLY_TOOL_NAMES: set[str] = {tool.value for tool in READ_ONLY_TOOLS}
 
 
 class AuthorizationRule(Protocol):
@@ -66,4 +69,4 @@ class ToolIgnoreListRule:
 
 def is_read_only_tool(tool_name: str) -> bool:
     """Check if the tool is classified as read-only."""
-    return tool_name in READ_ONLY_TOOLS
+    return tool_name in READ_ONLY_TOOL_NAMES
