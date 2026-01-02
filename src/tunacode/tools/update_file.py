@@ -28,7 +28,7 @@ class _ReplaceError(Exception):
     pass
 
 
-def _sync_update_file(filepath: str, target: str, patch: str) -> tuple[str, str]:
+def _sync_update_file(filepath: str, old_text: str, new_text: str) -> tuple[str, str]:
     """Synchronous file update - runs in thread pool.
 
     Returns:
@@ -46,7 +46,7 @@ def _sync_update_file(filepath: str, target: str, patch: str) -> tuple[str, str]
         original = f.read()
 
     try:
-        new_content = replace(original, target, patch, replace_all=False)
+        new_content = replace(original, old_text, new_text, replace_all=False)
     except ValueError as e:
         lines = original.splitlines()
         preview_lines = min(20, len(lines))
@@ -75,20 +75,20 @@ def _sync_update_file(filepath: str, target: str, patch: str) -> tuple[str, str]
 
 
 @file_tool(writes=True)
-async def update_file(filepath: str, target: str, patch: str) -> str:
-    """Update an existing file by replacing a target text block with a patch.
+async def update_file(filepath: str, old_text: str, new_text: str) -> str:
+    """Update an existing file by replacing old_text with new_text.
 
     Args:
         filepath: The path to the file to update.
-        target: The entire, exact block of text to be replaced.
-        patch: The new block of text to insert.
+        old_text: The entire, exact block of text to be replaced.
+        new_text: The new block of text to insert.
 
     Returns:
         A message indicating success and the diff of changes.
     """
     try:
         result_filepath, diff_text = await asyncio.to_thread(
-            _sync_update_file, filepath, target, patch
+            _sync_update_file, filepath, old_text, new_text
         )
     except _FileNotFoundSignal:
         raise ModelRetry(
@@ -97,8 +97,8 @@ async def update_file(filepath: str, target: str, patch: str) -> str:
         ) from None
     except _NoChangesSignal:
         raise ModelRetry(
-            f"Update target found, but replacement resulted in no changes to '{filepath}'. "
-            "Was the `target` identical to the `patch`? Please check the file content."
+            f"Update old_text found, but replacement resulted in no changes to '{filepath}'. "
+            "Was the `old_text` identical to the `new_text`? Please check the file content."
         ) from None
     except _ReplaceError as e:
         raise ModelRetry(str(e)) from None

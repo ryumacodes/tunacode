@@ -55,6 +55,77 @@ def _has_tool_calls(parts: list[Any]) -> bool:
     return any(getattr(part, "part_kind", None) == PART_KIND_TOOL_CALL for part in parts)
 
 
+PART_KIND_TEXT = "text"
+
+
+def _extract_fallback_tool_calls(
+    parts: list[Any],
+    state_manager: StateManager,
+    response_state: "ResponseState | None",
+) -> list[tuple[Any, ToolArgs]]:
+    """Extract tool calls from text parts using fallback parsing.
+
+    Called when no structured tool calls (part_kind == "tool-call") are found.
+    Attempts to parse embedded tool calls from text content.
+
+    Args:
+        parts: Model response parts to scan
+        state_manager: For recording tool call args
+        response_state: For state transitions
+
+    Returns:
+        List of (part, args) tuples for found tool calls
+    """
+    from pydantic_ai.messages import ToolCallPart
+
+    from tunacode.utils.parsing.tool_parser import (
+        has_potential_tool_call,
+        parse_tool_calls_from_text,
+    )
+
+    results: list[tuple[Any, ToolArgs]] = []
+
+    # Collect text content from text parts
+    text_content = ""
+    for part in parts:
+        part_kind = getattr(part, "part_kind", None)
+        if part_kind == PART_KIND_TEXT:
+            content = getattr(part, "content", "")
+            if content:
+                text_content += content + "\n"
+
+    # Quick check before expensive parsing
+    if not has_potential_tool_call(text_content):
+        return results
+
+    # Parse tool calls from combined text
+    parsed_calls = parse_tool_calls_from_text(text_content)
+
+    if not parsed_calls:
+        return results
+
+    # Transition to TOOL_EXECUTION on finding fallback tools
+    if response_state and response_state.can_transition_to(AgentState.TOOL_EXECUTION):
+        response_state.transition_to(AgentState.TOOL_EXECUTION)
+
+    # Convert ParsedToolCall to ToolCallPart objects
+    for parsed in parsed_calls:
+        # Create a ToolCallPart compatible with existing infrastructure
+        part = ToolCallPart(
+            tool_name=parsed.tool_name,
+            args=parsed.args,
+            tool_call_id=parsed.tool_call_id,
+        )
+
+        # Record args for later retrieval
+        tool_args = _normalize_tool_args(parsed.args)
+        state_manager.session.tool_call_args_by_id[parsed.tool_call_id] = tool_args
+
+        results.append((part, tool_args))
+
+    return results
+
+
 def _update_token_usage(model_response: Any, state_manager: StateManager) -> None:
     usage = getattr(model_response, "usage", None)
     if not usage:
@@ -317,6 +388,27 @@ async def _process_tool_calls(
                 read_only_tasks.append((part, node))
             else:
                 write_execute_tasks.append((part, node))
+
+    # Phase 1.5: FALLBACK - Parse text parts if no structured tool calls found
+    # Handles non-standard formats like Qwen2-style XML, Hermes-style, etc.
+    if not tool_call_records and tool_callback:
+        fallback_tool_calls = _extract_fallback_tool_calls(
+            node.model_response.parts,
+            state_manager,
+            response_state,
+        )
+
+        if fallback_tool_calls:
+            is_processing_tools = True
+            for part, tool_args in fallback_tool_calls:
+                tool_call_records.append((part, tool_args))
+                # Categorize fallback tools same as structured ones
+                if part.tool_name == "research_codebase":
+                    research_agent_tasks.append((part, node))
+                elif part.tool_name in READ_ONLY_TOOLS:
+                    read_only_tasks.append((part, node))
+                else:
+                    write_execute_tasks.append((part, node))
 
     # Phase 2: Execute research agent
     if research_agent_tasks and tool_callback:

@@ -60,7 +60,7 @@ Your task is to execute these tools sequentially with explicit confirmation at e
     Safety: Fails if file exists (no overwrites)
     Use for: Creating new modules, configs, tests
 
-7. `update_file(filepath: str, target: str, patch: str)` - Modify existing files
+7. `update_file(filepath: str, old_text: str, new_text: str)` - Modify existing files
     Safety: Shows diff before applying changes
     Use for: Fixing bugs, updating imports, refactoring
 
