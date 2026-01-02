@@ -12,11 +12,13 @@ from tunacode.constants import SETTINGS_BASE_URL
 from tunacode.core.state import StateManager
 from tunacode.exceptions import UserAbortError
 from tunacode.tools.authorization.handler import ToolHandler
+from tunacode.ui.headless import resolve_output
 from tunacode.ui.repl_support import run_textual_repl
 from tunacode.utils.system import check_for_updates
 
 DEFAULT_TIMEOUT_SECONDS = 600
 BASE_URL_HELP_TEXT = "API base URL (e.g., https://openrouter.ai/api/v1)"
+HEADLESS_NO_RESPONSE_ERROR = "Error: No response generated"
 
 app_settings = ApplicationSettings()
 app = typer.Typer(help="TunaCode - OS AI-powered development assistant")
@@ -188,7 +190,7 @@ def run_headless(
         state_manager.set_tool_handler(tool_handler)
 
         try:
-            await asyncio.wait_for(
+            agent_run = await asyncio.wait_for(
                 process_request(
                     message=prompt,
                     model=state_manager.session.current_model,
@@ -209,6 +211,14 @@ def run_headless(
                     "success": True,
                 }
                 print(json.dumps(trajectory, indent=2))
+                return 0
+
+            headless_output = resolve_output(agent_run, state_manager.session.messages)
+            if headless_output is None:
+                print(HEADLESS_NO_RESPONSE_ERROR, file=sys.stderr)
+                return 1
+
+            print(headless_output)
 
             return 0
 
