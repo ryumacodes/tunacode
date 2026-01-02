@@ -4,7 +4,6 @@ import asyncio
 import json
 import os
 import sys
-from typing import Any
 
 import typer
 
@@ -13,14 +12,13 @@ from tunacode.constants import SETTINGS_BASE_URL
 from tunacode.core.state import StateManager
 from tunacode.exceptions import UserAbortError
 from tunacode.tools.authorization.handler import ToolHandler
+from tunacode.ui.headless import resolve_output
 from tunacode.ui.repl_support import run_textual_repl
-from tunacode.utils.messaging import get_message_content
 from tunacode.utils.system import check_for_updates
 
 DEFAULT_TIMEOUT_SECONDS = 600
 BASE_URL_HELP_TEXT = "API base URL (e.g., https://openrouter.ai/api/v1)"
 HEADLESS_NO_RESPONSE_ERROR = "Error: No response generated"
-RESULT_TEXT_ATTRIBUTES: tuple[str, ...] = ("output", "text", "content", "message")
 
 app_settings = ApplicationSettings()
 app = typer.Typer(help="TunaCode - OS AI-powered development assistant")
@@ -151,64 +149,6 @@ def main(
     _run_textual_cli(model=model, show_setup=setup)
 
 
-def _normalize_text(value: str | None) -> str | None:
-    if value is None:
-        return None
-
-    stripped_value = value.strip()
-    if not stripped_value:
-        return None
-
-    return stripped_value
-
-
-def _extract_text_attribute(value: object) -> str | None:
-    for attribute_name in RESULT_TEXT_ATTRIBUTES:
-        attribute_value = getattr(value, attribute_name, None)
-        if not isinstance(attribute_value, str):
-            continue
-
-        normalized_value = _normalize_text(attribute_value)
-        if normalized_value is not None:
-            return normalized_value
-
-    return None
-
-
-def _extract_run_output(agent_run: object) -> str | None:
-    result = getattr(agent_run, "result", None)
-    if result is None:
-        return None
-
-    if isinstance(result, str):
-        return _normalize_text(result)
-
-    return _extract_text_attribute(result)
-
-
-def _extract_latest_response_text(messages: list[Any]) -> str | None:
-    from pydantic_ai.messages import ModelResponse
-
-    for message in reversed(messages):
-        if not isinstance(message, ModelResponse):
-            continue
-
-        content = get_message_content(message)
-        normalized_content = _normalize_text(content)
-        if normalized_content is not None:
-            return normalized_content
-
-    return None
-
-
-def _resolve_headless_output(agent_run: object, messages: list[Any]) -> str | None:
-    run_output = _extract_run_output(agent_run)
-    if run_output is not None:
-        return run_output
-
-    return _extract_latest_response_text(messages)
-
-
 @app.command(name="run")
 def run_headless(
     prompt: str = typer.Argument(..., help="The prompt/instruction to execute"),
@@ -273,7 +213,7 @@ def run_headless(
                 print(json.dumps(trajectory, indent=2))
                 return 0
 
-            headless_output = _resolve_headless_output(agent_run, state_manager.session.messages)
+            headless_output = resolve_output(agent_run, state_manager.session.messages)
             if headless_output is None:
                 print(HEADLESS_NO_RESPONSE_ERROR, file=sys.stderr)
                 return 1
