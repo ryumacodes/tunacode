@@ -40,11 +40,6 @@ def _generate_tool_call_id() -> str:
     return str(uuid.uuid4())
 
 
-# =============================================================================
-# STRATEGY 1: Qwen2-style XML
-# Format: <tool_call>{"name": "...", "arguments": {...}}</tool_call>
-# =============================================================================
-
 QWEN2_PATTERN = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
 
 
@@ -71,11 +66,6 @@ def parse_qwen2_xml(text: str) -> list[ParsedToolCall] | None:
 
     return results if results else None
 
-
-# =============================================================================
-# STRATEGY 2: Hermes-style function calls
-# Format: <function=name>{"arg": "value"}</function>
-# =============================================================================
 
 HERMES_PATTERN = re.compile(r"<function=(\w+)>\s*(\{.*?\})\s*</function>", re.DOTALL)
 
@@ -113,11 +103,6 @@ def parse_hermes_style(text: str) -> list[ParsedToolCall] | None:
     return results if results else None
 
 
-# =============================================================================
-# STRATEGY 3: Code fence JSON
-# Format: ```json {"name": "...", ...} ```
-# =============================================================================
-
 CODE_FENCE_PATTERN = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
 
@@ -145,12 +130,6 @@ def parse_code_fence(text: str) -> list[ParsedToolCall] | None:
     return results if results else None
 
 
-# =============================================================================
-# STRATEGY 4: Raw JSON tool calls
-# Format: {"name": "...", "arguments": {...}} or {"tool": "...", "args": {...}}
-# =============================================================================
-
-
 def parse_raw_json(text: str) -> list[ParsedToolCall] | None:
     """Parse raw JSON tool calls embedded in text.
 
@@ -176,11 +155,6 @@ def parse_raw_json(text: str) -> list[ParsedToolCall] | None:
             results.append(parsed)
 
     return results if results else None
-
-
-# =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
 
 
 def _parse_tool_json(json_str: str) -> ParsedToolCall | None:
@@ -231,11 +205,6 @@ def _normalize_tool_object(obj: Any) -> ParsedToolCall | None:
     )
 
 
-# =============================================================================
-# MAIN PARSER - STRATEGY CHAIN
-# =============================================================================
-
-# Ordered list of parsing strategies (try most specific first)
 PARSING_STRATEGIES: list[tuple[str, callable]] = [
     ("qwen2_xml", parse_qwen2_xml),
     ("hermes_style", parse_hermes_style),
