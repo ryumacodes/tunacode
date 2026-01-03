@@ -92,6 +92,7 @@ done < <(find . -type f \
     -not -name ".coverage" \
     -not -name "uv.lock" \
     -not -name ".osgrepignore" \
+    -not -name "models_registry.json" \
     -print0)
 
 exit $FOUND_LONG_FILES

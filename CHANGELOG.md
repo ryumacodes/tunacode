@@ -1,5 +1,32 @@
 ## [Unreleased]
 
+## [0.1.20] - 2026-01-02
+
+### Added
+- Lazy-load models registry and guardrail picker for faster startup
+- UI refinements and research documentation (#204)
+- neXTSTEP UI guidelines PDF and reader skill
+- Discord server link to README (#194)
+- Consolidated default prompt document
+
+### Fixed
+- Headless run output extraction (#208)
+- Base URL overrides and CLI baseurl flag (#200)
+- File size handling refactoring (#155, #154)
+- TOOL_VIEWPORT_LINES and DEFAULT_IGNORE_PATTERNS_COUNT (#197)
+
+### Changed
+- Refactor headless output extraction to dedicated module
+- Remove dead code: callbacks.py, 3 unused UI components (#205), 35 unused constants (#206)
+- Refactor types.py to package structure
+- Replace magic numbers with symbolic constants
+- Reduce MIN_VIEWPORT_LINES to 5 for more compact tool panels
+- Uniform tool panel width with fixed TOOL_PANEL_WIDTH
+
+### Contributors
+Thanks to our community contributors:
+- @ryumacodes - issue fixes and standardization
+
 ## [0.1.16] - 2025-12-19
 
 ### Added
