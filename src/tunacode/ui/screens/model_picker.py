@@ -10,6 +10,49 @@ from textual.widgets import Input, OptionList, Static
 from textual.widgets.option_list import Option
 
 from tunacode.configuration.models import get_models_for_provider, get_providers
+from tunacode.constants import MODEL_PICKER_UNFILTERED_LIMIT
+
+
+def _filter_visible_items(
+    items: list[tuple[str, str]],
+    filter_query: str,
+    limit: int,
+) -> tuple[list[tuple[str, str]], bool]:
+    normalized_query = filter_query.strip().lower()
+    has_query = bool(normalized_query)
+    visible_items: list[tuple[str, str]] = []
+    total_matches = 0
+
+    for display_name, item_id in items:
+        display_name_lower = display_name.lower()
+        if has_query and normalized_query not in display_name_lower:
+            continue
+        total_matches += 1
+        if not has_query and len(visible_items) >= limit:
+            continue
+        visible_items.append((display_name, item_id))
+
+    is_truncated = (not has_query) and (total_matches > len(visible_items))
+    return visible_items, is_truncated
+
+
+def _choose_highlight_index(
+    items: list[tuple[str, str]],
+    current_id: str,
+) -> int | None:
+    if not items:
+        return None
+
+    for index, (_, item_id) in enumerate(items):
+        if item_id == current_id:
+            return index
+
+    return 0
+
+
+def _append_truncation_notice(option_list: OptionList, limit: int, label: str) -> None:
+    message = f"Showing first {limit} {label}. Type to filter to see more."
+    option_list.add_option(Option(message, disabled=True))
 
 
 class ProviderPickerScreen(Screen[str | None]):
@@ -73,20 +116,27 @@ class ProviderPickerScreen(Screen[str | None]):
         option_list = self.query_one("#provider-list", OptionList)
         option_list.clear_options()
 
-        query = self._filter_query.lower()
-        highlight_index = 0
-        matched_count = 0
+        filter_query = self._filter_query
+        visible_providers, is_truncated = _filter_visible_items(
+            self._all_providers,
+            filter_query,
+            MODEL_PICKER_UNFILTERED_LIMIT,
+        )
 
-        for display_name, provider_id in self._all_providers:
-            if query and query not in display_name.lower():
-                continue
+        highlight_index = _choose_highlight_index(visible_providers, self._current_provider)
+
+        for display_name, provider_id in visible_providers:
             option_list.add_option(Option(display_name, id=provider_id))
-            if provider_id == self._current_provider:
-                highlight_index = matched_count
-            matched_count += 1
 
-        if matched_count > 0:
+        if highlight_index is not None:
             option_list.highlighted = highlight_index
+
+        if is_truncated:
+            _append_truncation_notice(
+                option_list,
+                MODEL_PICKER_UNFILTERED_LIMIT,
+                "providers",
+            )
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """Filter options as user types."""
@@ -188,14 +238,16 @@ class ModelPickerScreen(Screen[str | None]):
         option_list = self.query_one("#model-list", OptionList)
         option_list.clear_options()
 
-        query = self._filter_query.lower()
-        highlight_index = 0
-        matched_count = 0
+        filter_query = self._filter_query
+        visible_models, is_truncated = _filter_visible_items(
+            self._all_models,
+            filter_query,
+            MODEL_PICKER_UNFILTERED_LIMIT,
+        )
 
-        for display_name, model_id in self._all_models:
-            if query and query not in display_name.lower():
-                continue
+        highlight_index = _choose_highlight_index(visible_models, self._current_model_id)
 
+        for display_name, model_id in visible_models:
             full_model = f"{self._provider_id}:{model_id}"
             pricing = get_model_pricing(full_model)
             if pricing is not None:
@@ -204,12 +256,16 @@ class ModelPickerScreen(Screen[str | None]):
                 label = display_name
 
             option_list.add_option(Option(label, id=model_id))
-            if model_id == self._current_model_id:
-                highlight_index = matched_count
-            matched_count += 1
 
-        if matched_count > 0:
+        if highlight_index is not None:
             option_list.highlighted = highlight_index
+
+        if is_truncated:
+            _append_truncation_notice(
+                option_list,
+                MODEL_PICKER_UNFILTERED_LIMIT,
+                "models",
+            )
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """Filter options as user types."""

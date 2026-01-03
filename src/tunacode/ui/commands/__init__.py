@@ -95,10 +95,11 @@ class ModelCommand(Command):
     usage = "/model [provider:model-name]"
 
     async def execute(self, app: TextualReplApp, args: str) -> None:
-        from tunacode.configuration.models import get_model_context_window
+        from tunacode.configuration.models import get_model_context_window, load_models_registry
         from tunacode.utils.config.user_configuration import save_config
 
         if args:
+            load_models_registry()
             model_name = args.strip()
             app.state_manager.session.current_model = model_name
             app.state_manager.session.user_config["default_model"] = model_name
