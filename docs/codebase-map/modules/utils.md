@@ -1,0 +1,149 @@
+---
+title: Utils Module
+path: src/tunacode/utils
+type: directory
+depth: 1
+description: Shared utility functions and helpers
+exports: [estimate_tokens, parse_json, validate_command]
+seams: [M]
+---
+
+# Utils Module
+
+## Purpose
+Provides shared utility functions across configuration, messaging, parsing, security, and system operations.
+
+## Key Components
+
+### Configuration (utils/config/)
+
+**user_configuration.py**
+- User config file loading
+- Config directory management
+- Default value handling
+- Config validation
+
+### Messaging (utils/messaging/)
+
+**message_utils.py**
+- Message content extraction
+- Message formatting
+- Message type detection
+
+**token_counter.py**
+- **estimate_tokens()** - Token counting for messages
+- Supports multiple models (Claude, GPT, etc.)
+- Used for context window management
+
+### Parsing (utils/parsing/)
+
+**json_utils.py**
+- **parse_json()** - Robust JSON parsing
+- Handles malformed JSON
+- Provides error messages
+
+**command_parser.py**
+- Command string parsing
+- Argument extraction
+- Command validation
+
+**tool_parser.py**
+- Tool call parsing from text
+- Argument extraction
+- Tool name resolution
+
+**retry.py**
+- Retry logic with exponential backoff
+- Max retry configuration
+- Error handling
+
+### Security (utils/security/)
+
+**command.py**
+- **validate_command()** - Command safety checks
+- Destructive pattern detection
+- Command sanitization
+
+**Security checks:**
+- Blocks `rm -rf /`
+- Blocks `chmod -R 777`
+- Blocks other destructive commands
+- Whitelist-based safe commands
+
+### System (utils/system/)
+
+**gitignore.py**
+- .gitignore pattern matching
+- File filtering based on ignore rules
+- Gitignore parsing
+
+**paths.py**
+- Path manipulation utilities
+- Absolute/relative path conversion
+- Path validation
+
+### UI (utils/ui/)
+
+**file_filter.py**
+- File filtering for UI components
+- Pattern-based filtering
+- Extension filtering
+
+**helpers.py**
+- UI-specific helper functions
+- Text formatting
+- Display utilities
+
+## Utility Categories
+
+### Configuration Utilities
+- Config loading and merging
+- Default value resolution
+- Config validation
+
+### Messaging Utilities
+- Token estimation
+- Message formatting
+- Content extraction
+
+### Parsing Utilities
+- JSON parsing
+- Command parsing
+- Tool call parsing
+- Retry logic
+
+### Security Utilities
+- Command validation
+- Destructive pattern detection
+- Input sanitization
+
+### System Utilities
+- Gitignore integration
+- Path manipulation
+- File system operations
+
+### UI Utilities
+- File filtering
+- Text formatting
+- Display helpers
+
+## Integration Points
+
+- **core/agents/** - Token counting, message parsing
+- **tools/** - Command validation, JSON parsing
+- **ui/** - File filtering, path handling
+- **configuration/** - Config loading
+
+## Seams (M)
+
+**Modification Points:**
+- Add new parsing utilities
+- Extend security validation
+- Create new system helpers
+- Add UI formatting functions
+
+**Best Practices:**
+- Keep utilities pure (no side effects)
+- Provide clear error messages
+- Handle edge cases gracefully
+- Document complexity

@@ -1,0 +1,57 @@
+---
+title: Core State Management
+path: src/tunacode/core/state.py
+type: file
+depth: 1
+description: Central session state management and configuration tracking
+exports: [StateManager, SessionState]
+seams: [M]
+---
+
+# Core State Management
+
+## Purpose
+Central singleton managing all session data including conversation history, user configuration, agent cache, and token tracking.
+
+## Key Classes
+
+### SessionState
+Dataclass container for all session data:
+- **user_config** - User settings and preferences
+- **agents** - Cached pydantic-ai Agent instances
+- **agent_versions** - Version tracking for cache invalidation
+- **messages** - Full conversation history (MessageHistory)
+- **current_model** - Active model name
+- **tool_ignore** - Tools approved for auto-execution
+- **tool_progress_callback** - UI callback for tool updates
+- **todos** - Agent task list
+- **total_tokens** - Context window usage tracking
+- **session_total_usage** - Cost tracking per session
+
+### StateManager
+Singleton class with global instance access:
+- **get_state()** - Retrieve SessionState instance
+- **update_token_count()** - Track token usage
+- **save_session()** - Persist session to disk
+- **load_session()** - Restore session from disk
+
+## State Transitions
+
+```
+Initial → Configured → Active → Paused → Saved
+```
+
+## Integration Points
+
+- **core/agents/** - Agent creation and caching
+- **ui/** - Real-time state updates in TUI
+- **configuration/** - User config loading
+- **tools/** - Tool authorization state
+
+## Seams (M)
+
+**Modification Points:**
+- Add new SessionState fields for extended session tracking
+- Customize persistence format (currently JSON)
+- Add state validation logic
+- Implement state migration for version upgrades
