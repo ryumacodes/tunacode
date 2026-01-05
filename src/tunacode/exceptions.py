@@ -7,6 +7,76 @@ All exceptions inherit from TunaCodeError for easy catching of any TunaCode-spec
 
 from tunacode.types import ErrorMessage, FilePath, OriginalError, ToolName
 
+SECTION_SEPARATOR = "\n\n"
+LINE_SEPARATOR = "\n"
+BULLET_PREFIX = "  - "
+NUMBERED_ITEM_PREFIX = "  {index}. "
+
+SUGGESTED_FIX_LABEL = "Suggested fix"
+VALID_EXAMPLES_LABEL = "Valid examples"
+RECOVERY_COMMANDS_LABEL = "Recovery commands"
+TROUBLESHOOTING_STEPS_LABEL = "Troubleshooting steps"
+HELP_LABEL = "More help"
+
+VALIDATION_PREFIX = "Validation failed: "
+AGENT_ERROR_PREFIX = "Agent error: "
+TOOL_ERROR_PREFIX = "Tool '{tool_name}' failed: "
+
+JSON_TRUNCATION_LIMIT = 100
+VALID_MODEL_EXAMPLE_LIMIT = 3
+
+
+def _format_section(label: str, lines: list[str]) -> str:
+    if not lines:
+        return ""
+
+    section_header = f"{label}:"
+    section_body = LINE_SEPARATOR.join(lines)
+    return f"{section_header}{LINE_SEPARATOR}{section_body}"
+
+
+def _build_error_message(
+    base_message: str,
+    suggested_fix: str | None = None,
+    help_url: str | None = None,
+    valid_examples: list[str] | None = None,
+    recovery_commands: list[str] | None = None,
+    troubleshooting_steps: list[str] | None = None,
+) -> str:
+    sections: list[str] = []
+
+    if suggested_fix:
+        suggested_fix_section = _format_section(SUGGESTED_FIX_LABEL, [suggested_fix])
+        sections.append(suggested_fix_section)
+
+    if help_url:
+        help_section = _format_section(HELP_LABEL, [help_url])
+        sections.append(help_section)
+
+    if valid_examples:
+        example_lines = [f"{BULLET_PREFIX}{example}" for example in valid_examples]
+        examples_section = _format_section(VALID_EXAMPLES_LABEL, example_lines)
+        sections.append(examples_section)
+
+    if recovery_commands:
+        recovery_lines = [f"{BULLET_PREFIX}{cmd}" for cmd in recovery_commands]
+        recovery_section = _format_section(RECOVERY_COMMANDS_LABEL, recovery_lines)
+        sections.append(recovery_section)
+
+    if troubleshooting_steps:
+        step_lines = [
+            f"{NUMBERED_ITEM_PREFIX.format(index=i + 1)}{step}"
+            for i, step in enumerate(troubleshooting_steps)
+        ]
+        troubleshooting_section = _format_section(TROUBLESHOOTING_STEPS_LABEL, step_lines)
+        sections.append(troubleshooting_section)
+
+    if not sections:
+        return base_message
+
+    sections_text = SECTION_SEPARATOR.join(sections)
+    return f"{base_message}{SECTION_SEPARATOR}{sections_text}"
+
 
 class TunaCodeError(Exception):
     """Base exception for all TunaCode errors."""
@@ -14,7 +84,6 @@ class TunaCodeError(Exception):
     pass
 
 
-# Configuration and Setup Exceptions
 class ConfigurationError(TunaCodeError):
     """Raised when there's a configuration issue."""
 
@@ -22,13 +91,11 @@ class ConfigurationError(TunaCodeError):
         self.suggested_fix = suggested_fix
         self.help_url = help_url
 
-        # Build enhanced error message with actionable guidance
-        full_message = message
-        if suggested_fix:
-            full_message += f"\n\n💡 Suggested fix: {suggested_fix}"
-        if help_url:
-            full_message += f"\n📖 More help: {help_url}"
-
+        full_message = _build_error_message(
+            message,
+            suggested_fix=suggested_fix,
+            help_url=help_url,
+        )
         super().__init__(full_message)
 
 
@@ -51,14 +118,12 @@ class ValidationError(TunaCodeError):
         self.suggested_fix = suggested_fix
         self.valid_examples = valid_examples or []
 
-        # Build enhanced error message with actionable guidance
-        full_message = f"Validation failed: {message}"
-        if suggested_fix:
-            full_message += f"\n\n💡 Suggested fix: {suggested_fix}"
-        if valid_examples:
-            examples_text = "\n".join(f"  • {example}" for example in valid_examples)
-            full_message += f"\n\n✅ Valid examples:\n{examples_text}"
-
+        base_message = f"{VALIDATION_PREFIX}{message}"
+        full_message = _build_error_message(
+            base_message,
+            suggested_fix=suggested_fix,
+            valid_examples=self.valid_examples,
+        )
         super().__init__(full_message)
 
 
@@ -79,14 +144,12 @@ class ToolExecutionError(TunaCodeError):
         self.suggested_fix = suggested_fix
         self.recovery_commands = recovery_commands or []
 
-        # Build enhanced error message
-        full_message = f"Tool '{tool_name}' failed: {message}"
-        if suggested_fix:
-            full_message += f"\n\n💡 Suggested fix: {suggested_fix}"
-        if recovery_commands:
-            commands_text = "\n".join(f"  • {cmd}" for cmd in recovery_commands)
-            full_message += f"\n\n🔧 Recovery commands:\n{commands_text}"
-
+        base_message = TOOL_ERROR_PREFIX.format(tool_name=tool_name) + str(message)
+        full_message = _build_error_message(
+            base_message,
+            suggested_fix=suggested_fix,
+            recovery_commands=self.recovery_commands,
+        )
         super().__init__(full_message)
 
 
@@ -102,16 +165,12 @@ class AgentError(TunaCodeError):
         self.suggested_fix = suggested_fix
         self.troubleshooting_steps = troubleshooting_steps or []
 
-        # Build enhanced error message
-        full_message = f"Agent error: {message}"
-        if suggested_fix:
-            full_message += f"\n\n💡 Suggested fix: {suggested_fix}"
-        if troubleshooting_steps:
-            steps_text = "\n".join(
-                f"  {i + 1}. {step}" for i, step in enumerate(troubleshooting_steps)
-            )
-            full_message += f"\n\n🔍 Troubleshooting steps:\n{steps_text}"
-
+        base_message = f"{AGENT_ERROR_PREFIX}{message}"
+        full_message = _build_error_message(
+            base_message,
+            suggested_fix=suggested_fix,
+            troubleshooting_steps=self.troubleshooting_steps,
+        )
         super().__init__(full_message)
 
 
@@ -168,7 +227,7 @@ class ModelConfigurationError(ConfigurationError):
 
         message = f"Model '{model}' configuration error: {issue}"
         if valid_models:
-            examples = valid_models[:3]  # Show first 3 examples
+            examples = valid_models[:VALID_MODEL_EXAMPLE_LIMIT]
             suggested_fix += f"\n\nValid examples: {', '.join(examples)}"
 
         super().__init__(message, suggested_fix=suggested_fix, help_url=help_url)
@@ -233,7 +292,10 @@ class ToolBatchingJSONError(TunaCodeError):
         self.original_error = original_error
 
         # Truncate JSON content for display if too long
-        display_content = json_content[:100] + "..." if len(json_content) > 100 else json_content
+        truncated_content = json_content[:JSON_TRUNCATION_LIMIT]
+        display_content = (
+            f"{truncated_content}..." if len(json_content) > JSON_TRUNCATION_LIMIT else json_content
+        )
 
         super().__init__(
             f"The model is having issues with tool batching. "
