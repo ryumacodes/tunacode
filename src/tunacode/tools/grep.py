@@ -163,8 +163,7 @@ class ParallelGrep:
 
             # 5️⃣ Format and return results with strategy info
             strategy_info = (
-                f"Strategy: {search_type} (was {original_search_type}), "
-                f"Files: {len(candidates)}/{5000}"
+                f"Strategy: {search_type} (was {original_search_type}), Files: {len(candidates)}"
             )
             formatted_results = self._result_formatter.format_results(
                 results, pattern, config, output_mode=output_mode
@@ -205,6 +204,9 @@ class ParallelGrep:
         Run ripgrep on pre-filtered file list using the enhanced RipgrepExecutor.
         """
 
+        # Build set of resolved candidate paths for O(1) lookup
+        candidate_set = {p.resolve() for p in candidates}
+
         def run_enhanced_ripgrep():
             """Execute ripgrep search using the new executor."""
             start_time = time.time()
@@ -219,12 +221,10 @@ class ParallelGrep:
                 return []
 
             try:
-                # Use the enhanced executor with support for context lines
-                # Note: Currently searching all files, not using candidates
-                # This is a limitation that should be addressed in future enhancement
+                # Ripgrep respects .gitignore by default
                 search_results = self._ripgrep_executor.search(
                     pattern=pattern,
-                    path=".",  # Search in current directory
+                    path=".",
                     timeout=timeout,
                     max_matches=config.max_results,
                     case_insensitive=not config.case_sensitive,
@@ -232,17 +232,15 @@ class ParallelGrep:
                     context_after=config.context_lines,
                 )
 
-                # Ripgrep doesn't provide timing info for first match, so we rely on
-                # the overall timeout mechanism instead of first_match_deadline
-
                 # Parse results
                 for result_line in search_results:
                     # Parse ripgrep output format "file:line:content"
                     parts = result_line.split(":", 2)
                     if len(parts) >= 3:
                         # Filter to only include results from candidates
-                        file_path = Path(parts[0])
-                        if file_path not in candidates:
+                        # Resolve to absolute path for comparison (ripgrep returns relative)
+                        file_path = Path(parts[0]).resolve()
+                        if file_path not in candidate_set:
                             continue
 
                         try:
@@ -415,6 +413,10 @@ class ParallelGrep:
         return await asyncio.get_event_loop().run_in_executor(self._executor, search_file_sync)
 
 
+# Module-level singleton - reuses executor and FileFilter across calls
+_grep_instance = ParallelGrep()
+
+
 @base_tool
 async def grep(
     pattern: str,
@@ -452,8 +454,7 @@ async def grep(
     if path is not None:
         directory = path
 
-    tool = ParallelGrep()
-    return await tool.execute(
+    return await _grep_instance.execute(
         pattern=pattern,
         directory=directory,
         case_sensitive=case_sensitive,

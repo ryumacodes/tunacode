@@ -28,10 +28,11 @@ MAX_FILES_IN_DIR = 50
 MAX_TOTAL_DIR_SIZE = 2 * MB
 DEFAULT_CONTEXT_WINDOW = 200000
 
-MAX_CALLBACK_CONTENT = 50_000
-MAX_PANEL_LINES = 30
-MAX_PANEL_LINE_WIDTH = 200
-MAX_SEARCH_RESULTS_DISPLAY = 20
+# Display truncation limits (NeXTSTEP information hierarchy)
+MAX_CALLBACK_CONTENT = 50_000  # Emergency safety - prevents UI freeze
+MAX_PANEL_LINES = 10  # Focus zone limit for tool results
+MAX_PANEL_LINE_WIDTH = 200  # Individual line truncation
+MAX_SEARCH_RESULTS_DISPLAY = 20  # Search results shown before "+N more"
 MODEL_PICKER_UNFILTERED_LIMIT = 50
 
 # Tool panel viewport sizing (standardized across all renderers)
@@ -62,6 +63,7 @@ class ToolName(str, Enum):
     REACT = "react"
     RESEARCH_CODEBASE = "research_codebase"
     WEB_FETCH = "web_fetch"
+    PRESENT_PLAN = "present_plan"
 
 
 READ_ONLY_TOOLS = [
@@ -72,6 +74,16 @@ READ_ONLY_TOOLS = [
     ToolName.REACT,
     ToolName.RESEARCH_CODEBASE,
     ToolName.WEB_FETCH,
+    ToolName.PRESENT_PLAN,
+]
+
+WRITE_TOOLS = [
+    ToolName.WRITE_FILE,
+    ToolName.UPDATE_FILE,
+]
+
+EXECUTE_TOOLS = [
+    ToolName.BASH,
 ]
 
 COMMAND_PREFIX = "/"

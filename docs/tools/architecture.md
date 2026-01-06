@@ -164,6 +164,14 @@ The `@base_tool` decorator loads this and sets `tool.__doc__` to the description
 | `write_file` | `@file_tool` | `filepath: str` | Write new file |
 | `update_file` | `@file_tool` | `filepath: str` | Patch existing file |
 | `react` | factory | N/A | ReAct scratchpad (state-bound) |
+| `present_plan` | factory | N/A | Submit implementation plan for approval |
+| `todowrite` | factory | N/A | Track planning tasks |
+| `todoread` | factory | N/A | Read current task list |
+| `todoclear` | factory | N/A | Clear task list |
+
+## Plan Mode
+
+Plan mode is a read-only exploration mode where agents can gather context using read-only tools, then present implementation plans for user approval before executing write operations. See [Plan Mode Documentation](./plan_mode.md) for detailed information.
 
 ## Creating a New Tool
 
@@ -210,6 +218,15 @@ src/tunacode/tools/
 ├── write_file.py
 ├── update_file.py
 ├── react.py             # Factory pattern (stateful)
+├── present_plan.py      # Factory pattern (plan mode)
+├── todo.py              # Factory pattern (task tracking)
+├── authorization/       # Tool authorization subsystem
+│   ├── context.py       # AuthContext dataclass
+│   ├── factory.py       # Rule factory
+│   ├── handler.py       # AuthorizationHandler
+│   ├── policy.py        # AuthorizationPolicy
+│   ├── rules.py         # Authorization rules (PlanModeBlockRule, etc.)
+│   └── types.py         # AuthorizationResult enum
 └── prompts/
     ├── bash_prompt.xml
     ├── glob_prompt.xml
@@ -217,5 +234,18 @@ src/tunacode/tools/
     ├── list_dir_prompt.xml
     ├── read_file_prompt.xml
     ├── write_file_prompt.xml
-    └── update_file_prompt.xml
+    ├── update_file_prompt.xml
+    └── present_plan_prompt.xml
+```
+
+## UI Components
+
+```
+src/tunacode/ui/
+├── app.py               # Main Textual app (orchestration only)
+├── plan_approval.py     # Plan approval UI (NeXTSTEP 4-zone layout)
+├── repl_support.py      # Callbacks and state helpers
+├── styles.py            # Style constants
+├── renderers/           # Rich rendering functions
+└── widgets/             # Textual widget components
 ```
