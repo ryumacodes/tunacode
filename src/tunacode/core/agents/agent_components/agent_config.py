@@ -322,6 +322,17 @@ def _create_model_with_retry(
     if base_url is None and provider_name != "azure":
         base_url = base_url_override
 
+    # Debug: log model creation details
+    def _debug_log(msg: str) -> None:
+        with open("/tmp/tunacode_debug.log", "a") as f:
+            import datetime
+            f.write(f"{datetime.datetime.now().isoformat()} DEBUG [agent_config]: {msg}\n")
+            f.flush()
+
+    _debug_log(f"Creating model: provider={provider_name}, model={model_name}")
+    _debug_log(f"base_url={base_url}")
+    _debug_log(f"api_key_name={api_key_name}, api_key={'SET' if api_key else 'NOT SET'}")
+
     provider = OpenAIProvider(api_key=api_key, base_url=base_url, http_client=http_client)
     return OpenAIChatModel(model_name, provider=provider)
 
@@ -416,7 +427,12 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             validate_response=lambda r: r.raise_for_status(),
         )
         event_hooks = _build_request_hooks(request_delay, state_manager)
-        http_client = AsyncClient(transport=transport, event_hooks=event_hooks)
+        # Add timeout to prevent infinite hanging on API issues
+        http_client = AsyncClient(
+            transport=transport,
+            event_hooks=event_hooks,
+            timeout=60.0,  # 60 second timeout for API requests
+        )
 
         # Create model instance with retry-enabled HTTP client
         model_instance = _create_model_with_retry(model, http_client, state_manager)

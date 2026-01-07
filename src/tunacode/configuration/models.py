@@ -89,10 +89,7 @@ def get_provider_env_var(provider_id: str) -> str:
     Returns:
         Environment variable name (e.g., "OPENAI_API_KEY")
     """
-    registry = get_cached_models_registry()
-    if registry is None:
-        return f"{provider_id.upper()}_API_KEY"
-
+    registry = load_models_registry()
     provider = registry.get(provider_id, {})
     env_vars = provider.get("env", [])
     if env_vars:
@@ -109,10 +106,7 @@ def get_provider_base_url(provider_id: str) -> str | None:
     Returns:
         Base URL string or None if not specified
     """
-    registry = get_cached_models_registry()
-    if registry is None:
-        return None
-
+    registry = load_models_registry()
     provider = registry.get(provider_id, {})
     return provider.get("api")
 

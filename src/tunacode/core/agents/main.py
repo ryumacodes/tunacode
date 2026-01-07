@@ -357,12 +357,22 @@ class RequestOrchestrator:
 
     async def _run_impl(self) -> AgentRun:
         """Internal implementation of request processing loop."""
+        def debug(msg):
+            with open("/tmp/tunacode_debug.log", "a") as f:
+                import datetime
+                f.write(f"{datetime.datetime.now().isoformat()} DEBUG [main]: {msg}\n")
+                f.flush()
+
+        debug(f"_run_impl started for model: {self.model}")
+
         ctx = self._init_request_context()
         self._reset_session_state()
         self._set_original_query_once(self.message)
 
+        debug("About to get_or_create_agent")
         # Acquire agent
         agent = ac.get_or_create_agent(self.model, self.state_manager)
+        debug(f"Agent acquired: {type(agent).__name__}")
 
         # Prune old tool outputs directly in session (persisted)
         session_messages = self.state_manager.session.messages
@@ -376,12 +386,17 @@ class RequestOrchestrator:
         response_state = ac.ResponseState()
 
         try:
+            debug(f"About to call agent.iter() with message: {self.message[:50]}...")
+            debug(f"message_history length: {len(message_history)}")
             async with agent.iter(self.message, message_history=message_history) as agent_run:
+                debug("agent.iter() context entered, starting iteration")
                 i = 1
                 async for node in agent_run:
+                    debug(f"Got node {i}, type: {type(node).__name__}")
                     self.iteration_manager.update_counters(i)
 
                     # Optional token streaming
+                    debug(f"About to call _maybe_stream_node_tokens for node {i}")
                     await _maybe_stream_node_tokens(
                         node,
                         agent_run.ctx,
@@ -390,8 +405,10 @@ class RequestOrchestrator:
                         ctx.request_id,
                         i,
                     )
+                    debug(f"_maybe_stream_node_tokens completed for node {i}")
 
                     # Core node processing
+                    debug(f"About to call _process_node for node {i}")
                     empty_response, empty_reason = await ac._process_node(  # noqa: SLF001
                         node,
                         self.tool_callback,
@@ -440,16 +457,24 @@ class RequestOrchestrator:
 
                     i += 1
 
+                debug(f"Exited iteration loop after {i-1} iterations")
                 await _finalize_buffered_tasks(
                     tool_buffer,
                     self.tool_callback,
                     self.state_manager,
                 )
 
+                debug("Returning AgentRunWithState")
                 # Return wrapper that carries response_state
                 return ac.AgentRunWithState(agent_run, response_state)
 
         except UserAbortError:
+            debug("UserAbortError caught")
+            raise
+        except Exception as e:
+            import traceback
+            debug(f"Exception in _run_impl: {type(e).__name__}: {e}")
+            debug(f"Traceback: {traceback.format_exc()}")
             raise
 
 

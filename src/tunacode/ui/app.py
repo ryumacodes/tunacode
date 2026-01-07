@@ -252,6 +252,15 @@ class TextualReplApp(App[None]):
                 self.request_queue.task_done()
 
     async def _process_request(self, message: str) -> None:
+        # Debug to file (check /tmp/tunacode_debug.log after)
+        def debug(msg):
+            with open("/tmp/tunacode_debug.log", "a") as f:
+                import datetime
+                f.write(f"{datetime.datetime.now().isoformat()} DEBUG: {msg}\n")
+                f.flush()
+
+        debug(f"_process_request started with message: {message[:50]}...")
+
         self.current_stream_text = ""
         self._last_display_update = 0.0
         self._streaming_cancelled = False
@@ -262,6 +271,7 @@ class TextualReplApp(App[None]):
 
         try:
             model_name = self.state_manager.session.current_model or "openai/gpt-4o"
+            debug(f"Using model: {model_name}")
 
             # Set progress callback on session for subagent progress tracking
             self.state_manager.session.tool_progress_callback = build_tool_progress_callback(self)
@@ -312,6 +322,29 @@ class TextualReplApp(App[None]):
             self.current_stream_text = ""
             self._streaming_cancelled = False
             self._update_resource_bar()
+
+            # Check for streaming errors and display them
+            streaming_errors = getattr(self.state_manager.session, "_streaming_errors", [])
+            if streaming_errors:
+                from tunacode.ui.renderers.errors import render_catastrophic_error
+
+                for error_info in streaming_errors:
+                    error_msg = (
+                        f"Streaming error in iteration {error_info.get('iteration', '?')}: "
+                        f"{error_info.get('error_type', 'UnknownError')}: "
+                        f"{error_info.get('error', 'Unknown error')}"
+                    )
+                    # Create a simple exception-like object for rendering
+                    class StreamingError(Exception):
+                        pass
+
+                    exc = StreamingError(error_msg)
+                    error_renderable = render_catastrophic_error(
+                        exc, context=error_info.get("traceback", "")[:500]
+                    )
+                    self.rich_log.write(error_renderable)
+                # Clear errors after displaying
+                self.state_manager.session._streaming_errors = []
 
             # Auto-save session after processing
             self.state_manager.save_session()
