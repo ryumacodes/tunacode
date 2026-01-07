@@ -1,7 +1,7 @@
 """Node processing functionality for agent responses."""
 
 from collections.abc import Awaitable, Callable
-from typing import Any, cast
+from typing import Any
 
 from tunacode.constants import (
     ERROR_TOOL_ARGS_MISSING,
@@ -26,10 +26,21 @@ UNKNOWN_TOOL_NAME = "unknown"
 
 
 def _normalize_tool_args(raw_args: Any) -> ToolArgs:
-    from tunacode.utils.parsing.command_parser import parse_args
+    # Fast path: if already a dict, return directly (no async needed)
+    if isinstance(raw_args, dict):
+        return raw_args
+    # For strings, we need to parse - but we're in sync context
+    # Use synchronous fallback parsing
+    import json
 
-    parsed_args = parse_args(raw_args)
-    return cast(ToolArgs, parsed_args)
+    from tunacode.exceptions import ValidationError
+
+    if isinstance(raw_args, str):
+        try:
+            return json.loads(raw_args)
+        except json.JSONDecodeError as e:
+            raise ValidationError(f"Invalid JSON: {raw_args}") from e
+    raise ValidationError(f"Invalid args type: {type(raw_args)}")
 
 
 def _record_tool_call_args(part: Any, state_manager: StateManager) -> ToolArgs:
