@@ -14,7 +14,7 @@ from tunacode.exceptions import ConfigurationError
 from tunacode.types import ModelName, UserConfig
 
 if TYPE_CHECKING:
-    from tunacode.types.state import StateManagerProtocol
+    from tunacode.core.state import StateManager
 
 import hashlib
 
@@ -51,7 +51,7 @@ def load_config() -> UserConfig | None:
         raise ConfigurationError(f"Failed to load configuration: {err}") from err
 
 
-def save_config(state_manager: "StateManagerProtocol") -> bool:
+def save_config(state_manager: "StateManager") -> bool:
     """Save user config to file"""
     app_settings = ApplicationSettings()
     try:
@@ -74,7 +74,7 @@ def save_config(state_manager: "StateManagerProtocol") -> bool:
         raise ConfigurationError(f"Unexpected error saving configuration: {e}") from e
 
 
-def set_default_model(model_name: ModelName, state_manager: "StateManagerProtocol") -> bool:
+def set_default_model(model_name: ModelName, state_manager: "StateManager") -> bool:
     """Set the default model in the user config and save"""
     state_manager.session.user_config["default_model"] = model_name
     try:

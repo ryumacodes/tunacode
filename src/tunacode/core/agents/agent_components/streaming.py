@@ -7,14 +7,11 @@ and streams deltas to the provided callback while being resilient to errors.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Awaitable, Callable
 
 from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
 
 from tunacode.core.state import StateManager
-
-logger = logging.getLogger(__name__)
 
 
 def _find_overlap_length(pre_text: str, delta_text: str) -> int:
@@ -36,14 +33,6 @@ def _find_overlap_length(pre_text: str, delta_text: str) -> int:
     return 0
 
 
-def _debug_log(msg: str) -> None:
-    """Write debug message to log file."""
-    with open("/tmp/tunacode_debug.log", "a") as f:
-        import datetime
-        f.write(f"{datetime.datetime.now().isoformat()} DEBUG [streaming]: {msg}\n")
-        f.flush()
-
-
 async def stream_model_request_node(
     node,
     agent_run_ctx,
@@ -58,16 +47,12 @@ async def stream_model_request_node(
     keep main.py lean. On streaming failure, it degrades gracefully to allow
     non-streaming processing of the node.
     """
-    _debug_log(f"stream_model_request_node called, callback={streaming_callback is not None}")
     if not streaming_callback:
-        _debug_log("No streaming callback, returning early")
         return
 
     # Gracefully handle streaming errors from LLM provider
     try:
-        _debug_log("About to call node.stream()")
         async with node.stream(agent_run_ctx) as request_stream:
-            _debug_log("Entered node.stream() context")
             # Initialize per-node debug accumulators
             state_manager.session._debug_raw_stream_accum = ""
             state_manager.session._debug_events = []
@@ -277,40 +262,7 @@ async def stream_model_request_node(
                             state_manager.session._debug_events.append(final_msg)
                     except Exception:
                         pass
-    except Exception as e:
-        # Log the exception before graceful degradation
-        error_msg = (
-            f"Streaming failed (request_id={request_id}, iteration={iteration_index}, "
-            f"node_type={type(node).__name__}): {type(e).__name__}: {e}"
-        )
-        logger.exception(
-            "Streaming failed, degrading to non-streaming mode",
-            extra={
-                "request_id": request_id,
-                "iteration_index": iteration_index,
-                "node_type": type(node).__name__,
-            },
-        )
-        # Also print to stderr as fallback (TUI may not have logging configured)
-        import sys
-
-        print(f"ERROR: {error_msg}", file=sys.stderr)
-        import traceback
-
-        traceback.print_exc(file=sys.stderr)
-        # Store error in session for UI to display
-        try:
-            if not hasattr(state_manager.session, "_streaming_errors"):
-                state_manager.session._streaming_errors = []
-            state_manager.session._streaming_errors.append({
-                "error": str(e),
-                "error_type": type(e).__name__,
-                "request_id": request_id,
-                "iteration": iteration_index,
-                "traceback": traceback.format_exc(),
-            })
-        except Exception:
-            pass
+    except Exception:
         # Reset node state to allow graceful degradation to non-streaming mode
         try:
             if hasattr(node, "_did_stream"):

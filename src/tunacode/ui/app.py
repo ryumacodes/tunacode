@@ -33,17 +33,10 @@ from tunacode.types import (
     ToolConfirmationRequest,
     ToolConfirmationResponse,
 )
-from tunacode.ui.plan_approval import (
-    handle_plan_approval_key,
-)
-from tunacode.ui.plan_approval import (
-    request_plan_approval as _request_plan_approval,
-)
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
 from tunacode.ui.repl_support import (
     PendingConfirmationState,
-    PendingPlanApprovalState,
     build_textual_tool_callback,
     build_tool_progress_callback,
     build_tool_result_callback,
@@ -95,7 +88,6 @@ class TextualReplApp(App[None]):
         self._show_setup: bool = show_setup
         self.request_queue: asyncio.Queue[str] = asyncio.Queue()
         self.pending_confirmation: PendingConfirmationState | None = None
-        self.pending_plan_approval: PendingPlanApprovalState | None = None
 
         self._streaming_paused: bool = False
         self._streaming_cancelled: bool = False
@@ -252,15 +244,6 @@ class TextualReplApp(App[None]):
                 self.request_queue.task_done()
 
     async def _process_request(self, message: str) -> None:
-        # Debug to file (check /tmp/tunacode_debug.log after)
-        def debug(msg):
-            with open("/tmp/tunacode_debug.log", "a") as f:
-                import datetime
-                f.write(f"{datetime.datetime.now().isoformat()} DEBUG: {msg}\n")
-                f.flush()
-
-        debug(f"_process_request started with message: {message[:50]}...")
-
         self.current_stream_text = ""
         self._last_display_update = 0.0
         self._streaming_cancelled = False
@@ -271,7 +254,6 @@ class TextualReplApp(App[None]):
 
         try:
             model_name = self.state_manager.session.current_model or "openai/gpt-4o"
-            debug(f"Using model: {model_name}")
 
             # Set progress callback on session for subagent progress tracking
             self.state_manager.session.tool_progress_callback = build_tool_progress_callback(self)
@@ -280,7 +262,7 @@ class TextualReplApp(App[None]):
                 process_request(
                     message=message,
                     model=ModelName(model_name),
-                    state_manager=self.state_manager,  # type: ignore[arg-type]
+                    state_manager=self.state_manager,
                     tool_callback=build_textual_tool_callback(self, self.state_manager),
                     streaming_callback=self.streaming_callback,
                     tool_result_callback=build_tool_result_callback(self),
@@ -293,7 +275,7 @@ class TextualReplApp(App[None]):
 
             patch_tool_messages(
                 "Operation cancelled by user",
-                state_manager=self.state_manager,  # type: ignore[arg-type]
+                state_manager=self.state_manager,
             )
             self.notify("Cancelled")
         except Exception as e:
@@ -301,7 +283,7 @@ class TextualReplApp(App[None]):
 
             patch_tool_messages(
                 f"Request failed: {type(e).__name__}",
-                state_manager=self.state_manager,  # type: ignore[arg-type]
+                state_manager=self.state_manager,
             )
             error_renderable = render_exception(e)
             self.rich_log.write(error_renderable)
@@ -322,29 +304,6 @@ class TextualReplApp(App[None]):
             self.current_stream_text = ""
             self._streaming_cancelled = False
             self._update_resource_bar()
-
-            # Check for streaming errors and display them
-            streaming_errors = getattr(self.state_manager.session, "_streaming_errors", [])
-            if streaming_errors:
-                from tunacode.ui.renderers.errors import render_catastrophic_error
-
-                for error_info in streaming_errors:
-                    error_msg = (
-                        f"Streaming error in iteration {error_info.get('iteration', '?')}: "
-                        f"{error_info.get('error_type', 'UnknownError')}: "
-                        f"{error_info.get('error', 'Unknown error')}"
-                    )
-                    # Create a simple exception-like object for rendering
-                    class StreamingError(Exception):
-                        pass
-
-                    exc = StreamingError(error_msg)
-                    error_renderable = render_catastrophic_error(
-                        exc, context=error_info.get("traceback", "")[:500]
-                    )
-                    self.rich_log.write(error_renderable)
-                # Clear errors after displaying
-                self.state_manager.session._streaming_errors = []
 
             # Auto-save session after processing
             self.state_manager.save_session()
@@ -379,10 +338,6 @@ class TextualReplApp(App[None]):
         self.pending_confirmation = PendingConfirmationState(future=future, request=request)
         self._show_inline_confirmation(request)
         return await future
-
-    async def request_plan_approval(self, plan_content: str) -> tuple[bool, str]:
-        """Request user approval for a plan. Returns (approved, feedback)."""
-        return await _request_plan_approval(plan_content, self, self.rich_log)
 
     def on_tool_result_display(self, message: ToolResultDisplay) -> None:
         panel = tool_panel_smart(
@@ -514,10 +469,6 @@ class TextualReplApp(App[None]):
             session_cost=usage.get("cost", 0.0),
         )
 
-        # Sync status bar mode indicator with session state
-        # (handles plan mode exit via present_plan approval)
-        self.status_bar.set_mode("PLAN" if session.plan_mode else None)
-
     def _show_inline_confirmation(self, request: ToolConfirmationRequest) -> None:
         """Display inline confirmation prompt in RichLog."""
         content_parts: list[Text | Syntax] = []
@@ -570,12 +521,6 @@ class TextualReplApp(App[None]):
 
     def on_key(self, event: events.Key) -> None:
         """Handle key events, intercepting confirmation keys when pending."""
-        # Handle plan approval first
-        if self.pending_plan_approval is not None and not self.pending_plan_approval.future.done():
-            self._handle_plan_approval_key(event)
-            return
-
-        # Handle tool confirmation
         if self.pending_confirmation is None or self.pending_confirmation.future.done():
             return
 
@@ -595,9 +540,3 @@ class TextualReplApp(App[None]):
             self.pending_confirmation.future.set_result(response)
             self.pending_confirmation = None
             event.stop()
-
-    def _handle_plan_approval_key(self, event: events.Key) -> None:
-        """Handle key events for plan approval."""
-        assert self.pending_plan_approval is not None  # Guarded by caller
-        if handle_plan_approval_key(event, self.pending_plan_approval, self.rich_log):
-            self.pending_plan_approval = None

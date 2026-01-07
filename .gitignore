@@ -18,7 +18,6 @@ htmlcov/
 coverage.xml
 *.cover
 .uv-cache/
-.ruff_cache/
 
 # Test environments
 test_env/
@@ -82,7 +81,3 @@ vendor/
 .beads/
 .osgrep
 .osgrep*
-PLAN.md
-
-# Auto-generated model registry
-src/tunacode/configuration/models_registry.json
