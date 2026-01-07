@@ -87,12 +87,11 @@ from tunacode.types.pydantic_ai import (
 # State protocol
 from tunacode.types.state import (
     SessionStateProtocol,
-    StateManager,
     StateManagerProtocol,
 )
 
-# Backward compatibility: ProcessRequestCallback needs StateManager
-ProcessRequestCallback = Callable[[str, StateManager, bool], Awaitable[Any]]
+# ProcessRequestCallback uses the protocol, not concrete implementation
+ProcessRequestCallback = Callable[[str, StateManagerProtocol, bool], Awaitable[Any]]
 
 __all__ = [
     # Base types
@@ -149,7 +148,6 @@ __all__ = [
     "UIInputCallback",
     # State
     "SessionStateProtocol",
-    "StateManager",
     "StateManagerProtocol",
     # Dataclasses
     "AgentState",
