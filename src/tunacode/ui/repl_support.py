@@ -98,6 +98,14 @@ class PendingConfirmationState:
     request: ToolConfirmationRequest
 
 
+@dataclass
+class PendingPlanApprovalState:
+    """Tracks pending plan approval state."""
+
+    future: asyncio.Future[tuple[bool, str]]
+    plan_content: str
+
+
 class ConfirmationRequester(Protocol):
     async def request_tool_confirmation(
         self, request: ToolConfirmationRequest

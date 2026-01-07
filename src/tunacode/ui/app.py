@@ -33,10 +33,17 @@ from tunacode.types import (
     ToolConfirmationRequest,
     ToolConfirmationResponse,
 )
+from tunacode.ui.plan_approval import (
+    handle_plan_approval_key,
+)
+from tunacode.ui.plan_approval import (
+    request_plan_approval as _request_plan_approval,
+)
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
 from tunacode.ui.repl_support import (
     PendingConfirmationState,
+    PendingPlanApprovalState,
     build_textual_tool_callback,
     build_tool_progress_callback,
     build_tool_result_callback,
@@ -88,6 +95,7 @@ class TextualReplApp(App[None]):
         self._show_setup: bool = show_setup
         self.request_queue: asyncio.Queue[str] = asyncio.Queue()
         self.pending_confirmation: PendingConfirmationState | None = None
+        self.pending_plan_approval: PendingPlanApprovalState | None = None
 
         self._streaming_paused: bool = False
         self._streaming_cancelled: bool = False
@@ -339,6 +347,10 @@ class TextualReplApp(App[None]):
         self._show_inline_confirmation(request)
         return await future
 
+    async def request_plan_approval(self, plan_content: str) -> tuple[bool, str]:
+        """Request user approval for a plan. Returns (approved, feedback)."""
+        return await _request_plan_approval(plan_content, self, self.rich_log)
+
     def on_tool_result_display(self, message: ToolResultDisplay) -> None:
         panel = tool_panel_smart(
             name=message.tool_name,
@@ -469,6 +481,10 @@ class TextualReplApp(App[None]):
             session_cost=usage.get("cost", 0.0),
         )
 
+        # Sync status bar mode indicator with session state
+        # (handles plan mode exit via present_plan approval)
+        self.status_bar.set_mode("PLAN" if session.plan_mode else None)
+
     def _show_inline_confirmation(self, request: ToolConfirmationRequest) -> None:
         """Display inline confirmation prompt in RichLog."""
         content_parts: list[Text | Syntax] = []
@@ -521,6 +537,12 @@ class TextualReplApp(App[None]):
 
     def on_key(self, event: events.Key) -> None:
         """Handle key events, intercepting confirmation keys when pending."""
+        # Handle plan approval first
+        if self.pending_plan_approval is not None and not self.pending_plan_approval.future.done():
+            self._handle_plan_approval_key(event)
+            return
+
+        # Handle tool confirmation
         if self.pending_confirmation is None or self.pending_confirmation.future.done():
             return
 
@@ -540,3 +562,9 @@ class TextualReplApp(App[None]):
             self.pending_confirmation.future.set_result(response)
             self.pending_confirmation = None
             event.stop()
+
+    def _handle_plan_approval_key(self, event: events.Key) -> None:
+        """Handle key events for plan approval."""
+        assert self.pending_plan_approval is not None  # Guarded by caller
+        if handle_plan_approval_key(event, self.pending_plan_approval, self.rich_log):
+            self.pending_plan_approval = None

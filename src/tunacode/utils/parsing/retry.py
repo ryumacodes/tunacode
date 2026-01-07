@@ -67,6 +67,7 @@ def retry_on_json_error(
                     # Calculate delay with exponential backoff
                     delay = min(base_delay * (2**attempt), max_delay)
 
+                    # Note: For async, prefer retry_json_parse_async (uses asyncio.sleep)
                     time.sleep(delay)
 
             # Should never reach here, but just in case

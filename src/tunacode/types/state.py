@@ -20,6 +20,8 @@ class SessionStateProtocol(Protocol):
     tool_calls: list[dict[str, Any]]
     tool_ignore: list[str]
     yolo: bool
+    plan_mode: bool
+    plan_approval_callback: Any | None
     show_thoughts: bool
     operation_cancelled: bool
     total_tokens: int

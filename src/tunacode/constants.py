@@ -74,6 +74,15 @@ READ_ONLY_TOOLS = [
     ToolName.WEB_FETCH,
 ]
 
+WRITE_TOOLS = [
+    ToolName.WRITE_FILE,
+    ToolName.UPDATE_FILE,
+]
+
+EXECUTE_TOOLS = [
+    ToolName.BASH,
+]
+
 COMMAND_PREFIX = "/"
 
 TUNACODE_HOME_DIR = ".tunacode"
