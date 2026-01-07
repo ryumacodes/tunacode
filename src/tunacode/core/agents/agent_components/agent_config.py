@@ -15,6 +15,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.retries import AsyncTenacityTransport, RetryConfig, wait_retry_after
 from tenacity import retry_if_exception_type, stop_after_attempt
 
+from tunacode.configuration.models import load_models_registry
 from tunacode.constants import ENV_OPENAI_BASE_URL, SETTINGS_BASE_URL, UI_THINKING_MESSAGE
 from tunacode.core.agents.delegation_tools import create_research_codebase_tool
 from tunacode.core.prompting import (
@@ -265,6 +266,22 @@ def load_tunacode_context() -> str:
         return ""
 
 
+def _get_provider_config_from_registry(provider_name: str) -> dict:
+    """Get provider config from models registry.
+
+    Returns dict with 'api' (base_url) and 'env' (list of env var names).
+    Returns empty dict if provider not found.
+    """
+    registry = load_models_registry()
+    provider_data = registry.get(provider_name, {})
+    return {
+        "api": provider_data.get("api"),
+        "env": provider_data.get("env", []),
+    }
+
+
+
+
 def _create_model_with_retry(
     model_string: str, http_client: AsyncClient, state_manager: StateManager
 ):
@@ -272,69 +289,51 @@ def _create_model_with_retry(
 
     Parses model string in format 'provider:model_name' and creates
     appropriate provider and model instances with the retry-enabled HTTP client.
-    """
-    # Extract environment config
-    env = state_manager.session.user_config.get("env", {})
 
+    Uses models_registry.json for provider configuration (api URL, env vars).
+    Only 'anthropic' provider uses AnthropicModel, all others use OpenAI.
+    """
+    env = state_manager.session.user_config.get("env", {})
     settings = state_manager.session.user_config.get("settings", {})
+
+    # User overrides for base_url
     env_base_url_raw = env.get(ENV_OPENAI_BASE_URL)
     settings_base_url_raw = settings.get(SETTINGS_BASE_URL)
     env_base_url = _coerce_optional_str(env_base_url_raw, ENV_OPENAI_BASE_URL)
     settings_base_url = _coerce_optional_str(settings_base_url_raw, SETTINGS_BASE_URL)
     base_url_override = _resolve_base_url_override(env_base_url, settings_base_url)
 
-    # Provider configuration: API key names and base URLs
-    PROVIDER_CONFIG = {
-        "anthropic": {"api_key_name": "ANTHROPIC_API_KEY", "base_url": None},
-        "openai": {"api_key_name": "OPENAI_API_KEY", "base_url": None},
-        "openrouter": {
-            "api_key_name": "OPENROUTER_API_KEY",
-            "base_url": "https://openrouter.ai/api/v1",
-        },
-        "azure": {
-            "api_key_name": "AZURE_OPENAI_API_KEY",
-            "base_url": env.get("AZURE_OPENAI_ENDPOINT"),
-        },
-        "deepseek": {"api_key_name": "DEEPSEEK_API_KEY", "base_url": None},
-        "cerebras": {
-            "api_key_name": "CEREBRAS_API_KEY",
-            "base_url": "https://api.cerebras.ai/v1",
-        },
-    }
-
     # Parse model string
     if ":" in model_string:
         provider_name, model_name = model_string.split(":", 1)
     else:
-        # Auto-detect provider from model name
         model_name = model_string
         if model_name.startswith("claude"):
             provider_name = "anthropic"
         elif model_name.startswith(("gpt", "o1", "o3")):
             provider_name = "openai"
         else:
-            # Default to treating as model string (pydantic-ai will auto-detect)
             return model_string
 
-    # Create provider with api_key + base_url + http_client
+    # Get config from registry
+    registry_config = _get_provider_config_from_registry(provider_name)
+    api_url = registry_config.get("api")
+    env_vars = registry_config.get("env", [])
+    api_key_name = env_vars[0] if env_vars else f"{provider_name.upper()}_API_KEY"
+
+    # Use user override if set, otherwise registry URL
+    base_url = base_url_override if base_url_override else api_url
+
+    # Get API key
+    api_key = env.get(api_key_name)
+
+    # Only anthropic provider uses AnthropicModel, all others use OpenAI
     if provider_name == "anthropic":
-        api_key = env.get("ANTHROPIC_API_KEY")
-        provider = AnthropicProvider(api_key=api_key, http_client=http_client)
+        provider = AnthropicProvider(api_key=api_key, base_url=base_url, http_client=http_client)
         return AnthropicModel(model_name, provider=provider)
-    elif provider_name in ("openai", "openrouter", "azure", "deepseek", "cerebras"):
-        # OpenAI-compatible providers all use OpenAIChatModel
-        config = PROVIDER_CONFIG.get(provider_name, {})
-        api_key_name = config.get("api_key_name")
-        api_key = env.get(api_key_name) if api_key_name else None
-        base_url = config.get("base_url")
-        if base_url is None and provider_name != "azure":
-            base_url = base_url_override
+    else:
         provider = OpenAIProvider(api_key=api_key, base_url=base_url, http_client=http_client)
         return OpenAIChatModel(model_name, provider=provider)
-    else:
-        # Unsupported provider, return string and let pydantic-ai handle it
-        # (won't have retry support but won't break)
-        return model_string
 
 
 def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
