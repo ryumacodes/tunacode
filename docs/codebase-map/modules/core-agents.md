@@ -27,7 +27,9 @@ Manages AI agent lifecycle using pydantic-ai framework, including agent creation
 #### agent_config.py
 - **get_or_create_agent()** - Factory for cached Agent instances
 - **_create_model_with_retry()** - Model initialization with fallback
-- Loads AGENTS.md context into system prompt
+- **load_tunacode_context()** - Loads guide file into system prompt:
+  - Standard mode: loads `AGENTS.md` (or `settings.guide_file`)
+  - Local mode: loads `local_prompt.md` for minimal tokens
 
 #### node_processor.py
 - **_process_node()** - Core response processing loop
@@ -83,15 +85,22 @@ Manages AI agent lifecycle using pydantic-ai framework, including agent creation
 
 ## Tool Categories
 
-1. **Research Agent Tools** - read-only exploration
-2. **Read-Only Tools** - glob, grep, read_file, list_dir
-3. **Write/Execute Tools** - bash, write_file, update_file
-4. **Todo Tools** - todowrite, todoread, todoclear
-5. **ReAct Tools** - react scratchpad management
+**Standard Mode (11 tools):**
+1. **Read-Only Tools** - glob, grep, read_file, list_dir, web_fetch
+2. **Write/Execute Tools** - bash, write_file, update_file
+3. **Todo Tools** - todowrite, todoread, todoclear
+4. **Delegation Tools** - research_codebase
+
+**Local Mode (6 tools):**
+Minimal tool set for small context windows (8k-16k tokens):
+- bash, read_file, update_file, write_file, glob, list_dir
+- Uses 1-word descriptions to save tokens (e.g., "Shell", "Read", "Edit")
+- Excludes: grep, web_fetch, todo tools, research_codebase
 
 ## Integration Points
 
 - **core/state.py** - Session state access
+- **core/limits.py** - `is_local_mode()` for tool set selection
 - **core/prompting/** - System prompt composition
 - **tools/** - Tool function registry
 - **types/** - AgentRun, ModelName types

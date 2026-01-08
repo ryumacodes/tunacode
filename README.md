@@ -76,6 +76,8 @@ export ANTHROPIC_API_KEY="your-key"
 
 Config file location: `~/.config/tunacode.json`
 
+For advanced settings including **local mode** for small context models, see the [Configuration Guide](docs/configuration/README.md).
+
 ## Commands
 
 | Command  | Description                  |
