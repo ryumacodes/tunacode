@@ -682,7 +682,100 @@ Located in `/Users/tuna/Desktop/tunacode/tests/`:
 
 ---
 
-## 12. Security Considerations
+## 12. Local Mode vs API Mode
+
+Tunacode supports two operating modes optimized for different model capabilities.
+
+### Architecture
+
+**Both modes use identical providers.** There are no separate LocalProvider implementations. The same `AnthropicProvider` or `OpenAIProvider` classes are used regardless of mode.
+
+All optimization happens at the **message preparation layer** before any provider interaction.
+
+### The 6 Optimization Layers
+
+When `local_mode: true` is set in configuration, these layers activate:
+
+| Layer | Component | Standard Mode | Local Mode |
+|-------|-----------|--------------|------------|
+| 1 | System prompt | 11 sections (~3,500 tok) | 3 sections (~1,100 tok) |
+| 2 | Guide file | User's AGENTS.md (~2k+ tok) | local_prompt.md (~500 tok) |
+| 3 | Tool set | 11 tools, full descriptions | 6 tools, 1-word descriptions |
+| 4 | Output limits | 2000 lines, 5000 chars | 200 lines, 1500 chars |
+| 5 | Response cap | Unlimited | 1000 tokens |
+| 6 | Pruning | Protect 40k tokens | Protect 2k tokens |
+
+### Message Flow
+
+```
+User Message
+     │
+     ▼
+process_request() [core/agents/main.py:527]
+     │
+     ▼
+get_or_create_agent() [agent_config.py]
+     │   - is_local_mode() check
+     │   - Select template (LOCAL_TEMPLATE vs MAIN_TEMPLATE)
+     │   - Select tools (6 vs 11)
+     │   - Apply max_tokens
+     │
+     ▼
+prune_old_tool_outputs() [compaction.py]
+     │   - get_prune_thresholds() based on mode
+     │   - Backward scan messages
+     │   - Protect recent outputs
+     │   - Replace old with placeholder
+     │
+     ▼
+agent.iter() → Provider HTTP Request
+     │
+     ▼
+(Same pydantic-ai message format for both modes)
+```
+
+### Configuration
+
+Central control via `~/.config/tunacode.json`:
+
+```json
+{
+  "settings": {
+    "local_mode": true,
+    "local_max_tokens": 1000
+  }
+}
+```
+
+Precedence: `explicit setting > local_mode default > standard default`
+
+### Key Files
+
+| File | Role |
+|------|------|
+| `core/limits.py` | Central mode detection (`is_local_mode()`) |
+| `core/compaction.py` | Pruning with mode-aware thresholds |
+| `core/agents/agent_config.py` | Template/tool selection |
+| `core/prompting/templates.py` | LOCAL_TEMPLATE vs MAIN_TEMPLATE |
+| `core/prompting/local_prompt.md` | Condensed guide for local mode |
+| `constants.py` | Default limit values |
+
+### Token Budget
+
+| Component | Standard | Local |
+|-----------|----------|-------|
+| System prompt | ~3,500 | ~1,100 |
+| Guide file | ~2,000+ | ~500 |
+| Tool schemas | ~1,800 | ~575 |
+| **Total base** | **~7,300+** | **~2,200** |
+
+With 10k context window:
+- Standard: ~2,700 tokens for conversation
+- Local: ~7,800 tokens for conversation
+
+---
+
+## 13. Security Considerations
 
 ### Tool Authorization
 
