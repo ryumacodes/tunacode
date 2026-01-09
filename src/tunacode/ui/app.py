@@ -20,7 +20,6 @@ from textual.widgets import LoadingIndicator, RichLog, Static
 from tunacode.constants import (
     RICHLOG_CLASS_PAUSED,
     RICHLOG_CLASS_STREAMING,
-    TOOL_PANEL_WIDTH,
     build_nextstep_theme,
     build_tunacode_theme,
 )
@@ -323,7 +322,7 @@ class TextualReplApp(App[None]):
                     model=model,
                 )
                 self.rich_log.write("")
-                self.rich_log.write(panel)
+                self.rich_log.write(panel, expand=True)
 
             self.current_stream_text = ""
             self._streaming_cancelled = False
@@ -375,7 +374,7 @@ class TextualReplApp(App[None]):
             result=message.result,
             duration_ms=message.duration_ms,
         )
-        self.rich_log.write(panel)
+        self.rich_log.write(panel, expand=True)
 
     def _replay_session_messages(self) -> None:
         """Render loaded session messages to RichLog."""
@@ -555,9 +554,8 @@ class TextualReplApp(App[None]):
             border_style=STYLE_PRIMARY,
             padding=(0, 1),
             expand=True,
-            width=TOOL_PANEL_WIDTH,
         )
-        self.rich_log.write(panel)
+        self.rich_log.write(panel, expand=True)
 
     def on_key(self, event: events.Key) -> None:
         """Handle key events, intercepting confirmation keys when pending."""

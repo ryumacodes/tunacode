@@ -200,3 +200,79 @@ uv run python -c "from tunacode.ui.renderers.tools import list_renderers; print(
 
 ### Fun Fact:
 We went from 0 syntax-highlighted viewports to 8 in one session. The `update_file` renderer was the lonely pioneer - now it has friends!
+
+---
+
+## 2026-01-08: The Great Panel Width Debugging Adventure (Branch: master)
+
+### The Problem:
+Tool panels were narrower than agent panels. User showed screenshot - `read_file` panel was ~50 chars wide while `agent` panel was full width. Classic NeXTSTEP violation!
+
+### The Red Herring (What We Thought):
+Initially believed the issue was `width=TOOL_PANEL_WIDTH` (50 chars) on `Panel()` calls. Spent time:
+- Removing `width=TOOL_PANEL_WIDTH` from 7 Panel() calls in `panels.py`
+- Removing it from `search.py`, `update_file.py`, `app.py`
+- Cleaning up unused imports
+
+But panels were STILL narrow after restart. User called me out: "stop being lazy, dig deeper"
+
+### The Actual Root Cause (The AHA Moment):
+
+**Textual's `RichLog.write()` has its OWN `expand` parameter that defaults to `False`!**
+
+From `.venv/lib/python3.13/site-packages/textual/widgets/_rich_log.py`:
+```python
+def write(
+    self,
+    content: RenderableType | object,
+    width: int | None = None,
+    expand: bool = False,  # <-- THIS IS THE VILLAIN
+    shrink: bool = True,
+    ...
+)
+```
+
+When `expand=False` (default), RichLog measures the content's minimum width and renders at that width, **completely ignoring** the Panel's own `expand=True` property!
+
+The Panel's expand tells Rich "expand to console width", but RichLog overrides the console width to be just the measured content width. Two different expand flags, two different systems!
+
+### The Real Fix:
+Pass `expand=True` to `rich_log.write()`:
+
+```python
+# Before
+self.rich_log.write(panel)
+
+# After
+self.rich_log.write(panel, expand=True)
+```
+
+### Files Modified:
+| File | Change |
+|------|--------|
+| `src/tunacode/ui/app.py` | 3 panel writes → `expand=True` (lines 325, 377, 558) |
+| `src/tunacode/ui/plan_approval.py` | 1 panel write → `expand=True` (line 132) |
+| `src/tunacode/ui/renderers/panels.py` | Removed `width=TOOL_PANEL_WIDTH` (harmless cleanup) |
+| `src/tunacode/ui/renderers/search.py` | Removed unused import |
+| `src/tunacode/ui/renderers/tools/update_file.py` | Removed unused import |
+
+### The Lesson:
+When Rich Panel has `expand=True` but isn't expanding in Textual:
+1. The Panel's expand is **not** the issue
+2. Check how the panel is being **written** to the widget
+3. RichLog.write() has its own expand parameter!
+
+### Status:
+- Changes made, ruff passes
+- NOT COMMITTED YET - user needs to test
+- Previous width removal changes are technically unnecessary but harmless
+
+### Commands:
+```bash
+git diff --stat  # See all changes
+uv run ruff check src/tunacode/ui/  # Verify
+# Restart tunacode and make NEW request to test
+```
+
+### Philosophical Note:
+This bug was a perfect example of "the abstraction leaked". Panel.expand and RichLog.write(expand=) look like they should be the same thing, but they operate at different levels. Panel tells Rich what to do. RichLog tells Rich what size canvas to give it. The canvas size wins.

@@ -17,7 +17,6 @@ from rich.text import Text
 from tunacode.constants import (
     MAX_PANEL_LINE_WIDTH,
     MIN_VIEWPORT_LINES,
-    TOOL_PANEL_WIDTH,
     TOOL_VIEWPORT_LINES,
 )
 from tunacode.ui.renderers.tools.base import (
@@ -252,7 +251,6 @@ class UpdateFileRenderer(BaseToolRenderer[UpdateFileData]):
             border_style=Style(color=border_color),
             padding=(0, 1),
             expand=True,
-            width=TOOL_PANEL_WIDTH,
         )
 
 

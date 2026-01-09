@@ -326,6 +326,8 @@ Types: bug, smell, pattern, lesson, antipattern
 
 [2026-01-08] [pattern] Syntax highlighting in tool renderers: Use `syntax_utils.py` for `get_lexer(filepath)` and `syntax_or_text(content, filepath)`. Consistent monokai theme. 9 renderers now registered: bash, glob, grep, list_dir, read_file, research_codebase, update_file, web_fetch, write_file. Commit `9db8e92`.
 
+[2026-01-08] [lesson] **RichLog.write() has its own expand parameter!** When Panel(expand=True) doesn't expand in Textual, the fix is `rich_log.write(panel, expand=True)`. Panel.expand tells Rich what to do; RichLog.write(expand=) tells Rich what canvas size to use. Two different systems - canvas wins. See JOURNAL.md "The Great Panel Width Debugging Adventure".
+
 ---
 
 We are currently in the middle of a large rewrite few test exist and documentation and that is okay. We will build the test and documentation as we go

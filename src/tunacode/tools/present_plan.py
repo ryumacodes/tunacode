@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
+from tunacode.constants import EXIT_PLAN_MODE_SENTINEL
 from tunacode.tools.xml_helper import load_prompt_from_xml
 from tunacode.types import StateManagerProtocol
 
@@ -17,6 +18,10 @@ PLAN_APPROVED_MESSAGE = (
 PLAN_DENIED_MESSAGE = (
     "Plan denied by user. Feedback: {feedback}\n\n"
     "Revise your plan based on this feedback and call present_plan again."
+)
+PLAN_EXITED_MESSAGE = (
+    "User exited plan mode without approving. Plan mode disabled. "
+    "Do not call present_plan again unless the user re-enters plan mode."
 )
 PLAN_NOT_IN_PLAN_MODE = (
     "Error: present_plan can only be used in plan mode. Use /plan to enter plan mode first."
@@ -77,8 +82,13 @@ def create_present_plan_tool(state_manager: StateManagerProtocol) -> Callable:
             session.plan_mode = False
 
             return PLAN_APPROVED_MESSAGE
-        else:
-            return PLAN_DENIED_MESSAGE.format(feedback=feedback or "No specific feedback provided")
+
+        # Check if user exited plan mode entirely
+        if feedback == EXIT_PLAN_MODE_SENTINEL:
+            session.plan_mode = False
+            return PLAN_EXITED_MESSAGE
+
+        return PLAN_DENIED_MESSAGE.format(feedback=feedback or "No specific feedback provided")
 
     # Load prompt from XML if available
     prompt = load_prompt_from_xml("present_plan")

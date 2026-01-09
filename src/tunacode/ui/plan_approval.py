@@ -17,12 +17,14 @@ from rich.text import Text
 from textual import events
 from textual.widgets import RichLog
 
+from tunacode.constants import EXIT_PLAN_MODE_SENTINEL
 from tunacode.ui.repl_support import PendingPlanApprovalState
 from tunacode.ui.styles import (
     STYLE_ERROR,
     STYLE_MUTED,
     STYLE_PRIMARY,
     STYLE_SUCCESS,
+    STYLE_WARNING,
 )
 
 
@@ -49,8 +51,10 @@ def render_plan_approval_panel(plan_content: str) -> Panel:
     actions = Text()
     actions.append("[1]", style=f"bold {STYLE_SUCCESS}")
     actions.append(" Approve    ")
-    actions.append("[2]", style=f"bold {STYLE_ERROR}")
-    actions.append(" Deny")
+    actions.append("[2]", style=f"bold {STYLE_WARNING}")
+    actions.append(" Feedback    ")
+    actions.append("[3]", style=f"bold {STYLE_ERROR}")
+    actions.append(" Exit")
 
     content_parts: list[Text | Markdown | Rule] = [
         Markdown(plan_content),
@@ -92,8 +96,14 @@ def handle_plan_approval_key(
         return True
 
     if event.key == "2":
-        rich_log.write(Text("Plan denied - agent will revise", style=STYLE_ERROR))
+        rich_log.write(Text("Plan denied - provide feedback for revision", style=STYLE_WARNING))
         pending.future.set_result((False, "Please revise the plan based on my requirements."))
+        event.stop()
+        return True
+
+    if event.key == "3":
+        rich_log.write(Text("Plan mode exited", style=STYLE_ERROR))
+        pending.future.set_result((False, EXIT_PLAN_MODE_SENTINEL))
         event.stop()
         return True
 
@@ -129,6 +139,6 @@ async def request_plan_approval(
     pending_state_holder.pending_plan_approval = pending
 
     panel = render_plan_approval_panel(plan_content)
-    rich_log.write(panel)
+    rich_log.write(panel, expand=True)
 
     return await future

@@ -14,23 +14,26 @@ A TUI code agent.
 
 ## Interface
 
-![TUI Interface](docs/images/tui.png)
-
 The Textual-based terminal user interface provides a clean, interactive environment for AI-assisted coding, with a design heavily inspired by the classic NeXTSTEP user interface.
+
+![Agent Response Panel](docs/media/agent-response.png)
+*Agent response panel with formatted output*
+
+![Read File Tool](docs/media/read-file-tool.png)
+*Tool rendering with syntax highlighting*
+
+![Plan Approval](docs/media/plan-approval.png)
+*Structured plan approval workflow*
 
 ## Theme Support
 
 The interface supports multiple themes for different preferences and environments.
-
-![Theme](docs/images/theme.png)
 
 Customize the appearance with built-in themes or create your own color schemes.
 
 ## Model Setup
 
 Configure your AI models and settings through the provided setup interface.
-
-![TUI Model Setup](docs/images/tui-model-setup.png)
 
 **Note:** TunaCode has full bash shell access. This tool assumes you know what you're doing. If you're concerned, run it in a sandboxed environment.
 
