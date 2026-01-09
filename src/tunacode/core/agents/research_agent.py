@@ -67,6 +67,7 @@ def _create_limited_read_file(max_files: int):
     Returns:
         Wrapped read_file function with call limit enforcement
     """
+    logger = get_logger()
     call_count = {"count": 0}
 
     async def limited_read_file(file_path: str) -> str:
@@ -83,7 +84,6 @@ def _create_limited_read_file(max_files: int):
             allowing the agent to complete with partial results.
         """
         if call_count["count"] >= max_files:
-            logger = get_logger()
             logger.warning(f"Research agent file limit reached ({max_files})")
             return (
                 "<file>\n"
@@ -168,6 +168,8 @@ def create_research_agent(
     Returns:
         Agent configured with read-only tools, research system prompt, and file limit
     """
+    logger = get_logger()
+
     # Load research-specific system prompt
     system_prompt = _load_research_prompt()
 
@@ -226,7 +228,6 @@ def create_research_agent(
         Tool(tracked_glob, max_retries=max_retries, strict=tool_strict_validation),
     ]
 
-    logger = get_logger()
     logger.debug(f"Research agent created: {model} (max_files={max_files})")
 
     return Agent(

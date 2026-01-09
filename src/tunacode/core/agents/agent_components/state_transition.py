@@ -66,6 +66,7 @@ class AgentStateMachine:
         Raises:
             InvalidStateTransitionError: If the transition is not valid
         """
+        logger = get_logger()
         with self._lock:
             if not self._rules.is_valid_transition(self._state, new_state):
                 raise InvalidStateTransitionError(
@@ -80,7 +81,6 @@ class AgentStateMachine:
 
             old_state = self._state
             self._state = new_state
-            logger = get_logger()
             logger.debug(f"State: {old_state.value} → {new_state.value}")
 
     def can_transition_to(self, target_state: "AgentState") -> bool:

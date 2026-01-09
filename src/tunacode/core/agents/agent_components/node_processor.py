@@ -360,6 +360,8 @@ async def _process_tool_calls(
     """
     from tunacode.constants import READ_ONLY_TOOLS
 
+    logger = get_logger()
+
     # Track if we're processing tool calls
     is_processing_tools = False
 
@@ -410,8 +412,6 @@ async def _process_tool_calls(
                     read_only_tasks.append((part, node))
                 else:
                     write_execute_tasks.append((part, node))
-
-    logger = get_logger()
 
     # Phase 2: Execute research agent
     if research_agent_tasks and tool_callback:

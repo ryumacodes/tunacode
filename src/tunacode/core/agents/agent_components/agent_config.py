@@ -61,6 +61,7 @@ def _format_request_delay_message(seconds_remaining: float) -> str:
 
 async def _publish_delay_message(message: str, state_manager: StateManager) -> None:
     """Best-effort spinner update; UI failures must not block requests."""
+    logger = get_logger()
     streaming_panel = getattr(state_manager.session, "streaming_panel", None)
     try:
         if streaming_panel:
@@ -69,7 +70,6 @@ async def _publish_delay_message(message: str, state_manager: StateManager) -> N
             else:
                 await streaming_panel.set_status_message(message)
     except Exception as e:
-        logger = get_logger()
         logger.debug(f"UI spinner update failed: {e}")
 
 
@@ -253,6 +253,7 @@ def load_tunacode_context() -> str:
     For local_mode: loads local_prompt.md from prompting directory.
     Otherwise: uses guide_file from settings (defaults to AGENTS.md).
     """
+    logger = get_logger()
     try:
         if is_local_mode():
             # Load condensed prompt from prompting directory
@@ -289,10 +290,11 @@ def load_tunacode_context() -> str:
             _TUNACODE_CACHE[cache_key] = ("", tunacode_path.stat().st_mtime)
             return ""
 
-    except Exception as e:
-        logger = get_logger()
-        logger.warning(f"Failed to load guide file: {e}")
+    except FileNotFoundError:
         return ""
+    except Exception as e:
+        logger.error(f"Unexpected error loading guide file: {e}")
+        raise
 
 
 def _get_provider_config_from_registry(provider_name: str) -> dict:

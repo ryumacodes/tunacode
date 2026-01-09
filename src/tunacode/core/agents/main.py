@@ -193,6 +193,7 @@ class ReactSnapshotManager:
         self, iteration: int, agent_run_ctx: Any, _show_debug: bool = False
     ) -> None:
         """Capture react snapshot and inject guidance."""
+        logger = get_logger()
         if not self.should_snapshot(iteration):
             return
 
@@ -267,7 +268,6 @@ class ReactSnapshotManager:
                     ctx_messages.append(ModelRequest(parts=[system_part], kind="request"))
 
         except Exception as e:
-            logger = get_logger()
             logger.debug(f"React snapshot failed: {e}")
 
 
@@ -386,7 +386,7 @@ class RequestOrchestrator:
             async with agent.iter(self.message, message_history=message_history) as agent_run:
                 i = 1
                 async for node in agent_run:
-                    logger.debug(f"Iteration {i}", iteration=i, request_id=ctx.request_id)
+                    logger.debug("Processing iteration", iteration=i, request_id=ctx.request_id)
                     self.iteration_manager.update_counters(i)
 
                     # Optional token streaming

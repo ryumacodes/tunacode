@@ -114,6 +114,35 @@ class DebugCommand(Command):
             logger.info("Debug mode enabled")
 
 
+def _validate_provider_api_key_with_notification(
+    model_string: str,
+    user_config: dict,
+    app: TextualReplApp,
+    show_config_path: bool = False,
+) -> bool:
+    """Validate API key for provider and notify user if missing.
+
+    Returns True if valid (or no provider in string), False otherwise.
+    """
+    from tunacode.configuration.models import validate_provider_api_key
+
+    if ":" not in model_string:
+        return True
+
+    provider_id = model_string.split(":")[0]
+    is_valid, env_var = validate_provider_api_key(provider_id, user_config)
+
+    if not is_valid:
+        app.notify(f"Missing API key: {env_var}", severity="error")
+        msg = f"[yellow]Set {env_var} in config for {provider_id}[/yellow]"
+        if show_config_path:
+            config_path = ApplicationSettings().paths.config_file
+            msg += f"\n[dim]Config: {config_path}[/dim]"
+        app.rich_log.write(msg)
+
+    return is_valid
+
+
 class ModelCommand(Command):
     name = "model"
     description = "Open model picker or switch directly"
@@ -123,7 +152,6 @@ class ModelCommand(Command):
         from tunacode.configuration.models import (
             get_model_context_window,
             load_models_registry,
-            validate_provider_api_key,
         )
         from tunacode.utils.config.user_configuration import save_config
 
@@ -131,20 +159,13 @@ class ModelCommand(Command):
             load_models_registry()
             model_name = args.strip()
 
-            # Validate API key exists for provider
-            if ":" in model_name:
-                provider_id = model_name.split(":")[0]
-                is_valid, env_var = validate_provider_api_key(
-                    provider_id, app.state_manager.session.user_config
-                )
-                if not is_valid:
-                    app.notify(f"Missing API key: {env_var}", severity="error")
-                    config_path = ApplicationSettings().paths.config_file
-                    app.rich_log.write(
-                        f"[yellow]Set {env_var} in config for {provider_id}[/yellow]\n"
-                        f"[dim]Config: {config_path}[/dim]"
-                    )
-                    return
+            if not _validate_provider_api_key_with_notification(
+                model_name,
+                app.state_manager.session.user_config,
+                app,
+                show_config_path=True,
+            ):
+                return
 
             app.state_manager.session.current_model = model_name
             app.state_manager.session.user_config["default_model"] = model_name
@@ -164,18 +185,13 @@ class ModelCommand(Command):
                 if full_model is None:
                     return
 
-                # Validate API key exists for provider
-                if ":" in full_model:
-                    provider_id = full_model.split(":")[0]
-                    is_valid, env_var = validate_provider_api_key(
-                        provider_id, app.state_manager.session.user_config
-                    )
-                    if not is_valid:
-                        app.notify(f"Missing API key: {env_var}", severity="error")
-                        app.rich_log.write(
-                            f"[yellow]Set {env_var} in config for {provider_id}[/yellow]"
-                        )
-                        return
+                if not _validate_provider_api_key_with_notification(
+                    full_model,
+                    app.state_manager.session.user_config,
+                    app,
+                    show_config_path=False,
+                ):
+                    return
 
                 app.state_manager.session.current_model = full_model
                 app.state_manager.session.user_config["default_model"] = full_model
