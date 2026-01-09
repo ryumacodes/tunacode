@@ -20,6 +20,7 @@ from tunacode.configuration.models import load_models_registry
 from tunacode.constants import ENV_OPENAI_BASE_URL, SETTINGS_BASE_URL, UI_THINKING_MESSAGE
 from tunacode.core.agents.delegation_tools import create_research_codebase_tool
 from tunacode.core.limits import get_max_tokens, is_local_mode
+from tunacode.core.logging import get_logger
 from tunacode.core.prompting import (
     LOCAL_TEMPLATE,
     MAIN_TEMPLATE,
@@ -67,8 +68,9 @@ async def _publish_delay_message(message: str, state_manager: StateManager) -> N
                 await streaming_panel.clear_status_message()
             else:
                 await streaming_panel.set_status_message(message)
-    except Exception:
-        pass
+    except Exception as e:
+        logger = get_logger()
+        logger.debug(f"UI spinner update failed: {e}")
 
 
 async def _sleep_with_countdown(
@@ -287,7 +289,9 @@ def load_tunacode_context() -> str:
             _TUNACODE_CACHE[cache_key] = ("", tunacode_path.stat().st_mtime)
             return ""
 
-    except Exception:
+    except Exception as e:
+        logger = get_logger()
+        logger.warning(f"Failed to load guide file: {e}")
         return ""
 
 
@@ -361,6 +365,7 @@ def _create_model_with_retry(
 
 def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
     """Get existing agent or create new one for the specified model."""
+    logger = get_logger()
     request_delay = _coerce_request_delay(state_manager)
     settings = state_manager.session.user_config.get("settings", {})
     agent_version = _compute_agent_version(settings, request_delay)
@@ -369,6 +374,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
     session_agent = state_manager.session.agents.get(model)
     session_version = state_manager.session.agent_versions.get(model)
     if session_agent and session_version == agent_version:
+        logger.debug(f"Agent cache hit (session): {model}")
         return session_agent
     if session_agent and session_version != agent_version:
         del state_manager.session.agents[model]
@@ -379,10 +385,12 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         # Verify cache is still valid (check for config changes)
         cached_version = _AGENT_CACHE_VERSION.get(model)
         if cached_version == agent_version:
+            logger.debug(f"Agent cache hit (module): {model}")
             state_manager.session.agents[model] = _AGENT_CACHE[model]
             state_manager.session.agent_versions[model] = agent_version
             return _AGENT_CACHE[model]
         else:
+            logger.debug(f"Agent cache invalidated (config changed): {model}")
             del _AGENT_CACHE[model]
             del _AGENT_CACHE_VERSION[model]
 
@@ -483,5 +491,6 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         _AGENT_CACHE_VERSION[model] = agent_version
         state_manager.session.agent_versions[model] = agent_version
         state_manager.session.agents[model] = agent
+        logger.info(f"Agent created: {model}")
 
     return _AGENT_CACHE[model]

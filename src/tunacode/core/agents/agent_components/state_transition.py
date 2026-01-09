@@ -4,6 +4,7 @@ import threading
 from dataclasses import dataclass
 from enum import Enum
 
+from tunacode.core.logging import get_logger
 from tunacode.types import AgentState
 
 
@@ -77,7 +78,10 @@ class AgentStateMachine:
             if self._state == new_state:
                 return
 
+            old_state = self._state
             self._state = new_state
+            logger = get_logger()
+            logger.debug(f"State: {old_state.value} → {new_state.value}")
 
     def can_transition_to(self, target_state: "AgentState") -> bool:
         """Check if a transition to the target state is allowed."""

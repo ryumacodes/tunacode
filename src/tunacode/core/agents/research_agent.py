@@ -8,6 +8,7 @@ from pydantic_ai import Agent, Tool
 from pydantic_ai.retries import AsyncTenacityTransport, RetryConfig, wait_retry_after
 from tenacity import retry_if_exception_type, stop_after_attempt
 
+from tunacode.core.logging import get_logger
 from tunacode.core.prompting import (
     RESEARCH_TEMPLATE,
     SectionLoader,
@@ -82,6 +83,8 @@ def _create_limited_read_file(max_files: int):
             allowing the agent to complete with partial results.
         """
         if call_count["count"] >= max_files:
+            logger = get_logger()
+            logger.warning(f"Research agent file limit reached ({max_files})")
             return (
                 "<file>\n"
                 f"FILE READ LIMIT REACHED ({max_files} files maximum)\n\n"
@@ -222,6 +225,9 @@ def create_research_agent(
         Tool(tracked_list_dir, max_retries=max_retries, strict=tool_strict_validation),
         Tool(tracked_glob, max_retries=max_retries, strict=tool_strict_validation),
     ]
+
+    logger = get_logger()
+    logger.debug(f"Research agent created: {model} (max_files={max_files})")
 
     return Agent(
         model=model_instance,
