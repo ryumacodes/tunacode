@@ -1,5 +1,49 @@
 ## [Unreleased]
 
+## [0.1.26] - 2026-01-09
+
+### Added
+- NeXTSTEP agent response panels with streaming support (#218)
+
+## [0.1.25] - 2026-01-08
+
+### Added
+- Local mode for small context window models with configurable tool limits (#215, #216)
+- BaseToolRenderer pattern for compact NeXTSTEP panels (#214)
+- Local mode documentation and README link
+
+### Changed
+- Tool improvements and unified BaseToolRenderer pattern
+
+## [0.1.24] - 2026-01-07
+
+### Added
+- Plan mode feature with gitignore-aware grep (#213)
+- Dynamic provider config from registry, OpenAI-only for non-Anthropic
+
+### Fixed
+- Restore plan mode feature (accidentally deleted in d816ff2)
+
+## [0.1.23] - 2026-01-06
+
+### Fixed
+- Include models_registry.json in wheel distribution
+
+## [0.1.22] - 2026-01-06
+
+### Fixed
+- Use load_models_registry instead of cached version for provider config
+- Resolve async/sync mismatch in _normalize_tool_args
+
+## [0.1.21] - 2026-01-03
+
+### Added
+- Comprehensive codebase map with SEAMS analysis
+
+### Changed
+- Refactor exception formatting
+- Cleanup obsolete memory-bank and audit files
+
 ## [0.1.20] - 2026-01-02
 
 ### Added
