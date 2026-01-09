@@ -7,22 +7,11 @@ import os
 import re
 from pathlib import Path
 
+from tunacode.utils.system.ignore_patterns import DEFAULT_EXCLUDE_DIRS
+
 # Fast-Glob Prefilter Configuration
 MAX_GLOB = 5_000  # Hard cap - protects memory & tokens
 GLOB_BATCH = 500  # Streaming batch size
-EXCLUDE_DIRS = {  # Common directories to skip
-    "node_modules",
-    ".git",
-    "__pycache__",
-    ".venv",
-    "venv",
-    "dist",
-    "build",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".tox",
-    "target",
-}
 
 
 class FileFilter:
@@ -67,7 +56,7 @@ class FileFilter:
                     for entry in entries:
                         # Skip common irrelevant directories
                         if entry.is_dir(follow_symlinks=False):
-                            if entry.name not in EXCLUDE_DIRS:
+                            if entry.name not in DEFAULT_EXCLUDE_DIRS:
                                 stack.append(Path(entry.path))
 
                         # Check file matches

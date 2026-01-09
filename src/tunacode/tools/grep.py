@@ -216,88 +216,77 @@ class ParallelGrep:
         """
         Run ripgrep on pre-filtered file list using the enhanced RipgrepExecutor.
         """
+        start_time = time.time()
+        results: list[SearchResult] = []
 
-        def run_enhanced_ripgrep():
-            """Execute ripgrep search using the new executor."""
-            start_time = time.time()
-            results = []
+        timeout_setting = self._config.get("timeout", 10)
+        timeout = min(timeout_setting, config.timeout_seconds)
 
-            # Configure timeout from settings
-            timeout = min(self._config.get("timeout", 10), config.timeout_seconds)
+        if self._ripgrep_executor._use_python_fallback:
+            return []
 
-            # If ripgrep executor is using fallback, skip this method entirely
-            if self._ripgrep_executor._use_python_fallback:
-                # Return empty to trigger Python fallback in the calling function
-                return []
-
-            try:
-                # Use the enhanced executor with support for context lines
-                # Note: Currently searching all files, not using candidates
-                # This is a limitation that should be addressed in future enhancement
-                search_results = self._ripgrep_executor.search(
-                    pattern=pattern,
-                    path=".",  # Search in current directory
-                    timeout=timeout,
-                    max_matches=config.max_results,
-                    case_insensitive=not config.case_sensitive,
-                    context_before=config.context_lines,
-                    context_after=config.context_lines,
-                )
-
-                # Ripgrep doesn't provide timing info for first match, so we rely on
-                # the overall timeout mechanism instead of first_match_deadline
-
-                # Parse results
-                for result_line in search_results:
-                    # Parse ripgrep output format "file:line:content"
-                    parts = result_line.split(":", 2)
-                    if len(parts) >= 3:
-                        # Filter to only include results from candidates
-                        file_path = Path(parts[0])
-                        if file_path not in candidates:
-                            continue
-
-                        try:
-                            search_result = SearchResult(
-                                file_path=parts[0],
-                                line_number=int(parts[1]),
-                                line_content=parts[2] if len(parts) > 2 else "",
-                                match_start=0,
-                                match_end=len(parts[2]) if len(parts) > 2 else 0,
-                                context_before=[],
-                                context_after=[],
-                                relevance_score=1.0,
-                            )
-                            results.append(search_result)
-
-                            # Stop if we have enough results
-                            if config.max_results and len(results) >= config.max_results:
-                                break
-                        except (ValueError, IndexError):
-                            continue
-
-            except TooBroadPatternError:
-                raise
-            except Exception:
-                # Return empty to trigger fallback
-                return []
-
-            # Record metrics if enabled
-            if self._config.get("enable_metrics", False):
-                total_time = time.time() - start_time
-                ripgrep_metrics.record_search(
-                    duration=total_time, used_fallback=self._ripgrep_executor._use_python_fallback
-                )
-
-            return results
-
-        # Run the enhanced ripgrep search
         try:
-            return await asyncio.get_event_loop().run_in_executor(
-                self._executor, run_enhanced_ripgrep
+            # Use the enhanced executor with support for context lines
+            # Note: Currently searching all files, not using candidates
+            # This is a limitation that should be addressed in future enhancement
+            search_results = await self._ripgrep_executor.search(
+                pattern=pattern,
+                path=".",  # Search in current directory
+                timeout=timeout,
+                max_matches=config.max_results,
+                case_insensitive=not config.case_sensitive,
+                context_before=config.context_lines,
+                context_after=config.context_lines,
             )
+
+            # Ripgrep doesn't provide timing info for first match, so we rely on
+            # the overall timeout mechanism instead of first_match_deadline
+
+            # Parse results
+            for result_line in search_results:
+                # Parse ripgrep output format "file:line:content"
+                parts = result_line.split(":", 2)
+                if len(parts) < 3:
+                    continue
+
+                # Filter to only include results from candidates
+                file_path = Path(parts[0])
+                if file_path not in candidates:
+                    continue
+
+                try:
+                    line_content = parts[2]
+                    search_result = SearchResult(
+                        file_path=parts[0],
+                        line_number=int(parts[1]),
+                        line_content=line_content,
+                        match_start=0,
+                        match_end=len(line_content),
+                        context_before=[],
+                        context_after=[],
+                        relevance_score=1.0,
+                    )
+                    results.append(search_result)
+
+                    # Stop if we have enough results
+                    if config.max_results and len(results) >= config.max_results:
+                        break
+                except (ValueError, IndexError):
+                    continue
+
         except TooBroadPatternError:
             raise
+        except Exception:
+            # Return empty to trigger fallback
+            return []
+
+        if self._config.get("enable_metrics", False):
+            total_time = time.time() - start_time
+            ripgrep_metrics.record_search(
+                duration=total_time, used_fallback=self._ripgrep_executor._use_python_fallback
+            )
+
+        return results
 
     async def _python_search_filtered(
         self, pattern: str, candidates: list[Path], config: SearchConfig

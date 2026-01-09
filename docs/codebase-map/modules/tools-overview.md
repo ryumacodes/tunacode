@@ -101,6 +101,7 @@ Fast file pattern matching:
 - .gitignore awareness
 - Sorted results
 - Integration with CodeIndex
+- Shared ignore directory list from `utils/system/ignore_patterns.py`
 
 ### grep.py
 Advanced content search:
@@ -117,12 +118,14 @@ Advanced content search:
 - Context lines
 - Output modes: content, files-only, count, JSON
 - Broad pattern prevention
+- Shared ignore directory list for fast-glob prefiltering
 
 ### read_file.py
 Reads file contents safely:
 - Line range support (offset/limit)
 - Line number preservation
 - Long line truncation
+- Streaming line reads to avoid loading entire files into memory
 - File size limits
 - Encoding handling
 
@@ -151,6 +154,7 @@ Lists directory contents:
 - Ignore pattern support
 - Hidden file visibility
 - Output size limits
+- Shared ignore pattern list from `utils/system/ignore_patterns.py`
 
 ### web_fetch.py
 Fetches web content:
@@ -191,6 +195,7 @@ Ripgrep integration wrapper:
 - Binary detection
 - Output parsing
 - Error handling
+- Async subprocess execution with timeouts
 
 ## Integration Points
 

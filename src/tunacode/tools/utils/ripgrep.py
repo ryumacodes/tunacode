@@ -1,11 +1,24 @@
 """Ripgrep binary management and execution utilities."""
 
+import asyncio
 import functools
+import locale
 import os
 import platform
 import shutil
 import subprocess
 from pathlib import Path
+
+PROCESS_OUTPUT_ENCODING = locale.getpreferredencoding(False)
+RIPGREP_MATCH_FOUND_EXIT_CODE = 0
+RIPGREP_NO_MATCH_EXIT_CODE = 1
+RIPGREP_SEARCH_TIMEOUT_SECONDS = 10
+RIPGREP_VERSION_TIMEOUT_SECONDS = 1
+RIPGREP_LIST_FILES_TIMEOUT_SECONDS = 5
+RIPGREP_SUCCESS_EXIT_CODES = {
+    RIPGREP_MATCH_FOUND_EXIT_CODE,
+    RIPGREP_NO_MATCH_EXIT_CODE,
+}
 
 
 @functools.lru_cache(maxsize=1)
@@ -96,7 +109,7 @@ def _check_ripgrep_version(rg_path: Path, min_version: str = "13.0.0") -> bool:
             [str(rg_path), "--version"],
             capture_output=True,
             text=True,
-            timeout=1,
+            timeout=RIPGREP_VERSION_TIMEOUT_SECONDS,
         )
         if result.returncode == 0:
             # Parse version from output like "ripgrep 14.1.1"
@@ -126,12 +139,12 @@ class RipgrepExecutor:
         self.binary_path = binary_path or get_ripgrep_binary_path()
         self._use_python_fallback = self.binary_path is None
 
-    def search(
+    async def search(
         self,
         pattern: str,
         path: str = ".",
         *,
-        timeout: int = 10,
+        timeout: int = RIPGREP_SEARCH_TIMEOUT_SECONDS,
         max_matches: int | None = None,
         file_pattern: str | None = None,
         case_insensitive: bool = False,
@@ -182,22 +195,38 @@ class RipgrepExecutor:
             # Add pattern and path
             cmd.extend([pattern, path])
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
+            returncode, stdout_text = await self._run_ripgrep_command(cmd, timeout)
 
-            if result.returncode in [0, 1]:  # 0 = matches found, 1 = no matches
-                return [line.strip() for line in result.stdout.splitlines() if line.strip()]
-            else:
-                return []
+            if returncode in RIPGREP_SUCCESS_EXIT_CODES:
+                return [line.strip() for line in stdout_text.splitlines() if line.strip()]
+            return []
 
-        except subprocess.TimeoutExpired:
+        except TimeoutError:
             return []
         except Exception:
             return self._python_fallback_search(pattern, path, file_pattern=file_pattern)
+
+    async def _run_ripgrep_command(self, cmd: list[str], timeout: int) -> tuple[int, str]:
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout_bytes, _ = await asyncio.wait_for(
+                process.communicate(),
+                timeout=timeout,
+            )
+        except TimeoutError:
+            process.kill()
+            await process.communicate()
+            raise
+
+        stdout_text = stdout_bytes.decode(PROCESS_OUTPUT_ENCODING)
+        return_code = (
+            process.returncode if process.returncode is not None else RIPGREP_NO_MATCH_EXIT_CODE
+        )
+        return return_code, stdout_text
 
     def list_files(self, pattern: str, directory: str = ".") -> list[str]:
         """List files matching a glob pattern using ripgrep.
@@ -217,7 +246,7 @@ class RipgrepExecutor:
                 [str(self.binary_path), "--files", "-g", pattern, directory],
                 capture_output=True,
                 text=True,
-                timeout=5,
+                timeout=RIPGREP_LIST_FILES_TIMEOUT_SECONDS,
             )
             return [line.strip() for line in result.stdout.splitlines() if line.strip()]
         except Exception:

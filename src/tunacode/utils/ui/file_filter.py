@@ -6,26 +6,7 @@ from pathlib import Path
 import pathspec
 
 from tunacode.constants import AUTOCOMPLETE_MAX_DEPTH, AUTOCOMPLETE_RESULT_LIMIT
-
-DEFAULT_IGNORES = [
-    ".git/",
-    ".venv/",
-    "venv/",
-    "env/",
-    "node_modules/",
-    "__pycache__/",
-    "*.pyc",
-    "*.pyo",
-    "*.egg-info/",
-    ".DS_Store",
-    "Thumbs.db",
-    ".idea/",
-    ".vscode/",
-    "build/",
-    "dist/",
-    "target/",
-    ".env",
-]
+from tunacode.utils.system.ignore_patterns import DEFAULT_IGNORE_PATTERNS
 
 
 class FileFilter:
@@ -36,7 +17,7 @@ class FileFilter:
         self._spec = self._build_spec()
 
     def _build_spec(self) -> pathspec.PathSpec:
-        patterns = list(DEFAULT_IGNORES)
+        patterns = list(DEFAULT_IGNORE_PATTERNS)
         gitignore = self.root / ".gitignore"
         if gitignore.exists():
             patterns.extend(gitignore.read_text().splitlines())
