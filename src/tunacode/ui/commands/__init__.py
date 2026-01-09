@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tunacode.ui.app import TextualReplApp
 
+from tunacode.configuration.settings import ApplicationSettings
 from tunacode.ui.styles import STYLE_PRIMARY
 
 # Update command constants
@@ -138,9 +139,10 @@ class ModelCommand(Command):
                 )
                 if not is_valid:
                     app.notify(f"Missing API key: {env_var}", severity="error")
+                    config_path = ApplicationSettings().paths.config_file
                     app.rich_log.write(
                         f"[yellow]Set {env_var} in config for {provider_id}[/yellow]\n"
-                        "[dim]Config: ~/.config/tunacode.json[/dim]"
+                        f"[dim]Config: {config_path}[/dim]"
                     )
                     return
 
