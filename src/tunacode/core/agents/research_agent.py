@@ -1,5 +1,6 @@
 """Research agent factory for read-only codebase exploration."""
 
+import inspect
 from pathlib import Path
 from typing import Any
 
@@ -141,10 +142,11 @@ class ProgressTracker:
             self.emit(operation)
             return await tool_func(*args, **kwargs)
 
-        # Preserve function metadata for pydantic-ai
+        # Preserve function metadata for pydantic-ai schema generation
         wrapped.__name__ = tool_func.__name__
         wrapped.__doc__ = tool_func.__doc__
         wrapped.__annotations__ = getattr(tool_func, "__annotations__", {})
+        wrapped.__signature__ = inspect.signature(tool_func)  # type: ignore[attr-defined]
 
         return wrapped
 
@@ -197,7 +199,7 @@ def create_research_agent(
         validate_response=lambda r: r.raise_for_status(),
     )
     request_delay = _coerce_request_delay(state_manager)
-    event_hooks = _build_request_hooks(request_delay, state_manager)
+    event_hooks = _build_request_hooks(request_delay)
     http_client = AsyncClient(transport=transport, event_hooks=event_hooks)
 
     model_instance = _create_model_with_retry(model, http_client, state_manager)

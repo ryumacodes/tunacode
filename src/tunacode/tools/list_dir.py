@@ -7,57 +7,13 @@ from pathlib import Path
 from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.tools.decorators import base_tool
+from tunacode.utils.system.ignore_patterns import DEFAULT_IGNORE_PATTERNS, is_ignored
 
-IGNORE_PATTERNS = [
-    "node_modules/",
-    "__pycache__/",
-    ".git/",
-    "dist/",
-    "build/",
-    "target/",
-    "vendor/",
-    "bin/",
-    "obj/",
-    ".idea/",
-    ".vscode/",
-    ".zig-cache/",
-    "zig-out/",
-    ".coverage/",
-    "coverage/",
-    "tmp/",
-    "temp/",
-    ".cache/",
-    "cache/",
-    "logs/",
-    ".venv/",
-    "venv/",
-    "env/",
-    ".ruff_cache/",
-    ".pytest_cache/",
-    ".mypy_cache/",
-    "*.egg-info/",
-    ".eggs/",
-]
+IGNORE_PATTERNS = list(DEFAULT_IGNORE_PATTERNS)
 
 IGNORE_PATTERNS_COUNT = len(IGNORE_PATTERNS)
 
 LIMIT = 100
-
-
-def _should_ignore(path: str, ignore_patterns: list[str]) -> bool:
-    """Check if path matches any ignore pattern."""
-    for pattern in ignore_patterns:
-        if pattern.endswith("/"):
-            # Directory pattern
-            dir_name = pattern.rstrip("/")
-            if f"/{dir_name}/" in f"/{path}/" or path.startswith(f"{dir_name}/"):
-                return True
-        elif "*" in pattern:
-            # Glob pattern (simple suffix match)
-            suffix = pattern.replace("*", "")
-            if path.endswith(suffix):
-                return True
-    return False
 
 
 def _collect_files(
@@ -80,7 +36,11 @@ def _collect_files(
             d
             for d in dirnames
             if (show_hidden or not d.startswith("."))
-            and not _should_ignore(f"{rel_dir}/{d}".lstrip("/") + "/", ignore_patterns)
+            and not is_ignored(
+                os.path.join(rel_dir, d) if rel_dir else d,
+                d,
+                ignore_patterns,
+            )
         ]
         dirnames.sort()
 
@@ -89,11 +49,12 @@ def _collect_files(
             if not show_hidden and filename.startswith("."):
                 continue
 
-            rel_path = f"{rel_dir}/{filename}".lstrip("/") if rel_dir else filename
-            if _should_ignore(rel_path, ignore_patterns):
+            rel_path = os.path.join(rel_dir, filename) if rel_dir else filename
+            if is_ignored(rel_path, filename, ignore_patterns):
                 continue
 
-            files.append(rel_path)
+            normalized_path = rel_path.replace(os.sep, "/")
+            files.append(normalized_path)
             if len(files) >= max_files:
                 return files
 

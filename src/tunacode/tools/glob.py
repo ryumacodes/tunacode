@@ -11,25 +11,9 @@ from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.indexing import CodeIndex
 from tunacode.tools.decorators import base_tool
+from tunacode.utils.system.ignore_patterns import DEFAULT_EXCLUDE_DIRS
 
 MAX_RESULTS = 5000
-EXCLUDE_DIRS = {
-    "node_modules",
-    ".git",
-    "__pycache__",
-    ".venv",
-    "venv",
-    "dist",
-    "build",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".tox",
-    "target",
-    ".next",
-    ".nuxt",
-    "coverage",
-    ".coverage",
-}
 
 
 class SortOrder(Enum):
@@ -79,7 +63,7 @@ async def glob(
     if not root_path.is_dir():
         raise ModelRetry(f"Not a directory: {directory}. Provide a directory path.")
 
-    all_exclude = EXCLUDE_DIRS.copy()
+    all_exclude = set(DEFAULT_EXCLUDE_DIRS)
     if exclude_dirs:
         all_exclude.update(exclude_dirs)
 

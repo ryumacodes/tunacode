@@ -72,6 +72,10 @@ Provides shared utility functions across configuration, messaging, parsing, secu
 
 ### System (utils/system/)
 
+**ignore_patterns.py**
+- Shared ignore pattern list for tools and UI
+- **is_ignored()** - Pattern matching helper for filesystem traversal
+
 **gitignore.py**
 - .gitignore pattern matching
 - File filtering based on ignore rules
