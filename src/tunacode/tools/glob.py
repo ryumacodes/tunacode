@@ -11,9 +11,11 @@ from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.indexing import CodeIndex
 from tunacode.tools.decorators import base_tool
-from tunacode.utils.system.ignore_patterns import DEFAULT_EXCLUDE_DIRS
+from tunacode.tools.ignore import IgnoreManager, get_ignore_manager
 
 MAX_RESULTS = 5000
+EXCLUDE_DIR_SUFFIX = "/"
+EMPTY_EXCLUDE_DIR_PATTERNS: tuple[str, ...] = ()
 
 
 class SortOrder(Enum):
@@ -23,10 +25,6 @@ class SortOrder(Enum):
     SIZE = "size"
     ALPHABETICAL = "alphabetical"
     DEPTH = "depth"
-
-
-# Module-level cache for gitignore patterns
-_gitignore_patterns: set[str] | None = None
 
 
 @base_tool
@@ -39,7 +37,6 @@ async def glob(
     max_results: int = MAX_RESULTS,
     sort_by: str = "modified",
     case_sensitive: bool = False,
-    use_gitignore: bool = True,
 ) -> str:
     """Find files matching glob patterns.
 
@@ -52,7 +49,6 @@ async def glob(
         max_results: Maximum number of results to return.
         sort_by: How to sort results (modified/size/alphabetical/depth).
         case_sensitive: Whether pattern matching is case-sensitive.
-        use_gitignore: Whether to respect .gitignore patterns.
 
     Returns:
         Formatted list of matching file paths.
@@ -63,28 +59,30 @@ async def glob(
     if not root_path.is_dir():
         raise ModelRetry(f"Not a directory: {directory}. Provide a directory path.")
 
-    all_exclude = set(DEFAULT_EXCLUDE_DIRS)
-    if exclude_dirs:
-        all_exclude.update(exclude_dirs)
-
+    ignore_manager = _build_ignore_manager(root_path, exclude_dirs)
     sort_order = _parse_sort_order(sort_by)
     patterns = _expand_brace_pattern(pattern)
-
-    if use_gitignore:
-        await _load_gitignore_patterns(root_path)
 
     # Try CodeIndex for faster lookup
     code_index = _get_code_index(directory)
     source = "filesystem"
 
-    if code_index and not include_hidden and recursive:
+    has_code_index = code_index is not None
+    should_use_index = has_code_index and not include_hidden and recursive
+    if should_use_index:
         matches = await _glob_with_index(
-            code_index, patterns, root_path, all_exclude, max_results, case_sensitive
+            code_index, patterns, root_path, ignore_manager, max_results, case_sensitive
         )
         source = "index"
     else:
         matches = await _glob_filesystem(
-            root_path, patterns, recursive, include_hidden, all_exclude, max_results, case_sensitive
+            root_path,
+            patterns,
+            recursive,
+            include_hidden,
+            ignore_manager,
+            max_results,
+            case_sensitive,
         )
 
     if not matches:
@@ -100,6 +98,28 @@ def _parse_sort_order(sort_by: str) -> SortOrder:
         return SortOrder(sort_by)
     except ValueError:
         return SortOrder.MODIFIED
+
+
+def _build_ignore_manager(root: Path, exclude_dirs: list[str] | None) -> IgnoreManager:
+    ignore_manager = get_ignore_manager(root)
+    exclude_patterns = _normalize_exclude_dir_patterns(exclude_dirs)
+    if not exclude_patterns:
+        return ignore_manager
+    return ignore_manager.with_additional_patterns(exclude_patterns)
+
+
+def _normalize_exclude_dir_patterns(exclude_dirs: list[str] | None) -> tuple[str, ...]:
+    if not exclude_dirs:
+        return EMPTY_EXCLUDE_DIR_PATTERNS
+    patterns: list[str] = []
+    for name in exclude_dirs:
+        stripped_name = name.strip()
+        if not stripped_name:
+            continue
+        has_suffix = stripped_name.endswith(EXCLUDE_DIR_SUFFIX)
+        pattern = stripped_name if has_suffix else f"{stripped_name}{EXCLUDE_DIR_SUFFIX}"
+        patterns.append(pattern)
+    return tuple(patterns)
 
 
 def _get_code_index(directory: str) -> CodeIndex | None:
@@ -152,33 +172,11 @@ def _expand_brace_pattern(pattern: str) -> list[str]:
     return expanded
 
 
-async def _load_gitignore_patterns(root: Path) -> None:
-    """Load .gitignore patterns from the repository."""
-    global _gitignore_patterns
-    if _gitignore_patterns is not None:
-        return
-
-    _gitignore_patterns = set()
-    ignore_files = [".gitignore", ".ignore", ".rgignore"]
-
-    for ignore_file in ignore_files:
-        ignore_path = root / ignore_file
-        if ignore_path.exists():
-            try:
-                with open(ignore_path, encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith("#"):
-                            _gitignore_patterns.add(line)
-            except Exception:
-                pass
-
-
 async def _glob_with_index(
     code_index: CodeIndex,
     patterns: list[str],
     root: Path,
-    exclude_dirs: set,
+    ignore_manager: IgnoreManager,
     max_results: int,
     case_sensitive: bool,
 ) -> list[str]:
@@ -190,12 +188,16 @@ async def _glob_with_index(
         abs_path = code_index.root_dir / file_path
 
         for pattern in patterns:
-            if _match_pattern(str(file_path), pattern, case_sensitive):
-                if not any(d in file_path.parts for d in exclude_dirs):
-                    matches.append(str(abs_path))
-                    if len(matches) >= max_results:
-                        return matches
+            path_matches = _match_pattern(str(file_path), pattern, case_sensitive)
+            if not path_matches:
+                continue
+            is_ignored = ignore_manager.should_ignore(file_path)
+            if is_ignored:
                 break
+            matches.append(str(abs_path))
+            if len(matches) >= max_results:
+                return matches
+            break
 
     return matches
 
@@ -228,7 +230,7 @@ async def _glob_filesystem(
     patterns: list[str],
     recursive: bool,
     include_hidden: bool,
-    exclude_dirs: set,
+    ignore_manager: IgnoreManager,
     max_results: int,
     case_sensitive: bool,
 ) -> list[str]:
@@ -255,44 +257,60 @@ async def _glob_filesystem(
             try:
                 with os.scandir(current) as entries:
                     for entry in entries:
-                        if not include_hidden and entry.name.startswith("."):
+                        is_hidden_entry = entry.name.startswith(".")
+                        should_skip_hidden = is_hidden_entry and not include_hidden
+                        if should_skip_hidden:
                             continue
 
+                        entry_path = Path(entry.path)
+
                         if entry.is_dir(follow_symlinks=False):
-                            if entry.name not in exclude_dirs and recursive:
-                                stack.append(Path(entry.path))
-                        elif entry.is_file(follow_symlinks=False):
-                            rel_path = os.path.relpath(entry.path, root)
+                            if not recursive:
+                                continue
+                            is_ignored_dir = ignore_manager.should_ignore_dir(entry_path)
+                            if is_ignored_dir:
+                                continue
+                            stack.append(entry_path)
+                            continue
 
-                            for orig, comp in compiled:
-                                if "**" in orig:
-                                    if orig.startswith("**/") and not recursive:
-                                        suffix = orig[3:]
-                                        if fnmatch.fnmatch(entry.name, suffix):
-                                            matches.append(entry.path)
-                                            break
-                                    elif comp.match(rel_path):
+                        if not entry.is_file(follow_symlinks=False):
+                            continue
+
+                        is_ignored_file = ignore_manager.should_ignore(entry_path)
+                        if is_ignored_file:
+                            continue
+
+                        rel_path = os.path.relpath(entry.path, root)
+
+                        for orig, comp in compiled:
+                            if "**" in orig:
+                                if orig.startswith("**/") and not recursive:
+                                    suffix = orig[3:]
+                                    if fnmatch.fnmatch(entry.name, suffix):
                                         matches.append(entry.path)
                                         break
-                                    elif orig.startswith("**/"):
-                                        suffix = orig[3:]
-                                        if fnmatch.fnmatch(entry.name, suffix):
-                                            matches.append(entry.path)
-                                            break
-                                else:
-                                    if comp.match(entry.name):
+                                elif comp.match(rel_path):
+                                    matches.append(entry.path)
+                                    break
+                                elif orig.startswith("**/"):
+                                    suffix = orig[3:]
+                                    if fnmatch.fnmatch(entry.name, suffix):
                                         matches.append(entry.path)
                                         break
+                            else:
+                                if comp.match(entry.name):
+                                    matches.append(entry.path)
+                                    break
 
-                            if len(matches) >= max_results:
-                                break
+                        if len(matches) >= max_results:
+                            break
 
             except (PermissionError, OSError):
                 continue
 
         return matches[:max_results]
 
-    return await asyncio.get_event_loop().run_in_executor(None, search_sync)
+    return await asyncio.to_thread(search_sync)
 
 
 async def _sort_matches(matches: list[str], sort_by: SortOrder) -> list[str]:
@@ -309,7 +327,7 @@ async def _sort_matches(matches: list[str], sort_by: SortOrder) -> list[str]:
             return sorted(matches, key=lambda p: (p.count(os.sep), p))
         return sorted(matches)
 
-    return await asyncio.get_event_loop().run_in_executor(None, sort_sync)
+    return await asyncio.to_thread(sort_sync)
 
 
 def _format_output(pattern: str, matches: list[str], max_results: int, source: str) -> str:
