@@ -12,24 +12,26 @@ Transform tool panels from heavy boxed layouts to slim, line-based headers match
 ## Dream Mockup Reference
 
 ```
-— update_file ————————————————————————————————————————— +3 -2 —
-  ↳ tools/web_fetch.py                          (cyan, underlined)
+┌─ update_file ——————————————————————————————————── +3 -2 ─┐
+│   ↳ tools/web_fetch.py                    (cyan, underlined) │
+│                                                              │
+│ 136 try:                                                     │
+│ 137     head_response = await client.head(validated_url)     │
+│ 138     content_length = head_response.headers.get("content- │
+│ 139 - if content_length and int(content_length) > MAX+SIZE:  │ ██ RED BG
+│ 139 + max_content_size = web_fetch_config.max_content_size_  │ ██ GREEN BG
+│ 140 + if content_length and int(content_length) > max_conte  │ ██ GREEN BG
+│ 141     raize ModelRetry(                                    │
+└──────────────────────────────────────────────────────────────┘
 
-136 try:
-137     head_response = await client.head(validated_url)
-138     content_length = head_response.headers.get("content-le..
-139 - if content_length and int(content_length) > MAX+SIZE:    ██ RED BG
-139 + max_content_size = web_fetch_config.max_content_size_..  ██ GREEN BG
-140 + if content_length and int(content_length) > max_conte..  ██ GREEN BG
-141     raize ModelRetry(
-
-— LSP ——————————————————————————— ⊘ 2 errors □ ⓘ 2 warnings —
-
-L160: Undefined name `MAX_CONTENT_SIZE`                        ██ RED BG
-L163: Undefined name `MAX_CONTENT_SIZE`                        ██ RED BG
-
-L6: Import block is un-sorted or un-formatted                  ██ OLIVE BG
-L137: Line too long (107 > 100)                                ██ OLIVE BG
+┌─ LSP ————————————————————────── ⊘ 2 errors □ ⓘ 2 warnings ─┐
+│                                                              │
+│ L160: Undefined name `MAX_CONTENT_SIZE`                      │ ██ RED BG
+│ L163: Undefined name `MAX_CONTENT_SIZE`                      │ ██ RED BG
+│                                                              │
+│ L6: Import block is un-sorted or un-formatted                │ ██ OLIVE BG
+│ L137: Line too long (107 > 100)                              │ ██ OLIVE BG
+└──────────────────────────────────────────────────────────────┘
 
 ⚙ Analyzing LSP Diagnostics...
 ▓▓▓▓ ≋🐟
@@ -37,15 +39,16 @@ L137: Line too long (107 > 100)                                ██ OLIVE BG
 
 ## Design Principles (Updated from Mockup)
 
-1. **Line headers** - `— tool_name ——————————————————— stats —`
-2. **Stats in header** - Compact, right-aligned (`+3 -2` not `+3 -2 · 0.1s`)
-3. **Link-style subtitle** - `↳ filepath` in cyan with underline
-4. **FULL-LINE BACKGROUND COLORS** - Critical visual element:
+1. **NeXTSTEP slim borders** - Single-line box `┌─ ─┐ │ └─ ─┘`
+2. **Header integrated into top border** - `┌─ tool_name ——————— stats ─┐`
+3. **Stats in header** - Compact, right-aligned (`+3 -2` not `+3 -2 · 0.1s`)
+4. **Link-style subtitle** - `↳ filepath` in cyan with underline
+5. **FULL-LINE BACKGROUND COLORS** - Critical visual element:
    - `#4a2020` (dark red) for removed lines / errors
    - `#204a20` (dark green) for added lines / success
    - `#4a4a20` (dark olive) for warnings
-5. **No box borders** - Content flows directly
-6. **Activity line** - `⚙ {action}...` with fish animation `▓▓▓▓ ≋🐟`
+6. **Minimal internal padding** - Content dense, no zone separators
+7. **Activity line** - `⚙ {action}...` with fish animation `▓▓▓▓ ≋🐟`
 
 ## Visual Spec: Full-Line Backgrounds
 
@@ -66,20 +69,22 @@ line.stylize(DIFF_REMOVED_STYLE, 0, len(content))
 ## Before / After
 
 ```
-BEFORE (current):                   AFTER (dream):
-┌─────── update_file ───────┐       — update_file ——————————— +3 -2 —
-│                           │         ↳ tools/web_fetch.py
-│  tools/web_fetch.py       │
-│  ─────────────────────    │       137   head_response = await...
-│                           │       138   content_length = head...
-│  137 head_response = ...  │       139 - if content_length and...  ██RED
-│  138 content_length = ... │       139 + max_content_size = we...  ██GRN
-│  139 - if content_len...  │       140 + if content_length and...  ██GRN
-│  139 + max_content_si...  │
+BEFORE (current - heavy):              AFTER (dream - slim NeXTSTEP):
+┌─────── update_file ───────┐          ┌─ update_file ─────────── +3 -2 ─┐
+│                           │          │   ↳ tools/web_fetch.py          │
+│  tools/web_fetch.py       │          │                                 │
+│  ─────────────────────    │          │ 137   head_response = await...  │
+│                           │          │ 138   content_length = head...  │
+│  137 head_response = ...  │          │ 139 - if content_length and...  │ ██RED
+│  138 content_length = ... │          │ 139 + max_content_size = we...  │ ██GRN
+│  139 - if content_len...  │          │ 140 + if content_length and...  │ ██GRN
+│  139 + max_content_si...  │          └─────────────────────────────────┘
 │  ─────────────────────    │
-│  +3 -2  0.1s              │
-│               20:46:02    │
-└───────────────────────────┘       (no box, just content)
+│  +3 -2  0.1s              │          Key differences:
+│               20:46:02    │          - Header IN the border line
+└───────────────────────────┘          - No internal separators
+                                       - No timestamp clutter
+12 lines → 9 lines                     - Full-line backgrounds
 ```
 
 ## Implementation Tasks
@@ -198,28 +203,29 @@ BEFORE (current):                   AFTER (dream):
 | Activity icon | `dim` | `⚙` |
 | Fish | `cyan` | `🐟` |
 
-## Header Format by Tool
+## Header Format by Tool (Integrated into Border)
 
-| Tool | Header Format |
-|------|---------------|
-| update_file | `— update_file ——————————————————— +{n} -{n} —` |
-| read_file | `— read_file ————————————————————— {n} lines —` |
-| bash | `— bash ———————————————————————————— {ok\|exit N} —` |
-| grep | `— grep ——————————————— {n} matches · {n} files —` |
-| glob | `— glob ——————————————————————————————— {n} files —` |
-| list_dir | `— list_dir ——————————— {n} files · {n} dirs —` |
-| write_file | `— write_file ————————————————————— {n} lines —` |
-| web_fetch | `— web_fetch ——————————————————————— {status} —` |
-| LSP | `— LSP ————————————— ⊘ {n} errors □ ⓘ {n} warnings —` |
+| Tool | Top Border Format |
+|------|-------------------|
+| update_file | `┌─ update_file ——————————————————— +{n} -{n} ─┐` |
+| read_file | `┌─ read_file ————————————————————— {n} lines ─┐` |
+| bash | `┌─ bash ———————————————————————————— {ok\|exit N} ─┐` |
+| grep | `┌─ grep ——————————————— {n} matches · {n} files ─┐` |
+| glob | `┌─ glob ——————————————————————————————— {n} files ─┐` |
+| list_dir | `┌─ list_dir ——————————— {n} files · {n} dirs ─┐` |
+| write_file | `┌─ write_file ————————————————————— {n} lines ─┐` |
+| web_fetch | `┌─ web_fetch ——————————————————————— {status} ─┐` |
+| LSP | `┌─ LSP ————————————— ⊘ {n} errors □ ⓘ {n} warnings ─┐` |
 
 ## Success Criteria
 
 1. Matches dream mockup visual style exactly
-2. Full-line background colors for diffs/errors/warnings
-3. Link-style subtitles (cyan + underline)
-4. ~50% vertical space reduction
-5. Fish animation in activity line 🐟
-6. No Panel() boxes anywhere
+2. NeXTSTEP slim borders with header integrated into top line
+3. Full-line background colors for diffs/errors/warnings
+4. Link-style subtitles (cyan + underline)
+5. ~30% vertical space reduction (fewer internal separators)
+6. Fish animation in activity line 🐟
+7. Uses Rich Panel() with custom border title formatting
 
 ## Files to Modify
 
