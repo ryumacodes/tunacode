@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [0.1.35] - 2026-01-16
+
+### Changed
+- Centralize panel width handling and simplify tool renderers (#244)
+- Hook-arrow params across tool panels (#243)
+
 ## [0.1.26] - 2026-01-09
 
 ### Added
