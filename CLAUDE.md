@@ -296,6 +296,38 @@ PR #263: "chore: remove unused grep tool"
   - single atomic commit, code and docs together
 ```
 
+### Gate 5: Indirection Requires Verification
+
+Indirection hides behavior. Every layer between intent and effect is a place where your mental model can diverge from reality.
+
+```
+Direct:     width = 100        → Panel is 100 wide
+Indirect:   expand = True      → ??? → Panel is ??? wide
+```
+
+Direct: you control the value.
+Indirect: you express a wish and hope something else honors it.
+
+When you delegate a decision:
+
+- `expand=True` → who decides? what do they decide?
+- `auto` → auto based on what?
+- `default` → default to what?
+
+**You must verify the OUTPUT, not the INPUT.**
+
+**Wrong:** "I passed expand=True, so it expands"
+**Right:** "I passed expand=True, the panel rendered at 147px, terminal is 150px - why the 3px gap?"
+
+If you can't observe the final value, you can't verify the behavior. If you can't verify the behavior, you're guessing.
+
+**Rules:**
+
+- Direct control > Indirect delegation
+- Measured output > Assumed output
+- When using indirection, add a test or debug assertion that verifies the actual output
+- If you can't print/log/assert the final value, you don't know it
+
 ---
 
 ## KB Directory
@@ -328,7 +360,7 @@ Types: bug, smell, pattern, lesson, antipattern
 
 [2026-01-08] [pattern] Syntax highlighting in tool renderers: Use `syntax_utils.py` for `get_lexer(filepath)` and `syntax_or_text(content, filepath)`. Consistent monokai theme. 9 renderers now registered: bash, glob, grep, list_dir, read_file, research_codebase, update_file, web_fetch, write_file. Commit `9db8e92`.
 
-[2026-01-08] [lesson] **RichLog.write() has its own expand parameter!** When Panel(expand=True) doesn't expand in Textual, the fix is `rich_log.write(panel, expand=True)`. Panel.expand tells Rich what to do; RichLog.write(expand=) tells Rich what canvas size to use. Two different systems - canvas wins. See JOURNAL.md "The Great Panel Width Debugging Adventure".
+[2026-01-08] [antipattern] **RichLog.write(expand=True) is NOT terminal width!** `expand=True` expands to `scrollable_content_region`, which excludes padding and scrollbar gutter (~4-8 chars narrower than terminal). For full-width panels, pass explicit `width=` to the Panel constructor. Never trust `expand=True` to mean "full width" - it means "fill container" and the container is smaller than you think. See Gate 5: Indirection Requires Verification.
 
 [2026-01-14] [antipattern] **Semantically dead code: loaded but never read.** Static analysis (Vulture) only catches syntactically dead code (never called). It misses code that IS called but whose result is never consumed. Example: `glob.py` had `_load_gitignore_patterns()` that populated a global, but nothing ever read that global. The `use_gitignore` parameter was a lie - it triggered work but had zero effect. **Prevention:** When adding a "load X" function, grep for reads of X before shipping. If a parameter controls behavior, trace the data flow to prove it actually changes output.
 
