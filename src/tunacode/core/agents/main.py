@@ -33,7 +33,6 @@ from tunacode.types import (
 from tunacode.utils.ui import DotDict
 
 from . import agent_components as ac
-from .prompts import format_clarification, format_iteration_limit, format_no_progress
 
 colors = DotDict(UI_COLORS)
 
@@ -49,7 +48,6 @@ class AgentConfig:
     """Configuration for agent behavior."""
 
     max_iterations: int = 15
-    unproductive_limit: int = 3
     forced_react_interval: int = 2
     forced_react_limit: int = 5
     debug_metrics: bool = False
@@ -107,83 +105,15 @@ class EmptyResponseHandler:
 
 
 class IterationManager:
-    """Manages iteration tracking, productivity monitoring, and limit handling."""
+    """Manages iteration tracking."""
 
-    def __init__(
-        self,
-        state_manager: StateManager,
-        config: AgentConfig,
-        notice_callback: NoticeCallback | None,
-    ) -> None:
+    def __init__(self, state_manager: StateManager) -> None:
         self.state_manager = state_manager
-        self.config = config
-        self.notice_callback = notice_callback
-        self.unproductive_iterations = 0
-        self.last_productive_iteration = 0
-
-    def track_productivity(self, had_tool_use: bool, iteration: int) -> None:
-        """Track productivity based on tool usage."""
-        if had_tool_use:
-            self.unproductive_iterations = 0
-            self.last_productive_iteration = iteration
-        else:
-            self.unproductive_iterations += 1
-
-    def should_force_action(self, response_state: ac.ResponseState) -> bool:
-        """Check if action should be forced due to unproductivity."""
-        return (
-            self.unproductive_iterations >= self.config.unproductive_limit
-            and not response_state.task_completed
-        )
-
-    async def handle_iteration_limit(
-        self, iteration: int, response_state: ac.ResponseState
-    ) -> None:
-        """Handle reaching iteration limit."""
-        if iteration >= self.config.max_iterations and not response_state.task_completed:
-            _, tools_str = ac.create_progress_summary(
-                getattr(self.state_manager.session, "tool_calls", [])
-            )
-            limit_message = format_iteration_limit(self.config.max_iterations, iteration, tools_str)
-            if self.notice_callback:
-                self.notice_callback(limit_message)
-
-            response_state.awaiting_user_guidance = True
 
     def update_counters(self, iteration: int) -> None:
         """Update session iteration counters."""
         self.state_manager.session.current_iteration = iteration
         self.state_manager.session.iteration_count = iteration
-
-    async def force_action_if_unproductive(
-        self, message: str, iteration: int, response_state: ac.ResponseState
-    ) -> None:
-        """Force action if unproductive iterations exceeded."""
-        if not self.should_force_action(response_state):
-            return
-
-        no_progress_message = format_no_progress(
-            message,
-            self.unproductive_iterations,
-            self.last_productive_iteration,
-            iteration,
-            self.config.max_iterations,
-        )
-        if self.notice_callback:
-            self.notice_callback(no_progress_message)
-
-        # Reset after nudge
-        self.unproductive_iterations = 0
-
-    async def ask_for_clarification(self, iteration: int) -> None:
-        """Ask user for clarification."""
-        _, tools_used_str = ac.create_progress_summary(
-            getattr(self.state_manager.session, "tool_calls", [])
-        )
-        original_query = getattr(self.state_manager.session, "original_query", "your request")
-        clarification_message = format_clarification(original_query, iteration, tools_used_str)
-        if self.notice_callback:
-            self.notice_callback(clarification_message)
 
 
 class ReactSnapshotManager:
@@ -315,7 +245,6 @@ class RequestOrchestrator:
         settings = user_config.get("settings", {})
         self.config = AgentConfig(
             max_iterations=int(settings.get("max_iterations", 15)),
-            unproductive_limit=3,
             forced_react_interval=2,
             forced_react_limit=5,
             debug_metrics=bool(settings.get("debug_metrics", False)),
@@ -323,7 +252,7 @@ class RequestOrchestrator:
 
         # Initialize managers
         self.empty_handler = EmptyResponseHandler(state_manager, notice_callback)
-        self.iteration_manager = IterationManager(state_manager, self.config, notice_callback)
+        self.iteration_manager = IterationManager(state_manager)
         self.react_manager = ReactSnapshotManager(
             state_manager, ReactTool(state_manager=state_manager), self.config
         )
@@ -448,32 +377,16 @@ class RequestOrchestrator:
                     if getattr(getattr(node, "result", None), "output", None):
                         response_state.has_user_response = True
 
-                    # Productivity tracking
-                    had_tool_use = _iteration_had_tool_use(node)
-                    self.iteration_manager.track_productivity(had_tool_use, i)
-
-                    # Force action if unproductive
-                    await self.iteration_manager.force_action_if_unproductive(
-                        self.message, i, response_state
-                    )
-
                     # Force react snapshot
                     show_thoughts = bool(
                         getattr(self.state_manager.session, "show_thoughts", False)
                     )
                     await self.react_manager.capture_snapshot(i, agent_run.ctx, show_thoughts)
 
-                    # Ask for clarification if agent requested it
-                    if response_state.awaiting_user_guidance:
-                        await self.iteration_manager.ask_for_clarification(i)
-
                     # Early completion
                     if response_state.task_completed:
                         logger.info("Task completed", iteration=i, request_id=ctx.request_id)
                         break
-
-                    # Handle iteration limit
-                    await self.iteration_manager.handle_iteration_limit(i, response_state)
 
                     i += 1
 
@@ -514,19 +427,6 @@ async def _maybe_stream_node_tokens(
         await ac.stream_model_request_node(
             node, agent_run_ctx, state_manager, streaming_cb, request_id, iteration_index
         )
-
-
-def _iteration_had_tool_use(node: Any) -> bool:
-    """Inspect the node to see if model responded with any tool-call parts.
-
-    Reference: main.py lines 164-171
-    """
-    if hasattr(node, "model_response"):
-        for part in getattr(node.model_response, "parts", []):
-            # pydantic-ai annotates tool calls; be resilient to attr differences
-            if getattr(part, "part_kind", None) == "tool-call":
-                return True
-    return False
 
 
 async def _finalize_buffered_tasks(

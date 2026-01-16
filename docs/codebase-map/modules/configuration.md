@@ -77,7 +77,6 @@ Default configuration values:
   "yolo_mode": bool,
   "tool_ignore": list[str],
   "max_iterations": int,
-  "unproductive_limit": int,
   "timeout_seconds": int,
   # ... additional settings
 }

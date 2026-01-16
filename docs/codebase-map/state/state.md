@@ -39,7 +39,7 @@ Several state classes manage agent behavior:
 - **`AgentConfig` (dataclass):** Defines agent behavior configuration (e.g., `max_iterations`)
 - **`RequestContext` (dataclass):** Holds request-specific context (e.g., `request_id`)
 - **`EmptyResponseHandler`:** Manages state for consecutive empty responses
-- **`IterationManager`:** Tracks agent iteration progress and productivity
+- **`IterationManager`:** Tracks agent iteration progress
 - **`ReactSnapshotManager`:** Manages ReAct snapshots and guidance
 - **`RequestOrchestrator`:** Composes and manages the above state classes
 

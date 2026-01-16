@@ -100,7 +100,6 @@ Context injection via `{{USER_INSTRUCTIONS}}` placeholder:
 
 - **core/agents/agent_config.py** - Loads prompts, selects template based on `is_local_mode()`
 - **core/limits.py** - `is_local_mode()` determines LOCAL_TEMPLATE usage
-- **core/agents/prompts.py** - Intervention prompt templates
 - **configuration/** - Model-specific settings, `local_mode` flag
 - **AGENTS.md** - Project-specific context injection (standard mode)
 - **local_prompt.md** - Condensed context injection (local mode)

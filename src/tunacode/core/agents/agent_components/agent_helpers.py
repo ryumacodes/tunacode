@@ -5,15 +5,6 @@ from typing import Any
 from tunacode.types import FallbackResponse
 
 
-def get_tool_summary(tool_calls: list[dict[str, Any]]) -> dict[str, int]:
-    """Generate a summary of tool usage from tool calls."""
-    tool_summary: dict[str, int] = {}
-    for tc in tool_calls:
-        tool_name = tc.get("tool", "unknown")
-        tool_summary[tool_name] = tool_summary.get(tool_name, 0) + 1
-    return tool_summary
-
-
 def get_tool_description(tool_name: str, tool_args: dict[str, Any]) -> str:
     """Get a descriptive string for a tool call."""
     tool_desc = tool_name
@@ -116,18 +107,6 @@ Please take one of these specific actions:
 Ready to continue with a complete response."""
 
     return content
-
-
-def create_progress_summary(tool_calls: list[dict[str, Any]]) -> tuple[dict[str, int], str]:
-    """Create a progress summary from tool calls."""
-    tool_summary = get_tool_summary(tool_calls)
-
-    if tool_summary:
-        summary_str = ", ".join([f"{name}: {count}" for name, count in tool_summary.items()])
-    else:
-        summary_str = "No tools used yet"
-
-    return tool_summary, summary_str
 
 
 def create_fallback_response(

@@ -64,7 +64,7 @@ agent.iter() -> Provider HTTP Request
 - **Prunes old tool outputs before iteration** (line 369)
 - Iterates through agent responses until completion
 - Handles tool execution and result aggregation
-- Manages iteration limits and productivity checks
+- Tracks iteration counters during the run
 
 ### Agent Components
 
@@ -114,9 +114,7 @@ agent.iter() -> Provider HTTP Request
 - Ensures proper state flow
 
 #### iteration_manager.py (in main.py)
-- **IterationManager** - Tracks agent productivity
-- Forces action after unproductive_limit iterations
-- Requests clarification at max_iterations
+- **IterationManager** - Tracks iteration counters in session state
 
 ### ReAct Pattern Support
 
@@ -128,8 +126,9 @@ agent.iter() -> Provider HTTP Request
 ## Configuration
 
 **AgentConfig** dataclass:
-- **max_iterations** (default: 15) - Maximum agent loops
-- **unproductive_limit** (default: 3) - Unproductive loops before intervention
+- **max_iterations** (default: 15) - Configured per-request iteration limit value
+- **forced_react_interval** (default: 2) - Iteration interval for forced ReAct snapshots
+- **forced_react_limit** (default: 5) - Max forced ReAct snapshots per request
 
 ## Tool Categories
 
@@ -214,7 +213,7 @@ returns and other run output in the authoritative order.
 
 **Modification Points:**
 - Add new agent types (e.g., code_review_agent)
-- Customize iteration limits and productivity thresholds
+- Customize iteration settings and ReAct snapshot cadence
 - Extend tool categorization logic
 - Add new delegation patterns
 
