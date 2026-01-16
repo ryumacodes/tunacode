@@ -7,205 +7,240 @@
 
 ## Goal
 
-Transform tool panels from heavy boxed layouts to slim, line-based headers with minimal chrome. Target ~33% vertical space reduction while maintaining readability.
+Transform tool panels from heavy boxed layouts to slim, line-based headers matching the dream mockup (`tunacode-cli-lsp.webp`). Target ~50% vertical space reduction with full-line background colors for semantic highlighting.
 
-## Visual Target
+## Dream Mockup Reference
 
 ```
-— read_file ——————————————————————————————— 120 lines · 0.1s —
-  ↳ src/tunacode/core/prompting/engine.py
+— update_file ————————————————————————————————————————— +3 -2 —
+  ↳ tools/web_fetch.py                          (cyan, underlined)
 
-  1 │ """Core Prompting Engine"""
-  2 │ from typing import Protocol, Callable
-  3 │ from dataclasses import dataclass
-  [3/120]
+136 try:
+137     head_response = await client.head(validated_url)
+138     content_length = head_response.headers.get("content-le..
+139 - if content_length and int(content_length) > MAX+SIZE:    ██ RED BG
+139 + max_content_size = web_fetch_config.max_content_size_..  ██ GREEN BG
+140 + if content_length and int(content_length) > max_conte..  ██ GREEN BG
+141     raize ModelRetry(
+
+— LSP ——————————————————————————— ⊘ 2 errors □ ⓘ 2 warnings —
+
+L160: Undefined name `MAX_CONTENT_SIZE`                        ██ RED BG
+L163: Undefined name `MAX_CONTENT_SIZE`                        ██ RED BG
+
+L6: Import block is un-sorted or un-formatted                  ██ OLIVE BG
+L137: Line too long (107 > 100)                                ██ OLIVE BG
+
+⚙ Analyzing LSP Diagnostics...
+▓▓▓▓ ≋🐟
 ```
 
-## Design Principles
+## Design Principles (Updated from Mockup)
 
-1. **Line headers, not box borders** - `— tool_name ——— stats —`
-2. **Stats in header** - Move timing/counts to right side of header
-3. **Arrow subtitle** - `↳ filepath` for context
-4. **Minimal separators** - No internal zone dividers
-5. **Compact truncation** - `[5/120]` not `[5/120 displayed] total: 120 lines`
-6. **Zero vertical padding** - Content flows directly
+1. **Line headers** - `— tool_name ——————————————————— stats —`
+2. **Stats in header** - Compact, right-aligned (`+3 -2` not `+3 -2 · 0.1s`)
+3. **Link-style subtitle** - `↳ filepath` in cyan with underline
+4. **FULL-LINE BACKGROUND COLORS** - Critical visual element:
+   - `#4a2020` (dark red) for removed lines / errors
+   - `#204a20` (dark green) for added lines / success
+   - `#4a4a20` (dark olive) for warnings
+5. **No box borders** - Content flows directly
+6. **Activity line** - `⚙ {action}...` with fish animation `▓▓▓▓ ≋🐟`
+
+## Visual Spec: Full-Line Backgrounds
+
+This is THE key differentiator from the current design:
+
+```python
+# Rich styling for full-line backgrounds
+DIFF_REMOVED_STYLE = Style(bgcolor="#4a2020")  # Dark red
+DIFF_ADDED_STYLE = Style(bgcolor="#204a20")    # Dark green
+LSP_ERROR_STYLE = Style(bgcolor="#4a2020")     # Dark red
+LSP_WARNING_STYLE = Style(bgcolor="#4a4a20")   # Dark olive/yellow
+
+# Apply to entire line, not just text
+line = Text(content)
+line.stylize(DIFF_REMOVED_STYLE, 0, len(content))
+```
 
 ## Before / After
 
 ```
-BEFORE (12 lines):                 AFTER (6 lines):
-┌─────── read_file ───────┐        — read_file ——— 120 lines · 0.1s —
-│                         │          ↳ engine.py
-│  src/.../engine.py      │
-│  ─────────────────────  │          1 │ """Core Prompting..."""
-│                         │          2 │ from typing import...
-│  1 """Core Prompting""" │          [2/120]
-│  2 from typing import   │
-│  ─────────────────────  │
-│  [2/120 displayed]      │
-│  120 lines  0.1s        │
-│                20:46:02 │
-└─────────────────────────┘
+BEFORE (current):                   AFTER (dream):
+┌─────── update_file ───────┐       — update_file ——————————— +3 -2 —
+│                           │         ↳ tools/web_fetch.py
+│  tools/web_fetch.py       │
+│  ─────────────────────    │       137   head_response = await...
+│                           │       138   content_length = head...
+│  137 head_response = ...  │       139 - if content_length and...  ██RED
+│  138 content_length = ... │       139 + max_content_size = we...  ██GRN
+│  139 - if content_len...  │       140 + if content_length and...  ██GRN
+│  139 + max_content_si...  │
+│  ─────────────────────    │
+│  +3 -2  0.1s              │
+│               20:46:02    │
+└───────────────────────────┘       (no box, just content)
 ```
 
 ## Implementation Tasks
 
 ### Phase 1: Core Infrastructure
 
-- [ ] **1.1** Create `SlimRenderer` base class in `renderers/tools/slim_base.py`
-  - Line header builder: `— {name} ——————— {stats} —`
-  - Arrow subtitle builder: `  ↳ {context}`
-  - Compact truncation: `[{shown}/{total}]`
-  - No Panel(), just Text/Group composition
-
-- [ ] **1.2** Create header line utility function
+- [ ] **1.1** Create slim utilities in `renderers/tools/slim_base.py`
   ```python
   def slim_header(name: str, stats: str, width: int = 70) -> Text:
       """Build: — name ——————————————————————— stats —"""
+
+  def slim_subtitle(context: str) -> Text:
+      """Build: ↳ context (cyan, underlined)"""
+
+  def slim_footer(shown: int, total: int) -> Text:
+      """Build: [{shown}/{total}]"""
   ```
 
-- [ ] **1.3** Update constants in `constants.py`
+- [ ] **1.2** Define background color constants
   ```python
-  SLIM_PANEL_WIDTH = 70
-  SLIM_VIEWPORT_LINES = 5  # Reduced from 8
+  # In constants.py or slim_base.py
+  BG_REMOVED = "#4a2020"   # Dark red
+  BG_ADDED = "#204a20"     # Dark green
+  BG_ERROR = "#4a2020"     # Dark red (same as removed)
+  BG_WARNING = "#4a4a20"   # Dark olive
+  ```
+
+- [ ] **1.3** Create full-line background utility
+  ```python
+  def styled_line(content: str, style: Style) -> Text:
+      """Apply background color to entire line width."""
+      text = Text(content)
+      text.stylize(style, 0, len(content))
+      return text
   ```
 
 ### Phase 2: Renderer Migration
 
-Migrate each renderer to slim format:
+- [ ] **2.1** `update_file.py` (Start here - matches mockup exactly)
+  - Header: `— update_file ——————————————————————— +{added} -{removed} —`
+  - Subtitle: `↳ {filepath}` (cyan, underlined)
+  - Content: Line numbers + code
+    - Removed lines: full red background `#4a2020`
+    - Added lines: full green background `#204a20`
+    - Context lines: normal background
 
-- [ ] **2.1** `read_file.py` → SlimReadFileRenderer
-  - Header: `— read_file ——— {lines} lines · {time}s —`
-  - Subtitle: `↳ {filepath}`
-  - Content: Line-numbered code
-  - Footer: `[{shown}/{total}]`
+- [ ] **2.2** `read_file.py`
+  - Header: `— read_file ——————————————————————— {lines} lines —`
+  - Subtitle: `↳ {filepath}` (cyan, underlined)
+  - Content: Line-numbered code with syntax highlighting
 
-- [ ] **2.2** `glob.py` → SlimGlobRenderer
-  - Header: `— glob ——— {count} files · {time}s —`
-  - Subtitle: `↳ {pattern}`
-  - Content: File list
-  - Footer: `[{shown}/{total}]`
+- [ ] **2.3** `bash.py`
+  - Header: `— bash ——————————————————————————————— {ok|exit N} —`
+  - Subtitle: `↳ $ {command}`
+  - Content: stdout normal, stderr with warning background
 
-- [ ] **2.3** `grep.py` → SlimGrepRenderer
-  - Header: `— grep ——— {matches} matches · {files} files · {time}s —`
+- [ ] **2.4** `grep.py`
+  - Header: `— grep ———————————————— {matches} matches · {files} files —`
   - Subtitle: `↳ pattern: "{pattern}"`
   - Content: Match lines with file:line prefix
-  - Footer: `[{shown}/{total}]`
 
-- [ ] **2.4** `bash.py` → SlimBashRenderer
-  - Header: `— bash ——— {ok|exit N} · {time}s —`
-  - Subtitle: `↳ $ {command}`
-  - Content: stdout/stderr
-  - Footer: `[{shown}/{total}]`
+- [ ] **2.5** `glob.py`
+  - Header: `— glob ——————————————————————————————— {count} files —`
+  - Subtitle: `↳ {pattern}`
+  - Content: File list
 
-- [ ] **2.5** `update_file.py` → SlimUpdateFileRenderer
-  - Header: `— update_file ——— +{added} -{removed} · {time}s —`
-  - Subtitle: `↳ {filepath}`
-  - Content: Diff with line numbers, red/green highlighting
-  - Footer: `[{shown}/{total}]`
-
-- [ ] **2.6** `list_dir.py` → SlimListDirRenderer
-  - Header: `— list_dir ——— {files} files · {dirs} dirs · {time}s —`
+- [ ] **2.6** `list_dir.py`
+  - Header: `— list_dir ————————————— {files} files · {dirs} dirs —`
   - Subtitle: `↳ {directory}`
   - Content: Tree view
-  - Footer: `[{shown}/{total}]`
 
-- [ ] **2.7** `write_file.py` → SlimWriteFileRenderer
-  - Header: `— write_file ——— {lines} lines · {time}s —`
-  - Subtitle: `↳ {filepath}`
-  - Content: Preview of written content
-  - Footer: `[{shown}/{total}]`
+- [ ] **2.7** `write_file.py`
+  - Header: `— write_file —————————————————————————— {lines} lines —`
+  - Subtitle: `↳ {filepath}` (cyan, underlined)
+  - Content: Preview with success background tint
 
-- [ ] **2.8** `web_fetch.py` → SlimWebFetchRenderer
-  - Header: `— web_fetch ——— {status} · {time}s —`
+- [ ] **2.8** `web_fetch.py`
+  - Header: `— web_fetch ——————————————————————————————— {status} —`
   - Subtitle: `↳ {url}`
   - Content: Response preview
-  - Footer: `[{shown}/{total}]`
 
-### Phase 3: Generic Fallback
+### Phase 3: LSP Integration (Already exists, just restyle)
 
-- [ ] **3.1** Update `tool_panel()` in `panels.py` to use slim format
-  - Fallback for tools without custom renderers
-  - Same line-header pattern
+- [ ] **3.1** Update LSP display to match mockup
+  - Header: `— LSP ——————————————— ⊘ {n} errors □ ⓘ {n} warnings —`
+  - Errors: Full red background per line
+  - Warnings: Full olive background per line
+  - Format: `L{line}: {message}`
 
-- [ ] **3.2** Update `tool_panel_smart()` routing to use new renderers
+### Phase 4: Activity Line
 
-### Phase 4: Styling
+- [ ] **4.1** Create activity indicator widget
+  - Format: `⚙ {action}...`
+  - Progress: `▓▓▓▓ ≋🐟` (fish animation!)
+  - Replaces current `● ● ● ● ●` loading dots
 
-- [ ] **4.1** Update `panels.tcss` - remove box-related styles
-- [ ] **4.2** Add slim panel styles if needed
-- [ ] **4.3** Verify NeXTSTEP theme compatibility
+### Phase 5: Cleanup
 
-### Phase 5: Polish
-
-- [ ] **5.1** Color coding for header line based on status
-  - Success: green `—`
-  - Error: red `—`
-  - Running: cyan `—`
-
-- [ ] **5.2** Add subtle background tint option (future)
+- [ ] **5.1** Remove Panel() usage from tool renderers
+- [ ] **5.2** Update `panels.tcss` - remove box styles
 - [ ] **5.3** Test with various terminal widths
+- [ ] **5.4** Verify NeXTSTEP theme compatibility
+
+## Color Palette
+
+| Element | Hex | Usage |
+|---------|-----|-------|
+| Header line | `dim` | The `—————` dashes |
+| Tool name | `bold` | `update_file` |
+| Stats (success) | `green` | `+3` |
+| Stats (removed) | `red` | `-2` |
+| Subtitle | `cyan underline` | `↳ filepath` |
+| BG Removed/Error | `#4a2020` | Full line background |
+| BG Added/Success | `#204a20` | Full line background |
+| BG Warning | `#4a4a20` | Full line background |
+| Activity icon | `dim` | `⚙` |
+| Fish | `cyan` | `🐟` |
+
+## Header Format by Tool
+
+| Tool | Header Format |
+|------|---------------|
+| update_file | `— update_file ——————————————————— +{n} -{n} —` |
+| read_file | `— read_file ————————————————————— {n} lines —` |
+| bash | `— bash ———————————————————————————— {ok\|exit N} —` |
+| grep | `— grep ——————————————— {n} matches · {n} files —` |
+| glob | `— glob ——————————————————————————————— {n} files —` |
+| list_dir | `— list_dir ——————————— {n} files · {n} dirs —` |
+| write_file | `— write_file ————————————————————— {n} lines —` |
+| web_fetch | `— web_fetch ——————————————————————— {status} —` |
+| LSP | `— LSP ————————————— ⊘ {n} errors □ ⓘ {n} warnings —` |
+
+## Success Criteria
+
+1. Matches dream mockup visual style exactly
+2. Full-line background colors for diffs/errors/warnings
+3. Link-style subtitles (cyan + underline)
+4. ~50% vertical space reduction
+5. Fish animation in activity line 🐟
+6. No Panel() boxes anywhere
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/tunacode/ui/renderers/tools/base.py` | Add `SlimRenderer` base or utilities |
-| `src/tunacode/ui/renderers/tools/read_file.py` | Migrate to slim |
-| `src/tunacode/ui/renderers/tools/glob.py` | Migrate to slim |
-| `src/tunacode/ui/renderers/tools/grep.py` | Migrate to slim |
-| `src/tunacode/ui/renderers/tools/bash.py` | Migrate to slim |
-| `src/tunacode/ui/renderers/tools/update_file.py` | Migrate to slim |
-| `src/tunacode/ui/renderers/tools/list_dir.py` | Migrate to slim |
-| `src/tunacode/ui/renderers/tools/write_file.py` | Migrate to slim |
-| `src/tunacode/ui/renderers/tools/web_fetch.py` | Migrate to slim |
-| `src/tunacode/ui/renderers/panels.py` | Update fallback |
-| `src/tunacode/ui/styles/panels.tcss` | Update styles |
-| `src/tunacode/constants.py` | Add slim constants |
-
-## Header Format Reference
-
-```
-— {tool_name} ————————————————————————————— {stats} —
-  ↳ {context_line}
-
-  {content_line_1}
-  {content_line_2}
-  {content_line_3}
-  [{shown}/{total}]
-```
-
-### Stats by Tool Type
-
-| Tool | Stats Format |
-|------|-------------|
-| read_file | `{lines} lines · {time}s` |
-| glob | `{count} files · {time}s` |
-| grep | `{matches} matches · {files} files · {time}s` |
-| bash | `{ok\|exit N} · {time}s` |
-| update_file | `+{added} -{removed} · {time}s` |
-| list_dir | `{files} files · {dirs} dirs · {time}s` |
-| write_file | `{lines} lines · {time}s` |
-| web_fetch | `{status} · {time}s` |
-
-## Success Criteria
-
-1. All tool panels use slim format
-2. ~33% vertical space reduction achieved
-3. Stats visible in header at a glance
-4. No regression in information shown
-5. Consistent look across all tool types
-6. Works with both default and NeXTSTEP themes
-
-## Future Enhancements (Not This PR)
-
-- LSP diagnostics section (from mockup)
-- Activity line with fish animation
-- Grouped sections (Tools / LSP / Agent)
-- Expand/collapse drawer
+| `renderers/tools/slim_base.py` | NEW: Slim utilities |
+| `renderers/tools/update_file.py` | Migrate first (matches mockup) |
+| `renderers/tools/read_file.py` | Migrate to slim |
+| `renderers/tools/bash.py` | Migrate to slim |
+| `renderers/tools/grep.py` | Migrate to slim |
+| `renderers/tools/glob.py` | Migrate to slim |
+| `renderers/tools/list_dir.py` | Migrate to slim |
+| `renderers/tools/write_file.py` | Migrate to slim |
+| `renderers/tools/web_fetch.py` | Migrate to slim |
+| `renderers/panels.py` | Update fallback |
+| `styles/panels.tcss` | Remove box styles |
+| `constants.py` | Add color constants |
+| `app.py` | Update activity indicator |
 
 ## References
 
+- **Dream mockup:** `tunacode-cli-lsp.webp`
 - Research: `memory-bank/research/2026-01-15_tool-panel-redesign-options.md`
-- Mockup: `tunacode-cli-lsp.webp`
 - Current base: `src/tunacode/ui/renderers/tools/base.py`
