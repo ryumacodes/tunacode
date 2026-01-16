@@ -39,7 +39,7 @@ Configure your AI models and settings through the provided setup interface.
 
 **Note:** TunaCode has full bash shell access. This tool assumes you know what you're doing. If you're concerned, run it in a sandboxed environment.
 
-## v0.1.1 - Major Rewrite
+## v0.1.34 - Major Rewrite
 
 This release is a complete rewrite with a new Textual-based TUI.
 
