@@ -393,9 +393,7 @@ class StateManager:
             self._session.todos = data.get("todos", [])
             loaded_messages = self._deserialize_messages(data.get("messages", []))
             stored_thoughts = data.get("thoughts") or []
-            extracted_thoughts, cleaned_messages = self._split_thought_messages(
-                loaded_messages
-            )
+            extracted_thoughts, cleaned_messages = self._split_thought_messages(loaded_messages)
             self._session.thoughts = [*stored_thoughts, *extracted_thoughts]
             self._session.messages = cleaned_messages
 

@@ -62,7 +62,6 @@ src/tunacode/
 │   │   ├── main.py              # * Primary agent orchestration
 │   │   ├── research_agent.py    # * Codebase research specialist
 │   │   ├── delegation_tools.py  # Agent tool delegation
-│   │   ├── prompts.py           # Agent system prompts
 │   │   └── agent_components/    # Agent building blocks
 │   │       ├── (state modules)
 │   │       ├── (planning modules)

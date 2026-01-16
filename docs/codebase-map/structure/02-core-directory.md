@@ -29,7 +29,6 @@ core/
 │   ├── main.py                    # Primary agent orchestration
 │   ├── research_agent.py          # Codebase research specialist
 │   ├── delegation_tools.py        # Agent tool delegation logic
-│   ├── prompts.py                 # Agent system prompts
 │   └── agent_components/          # Agent building blocks
 │       ├── (state, planning, tools)
 ├── prompting/
