@@ -272,6 +272,43 @@ class RequestContext:
 
 ---
 
+## Message Invariants
+
+These invariants MUST hold for the conversation to be valid:
+
+### 1. Tool Call Pairing
+
+Every `ModelResponse` with tool_calls MUST be followed by matching `ToolReturn(s)` before any new `ModelRequest`.
+
+```
+VALID:
+  ModelResponse(tool_calls=[A, B])
+  ToolReturn(A)
+  ToolReturn(B)
+  ModelRequest(...)  ✓
+
+INVALID:
+  ModelResponse(tool_calls=[A, B])
+  ModelRequest(...)  ✗ API will reject - missing tool returns
+```
+
+**Enforcement:** `_remove_dangling_tool_calls()` cleans up on `UserAbortError`.
+
+### 2. Exception Safety
+
+Any exception path that exits the agent loop must restore message history to a valid state. The `except UserAbortError` handler in `RequestOrchestrator._run_impl()` calls `_remove_dangling_tool_calls()` to enforce invariant #1.
+
+### 3. Message Order
+
+Messages must follow the pattern:
+```
+[SystemPrompt?] [UserPrompt | ToolReturn]+ [ModelResponse]+
+```
+
+The agent loop naturally maintains this. Violations indicate a bug.
+
+---
+
 ## Critical Behaviors
 
 ### Empty Response Handling
