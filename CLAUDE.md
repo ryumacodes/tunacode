@@ -328,6 +328,76 @@ If you can't observe the final value, you can't verify the behavior. If you can'
 - When using indirection, add a test or debug assertion that verifies the actual output
 - If you can't print/log/assert the final value, you don't know it
 
+### Gate 6: Exception Paths Are First-Class
+
+Every path out of a stateful operation must leave state valid. Exception paths are not edge cases - they are first-class exit routes that need explicit design.
+
+```
+WRONG: Only design the happy path
+┌─────────────────────────────────────────────────┐
+│ loop:                                           │
+│   mutate_state()  ←  state now dirty            │
+│   do_work()       ←  exception here!            │
+│   commit()        ←  never reached              │
+│                                                 │
+│ Result: state is corrupted                      │
+└─────────────────────────────────────────────────┘
+
+RIGHT: Design all exit paths
+┌─────────────────────────────────────────────────┐
+│ try:                                            │
+│   loop:                                         │
+│     mutate_state()                              │
+│     do_work()                                   │
+│     commit()                                    │
+│ except SomeError:                               │
+│   rollback_or_cleanup()  ←  state restored      │
+│   raise                                         │
+└─────────────────────────────────────────────────┘
+```
+
+**Before writing a stateful loop, answer:**
+
+1. **What exceptions can exit this loop?** List them all.
+2. **For each exception: what state is left behind?** Trace the mutation.
+3. **For each exception: is that state valid for the next operation?** If no, add cleanup.
+4. **Do tests exist for exception scenarios?** If no, write them.
+
+**Strategies:**
+
+| Strategy | When to use |
+|----------|-------------|
+| **Rollback on exception** | State is mutable, cleanup is cheap |
+| **Transactional updates** | Only commit state after full success |
+| **Copy-on-write** | Work on copy, swap atomically on success |
+
+**Example:** The dangling tool calls bug (PR #246). User aborted mid-tool-call, leaving `messages` with unanswered tool calls. Next request failed. Fix: `except UserAbortError` now calls `_remove_dangling_tool_calls()` to restore valid state.
+
+**Wrong:**
+
+```python
+async def process_request():
+    for node in agent.iter():
+        messages.append(node.response)  # state mutated
+        await execute_tools(node)       # can raise UserAbortError
+    # if exception, messages has dangling tool calls
+```
+
+**Right:**
+
+```python
+async def process_request():
+    try:
+        for node in agent.iter():
+            messages.append(node.response)
+            await execute_tools(node)
+    except UserAbortError:
+        _remove_dangling_tool_calls(messages)  # restore valid state
+        raise
+```
+
+**Rule:** If you can't answer "what happens to state if X raises here?" for every line that can raise, you have a bug waiting to happen.
+
 ---
 
 ## KB Directory
@@ -363,6 +433,8 @@ Types: bug, smell, pattern, lesson, antipattern
 [2026-01-08] [antipattern] **RichLog.write(expand=True) is NOT terminal width!** `expand=True` expands to `scrollable_content_region`, which excludes padding and scrollbar gutter (~4-8 chars narrower than terminal). For full-width panels, pass explicit `width=` to the Panel constructor. Never trust `expand=True` to mean "full width" - it means "fill container" and the container is smaller than you think. See Gate 5: Indirection Requires Verification.
 
 [2026-01-14] [antipattern] **Semantically dead code: loaded but never read.** Static analysis (Vulture) only catches syntactically dead code (never called). It misses code that IS called but whose result is never consumed. Example: `glob.py` had `_load_gitignore_patterns()` that populated a global, but nothing ever read that global. The `use_gitignore` parameter was a lie - it triggered work but had zero effect. **Prevention:** When adding a "load X" function, grep for reads of X before shipping. If a parameter controls behavior, trace the data flow to prove it actually changes output.
+
+[2026-01-17] [bug] **Dangling tool calls on user abort (PR #246).** User aborts mid-tool-call → `messages` has `ModelResponse` with tool calls but no `ToolReturn` → next API request fails. Root cause: exception path violated message invariant (every tool call needs a return). Fix: `_remove_dangling_tool_calls()` in `except UserAbortError`. **Prevention:** Document state invariants. Test exception scenarios. See Gate 6.
 
 ---
 
