@@ -17,7 +17,7 @@ EXCLUDED_MODULES = {"__init__", "decorators", "xml_helper", "react"}
 
 def discover_tools():
     """Auto-discover all tool functions from tunacode/tools/*.py."""
-    tools_dir = Path(__file__).parent.parent / "src" / "tunacode" / "tools"
+    tools_dir = Path(__file__).parent.parent.parent.parent / "src" / "tunacode" / "tools"
     all_tools = []
     file_tools = []
     base_tools = []
