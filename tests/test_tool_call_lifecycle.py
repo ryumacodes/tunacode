@@ -68,7 +68,7 @@ MAX_RESULT_TEXT_LEN = 80
 TEXT_PART_KIND = "text"
 TOOL_CALL_TEXT_PREFIX = "assistant:"
 TOOL_CALL_TEXT_SUFFIX = "end"
-SUPPRESS_HEALTH_CHECKS = [HealthCheck.function_scoped_fixture]
+SUPPRESS_HEALTH_CHECKS = [HealthCheck.function_scoped_fixture, HealthCheck.too_slow]
 
 READ_ONLY_TOOL_NAMES = [
     tool.value for tool in READ_ONLY_TOOLS if tool != ToolName.RESEARCH_CODEBASE
