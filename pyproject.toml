@@ -178,8 +178,15 @@ artifacts = [
     "src/tunacode/configuration/models_registry.json",
 ]
 
+[tool.pytest.ini_options]
+markers = [
+    "hypothesis: property-based tests using hypothesis (may be slow)",
+]
+asyncio_mode = "auto"
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.1",
     "pytest-asyncio>=1.3.0",
+    "hypothesis>=6.150.0",
 ]

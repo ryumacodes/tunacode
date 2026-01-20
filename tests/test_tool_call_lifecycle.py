@@ -40,6 +40,9 @@ from tunacode.core.state import SessionState, StateManager
 from tunacode.exceptions import StateError
 from tunacode.types import AgentState, ToolArgs, ToolCallId
 
+# Mark all tests in this module as hypothesis property tests
+pytestmark = pytest.mark.hypothesis
+
 # =============================================================================
 # Test Constants
 # =============================================================================
