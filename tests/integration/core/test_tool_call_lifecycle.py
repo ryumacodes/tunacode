@@ -792,8 +792,9 @@ async def test_dispatch_tools_batches_by_category(
     assert len(state_manager.session.tool_calls) == len(parts)
     assert response_state.current_state == AgentState.RESPONSE
 
-    if ToolName.SUBMIT.value in tool_names:
-        assert response_state.task_completed is True
+    # NOTE: submit tool no longer sets task_completed - pydantic-ai loop ends naturally
+    # if ToolName.SUBMIT.value in tool_names:
+    #     assert response_state.task_completed is True
 
     for part in parts:
         if part.tool_name in expected_parallel:
