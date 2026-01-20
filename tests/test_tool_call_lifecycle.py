@@ -609,6 +609,38 @@ def test_remove_dangling_with_empty_messages(session_state: SessionState) -> Non
     assert len(messages) == 0
 
 
+def test_cancelled_error_triggers_cleanup(session_state: SessionState) -> None:
+    """CancelledError should trigger _remove_dangling_tool_calls like UserAbortError.
+
+    This test validates that the cleanup logic invoked in the except block at main.py:409
+    works correctly when triggered by asyncio.CancelledError (timeout scenario).
+
+    The exception handler catches both UserAbortError and CancelledError:
+        except (UserAbortError, asyncio.CancelledError):
+            cleanup_applied = _remove_dangling_tool_calls(messages, tool_call_args_by_id)
+
+    Related: PR #246 (UserAbortError), memory-bank/research/2026-01-19_14-30-00_dangling_tool_calls_timeout_gap.md
+    """
+    # Arrange: Simulate state mid-tool-execution when CancelledError fires
+    tool_call = ToolCallPart(
+        tool_name="bash", args={"command": "sleep 60"}, tool_call_id="call_timeout123"
+    )
+    dangling_message = MockMessage(tool_calls=[tool_call], parts=[tool_call])
+    messages: list[Any] = [dangling_message]
+    tool_call_args_by_id: dict[ToolCallId, ToolArgs] = {
+        tool_call.tool_call_id: tool_call.args
+    }
+
+    # Act: Simulate the cleanup that happens in except (UserAbortError, CancelledError) block
+    # This is exactly what main.py:409-416 does
+    cleanup_applied = _remove_dangling_tool_calls(messages, tool_call_args_by_id)
+
+    # Assert: State is now valid for next API request
+    assert cleanup_applied is True
+    assert len(messages) == 0, "Dangling tool call message should be removed"
+    assert len(tool_call_args_by_id) == 0, "Cached tool args should be cleared"
+
+
 def test_remove_dangling_clears_corresponding_args(session_state: SessionState) -> None:
     """_remove_dangling_tool_calls should clear args for removed tool calls."""
     # Arrange

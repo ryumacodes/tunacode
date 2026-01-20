@@ -328,18 +328,23 @@ class RequestOrchestrator:
         self._set_original_query_once(self.message)
 
         logger = get_logger()
-        logger.info("Request started", request_id=ctx.request_id)
+        request_id = ctx.request_id
+        logger.info("Request started", request_id=request_id)
+        logger.lifecycle("Request context initialized", request_id=request_id)
 
         # Acquire agent
         agent = ac.get_or_create_agent(self.model, self.state_manager)
 
         # Prune old tool outputs directly in session (persisted)
         session_messages = self.state_manager.session.messages
-        _, _tokens_reclaimed = prune_old_tool_outputs(session_messages, self.model)
+        _, tokens_reclaimed = prune_old_tool_outputs(session_messages, self.model)
         baseline_message_count = len(session_messages)
+        pruned_message = f"History pruned (reclaimed_tokens={tokens_reclaimed})"
+        logger.lifecycle(pruned_message, request_id=request_id)
 
         # Prepare history snapshot (now pruned)
         message_history = list(session_messages)
+        logger.lifecycle("Agent iteration loop starting", request_id=request_id)
 
         # Per-request trackers
         tool_buffer = ac.ToolBuffer()
@@ -349,7 +354,9 @@ class RequestOrchestrator:
             async with agent.iter(self.message, message_history=message_history) as agent_run:
                 i = 1
                 async for node in agent_run:
-                    logger.debug("Processing iteration", iteration=i, request_id=ctx.request_id)
+                    iteration_message = f"Iteration start (iteration={i})"
+                    logger.lifecycle(iteration_message, request_id=request_id, iteration=i)
+                    logger.debug("Processing iteration", iteration=i, request_id=request_id)
                     self.iteration_manager.update_counters(i)
 
                     # Optional token streaming
@@ -373,6 +380,8 @@ class RequestOrchestrator:
                         self.tool_result_callback,
                         self.tool_start_callback,
                     )
+                    completion_message = f"Iteration processed (iteration={i})"
+                    logger.lifecycle(completion_message, request_id=request_id, iteration=i)
 
                     # Handle empty response
                     self.empty_handler.track(empty_response)
@@ -391,7 +400,9 @@ class RequestOrchestrator:
 
                     # Early completion
                     if response_state.task_completed:
-                        logger.info("Task completed", iteration=i, request_id=ctx.request_id)
+                        logger.info("Task completed", iteration=i, request_id=request_id)
+                        completion_notice = f"Task completed (iteration={i})"
+                        logger.lifecycle(completion_notice, request_id=request_id, iteration=i)
                         break
 
                     i += 1
@@ -404,9 +415,11 @@ class RequestOrchestrator:
 
                 # Return wrapper that carries response_state
                 self._persist_run_messages(agent_run, baseline_message_count)
+                logger.lifecycle("Run messages persisted", request_id=request_id)
+                logger.lifecycle("Request complete", request_id=request_id)
                 return ac.AgentRunWithState(agent_run, response_state)
 
-        except UserAbortError:
+        except (UserAbortError, asyncio.CancelledError):
             # Clean up dangling tool calls to prevent API errors on next request
             cleanup_applied = _remove_dangling_tool_calls(
                 self.state_manager.session.messages,
@@ -452,6 +465,10 @@ async def _finalize_buffered_tasks(
         return
 
     buffered_tasks = tool_buffer.flush()
+    task_count = len(buffered_tasks)
+    logger = get_logger()
+    buffered_message = f"Executing buffered tools (count={task_count})"
+    logger.lifecycle(buffered_message, request_id=state_manager.session.request_id)
 
     # Execute
     await ac.execute_tools_parallel(buffered_tasks, tool_callback)
