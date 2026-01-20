@@ -317,8 +317,8 @@ async def dispatch_tools(
     ):
         response_state.transition_to(AgentState.RESPONSE)
 
-    if submit_requested and response_state:
-        response_state.task_completed = True
+    # NOTE: submit tool is just a marker - don't set task_completed here.
+    # Let pydantic-ai's loop end naturally after the agent responds.
 
     if response_state:
         result = getattr(node, "result", None)
