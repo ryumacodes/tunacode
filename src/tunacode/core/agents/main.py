@@ -41,6 +41,7 @@ colors = DotDict(UI_COLORS)
 PART_KIND_TOOL_CALL: str = "tool-call"
 TOOL_CALLS_ATTR: str = "tool_calls"
 TOOL_CALL_ID_ATTR: str = "tool_call_id"
+DANGLING_TOOL_CALLS_CLEANUP_MESSAGE: str = "Dangling tool calls removed before request"
 
 __all__ = [
     "process_request",
@@ -337,10 +338,20 @@ class RequestOrchestrator:
 
         # Prune old tool outputs directly in session (persisted)
         session_messages = self.state_manager.session.messages
+        tool_call_args_by_id = self.state_manager.session.tool_call_args_by_id
         _, tokens_reclaimed = prune_old_tool_outputs(session_messages, self.model)
-        baseline_message_count = len(session_messages)
         pruned_message = f"History pruned (reclaimed_tokens={tokens_reclaimed})"
         logger.lifecycle(pruned_message, request_id=request_id)
+
+        cleanup_applied = _remove_dangling_tool_calls(
+            session_messages,
+            tool_call_args_by_id,
+        )
+        if cleanup_applied:
+            self.state_manager.session.update_token_count()
+            logger.lifecycle(DANGLING_TOOL_CALLS_CLEANUP_MESSAGE, request_id=request_id)
+
+        baseline_message_count = len(session_messages)
 
         # Prepare history snapshot (now pruned)
         message_history = list(session_messages)
@@ -424,9 +435,7 @@ class RequestOrchestrator:
         except (UserAbortError, asyncio.CancelledError):
             if agent_run is not None:
                 self._persist_run_messages(agent_run, baseline_message_count)
-                logger.lifecycle(
-                    "Run messages persisted after abort", request_id=request_id
-                )
+                logger.lifecycle("Run messages persisted after abort", request_id=request_id)
             # Clean up dangling tool calls to prevent API errors on next request
             cleanup_applied = _remove_dangling_tool_calls(
                 self.state_manager.session.messages,

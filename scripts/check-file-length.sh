@@ -35,14 +35,15 @@ while IFS= read -r -d '' file; do
     # Skip main.py in agents dir as it was recently refactored
     # Skip prompt files as they can be lengthy for comprehensive system instructions
     # Skip app.tcss and code_index.py pending refactor (see issue #155)
-    # Skip test_tool_call_lifecycle.py as it contains comprehensive integration tests
+    # Skip test_tool_call_lifecycle.py as it contains comprehensive integration tests (issue #259)
     if [[ "$file" == *"/src/tunacode/tools/glob.py" ]] || \
        [[ "$file" == *"/src/tunacode/tools/grep.py" ]] || \
        [[ "$file" == *"/src/tunacode/core/agents/main.py" ]] || \
        [[ "$file" == *"/src/tunacode/prompts/"*".xml" ]] || \
        [[ "$file" == *"/src/tunacode/ui/app.tcss" ]] || \
        [[ "$file" == *"/src/tunacode/indexing/code_index.py" ]] || \
-       [[ "$file" == *"/tests/test_tool_call_lifecycle.py" ]]; then
+       [[ "$file" == *"/tests/test_tool_call_lifecycle.py" ]] || \
+       [[ "$file" == *"/tests/integration/core/test_tool_call_lifecycle.py" ]]; then
         continue
     fi
 

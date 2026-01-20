@@ -1,2 +1,3 @@
 [2026-01-19] [smell] Removed dead utils/security module and unused merge_json_objects().
 [2026-01-19] [bug] Abort/cancel paths dropped run messages and message serialization suppressed failures.
+[2026-01-20] [bug] New requests could fail when history ended with dangling tool calls (unprocessed tool-call parts).
