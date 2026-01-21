@@ -1,5 +1,6 @@
 """Tool categorization and execution for agent responses."""
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -8,7 +9,6 @@ from tunacode.constants import (
     ERROR_TOOL_ARGS_MISSING,
     ERROR_TOOL_CALL_ID_MISSING,
     READ_ONLY_TOOLS,
-    ToolName,
 )
 from tunacode.core.logging import get_logger
 from tunacode.core.state import StateManager
@@ -21,7 +21,6 @@ from ..response_state import ResponseState
 PART_KIND_TEXT = "text"
 PART_KIND_TOOL_CALL = "tool-call"
 RESEARCH_TOOL_NAME = "research_codebase"
-SUBMIT_TOOL_NAME = ToolName.SUBMIT
 UNKNOWN_TOOL_NAME = "unknown"
 TOOL_BATCH_PREVIEW_COUNT = 3
 TEXT_PART_JOINER = "\n"
@@ -29,6 +28,9 @@ TOOL_NAME_JOINER = ", "
 TOOL_NAME_SUFFIX = "..."
 
 TOOL_START_RESEARCH_LABEL = "research"
+
+# Maximum tool names to display in lifecycle logs before truncating
+TOOL_NAMES_DISPLAY_LIMIT = 5
 
 # Characters that should never appear in valid tool names
 INVALID_TOOL_NAME_CHARS = frozenset("<>(){}[]\"'`")
@@ -189,11 +191,10 @@ async def dispatch_tools(
     research_agent_tasks: list[tuple[Any, Any]] = []
     write_execute_tasks: list[tuple[Any, Any]] = []
     tool_call_records: list[tuple[Any, ToolArgs]] = []
-    submit_requested = False
 
     debug_mode = getattr(state_manager.session, "debug_mode", False)
 
-    logger.lifecycle("Tool dispatch start")
+    dispatch_start = time.perf_counter()
 
     for part in parts:
         part_kind = getattr(part, "part_kind", None)
@@ -223,9 +224,6 @@ async def dispatch_tools(
                 args_keys=list(tool_args.keys()) if tool_args else [],
             )
 
-        if tool_name == SUBMIT_TOOL_NAME:
-            submit_requested = True
-
         if not tool_callback:
             continue
 
@@ -250,8 +248,6 @@ async def dispatch_tools(
             for part, tool_args in fallback_tool_calls:
                 tool_call_records.append((part, tool_args))
                 tool_name = getattr(part, "tool_name", UNKNOWN_TOOL_NAME)
-                if tool_name == SUBMIT_TOOL_NAME:
-                    submit_requested = True
                 if tool_name == RESEARCH_TOOL_NAME:
                     research_agent_tasks.append((part, node))
                 elif tool_name in READ_ONLY_TOOLS:
@@ -260,18 +256,12 @@ async def dispatch_tools(
                     write_execute_tasks.append((part, node))
 
     if research_agent_tasks and tool_callback:
-        logger.debug(f"Phase 2: research agent ({len(research_agent_tasks)} calls)")
-        logger.lifecycle(f"Dispatch research tools (count={len(research_agent_tasks)})")
-
         if tool_start_callback:
             tool_start_callback(TOOL_START_RESEARCH_LABEL)
 
         await execute_tools_parallel(research_agent_tasks, tool_callback)
 
     if read_only_tasks and tool_callback:
-        logger.debug(f"Phase 3: read-only batch ({len(read_only_tasks)} calls)")
-        logger.lifecycle(f"Dispatch read-only tools (count={len(read_only_tasks)})")
-
         batch_id = state_manager.session.batch_counter + 1
         state_manager.session.batch_counter = batch_id
 
@@ -284,10 +274,6 @@ async def dispatch_tools(
             tool_start_callback(TOOL_NAME_JOINER.join(preview_names) + suffix)
 
         await execute_tools_parallel(read_only_tasks, tool_callback)
-
-    if write_execute_tasks:
-        logger.debug(f"Phase 4: write/execute ({len(write_execute_tasks)} calls)")
-        logger.lifecycle(f"Dispatch write/execute tools (count={len(write_execute_tasks)})")
 
     for part, task_node in write_execute_tasks:
         if tool_start_callback:
@@ -326,21 +312,23 @@ async def dispatch_tools(
         if result_output:
             response_state.has_user_response = True
 
+    dispatch_elapsed_ms = (time.perf_counter() - dispatch_start) * 1000
     total_tools = len(tool_call_records)
-    read_only_count = len(read_only_tasks)
-    research_count = len(research_agent_tasks)
-    write_execute_count = len(write_execute_tasks)
+
     if total_tools:
-        summary_message = (
-            "Tool dispatch summary "
-            f"(total={total_tools}, read_only={read_only_count}, "
-            f"research={research_count}, write_execute={write_execute_count}, "
-            f"fallback={used_fallback}, submit={submit_requested})"
-        )
+        # Build tool name list for visibility
+        tool_names = [
+            getattr(part, "tool_name", UNKNOWN_TOOL_NAME) for part, _ in tool_call_records
+        ]
+        tool_names_str = ", ".join(tool_names[:TOOL_NAMES_DISPLAY_LIMIT])
+        if len(tool_names) > TOOL_NAMES_DISPLAY_LIMIT:
+            tool_names_str += f" (+{len(tool_names) - TOOL_NAMES_DISPLAY_LIMIT} more)"
+
         logger.lifecycle(
-            summary_message,
-            request_id=state_manager.session.request_id,
+            f"Tools: [{tool_names_str}] ({total_tools} total, {dispatch_elapsed_ms:.0f}ms)"
         )
+    else:
+        logger.lifecycle("No tool calls this iteration")
 
     return ToolDispatchResult(
         has_tool_calls=is_processing_tools,

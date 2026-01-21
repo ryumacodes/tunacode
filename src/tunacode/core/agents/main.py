@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -331,7 +332,6 @@ class RequestOrchestrator:
         logger = get_logger()
         request_id = ctx.request_id
         logger.info("Request started", request_id=request_id)
-        logger.lifecycle("Request context initialized", request_id=request_id)
 
         # Acquire agent
         agent = ac.get_or_create_agent(self.model, self.state_manager)
@@ -340,8 +340,8 @@ class RequestOrchestrator:
         session_messages = self.state_manager.session.messages
         tool_call_args_by_id = self.state_manager.session.tool_call_args_by_id
         _, tokens_reclaimed = prune_old_tool_outputs(session_messages, self.model)
-        pruned_message = f"History pruned (reclaimed_tokens={tokens_reclaimed})"
-        logger.lifecycle(pruned_message, request_id=request_id)
+        if tokens_reclaimed > 0:
+            logger.lifecycle(f"History pruned ({tokens_reclaimed} tokens reclaimed)")
 
         cleanup_applied = _remove_dangling_tool_calls(
             session_messages,
@@ -349,13 +349,12 @@ class RequestOrchestrator:
         )
         if cleanup_applied:
             self.state_manager.session.update_token_count()
-            logger.lifecycle(DANGLING_TOOL_CALLS_CLEANUP_MESSAGE, request_id=request_id)
+            logger.lifecycle("Cleaned up dangling tool calls")
 
         baseline_message_count = len(session_messages)
 
         # Prepare history snapshot (now pruned)
         message_history = list(session_messages)
-        logger.lifecycle("Agent iteration loop starting", request_id=request_id)
 
         # Per-request trackers
         tool_buffer = ac.ToolBuffer()
@@ -367,9 +366,8 @@ class RequestOrchestrator:
                 agent_run = run_handle
                 i = 1
                 async for node in run_handle:
-                    iteration_message = f"Iteration start (iteration={i})"
-                    logger.lifecycle(iteration_message, request_id=request_id, iteration=i)
-                    logger.debug("Processing iteration", iteration=i, request_id=request_id)
+                    iter_start = time.perf_counter()
+                    logger.lifecycle(f"--- Iteration {i} ---")
                     self.iteration_manager.update_counters(i)
 
                     # Optional token streaming
@@ -393,8 +391,8 @@ class RequestOrchestrator:
                         self.tool_result_callback,
                         self.tool_start_callback,
                     )
-                    completion_message = f"Iteration processed (iteration={i})"
-                    logger.lifecycle(completion_message, request_id=request_id, iteration=i)
+                    iter_elapsed_ms = (time.perf_counter() - iter_start) * 1000
+                    logger.lifecycle(f"Iteration {i} complete ({iter_elapsed_ms:.0f}ms)")
 
                     # Handle empty response
                     self.empty_handler.track(empty_response)
@@ -413,9 +411,7 @@ class RequestOrchestrator:
 
                     # Early completion
                     if response_state.task_completed:
-                        logger.info("Task completed", iteration=i, request_id=request_id)
-                        completion_notice = f"Task completed (iteration={i})"
-                        logger.lifecycle(completion_notice, request_id=request_id, iteration=i)
+                        logger.lifecycle(f"Task completed at iteration {i}")
                         break
 
                     i += 1
@@ -428,14 +424,12 @@ class RequestOrchestrator:
 
                 # Return wrapper that carries response_state
                 self._persist_run_messages(run_handle, baseline_message_count)
-                logger.lifecycle("Run messages persisted", request_id=request_id)
-                logger.lifecycle("Request complete", request_id=request_id)
+                logger.lifecycle("Request complete")
                 return ac.AgentRunWithState(run_handle, response_state)
 
         except (UserAbortError, asyncio.CancelledError):
             if agent_run is not None:
                 self._persist_run_messages(agent_run, baseline_message_count)
-                logger.lifecycle("Run messages persisted after abort", request_id=request_id)
             # Clean up dangling tool calls to prevent API errors on next request
             cleanup_applied = _remove_dangling_tool_calls(
                 self.state_manager.session.messages,

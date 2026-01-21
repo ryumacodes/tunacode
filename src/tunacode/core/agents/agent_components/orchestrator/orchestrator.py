@@ -24,6 +24,10 @@ EMPTY_RESPONSE_REASON_TRUNCATED = "truncated"
 
 TOOL_RESULT_STATUS_COMPLETED = "completed"
 
+# Preview length limits for debug logging
+THOUGHT_PREVIEW_LENGTH = 80
+RESPONSE_PREVIEW_LENGTH = 100
+
 ToolResultCallback = Callable[..., None]
 StreamingCallback = Callable[[str], Awaitable[None]]
 
@@ -93,21 +97,22 @@ async def process_node(
 
     if response_state and response_state.can_transition_to(AgentState.ASSISTANT):
         response_state.transition_to(AgentState.ASSISTANT)
-        logger.lifecycle("Phase 1: assistant state entered")
 
     request = getattr(node, "request", None)
     if request is not None:
-        logger.lifecycle("Phase 2: emitting tool returns")
         _emit_tool_returns(request, state_manager, tool_result_callback)
 
     thought = getattr(node, "thought", None)
     if thought:
-        logger.lifecycle("Phase 3: recording thought")
         record_thought(session, thought)
+        # Log thought preview
+        thought_preview = thought[:THOUGHT_PREVIEW_LENGTH].replace("\n", "\\n")
+        if len(thought) > THOUGHT_PREVIEW_LENGTH:
+            thought_preview += "..."
+        logger.lifecycle(f"Thought: {thought_preview}")
 
     model_response = getattr(node, "model_response", None)
     if model_response is not None:
-        logger.lifecycle("Phase 4: updating usage")
         update_usage(
             session,
             getattr(model_response, "usage", None),
@@ -132,13 +137,21 @@ async def process_node(
                 combined_content = CONTENT_JOINER.join(content_parts).strip()
                 appears_truncated = check_for_truncation(combined_content)
 
+                # Log response preview for debug visibility
+                preview_len = min(RESPONSE_PREVIEW_LENGTH, len(combined_content))
+                preview = combined_content[:preview_len]
+                if len(combined_content) > preview_len:
+                    preview += "..."
+                # Escape newlines for single-line output
+                preview = preview.replace("\n", "\\n")
+                logger.lifecycle(f"Response: {preview} ({len(combined_content)} chars)")
+
             no_tools = not has_structured_tools
             empty_without_tools = not has_non_empty_content and no_tools
             truncated_without_tools = appears_truncated and no_tools
             if empty_without_tools or truncated_without_tools:
                 empty_response_detected = True
 
-        logger.lifecycle("Phase 5: dispatching tools")
         await dispatch_tools(
             response_parts,
             node,
@@ -148,7 +161,6 @@ async def process_node(
             tool_start_callback,
             response_state,
         )
-        logger.lifecycle("Phase 6: tool dispatch complete")
 
     if (
         response_state
@@ -156,7 +168,6 @@ async def process_node(
         and not response_state.is_completed()
     ):
         response_state.transition_to(AgentState.RESPONSE)
-        logger.lifecycle("Phase 7: response state entered")
 
     if empty_response_detected:
         reason = (
