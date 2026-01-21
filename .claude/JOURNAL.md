@@ -357,3 +357,55 @@ Push branch, optionally create PR
 - Research: `memory-bank/research/2026-01-14_12-27-29_glob-tool-bottlenecks.md`
 - QA Card: `.claude/qa/semantically-dead-code.md`
 - Skill used: `.claude/skills/dead-code-detector/` (Vulture - catches syntactic, not semantic)
+
+---
+
+## 2026-01-21: Session Resume Hang Fix (Abort Recovery)
+
+### Problem:
+After user aborts (ESC) mid-request, subsequent requests hang indefinitely. Even fresh sessions hit the issue if corrupted history was persisted.
+
+### Root Causes Found:
+
+**1. CancelledError Not Caught (Python 3.8+)**
+- `except Exception` does NOT catch `asyncio.CancelledError`
+- CancelledError inherits from `BaseException`, not `Exception`
+- Stream cleanup code was bypassed on abort
+
+**2. Empty Response Messages**
+- `kind=response parts=0` left in history after abort during response generation
+- API can't handle empty responses in message sequence
+
+**3. Consecutive Request Messages**
+- Multiple `kind=request` without `kind=response` between them
+- Happens when abort before model responds, then user sends new message
+- API expects alternating request/response pattern
+
+### Solution:
+Added three cleanup functions to `main.py`:
+1. `_remove_empty_responses()` - removes `kind=response parts=0`
+2. `_remove_consecutive_requests()` - keeps only last request in consecutive runs
+3. Added `except asyncio.CancelledError` handler in `streaming.py`
+
+**Cleanup order matters:**
+```
+dangling_tool_calls -> empty_responses -> consecutive_requests
+```
+
+### Files Modified:
+- `src/tunacode/core/agents/main.py` - cleanup functions + pre-request validation
+- `src/tunacode/core/agents/agent_components/streaming.py` - CancelledError handler
+
+### Commit:
+`ad53e0b` - fix: resolve session resume hangs after user abort
+
+### Skill Created:
+`~/.claude/skills/llm-agent-abort-recovery/SKILL.md`
+
+### Key Insight:
+The debug log `ctx_messages=0` was a red herring - that's pydantic-ai's internal context, not session messages. The real issue was message STRUCTURE corruption (empty responses, consecutive requests), not content corruption.
+
+### Prevention:
+- Always validate message structure before API calls, not just tool call pairing
+- Test abort scenarios: mid-stream, mid-tool-call, before any response
+- Remember: Python 3.8+ CancelledError is BaseException, not Exception
