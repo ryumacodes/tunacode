@@ -519,9 +519,16 @@ class MockMessage:
     parts: list[Any] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        # Add tool calls to parts
+        if not self.tool_calls:
+            return
+
+        existing_call_ids = {getattr(part, "tool_call_id", None) for part in self.parts}
         for call in self.tool_calls:
+            tool_call_id = getattr(call, "tool_call_id", None)
+            if tool_call_id in existing_call_ids:
+                continue
             self.parts.append(call)
+            existing_call_ids.add(tool_call_id)
 
 
 def _extract_tool_call_ids(message: Any) -> list[str]:
@@ -548,13 +555,13 @@ def _extract_tool_call_ids(message: Any) -> list[str]:
 def test_remove_dangling_removes_trailing_tool_calls(
     call_parts: list[ToolCallPart], session_state: SessionState
 ) -> None:
-    """_remove_dangling_tool_calls should remove trailing tool call messages."""
+    """_remove_dangling_tool_calls should remove dangling tool call messages."""
     # Arrange: Create messages with trailing tool calls
     messages = []
     tool_call_args_by_id: dict[ToolCallId, ToolArgs] = {}
 
     for part in call_parts:
-        msg = MockMessage(tool_calls=[part], parts=[part])
+        msg = MockMessage(tool_calls=[part])
         messages.append(msg)
         tool_call_args_by_id[part.tool_call_id] = part.args
 
@@ -578,20 +585,20 @@ def test_remove_dangling_removes_trailing_tool_calls(
         assert len(messages) == initial_count
 
 
-def test_remove_dangling_stops_at_non_tool_message(session_state: SessionState) -> None:
-    """_remove_dangling_tool_calls should stop at first non-tool message."""
-    # Arrange: Mixed messages
+def test_remove_dangling_removes_non_trailing_tool_calls(session_state: SessionState) -> None:
+    """_remove_dangling_tool_calls should remove tool calls anywhere in history."""
+    # Arrange: Dangling tool call followed by a non-tool message
     tool_call = ToolCallPart(tool_name="read_file", args={"path": "test"}, tool_call_id="call_1")
     non_tool_msg = MockMessage(tool_calls=[], parts=[])
-    dangling_tool_msg = MockMessage(tool_calls=[tool_call], parts=[tool_call])
+    dangling_tool_msg = MockMessage(tool_calls=[tool_call])
 
-    messages = [non_tool_msg, dangling_tool_msg]
+    messages = [dangling_tool_msg, non_tool_msg]
     tool_call_args_by_id = {tool_call.tool_call_id: tool_call.args}
 
     # Act
     _remove_dangling_tool_calls(messages, tool_call_args_by_id)
 
-    # Assert: Only dangling message removed, non-tool message preserved
+    # Assert: Dangling message removed, non-tool message preserved
     assert len(messages) == 1
     assert messages[0] is non_tool_msg
 
@@ -626,7 +633,7 @@ def test_cancelled_error_triggers_cleanup(session_state: SessionState) -> None:
     tool_call = ToolCallPart(
         tool_name="bash", args={"command": "sleep 60"}, tool_call_id="call_timeout123"
     )
-    dangling_message = MockMessage(tool_calls=[tool_call], parts=[tool_call])
+    dangling_message = MockMessage(tool_calls=[tool_call])
     messages: list[Any] = [dangling_message]
     tool_call_args_by_id: dict[ToolCallId, ToolArgs] = {tool_call.tool_call_id: tool_call.args}
 
@@ -647,8 +654,8 @@ def test_remove_dangling_clears_corresponding_args(session_state: SessionState) 
     call_2 = ToolCallPart(tool_name="grep", args={"pattern": "test"}, tool_call_id="call_2")
 
     messages = [
-        MockMessage(tool_calls=[call_1], parts=[call_1]),
-        MockMessage(tool_calls=[call_2], parts=[call_2]),
+        MockMessage(tool_calls=[call_1]),
+        MockMessage(tool_calls=[call_2]),
     ]
     tool_call_args_by_id = {
         call_1.tool_call_id: call_1.args,
@@ -661,6 +668,57 @@ def test_remove_dangling_clears_corresponding_args(session_state: SessionState) 
     # Assert: All args cleared
     assert len(tool_call_args_by_id) == 0
     assert len(messages) == 0
+
+
+def test_remove_dangling_keeps_matched_tool_calls(session_state: SessionState) -> None:
+    """_remove_dangling_tool_calls should not remove matched tool calls."""
+    tool_call = ToolCallPart(tool_name="read_file", args={"path": "file1"}, tool_call_id="call_ok")
+    tool_return = ToolReturnPart(
+        tool_call_id=tool_call.tool_call_id,
+        content="ok",
+        tool_name=tool_call.tool_name,
+    )
+
+    call_message = MockMessage(tool_calls=[tool_call])
+    return_message = MockMessage(parts=[tool_return])
+    messages = [call_message, return_message]
+    tool_call_args_by_id = {tool_call.tool_call_id: tool_call.args}
+
+    removed = _remove_dangling_tool_calls(messages, tool_call_args_by_id)
+
+    assert removed is False
+    assert messages == [call_message, return_message]
+    assert tool_call_args_by_id == {tool_call.tool_call_id: tool_call.args}
+
+
+def test_remove_dangling_removes_only_unmatched_calls(session_state: SessionState) -> None:
+    """_remove_dangling_tool_calls should remove only unmatched tool calls."""
+    matched_call = ToolCallPart(
+        tool_name="read_file", args={"path": "file1"}, tool_call_id="call_matched"
+    )
+    unmatched_call = ToolCallPart(
+        tool_name="grep", args={"pattern": "test"}, tool_call_id="call_unmatched"
+    )
+    tool_return = ToolReturnPart(
+        tool_call_id=matched_call.tool_call_id,
+        content="ok",
+        tool_name=matched_call.tool_name,
+    )
+
+    matched_message = MockMessage(tool_calls=[matched_call])
+    return_message = MockMessage(parts=[tool_return])
+    unmatched_message = MockMessage(tool_calls=[unmatched_call])
+    messages = [matched_message, return_message, unmatched_message]
+    tool_call_args_by_id = {
+        matched_call.tool_call_id: matched_call.args,
+        unmatched_call.tool_call_id: unmatched_call.args,
+    }
+
+    removed = _remove_dangling_tool_calls(messages, tool_call_args_by_id)
+
+    assert removed is True
+    assert messages == [matched_message, return_message]
+    assert tool_call_args_by_id == {matched_call.tool_call_id: matched_call.args}
 
 
 # =============================================================================

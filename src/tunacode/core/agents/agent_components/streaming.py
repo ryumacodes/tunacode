@@ -7,13 +7,20 @@ and streams deltas to the provided callback while being resilient to errors.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
 
 from tunacode.core.logging import get_logger
 from tunacode.core.state import StateManager
+
+DEBUG_STREAM_EVENT_LOG_LIMIT: int = 5
+DEBUG_STREAM_TEXT_PREVIEW_LEN: int = 120
+DEBUG_STREAM_NEWLINE_REPLACEMENT: str = "\\n"
+DEBUG_STREAM_PREVIEW_SUFFIX: str = "..."
 
 
 def _find_overlap_length(pre_text: str, delta_text: str) -> int:
@@ -35,6 +42,82 @@ def _find_overlap_length(pre_text: str, delta_text: str) -> int:
     return 0
 
 
+def _format_stream_preview(value: Any) -> tuple[str, int]:
+    """Return a truncated preview for debug logging."""
+    if value is None:
+        return "", 0
+
+    value_text = value if isinstance(value, str) else str(value)
+    value_len = len(value_text)
+    preview_len = min(DEBUG_STREAM_TEXT_PREVIEW_LEN, value_len)
+    preview = value_text[:preview_len]
+    if value_len > preview_len:
+        preview = f"{preview}{DEBUG_STREAM_PREVIEW_SUFFIX}"
+    preview = preview.replace("\n", DEBUG_STREAM_NEWLINE_REPLACEMENT)
+    return preview, value_len
+
+
+def _format_request_part_debug(part: Any) -> str:
+    """Format a model request part for debug logging."""
+    part_kind_value = getattr(part, "part_kind", None)
+    part_kind = part_kind_value if part_kind_value is not None else "unknown"
+    tool_name = getattr(part, "tool_name", None)
+    tool_call_id = getattr(part, "tool_call_id", None)
+    content = getattr(part, "content", None)
+    args = getattr(part, "args", None)
+
+    segments = [f"kind={part_kind}"]
+    if tool_name:
+        segments.append(f"tool={tool_name}")
+    if tool_call_id:
+        segments.append(f"id={tool_call_id}")
+
+    content_preview, content_len = _format_stream_preview(content)
+    if content_preview:
+        segments.append(f"content={content_preview} ({content_len} chars)")
+
+    args_preview, args_len = _format_stream_preview(args)
+    if args_preview:
+        segments.append(f"args={args_preview} ({args_len} chars)")
+
+    return " ".join(segments)
+
+
+def _log_stream_request_parts(node: Any, debug_mode: bool) -> None:
+    """Log the request parts just before opening a stream."""
+    if not debug_mode:
+        return
+
+    logger = get_logger()
+    request = getattr(node, "request", None)
+    if request is None:
+        logger.debug("Stream request: none")
+        return
+
+    request_type = type(request).__name__
+    request_parts = getattr(request, "parts", None)
+    if request_parts is None:
+        logger.debug(f"Stream request parts: count=0 type={request_type} parts=None")
+        return
+    if not isinstance(request_parts, list):
+        preview, preview_len = _format_stream_preview(request_parts)
+        logger.debug(
+            f"Stream request parts: type={request_type} "
+            f"parts_type={type(request_parts).__name__} preview={preview} "
+            f"({preview_len} chars)"
+        )
+        return
+    if not request_parts:
+        logger.debug(f"Stream request parts: count=0 type={request_type}")
+        return
+
+    request_part_count = len(request_parts)
+    logger.debug(f"Stream request parts: count={request_part_count} type={request_type}")
+    for part_index, part in enumerate(request_parts):
+        part_summary = _format_request_part_debug(part)
+        logger.debug(f"Stream request part[{part_index}]: {part_summary}")
+
+
 async def stream_model_request_node(
     node,
     agent_run_ctx,
@@ -54,6 +137,18 @@ async def stream_model_request_node(
 
     logger = get_logger()
     stream_start = time.perf_counter()
+    debug_mode = bool(getattr(state_manager.session, "debug_mode", False))
+    node_type = type(node).__name__
+    ctx_messages = getattr(agent_run_ctx, "messages", None)
+    ctx_messages_type = type(ctx_messages).__name__ if ctx_messages is not None else "None"
+    ctx_message_count = len(ctx_messages) if isinstance(ctx_messages, list) else 0
+    if debug_mode:
+        logger.debug(
+            f"Stream init: node={node_type} request_id={request_id} "
+            f"iteration={iteration_index} ctx_messages={ctx_message_count} "
+            f"ctx_messages_type={ctx_messages_type}"
+        )
+        _log_stream_request_parts(node, debug_mode)
 
     # Gracefully handle streaming errors from LLM provider
     try:
@@ -109,10 +204,16 @@ async def stream_model_request_node(
             except Exception:
                 pass
 
+            if debug_mode:
+                logger.debug(
+                    f"Stream opened: node={node_type} request_id={request_id} "
+                    f"iteration={iteration_index}"
+                )
+
             async for event in request_stream:
                 debug_event_count += 1
                 # Log first few raw event types for diagnosis
-                if debug_event_count <= 5:
+                if debug_event_count <= DEBUG_STREAM_EVENT_LOG_LIMIT:
                     try:
                         etype = type(event).__name__
                         d = getattr(event, "delta", None)
@@ -164,6 +265,8 @@ async def stream_model_request_node(
                             f"pkind={pkind} pprev={ppreview} plen={pplen}"
                         )
                         state_manager.session._debug_events.append(event_info)
+                        if debug_mode:
+                            logger.debug(event_info)
                     except Exception:
                         pass
 
@@ -269,10 +372,41 @@ async def stream_model_request_node(
                         pass
             stream_elapsed_ms = (time.perf_counter() - stream_start) * 1000
             logger.lifecycle(f"Stream: {debug_event_count} events, {stream_elapsed_ms:.0f}ms")
+            if debug_mode:
+                raw_stream = state_manager.session._debug_raw_stream_accum
+                raw_preview, raw_len = _format_stream_preview(raw_stream)
+                logger.debug(
+                    f"Stream done: events={debug_event_count} "
+                    f"raw_len={raw_len} preview={raw_preview}"
+                )
+    except asyncio.CancelledError:
+        logger.lifecycle("Stream cancelled")
+        if debug_mode:
+            raw_stream = state_manager.session._debug_raw_stream_accum
+            raw_preview, raw_len = _format_stream_preview(raw_stream)
+            debug_event_total = len(state_manager.session._debug_events)
+            logger.debug(
+                f"Stream cancelled: events={debug_event_total} "
+                f"raw_len={raw_len} preview={raw_preview}"
+            )
+        try:
+            if hasattr(node, "_did_stream"):
+                node._did_stream = False
+        except Exception:
+            pass
+        raise
     except Exception as e:
         # Reset node state to allow graceful degradation to non-streaming mode
         logger.warning(f"Stream failed, falling back to non-streaming: {e}")
         logger.lifecycle(f"Stream failed: {type(e).__name__}")
+        if debug_mode:
+            raw_stream = state_manager.session._debug_raw_stream_accum
+            raw_preview, raw_len = _format_stream_preview(raw_stream)
+            debug_event_total = len(state_manager.session._debug_events)
+            logger.debug(
+                f"Stream failed: events={debug_event_total} "
+                f"raw_len={raw_len} preview={raw_preview}"
+            )
         try:
             if hasattr(node, "_did_stream"):
                 node._did_stream = False

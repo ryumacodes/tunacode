@@ -145,6 +145,45 @@ def clear_all_caches():
     _AGENT_CACHE_VERSION.clear()
 
 
+def invalidate_agent_cache(model: str, state_manager: "StateManager") -> bool:
+    """Invalidate cached agent for a specific model.
+
+    Call this after an abort or timeout to ensure the HTTP client is recreated.
+    Clears both module-level and session-level caches.
+
+    Args:
+        model: The model name to invalidate
+        state_manager: StateManager to clear session-level cache
+
+    Returns:
+        True if an agent was invalidated, False if not cached.
+    """
+    logger = get_logger()
+    cleared_module = False
+    cleared_session = False
+
+    # Clear module-level cache
+    if model in _AGENT_CACHE:
+        del _AGENT_CACHE[model]
+        cleared_module = True
+    _AGENT_CACHE_VERSION.pop(model, None)
+
+    # Clear session-level cache
+    if model in state_manager.session.agents:
+        del state_manager.session.agents[model]
+        cleared_session = True
+    state_manager.session.agent_versions.pop(model, None)
+
+    invalidated = cleared_module or cleared_session
+    if invalidated:
+        logger.debug(
+            f"Agent cache cleared: model={model}, "
+            f"module={cleared_module}, session={cleared_session}"
+        )
+
+    return invalidated
+
+
 def get_agent_tool():
     """Lazy import for Agent and Tool to avoid circular imports."""
     from pydantic_ai import Tool
@@ -322,6 +361,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         logger.debug(f"Agent cache hit (session): {model}")
         return session_agent
     if session_agent and session_version != agent_version:
+        logger.debug(f"Agent cache invalidated (session version mismatch): {model}")
         del state_manager.session.agents[model]
         state_manager.session.agent_versions.pop(model, None)
 
