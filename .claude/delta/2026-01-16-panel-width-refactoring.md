@@ -140,4 +140,4 @@ This refactoring demonstrates Gate 5: **Indirection Requires Verification**.
 
 - [[tool-renderers]] - Tool renderer architecture
 - [[ui-overview]] - UI module documentation
-- [[nextstep-panels]] - NeXTSTEP design principles
+- [[nextstep_panels]] - NeXTSTEP design principles
