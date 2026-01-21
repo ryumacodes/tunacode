@@ -92,9 +92,13 @@ and line-number gutters so panels stay within narrow terminal widths.
 - `TextualReplApp.on_tool_result_display()` computes an available content width
   from the RichLog/viewport and subtracts a fixed horizontal inset so text
   wraps safely inside the panel frame.
-- Tool renderers set an explicit panel frame width of
-  `max_line_width + TOOL_PANEL_HORIZONTAL_INSET` so the panel spans the full
-  terminal width instead of the narrower RichLog content region.
+- **panel_widths.py** - Centralized width calculation module (PR #244). Contains
+  `tool_panel_frame_width(max_line_width)` which returns the explicit panel frame
+  width (`max_line_width + TOOL_PANEL_HORIZONTAL_INSET`). This replaces the
+  previous pattern of using `expand=True` indirection with explicit, verifiable
+  widths (Gate 5 compliance).
+- Tool renderers receive `max_line_width` as a parameter and use it for content
+  truncation. The frame width is computed by `tool_panel_frame_width()`.
 - Tool renderers reserve space for prefixes (indentation, grep line-number
   gutters, bullets) before truncating content, so the full rendered line stays
   within the computed width.

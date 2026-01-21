@@ -203,6 +203,33 @@ def render_my_tool(args, result, duration_ms, max_line_width) -> RenderableType 
     return _renderer.render(args, result, duration_ms, max_line_width)
 ```
 
+## Width Handling
+
+Panel widths are calculated centrally in `panel_widths.py` (PR #244). This follows Gate 5: explicit widths instead of `expand=True` indirection.
+
+### Width Flow
+
+```
+TextualReplApp.on_tool_result_display()
+  → computes max_line_width from viewport
+  → calls tool_panel_smart(args, result, duration_ms, max_line_width)
+    → renderer receives max_line_width as parameter
+    → renderer uses max_line_width for content truncation
+    → tool_panel_frame_width(max_line_width) computes Panel width
+```
+
+### Key Function
+
+```python
+from tunacode.ui.renderers.panel_widths import tool_panel_frame_width
+
+# Compute explicit panel frame width
+frame_width = tool_panel_frame_width(max_line_width)
+Panel(content, width=frame_width)  # explicit, verifiable
+```
+
+**Why not `expand=True`?** The `expand` parameter expands to `scrollable_content_region`, not terminal width. RichLog's internal padding subtracts 4-8 chars, making panels narrower than expected. Explicit widths are verifiable.
+
 ## Constants
 
 Defined in `tunacode.constants`:
@@ -214,6 +241,12 @@ Defined in `tunacode.constants`:
 | `MIN_VIEWPORT_LINES` | 3 | Minimum viewport height |
 | `MIN_TOOL_PANEL_LINE_WIDTH` | 4 | Minimum tool panel line width |
 | `TOOL_PANEL_HORIZONTAL_INSET` | 8 | Width reserved for borders/padding |
+
+Defined in `panel_widths.py`:
+
+| Function | Returns | Purpose |
+|----------|---------|---------|
+| `tool_panel_frame_width(max_line_width)` | `max_line_width + TOOL_PANEL_HORIZONTAL_INSET` | Panel frame width |
 
 Tool panel line width is derived from the available viewport width and passed into renderers.
 
