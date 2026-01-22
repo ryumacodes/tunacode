@@ -46,12 +46,6 @@ from . import agent_components as ac
 
 colors = DotDict(UI_COLORS)
 
-STREAM_WATCHDOG_DEFAULT_SECONDS: float = 20.0
-STREAM_WATCHDOG_MIN_SECONDS: float = 5.0
-STREAM_WATCHDOG_MAX_SECONDS: float = 45.0
-STREAM_WATCHDOG_FRACTION: float = 0.25
-STREAM_WATCHDOG_GLOBAL_FALLBACK: float = 120.0
-
 __all__ = [
     "process_request",
     "get_agent_tool",
@@ -529,15 +523,16 @@ class RequestOrchestrator:
 
                     self.iteration_manager.update_counters(i)
 
-                    # Optional token streaming
-                    await _maybe_stream_node_tokens(
-                        node,
-                        agent_run.ctx,
-                        self.state_manager,
-                        self.streaming_callback,
-                        ctx.request_id,
-                        i,
-                    )
+                    # Stream tokens from model request nodes
+                    if self.streaming_callback and Agent.is_model_request_node(node):
+                        await ac.stream_model_request_node(
+                            node,
+                            agent_run.ctx,
+                            self.state_manager,
+                            self.streaming_callback,
+                            ctx.request_id,
+                            i,
+                        )
 
                     # Core node processing
                     empty_response, empty_reason = await ac.process_node(
@@ -615,77 +610,6 @@ class RequestOrchestrator:
 
 
 # Utility functions
-
-
-def _coerce_stream_watchdog_timeout(state_manager: StateManager) -> float:
-    """Compute stream watchdog timeout based on global request timeout."""
-    settings = state_manager.session.user_config.get("settings", {})
-    global_timeout_raw = settings.get(
-        "global_request_timeout",
-        STREAM_WATCHDOG_GLOBAL_FALLBACK,
-    )
-
-    try:
-        global_timeout = float(global_timeout_raw)
-    except (TypeError, ValueError):
-        return STREAM_WATCHDOG_DEFAULT_SECONDS
-
-    if global_timeout <= 0:
-        return STREAM_WATCHDOG_DEFAULT_SECONDS
-
-    stream_timeout = global_timeout * STREAM_WATCHDOG_FRACTION
-    stream_timeout = min(stream_timeout, STREAM_WATCHDOG_MAX_SECONDS)
-    stream_timeout = max(stream_timeout, STREAM_WATCHDOG_MIN_SECONDS)
-    return stream_timeout
-
-
-async def _maybe_stream_node_tokens(
-    node: Any,
-    agent_run_ctx: Any,
-    state_manager: StateManager,
-    streaming_cb: Callable[[str], Awaitable[None]] | None,
-    request_id: str,
-    iteration_index: int,
-) -> None:
-    """Stream tokens from model request nodes if callback provided.
-
-    Reference: main.py lines 146-161
-    """
-    if not streaming_cb:
-        return
-
-    # Delegate to component streaming helper
-    if Agent.is_model_request_node(node):  # type: ignore[attr-defined]
-        logger = get_logger()
-        stream_timeout = _coerce_stream_watchdog_timeout(state_manager)
-        debug_mode = bool(getattr(state_manager.session, "debug_mode", False))
-        try:
-            await asyncio.wait_for(
-                ac.stream_model_request_node(
-                    node,
-                    agent_run_ctx,
-                    state_manager,
-                    streaming_cb,
-                    request_id,
-                    iteration_index,
-                ),
-                timeout=stream_timeout,
-            )
-        except TimeoutError:
-            logger.warning(
-                f"Stream watchdog timeout after {stream_timeout:.1f}s; "
-                "falling back to non-streaming"
-            )
-            logger.lifecycle(f"Stream watchdog timeout ({stream_timeout:.1f}s)")
-            if debug_mode:
-                logger.debug(
-                    f"Stream watchdog abort: request_id={request_id} iteration={iteration_index}"
-                )
-            try:
-                if hasattr(node, "_did_stream"):
-                    node._did_stream = False
-            except Exception:
-                pass
 
 
 async def _finalize_buffered_tasks(

@@ -377,34 +377,8 @@ async def stream_model_request_node(
                 )
     except asyncio.CancelledError:
         logger.lifecycle("Stream cancelled")
-        if debug_mode:
-            raw_stream = state_manager.session._debug_raw_stream_accum
-            raw_preview, raw_len = _format_stream_preview(raw_stream)
-            debug_event_total = len(state_manager.session._debug_events)
-            logger.debug(
-                f"Stream cancelled: events={debug_event_total} "
-                f"raw_len={raw_len} preview={raw_preview}"
-            )
-        try:
-            if hasattr(node, "_did_stream"):
-                node._did_stream = False
-        except Exception:
-            pass
         raise
     except Exception as e:
-        # Reset node state to allow graceful degradation to non-streaming mode
-        logger.warning(f"Stream failed, falling back to non-streaming: {e}")
-        logger.lifecycle(f"Stream failed: {type(e).__name__}")
-        if debug_mode:
-            raw_stream = state_manager.session._debug_raw_stream_accum
-            raw_preview, raw_len = _format_stream_preview(raw_stream)
-            debug_event_total = len(state_manager.session._debug_events)
-            logger.debug(
-                f"Stream failed: events={debug_event_total} "
-                f"raw_len={raw_len} preview={raw_preview}"
-            )
-        try:
-            if hasattr(node, "_did_stream"):
-                node._did_stream = False
-        except Exception:
-            pass
+        # Log and re-raise - no silent fallbacks
+        logger.lifecycle(f"Stream failed: {type(e).__name__}: {e}")
+        raise
