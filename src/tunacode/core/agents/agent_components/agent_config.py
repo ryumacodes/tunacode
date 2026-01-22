@@ -461,8 +461,17 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
             ),
             validate_response=lambda r: r.raise_for_status(),
         )
+
         event_hooks = _build_request_hooks(request_delay)
-        http_client = AsyncClient(transport=transport, event_hooks=event_hooks)
+
+        # Set HTTP timeout: connect=10s, read=60s, write=30s, pool=5s
+        # This prevents hanging forever if provider doesn't respond
+        from httpx import Timeout
+
+        http_timeout = Timeout(10.0, read=60.0, write=30.0, pool=5.0)
+        http_client = AsyncClient(
+            transport=transport, event_hooks=event_hooks, timeout=http_timeout
+        )
 
         # Create model instance with retry-enabled HTTP client
         model_instance = _create_model_with_retry(model, http_client, state_manager)

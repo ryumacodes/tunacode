@@ -139,14 +139,10 @@ async def stream_model_request_node(
     stream_start = time.perf_counter()
     debug_mode = bool(getattr(state_manager.session, "debug_mode", False))
     node_type = type(node).__name__
-    ctx_messages = getattr(agent_run_ctx, "messages", None)
-    ctx_messages_type = type(ctx_messages).__name__ if ctx_messages is not None else "None"
-    ctx_message_count = len(ctx_messages) if isinstance(ctx_messages, list) else 0
     if debug_mode:
         logger.debug(
             f"Stream init: node={node_type} request_id={request_id} "
-            f"iteration={iteration_index} ctx_messages={ctx_message_count} "
-            f"ctx_messages_type={ctx_messages_type}"
+            f"iteration={iteration_index}"
         )
         _log_stream_request_parts(node, debug_mode)
 

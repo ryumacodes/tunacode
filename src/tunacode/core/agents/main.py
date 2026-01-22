@@ -20,7 +20,15 @@ if TYPE_CHECKING:
     from pydantic_ai import Tool  # noqa: F401
 
 from tunacode.constants import UI_COLORS
-from tunacode.core.compaction import prune_old_tool_outputs
+from tunacode.core.agents.resume import prune_old_tool_outputs
+from tunacode.core.agents.resume.sanitize import (
+    find_dangling_tool_call_ids,
+    log_message_history_debug,
+    remove_consecutive_requests,
+    remove_dangling_tool_calls,
+    remove_empty_responses,
+    sanitize_history_for_resume,
+)
 from tunacode.core.logging import get_logger
 from tunacode.core.state import StateManager
 from tunacode.exceptions import GlobalRequestTimeoutError, UserAbortError
@@ -29,7 +37,6 @@ from tunacode.types import (
     AgentRun,
     ModelName,
     NoticeCallback,
-    ToolArgs,
     ToolCallback,
     ToolCallId,
 )
@@ -39,17 +46,6 @@ from . import agent_components as ac
 
 colors = DotDict(UI_COLORS)
 
-PART_KIND_TOOL_CALL: str = "tool-call"
-PART_KIND_TOOL_RETURN: str = "tool-return"
-PART_KIND_ATTR: str = "part_kind"
-PARTS_ATTR: str = "parts"
-TOOL_CALLS_ATTR: str = "tool_calls"
-TOOL_CALL_ID_ATTR: str = "tool_call_id"
-DANGLING_TOOL_CALLS_CLEANUP_MESSAGE: str = "Dangling tool calls removed before request"
-DEBUG_PREVIEW_SUFFIX: str = "..."
-DEBUG_NEWLINE_REPLACEMENT: str = "\\n"
-DEBUG_HISTORY_MESSAGE_PREVIEW_LEN: int = 160
-DEBUG_HISTORY_PART_PREVIEW_LEN: int = 120
 STREAM_WATCHDOG_DEFAULT_SECONDS: float = 20.0
 STREAM_WATCHDOG_MIN_SECONDS: float = 5.0
 STREAM_WATCHDOG_MAX_SECONDS: float = 45.0
@@ -224,6 +220,11 @@ class ReactSnapshotManager:
             # CRITICAL: Inject into agent_run.ctx.messages so next LLM call sees guidance
             if agent_run_ctx is not None:
                 ctx_messages = getattr(agent_run_ctx, "messages", None)
+                if ctx_messages is None:
+                    state = getattr(agent_run_ctx, "state", None)
+                    if state and hasattr(state, "message_history"):
+                        ctx_messages = state.message_history
+                    
                 if isinstance(ctx_messages, list):
                     ModelRequest, _, SystemPromptPart = ac.get_model_messages()
                     system_part = SystemPromptPart(
@@ -361,29 +362,68 @@ class RequestOrchestrator:
             logger.lifecycle(f"History pruned ({tokens_reclaimed} tokens reclaimed)")
 
         debug_mode = bool(getattr(self.state_manager.session, "debug_mode", False))
-        dangling_tool_call_ids = _find_dangling_tool_call_ids(session_messages)
-        cleanup_applied = _remove_dangling_tool_calls(
-            session_messages,
-            tool_call_args_by_id,
-            dangling_tool_call_ids,
-        )
-        if cleanup_applied:
-            self.state_manager.session.update_token_count()
-            logger.lifecycle("Cleaned up dangling tool calls")
 
-        # Remove empty response messages (abort during response generation)
-        empty_cleanup = _remove_empty_responses(session_messages)
-        if empty_cleanup:
-            self.state_manager.session.update_token_count()
+        # Message cleanup is iterative because each pass can expose new issues:
+        # - Removing dangling tool calls may create consecutive requests
+        # - Removing consecutive requests may orphan tool returns, creating new dangling calls
+        # Loop until no more changes (transitive closure)
+        max_cleanup_iterations = 10
+        total_cleanup_applied = False
+        dangling_tool_call_ids: set[ToolCallId] = set()
 
-        # Remove consecutive request messages (caused by abort before model responds)
-        # Must run AFTER empty response removal since that can expose consecutive requests
-        consecutive_cleanup = _remove_consecutive_requests(session_messages)
-        if consecutive_cleanup:
+        for cleanup_iteration in range(max_cleanup_iterations):
+            any_cleanup = False
+
+            dangling_tool_call_ids = find_dangling_tool_call_ids(session_messages)
+            if remove_dangling_tool_calls(
+                session_messages,
+                tool_call_args_by_id,
+                dangling_tool_call_ids,
+            ):
+                any_cleanup = True
+                total_cleanup_applied = True
+                logger.lifecycle("Cleaned up dangling tool calls")
+
+            # Remove empty response messages (abort during response generation)
+            if remove_empty_responses(session_messages):
+                any_cleanup = True
+                total_cleanup_applied = True
+
+            # Remove consecutive request messages (caused by abort before model responds)
+            # Must run AFTER empty response removal since that can expose consecutive requests
+            if remove_consecutive_requests(session_messages):
+                any_cleanup = True
+                total_cleanup_applied = True
+
+            if not any_cleanup:
+                break
+
+            if cleanup_iteration == max_cleanup_iterations - 1:
+                logger.warning(
+                    f"Message cleanup did not stabilize after {max_cleanup_iterations} iterations"
+                )
+
+        # Handle trailing request in history if we are about to add a new one.
+        # This prevents [Request, Request] sequences when resuming after an abort.
+        # Only do this if we have a non-empty message (intent to start new turn).
+        if session_messages and self.message:
+            last_msg = session_messages[-1]
+            # Check for pydantic-ai ModelRequest or dict with kind='request'
+            last_kind = getattr(last_msg, "kind", None)
+            if isinstance(last_msg, dict):
+                last_kind = last_msg.get("kind")
+            
+            if last_kind == "request":
+                logger.lifecycle("Dropping trailing request to avoid consecutive requests")
+                session_messages.pop()
+                self.state_manager.session.update_token_count()
+                total_cleanup_applied = True
+
+        if total_cleanup_applied:
             self.state_manager.session.update_token_count()
 
         if debug_mode:
-            _log_message_history_debug(
+            log_message_history_debug(
                 session_messages,
                 self.message,
                 dangling_tool_call_ids,
@@ -416,11 +456,33 @@ class RequestOrchestrator:
                         content_preview = f":{len(p_content)}chars"
                     parts_summary.append(f"{p_kind}{content_preview}")
                 logger.debug(
-                    f"  msg[-{3-idx}]: kind={msg_kind}, parts=[{', '.join(parts_summary)}]"
+                    f"  msg[-{3 - idx}]: kind={msg_kind}, parts=[{', '.join(parts_summary)}]"
                 )
 
         # Prepare history snapshot (now pruned)
-        message_history = list(session_messages)
+        # Sanitize history to prevent run_id conflicts or stale state on resume
+        message_history = sanitize_history_for_resume(session_messages)
+
+        # CRITICAL DEBUG: Verify message_history state before passing to agent.iter()
+        if debug_mode:
+            type_names = (
+                [type(m).__name__ for m in message_history[:3]]
+                if message_history
+                else []
+            )
+            logger.debug(
+                f"message_history count={len(message_history)}, types={type_names}"
+            )
+            if message_history:
+                logger.debug(
+                    f"message_history[0]: {type(message_history[0]).__name__} "
+                    f"kind={getattr(message_history[0], 'kind', 'unknown')}"
+                )
+                if len(message_history) > 1:
+                    logger.debug(
+                        f"message_history[-1]: {type(message_history[-1]).__name__} "
+                        f"kind={getattr(message_history[-1], 'kind', 'unknown')}"
+                    )
 
         # Per-request trackers
         tool_buffer = ac.ToolBuffer()
@@ -428,10 +490,27 @@ class RequestOrchestrator:
         agent_run: AgentRun | None = None
 
         try:
-            logger.debug(f"Starting agent.iter() with message: {self.message[:50]}...")
+            msg_preview = self.message[:50]
+            history_len = len(message_history)
+            logger.debug(f"Starting agent.iter(): msg={msg_preview}... history={history_len}")
             async with agent.iter(self.message, message_history=message_history) as run_handle:
                 logger.debug("agent.iter() context entered successfully")
                 agent_run = run_handle
+                
+                # CRITICAL DEBUG: Check if pydantic-ai received the message_history
+                if debug_mode and hasattr(run_handle, 'ctx'):
+                    ctx_messages = getattr(run_handle.ctx, 'messages', None)
+                    if ctx_messages is None:
+                        run_state = getattr(run_handle.ctx, "state", None)
+                        if run_state and hasattr(run_state, "message_history"):
+                            ctx_messages = run_state.message_history
+                    
+                    if ctx_messages is not None:
+                        logger.debug(f"pydantic-ai ctx.messages count={len(ctx_messages)}")
+                        if ctx_messages:
+                            logger.debug(f"ctx.messages[0] type={type(ctx_messages[0]).__name__}")
+                    else:
+                        logger.debug("pydantic-ai ctx.messages not found or None")
                 i = 1
                 async for node in run_handle:
                     iter_start = time.perf_counter()
@@ -511,7 +590,7 @@ class RequestOrchestrator:
             if agent_run is not None:
                 self._persist_run_messages(agent_run, baseline_message_count)
             # Clean up dangling tool calls to prevent API errors on next request
-            cleanup_applied = _remove_dangling_tool_calls(
+            cleanup_applied = remove_dangling_tool_calls(
                 self.state_manager.session.messages,
                 self.state_manager.session.tool_call_args_by_id,
             )
@@ -519,14 +598,12 @@ class RequestOrchestrator:
                 self.state_manager.session.update_token_count()
 
             # Clean up empty response messages (abort during response generation)
-            empty_cleanup = _remove_empty_responses(self.state_manager.session.messages)
+            empty_cleanup = remove_empty_responses(self.state_manager.session.messages)
             if empty_cleanup:
                 self.state_manager.session.update_token_count()
 
             # Clean up consecutive request messages (abort before model responded)
-            consecutive_cleanup = _remove_consecutive_requests(
-                self.state_manager.session.messages
-            )
+            consecutive_cleanup = remove_consecutive_requests(self.state_manager.session.messages)
             if consecutive_cleanup:
                 self.state_manager.session.update_token_count()
 
@@ -632,473 +709,14 @@ async def _finalize_buffered_tasks(
 
 def _message_has_tool_calls(message: Any) -> bool:
     """Return True if message is a model response containing tool calls."""
-    tool_call_ids = _collect_message_tool_call_ids(message)
-    return bool(tool_call_ids)
-
-
-def _get_attr_value(item: Any, attr_name: str) -> Any:
-    """Return attribute values from dicts or objects."""
-    if isinstance(item, dict):
-        return item.get(attr_name)
-    return getattr(item, attr_name, None)
-
-
-def _normalize_list(value: Any) -> list[Any]:
-    """Normalize optional list-like values to a list."""
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return value
-    if isinstance(value, tuple):
-        return list(value)
-    return []
-
-
-def _get_message_parts(message: Any) -> list[Any]:
-    """Return message parts as a list."""
-    parts_value = _get_attr_value(message, PARTS_ATTR)
-    return _normalize_list(parts_value)
-
-
-def _set_message_parts(message: Any, parts: list[Any]) -> None:
-    """Assign new parts to a message."""
-    if isinstance(message, dict):
-        message[PARTS_ATTR] = parts
-        return
-    if hasattr(message, PARTS_ATTR):
-        setattr(message, PARTS_ATTR, parts)
-
-
-def _get_message_tool_calls(message: Any) -> list[Any]:
-    """Return tool_calls from a message as a list."""
-    tool_calls_value = _get_attr_value(message, TOOL_CALLS_ATTR)
-    return _normalize_list(tool_calls_value)
-
-
-def _set_message_tool_calls(message: Any, tool_calls: list[Any]) -> None:
-    """Assign tool_calls to a message."""
-    if isinstance(message, dict):
-        message[TOOL_CALLS_ATTR] = tool_calls
-        return
-
-
-def _format_debug_preview(value: Any, max_len: int) -> tuple[str, int]:
-    """Format a debug preview with length metadata."""
-    if value is None:
-        return "", 0
-
-    value_text = value if isinstance(value, str) else str(value)
-    value_len = len(value_text)
-    preview_len = min(max_len, value_len)
-    preview_text = value_text[:preview_len]
-    if value_len > preview_len:
-        preview_text = f"{preview_text}{DEBUG_PREVIEW_SUFFIX}"
-    preview_text = preview_text.replace("\n", DEBUG_NEWLINE_REPLACEMENT)
-    return preview_text, value_len
-
-
-def _format_part_debug(part: Any, max_len: int) -> str:
-    """Format a single part for debug logging."""
-    part_kind_value = _get_attr_value(part, PART_KIND_ATTR)
-    part_kind = part_kind_value if part_kind_value is not None else "unknown"
-    tool_name = _get_attr_value(part, "tool_name")
-    tool_call_id = _get_attr_value(part, TOOL_CALL_ID_ATTR)
-    content = _get_attr_value(part, "content")
-    args = _get_attr_value(part, "args")
-
-    segments = [f"kind={part_kind}"]
-    if tool_name:
-        segments.append(f"tool={tool_name}")
-    if tool_call_id:
-        segments.append(f"id={tool_call_id}")
-
-    content_preview, content_len = _format_debug_preview(content, max_len)
-    if content_preview:
-        segments.append(f"content={content_preview} ({content_len} chars)")
-
-    args_preview, args_len = _format_debug_preview(args, max_len)
-    if args_preview:
-        segments.append(f"args={args_preview} ({args_len} chars)")
-
-    return " ".join(segments)
-
-
-def _format_tool_call_debug(tool_call: Any, max_len: int) -> str:
-    """Format a tool call metadata entry for debug logging."""
-    tool_name = _get_attr_value(tool_call, "tool_name")
-    tool_call_id = _get_attr_value(tool_call, TOOL_CALL_ID_ATTR)
-    args = _get_attr_value(tool_call, "args")
-
-    segments: list[str] = []
-    if tool_name:
-        segments.append(f"tool={tool_name}")
-    if tool_call_id:
-        segments.append(f"id={tool_call_id}")
-
-    args_preview, args_len = _format_debug_preview(args, max_len)
-    if args_preview:
-        segments.append(f"args={args_preview} ({args_len} chars)")
-
-    if not segments:
-        segments.append("empty")
-
-    return " ".join(segments)
-
-
-def _collect_tool_call_ids_from_parts(parts: list[Any]) -> list[ToolCallId]:
-    """Collect tool_call_id values from tool-call parts."""
-    if not parts:
-        return []
-
-    tool_call_ids: list[ToolCallId] = []
+    # Check parts for tool-call part_kind
+    parts = getattr(message, "parts", [])
     for part in parts:
-        part_kind = _get_attr_value(part, PART_KIND_ATTR)
-        if part_kind != PART_KIND_TOOL_CALL:
-            continue
-        tool_call_id = _get_attr_value(part, TOOL_CALL_ID_ATTR)
-        if tool_call_id is None:
-            continue
-        tool_call_ids.append(tool_call_id)
-    return tool_call_ids
-
-
-def _collect_tool_call_ids_from_tool_calls(tool_calls: list[Any]) -> list[ToolCallId]:
-    """Collect tool_call_id values from tool_calls lists."""
-    if not tool_calls:
-        return []
-
-    tool_call_ids: list[ToolCallId] = []
-    for tool_call in tool_calls:
-        tool_call_id = _get_attr_value(tool_call, TOOL_CALL_ID_ATTR)
-        if tool_call_id is None:
-            continue
-        tool_call_ids.append(tool_call_id)
-    return tool_call_ids
-
-
-def _collect_tool_return_ids_from_parts(parts: list[Any]) -> list[ToolCallId]:
-    """Collect tool_call_id values from tool-return parts."""
-    if not parts:
-        return []
-
-    tool_return_ids: list[ToolCallId] = []
-    for part in parts:
-        part_kind = _get_attr_value(part, PART_KIND_ATTR)
-        if part_kind != PART_KIND_TOOL_RETURN:
-            continue
-        tool_call_id = _get_attr_value(part, TOOL_CALL_ID_ATTR)
-        if tool_call_id is None:
-            continue
-        tool_return_ids.append(tool_call_id)
-    return tool_return_ids
-
-
-def _collect_message_tool_call_ids(message: Any) -> set[ToolCallId]:
-    """Collect tool_call_ids from tool-call parts and tool_calls metadata."""
-    parts = _get_message_parts(message)
-    tool_calls = _get_message_tool_calls(message)
-
-    tool_call_ids = set(_collect_tool_call_ids_from_parts(parts))
-    tool_call_ids.update(_collect_tool_call_ids_from_tool_calls(tool_calls))
-    return tool_call_ids
-
-
-def _collect_message_tool_return_ids(message: Any) -> set[ToolCallId]:
-    """Collect tool_call_ids from tool-return parts."""
-    parts = _get_message_parts(message)
-    return set(_collect_tool_return_ids_from_parts(parts))
-
-
-def _find_dangling_tool_call_ids(messages: list[Any]) -> set[ToolCallId]:
-    """Return tool_call_ids that never received a tool return."""
-    if not messages:
-        return set()
-
-    tool_call_ids: set[ToolCallId] = set()
-    tool_return_ids: set[ToolCallId] = set()
-
-    for message in messages:
-        tool_call_ids.update(_collect_message_tool_call_ids(message))
-        tool_return_ids.update(_collect_message_tool_return_ids(message))
-
-    return tool_call_ids - tool_return_ids
-
-
-MESSAGE_KIND_REQUEST = "request"
-MESSAGE_KIND_RESPONSE = "response"
-
-
-def _remove_consecutive_requests(messages: list[Any]) -> bool:
-    """Remove consecutive request messages, keeping only the last in each run.
-
-    The API expects alternating request/response messages. When abort happens
-    before model responds, we can end up with consecutive request messages.
-    This function removes all but the last request in any consecutive run.
-
-    Returns:
-        True if any messages were removed, False otherwise.
-    """
-    if len(messages) < 2:
-        return False
-
-    logger = get_logger()
-    indices_to_remove: list[int] = []
-    i = 0
-
-    while i < len(messages) - 1:
-        current_kind = getattr(messages[i], "kind", None)
-
-        if current_kind != MESSAGE_KIND_REQUEST:
-            i += 1
-            continue
-
-        # Found a request - check if next message is also a request
-        run_start = i
-        while i < len(messages) - 1:
-            next_kind = getattr(messages[i + 1], "kind", None)
-            if next_kind != MESSAGE_KIND_REQUEST:
-                break
-            i += 1
-
-        # If we advanced, we have consecutive requests from run_start to i
-        # Keep only the last one (at index i), remove run_start to i-1
-        if i > run_start:
-            for idx in range(run_start, i):
-                indices_to_remove.append(idx)
-
-        i += 1
-
-    if not indices_to_remove:
-        return False
-
-    # Remove in reverse order to preserve indices
-    for idx in reversed(indices_to_remove):
-        removed_msg = messages[idx]
-        removed_kind = getattr(removed_msg, "kind", "unknown")
-        removed_parts = len(getattr(removed_msg, "parts", []))
-        logger.debug(
-            f"Removing consecutive request at index {idx}: "
-            f"kind={removed_kind} parts={removed_parts}"
-        )
-        del messages[idx]
-
-    logger.lifecycle(f"Removed {len(indices_to_remove)} consecutive request messages")
-    return True
-
-
-def _remove_empty_responses(messages: list[Any]) -> bool:
-    """Remove response messages with zero parts.
-
-    Empty responses (parts=0) can occur when abort happens after model starts
-    responding but before any content is generated. These empty responses
-    create invalid message sequences.
-
-    Returns:
-        True if any messages were removed, False otherwise.
-    """
-    if not messages:
-        return False
-
-    logger = get_logger()
-    indices_to_remove: list[int] = []
-
-    for i, message in enumerate(messages):
-        msg_kind = getattr(message, "kind", None)
-        if msg_kind != MESSAGE_KIND_RESPONSE:
-            continue
-
-        parts = getattr(message, "parts", [])
-        if not parts:
-            indices_to_remove.append(i)
-
-    if not indices_to_remove:
-        return False
-
-    for idx in reversed(indices_to_remove):
-        logger.debug(f"Removing empty response at index {idx}")
-        del messages[idx]
-
-    logger.lifecycle(f"Removed {len(indices_to_remove)} empty response messages")
-    return True
-
-
-def _log_message_history_debug(
-    messages: list[Any],
-    user_message: str,
-    dangling_tool_call_ids: set[ToolCallId],
-) -> None:
-    """Log a detailed history snapshot for debug tracing."""
-    logger = get_logger()
-    message_count = len(messages)
-    dangling_count = len(dangling_tool_call_ids)
-    logger.debug(
-        f"History dump: messages={message_count} dangling_tool_calls={dangling_count}"
-    )
-
-    if dangling_tool_call_ids:
-        dangling_sorted = sorted(dangling_tool_call_ids)
-        logger.debug(f"History dangling tool_call_ids: {dangling_sorted}")
-
-    if user_message:
-        preview, msg_len = _format_debug_preview(
-            user_message,
-            DEBUG_HISTORY_MESSAGE_PREVIEW_LEN,
-        )
-        logger.debug(f"Outgoing user message: {preview} ({msg_len} chars)")
-
-    for msg_index, message in enumerate(messages):
-        msg_kind_value = _get_attr_value(message, "kind")
-        msg_kind = msg_kind_value if msg_kind_value is not None else "unknown"
-        parts = _get_message_parts(message)
-        tool_calls = _get_message_tool_calls(message)
-        tool_call_ids = _collect_message_tool_call_ids(message)
-        tool_return_ids = _collect_message_tool_return_ids(message)
-
-        part_count = len(parts)
-        tool_call_count = len(tool_call_ids)
-        tool_return_count = len(tool_return_ids)
-
-        summary = (
-            f"history[{msg_index}] kind={msg_kind} "
-            f"parts={part_count} tool_calls={tool_call_count} "
-            f"tool_returns={tool_return_count}"
-        )
-        if tool_call_ids:
-            tool_call_sorted = sorted(tool_call_ids)
-            summary = f"{summary} tool_call_ids={tool_call_sorted}"
-        if tool_return_ids:
-            tool_return_sorted = sorted(tool_return_ids)
-            summary = f"{summary} tool_return_ids={tool_return_sorted}"
-        logger.debug(summary)
-
-        for part_index, part in enumerate(parts):
-            part_summary = _format_part_debug(part, DEBUG_HISTORY_PART_PREVIEW_LEN)
-            logger.debug(f"history[{msg_index}].part[{part_index}] {part_summary}")
-
-        for tool_index, tool_call in enumerate(tool_calls):
-            tool_summary = _format_tool_call_debug(tool_call, DEBUG_HISTORY_PART_PREVIEW_LEN)
-            logger.debug(f"history[{msg_index}].tool_calls[{tool_index}] {tool_summary}")
-
-
-def _filter_dangling_tool_calls_from_parts(
-    parts: list[Any],
-    dangling_tool_call_ids: set[ToolCallId],
-) -> tuple[list[Any], bool]:
-    """Remove dangling tool-call parts and return filtered parts."""
-    if not parts:
-        return parts, False
-
-    filtered_parts: list[Any] = []
-    removed_any = False
-
-    for part in parts:
-        part_kind = _get_attr_value(part, PART_KIND_ATTR)
-        if part_kind != PART_KIND_TOOL_CALL:
-            filtered_parts.append(part)
-            continue
-
-        tool_call_id = _get_attr_value(part, TOOL_CALL_ID_ATTR)
-        if tool_call_id is None:
-            filtered_parts.append(part)
-            continue
-
-        if tool_call_id in dangling_tool_call_ids:
-            removed_any = True
-            continue
-
-        filtered_parts.append(part)
-
-    return filtered_parts, removed_any
-
-
-def _filter_dangling_tool_calls_from_tool_calls(
-    tool_calls: list[Any],
-    dangling_tool_call_ids: set[ToolCallId],
-) -> tuple[list[Any], bool]:
-    """Remove dangling entries from tool_calls lists."""
-    if not tool_calls:
-        return tool_calls, False
-
-    filtered_tool_calls: list[Any] = []
-    removed_any = False
-
-    for tool_call in tool_calls:
-        tool_call_id = _get_attr_value(tool_call, TOOL_CALL_ID_ATTR)
-        if tool_call_id is None:
-            filtered_tool_calls.append(tool_call)
-            continue
-
-        if tool_call_id in dangling_tool_call_ids:
-            removed_any = True
-            continue
-
-        filtered_tool_calls.append(tool_call)
-
-    return filtered_tool_calls, removed_any
-
-
-def _strip_dangling_tool_calls_from_message(
-    message: Any,
-    dangling_tool_call_ids: set[ToolCallId],
-) -> tuple[bool, bool]:
-    """Remove dangling tool calls from a message and signal if it should be dropped."""
-    parts = _get_message_parts(message)
-    tool_calls = _get_message_tool_calls(message)
-
-    filtered_parts, removed_from_parts = _filter_dangling_tool_calls_from_parts(
-        parts,
-        dangling_tool_call_ids,
-    )
-    filtered_tool_calls, removed_from_tool_calls = _filter_dangling_tool_calls_from_tool_calls(
-        tool_calls,
-        dangling_tool_call_ids,
-    )
-
-    if removed_from_parts:
-        _set_message_parts(message, filtered_parts)
-    if removed_from_tool_calls:
-        _set_message_tool_calls(message, filtered_tool_calls)
-
-    removed_any = removed_from_parts or removed_from_tool_calls
-    should_drop = removed_any and not filtered_parts and not filtered_tool_calls
-    return removed_any, should_drop
-
-
-def _remove_dangling_tool_calls(
-    messages: list[Any],
-    tool_call_args_by_id: dict[ToolCallId, ToolArgs],
-    dangling_tool_call_ids: set[ToolCallId] | None = None,
-) -> bool:
-    """Remove tool calls that never received tool returns and clear cached args."""
-    if not messages:
-        return False
-
-    if dangling_tool_call_ids is None:
-        dangling_tool_call_ids = _find_dangling_tool_call_ids(messages)
-    if not dangling_tool_call_ids:
-        return False
-
-    removed_any = False
-    remaining_messages: list[Any] = []
-
-    for message in messages:
-        removed_from_message, should_drop = _strip_dangling_tool_calls_from_message(
-            message,
-            dangling_tool_call_ids,
-        )
-        if removed_from_message:
-            removed_any = True
-        if should_drop:
-            removed_any = True
-            continue
-        remaining_messages.append(message)
-
-    if removed_any:
-        messages[:] = remaining_messages
-        for tool_call_id in dangling_tool_call_ids:
-            tool_call_args_by_id.pop(tool_call_id, None)
-
-    return removed_any
+        if getattr(part, "part_kind", None) == "tool-call":
+            return True
+    # Check tool_calls attribute
+    tool_calls = getattr(message, "tool_calls", [])
+    return bool(tool_calls)
 
 
 def get_agent_tool() -> tuple[type[Agent], type[Tool]]:

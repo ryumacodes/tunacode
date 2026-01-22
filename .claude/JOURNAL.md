@@ -1,5 +1,96 @@
 # Claude Journal
 
+## 2026-01-21: pydantic-ai System Prompt Stripping Fix (Branch: resume-qa)
+
+### Problem
+Session resume hangs after user abort. Even with message cleanup (dangling tool calls, empty responses, consecutive requests), the stream would open but receive 0 events.
+
+### Root Cause Discovery
+**pydantic-ai v1.21.0+ automatically injects system prompts via `agent.iter()`.**
+
+When `message_history` from a previous session contains `system-prompt` parts, the model receives **duplicate system prompts**:
+1. System prompt from history (old)
+2. System prompt injected by agent (fresh)
+
+This causes models to hang or behave unpredictably.
+
+### Solution
+1. Added `_strip_system_prompt_parts()` - removes system-prompt parts from message history
+2. Updated `_sanitize_history_for_resume()` to strip system prompts before `agent.iter()`
+3. Added HTTP logging (`Network OUT:`/`Network IN:`) for visibility
+4. Added HTTP timeout (connect=10s, read=60s) to prevent infinite hangs
+
+### Verification
+Debug logs now show:
+- Before: `[0] request (2 parts)` with system-prompt + user-prompt
+- After: `[0] request (1 parts)` with only user-prompt
+
+### Key Insight
+The `Network OUT:` log confirmed requests ARE being sent. The hang was at the provider level (OpenRouter not responding), not message corruption. But the system prompt fix was still necessary to prevent duplicate prompts.
+
+### Files Modified
+- `src/tunacode/core/agents/main.py` - system prompt stripping
+- `src/tunacode/core/agents/agent_components/streaming.py` - line fixes
+- `src/tunacode/core/agents/agent_components/agent_config.py` - HTTP logging + timeout
+
+### Commit
+`c9b71bb` on branch `resume-qa`
+
+### References
+- Issue: #269
+- pydantic-ai issue #3503: message_history must start with user message (v1.21.0 breaking change)
+- Previous fix: ad53e0b (dangling tool calls, empty responses, consecutive requests)
+
+---
+
+## 2026-01-21: Resume Module Refactor (Branch: resume-qa)
+
+### Task
+Extract session resume logic from `main.py` into dedicated `resume/` module per plan doc.
+
+### Completed
+- Created `src/tunacode/core/agents/resume/` module:
+  - `__init__.py` - Public API (9 exports)
+  - `sanitize.py` - 7 cleanup functions + debug logging (672 lines)
+  - `prune.py` - Tool output pruning from compaction.py (179 lines)
+  - `summary.py` - Rolling summary generation (NEW, 203 lines)
+  - `filter.py` - filterCompacted equivalent (NEW, 61 lines)
+- Reduced main.py from ~1312 to ~740 lines
+- Deleted `src/tunacode/core/compaction.py`
+- Updated test imports
+- All 377 tests passing
+
+### Key Commits
+- `0f197d3` - rollback point
+- `4f300e3` - refactor: extract session resume logic into dedicated resume/ module
+
+### What Happens on Resume Now
+1. Cleanup loop: dangling tool calls -> empty responses -> consecutive requests
+2. Trailing request check (drop if sending new message)
+3. Prune old tool outputs (>40k tokens)
+4. Sanitize for pydantic-ai (strip system prompts, clear run_id)
+5. Continue with cleaned history
+
+### Follow-up Issue
+#271 - Integrate rolling summary compaction into request loop
+- Wire `should_compact()` trigger
+- Use `filter_compacted()` on resume
+- Add tests for new summary/filter functions
+
+### Architecture
+```
+src/tunacode/core/agents/
+├── resume/
+│   ├── __init__.py      # Public API
+│   ├── sanitize.py      # Cleanup functions
+│   ├── prune.py         # Tool output pruning
+│   ├── summary.py       # Rolling summaries (not yet wired)
+│   └── filter.py        # History truncation (not yet wired)
+└── main.py              # Imports from resume/
+```
+
+---
+
 ## 2026-01-07: Renderer Unification
 
 Unifying the 8 tool renderers in `src/tunacode/ui/renderers/tools/` to eliminate duplication via a shared base class and registry pattern.
