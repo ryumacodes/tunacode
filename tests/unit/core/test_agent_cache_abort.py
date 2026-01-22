@@ -74,7 +74,9 @@ def test_abort_should_invalidate_agent_cache(clean_caches, mock_state_manager):
     assert model not in _AGENT_CACHE, "Module cache should be cleared after abort"
     assert model not in _AGENT_CACHE_VERSION, "Module version cache should be cleared"
     assert model not in mock_state_manager.session.agents, "Session cache should be cleared"
-    assert model not in mock_state_manager.session.agent_versions, "Session version should be cleared"
+    assert model not in mock_state_manager.session.agent_versions, (
+        "Session version should be cleared"
+    )
 
 
 def test_invalidate_returns_false_when_not_cached(clean_caches, mock_state_manager):
