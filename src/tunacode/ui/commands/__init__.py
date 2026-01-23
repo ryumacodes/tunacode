@@ -70,14 +70,47 @@ class HelpCommand(Command):
 
 class ClearCommand(Command):
     name = "clear"
-    description = "Clear conversation history"
+    description = "Clear agent working state (UI, thoughts, todos)"
 
     async def execute(self, app: TextualReplApp, args: str) -> None:
+        session = app.state_manager.session
+
         app.rich_log.clear()
-        app.state_manager.session.messages = []
-        app.state_manager.session.total_tokens = 0
+
+        # PRESERVE messages - needed for /resume
+        # PRESERVE total_tokens - represents conversation size
+
+        session.thoughts = []
+        session.tool_calls = []
+        session.tool_call_args_by_id = {}
+        session.files_in_context = set()
+
+        app.state_manager.clear_react_scratchpad()
+        session.react_forced_calls = 0
+        session.react_guidance = []
+
+        app.state_manager.clear_todos()
+
+        session.iteration_count = 0
+        session.current_iteration = 0
+        session.consecutive_empty_responses = 0
+        session.batch_counter = 0
+
+        session.request_id = ""
+        session.original_query = ""
+        session.operation_cancelled = False
+
+        session._debug_events = []
+        session._debug_raw_stream_accum = ""
+
+        session.last_call_usage = {"prompt_tokens": 0, "completion_tokens": 0, "cost": 0.0}
+        # Keep session_total_usage - tracks lifetime session cost
+
+        app.state_manager.reset_recursive_state()
+
         app._update_resource_bar()
-        app.notify("Cleared conversation history")
+        app.notify("Cleared agent state (messages preserved for /resume)")
+        app.state_manager.save_session()
 
 
 class YoloCommand(Command):
