@@ -5,13 +5,19 @@ Global constants and configuration values for the TunaCode CLI application.
 Centralizes all magic strings, UI text, error messages, and application constants.
 """
 
+from __future__ import annotations
+
 from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from textual.theme import Theme
 
 KB = 1024
 MB = KB * 1024
 
 APP_NAME = "TunaCode"
-APP_VERSION = "0.1.43"
+APP_VERSION = "0.1.44"
 
 
 GUIDE_FILE_NAME = "AGENTS.md"
@@ -162,7 +168,7 @@ RICHLOG_CLASS_PAUSED = "paused"
 RICHLOG_CLASS_STREAMING = "streaming"
 
 
-def build_tunacode_theme():
+def build_tunacode_theme() -> Theme:
     """Build and return the TunaCode Textual theme.
 
     Uses UI_COLORS palette - high contrast neutral scheme.
@@ -190,7 +196,7 @@ def build_tunacode_theme():
     )
 
 
-def build_nextstep_theme():
+def build_nextstep_theme() -> Theme:
     """Build and return the NeXTSTEP Textual theme.
 
     Classic 1990s NeXTSTEP look - light gray background, black text,
