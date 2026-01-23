@@ -46,6 +46,96 @@ The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. T
 - Never use magic literals; symbolic constants are preferred.
 - ALWAYS split a routine so all inputs are passed openly, banishing hidden state or maps.
 
+## Naming Conventions
+
+Consistent naming improves readability and maintainability. These conventions are enforced by pre-commit hooks.
+
+### Files and Modules
+
+- **Files**: `snake_case.py`
+- **Packages**: `snake_case` directory names
+- **Special**: `__init__.py` is the only exception to snake_case
+
+Examples:
+```
+✅ read_file.py, agent_config.py, message_handler.py
+❌ ReadFile.py, agentConfig.py, messageHandler.py
+```
+
+### Functions and Methods
+
+- **Public functions/methods**: `snake_case`
+- **Private functions/methods**: `_snake_case` (single leading underscore)
+- **Dunder methods**: `__method__` (double underscore both sides)
+- **Parameters**: `snake_case`
+
+Examples:
+```python
+✅ def read_file(filepath: str) -> str:
+✅ def _format_line(line: str, max_width: int) -> str:
+✅ def __init__(self) -> None:
+
+❌ def ReadFile(filepath: str) -> str:
+❌ def formatLine(line: str, max_width: int) -> str:
+```
+
+### Classes and Types
+
+- **Classes**: `PascalCase`
+- **Type aliases**: `PascalCase`
+- **Enums**: `PascalCase` for the enum class, `UPPER_CASE` for members
+- **Private classes**: `_PascalCase` (single leading underscore)
+- **Generic type variables**: Single uppercase letter OK (`T`, `P`, `R`)
+
+Examples:
+```python
+✅ class AgentConfig:
+✅ class MessageHandler:
+✅ class _InternalState:
+✅ ModelName = str
+✅ FilePath = str | Path
+
+❌ class agent_config:
+❌ class messageHandler:
+❌ class Agent_Config:
+```
+
+### Constants and Variables
+
+- **Constants** (module-level, immutable values): `UPPER_CASE`
+- **Module-level variables**: `snake_case`
+- **Private module variables**: `_snake_case`
+- **Local variables**: `snake_case`
+
+Examples:
+```python
+✅ MAX_FILE_SIZE = 100 * 1024
+✅ DEFAULT_ENCODING = "utf-8"
+✅ READ_ONLY_TOOLS = ["read_file", "list_dir"]
+✅ _internal_cache: dict[str, Any] = {}
+
+❌ maxFileSize = 100 * 1024
+❌ DefaultEncoding = "utf-8"
+❌ ReadOnlyTools = ["read_file", "list_dir"]
+```
+
+### Pre-commit Hook
+
+The naming convention checker runs automatically on `git commit`. To run manually:
+
+```bash
+uv run python scripts/check-naming-conventions.py src/tunacode/**/*.py
+```
+
+Violations will block commits. Fix them before committing:
+
+```
+❌ Naming convention violations found:
+
+  src/tunacode/core/config.py:42: 'maxRetries' should be snake_case, not camelCase
+  src/tunacode/tools/helper.py:15: 'ProcessData' should be snake_case, not PascalCase
+```
+
 ## Error Handling
 
 - Fail fast, fail loud. No silent fallbacks. This is one of the most important rules to follow.

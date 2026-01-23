@@ -112,6 +112,14 @@ repos:
         pass_filenames: false
         always_run: true
 
+      # Check naming conventions
+      - id: naming-conventions
+        name: Check naming conventions
+        entry: uv run python scripts/check-naming-conventions.py
+        language: system
+        files: ^src/.*\.py$
+        exclude: ^(tests/|scripts/)
+
   # Import sorting with isort - DISABLED (ruff handles this with extend-select = ["I"])
   # - repo: https://github.com/pycqa/isort
   #   rev: 5.13.2
