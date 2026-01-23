@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/tunacode/tunacode/discussions
+    about: For general discussions, ideas, and community support
+  - name: Documentation
+    url: https://github.com/tunacode/tunacode/blob/master/README.md
+    about: Check out the documentation for setup and usage guides
