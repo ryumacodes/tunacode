@@ -1,7 +1,9 @@
 """Message handling utilities for agent communication."""
 
+from typing import Any
 
-def get_model_messages():
+
+def get_model_messages() -> tuple[Any, Any, Any]:
     """
     Safely retrieve message-related classes from pydantic_ai.
 
@@ -20,12 +22,14 @@ def get_model_messages():
     # Create minimal fallback for SystemPromptPart if it doesn't exist
     if not hasattr(messages, "SystemPromptPart"):
 
-        class SystemPromptPart:  # type: ignore
+        class SystemPromptPart:
             def __init__(self, content: str = "", role: str = "system", part_kind: str = ""):
                 self.content = content
                 self.role = role
                 self.part_kind = part_kind
-    else:
-        SystemPromptPart = messages.SystemPromptPart
 
-    return ModelRequest, ToolReturnPart, SystemPromptPart
+        system_prompt_part_cls: Any = SystemPromptPart
+    else:
+        system_prompt_part_cls = messages.SystemPromptPart
+
+    return ModelRequest, ToolReturnPart, system_prompt_part_cls

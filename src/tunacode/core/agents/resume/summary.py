@@ -127,7 +127,7 @@ def should_compact(messages: list[Any], model_name: str, local_mode: bool = Fals
 
 
 async def generate_summary(
-    agent: Agent,
+    agent: Agent[str],
     messages: list[Any],
     model_name: str,
     start_index: int = 0,
@@ -186,7 +186,7 @@ Summary:"""
     # Use agent to generate summary
     try:
         result = await agent.run(summary_prompt)
-        summary_text = str(result.data)
+        summary_text = str(result.output)
     except Exception as e:
         logger.warning(f"Summary generation failed: {e}")
         # Fallback to truncated content
