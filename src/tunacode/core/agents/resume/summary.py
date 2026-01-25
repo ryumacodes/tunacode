@@ -16,15 +16,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from tunacode.constants import LOCAL_SUMMARY_THRESHOLD, SUMMARY_THRESHOLD
 from tunacode.core.logging import get_logger
 from tunacode.utils.messaging import estimate_tokens
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
-
-# Summary generation threshold (tokens)
-SUMMARY_THRESHOLD: int = 40_000
-LOCAL_SUMMARY_THRESHOLD: int = 6_000
 
 # Summary marker for detection
 SUMMARY_MARKER: str = "[CONVERSATION_SUMMARY]"

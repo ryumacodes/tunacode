@@ -53,6 +53,9 @@ from . import agent_components as ac
 
 colors = DotDict(UI_COLORS)
 
+# Number of recent messages to retain after summary compaction
+RETAINED_MESSAGES_COUNT = 3
+
 __all__ = [
     "process_request",
     "get_agent_tool",
@@ -338,24 +341,29 @@ class RequestOrchestrator:
 
         logger.lifecycle("Token threshold exceeded, generating summary...")
 
-        end_index = max(0, len(session_messages) - 3)
-        if end_index < 2:
+        tail_start = max(0, len(session_messages) - RETAINED_MESSAGES_COUNT)
+        if tail_start < 2:
             return
+
+        # Save the tail before modifying
+        tail_messages = session_messages[tail_start:]
 
         summary = await generate_summary(
             agent,
             session_messages,
             self.model,
             start_index=0,
-            end_index=end_index,
+            end_index=tail_start,
         )
 
         summary_message = create_summary_request_message(summary)
-        session_messages.append(summary_message)
-        self.state_manager.session.update_token_count()
 
         # Store summary for ctrl+o viewing
         self.state_manager.session.last_summary = summary
+
+        # Replace messages: [summary] + [tail]
+        session_messages[:] = [summary_message] + tail_messages
+        self.state_manager.session.update_token_count()
 
         logger.lifecycle(f"Summary generated: {summary.token_count} tokens")
 

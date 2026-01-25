@@ -16,12 +16,10 @@ from tunacode.constants import (
     LOCAL_MAX_COMMAND_OUTPUT,
     LOCAL_MAX_FILES_IN_DIR,
     LOCAL_MAX_LINE_LENGTH,
+    LOCAL_SUMMARY_THRESHOLD,
     MAX_COMMAND_OUTPUT,
     MAX_FILES_IN_DIR,
     MAX_LINE_LENGTH,
-)
-from tunacode.core.agents.resume.summary import (
-    LOCAL_SUMMARY_THRESHOLD,
     SUMMARY_THRESHOLD,
 )
 
@@ -107,6 +105,12 @@ def is_rolling_summaries_enabled() -> bool:
 
 def get_summary_threshold() -> int:
     """Get token threshold for triggering summary generation."""
+    settings = _load_settings()
+
+    # Check for explicit local_summary_threshold when in local mode
+    if settings.get("local_mode", False) and "local_summary_threshold" in settings:
+        return int(settings["local_summary_threshold"])
+
     return _get_limit(
         "summary_threshold",
         SUMMARY_THRESHOLD,
