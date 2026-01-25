@@ -271,22 +271,6 @@ reviews:
           Functions should raise exceptions for invalid inputs, not return
           sentinel values like None, [], or {}.
 
-      - name: "MagicNumbers"
-        mode: "warning"
-        instructions: |
-          CLAUDE.md: "Never use magic literals; symbolic constants are preferred."
-
-          Flag numeric literals that should be named constants:
-          - Timeouts (e.g., `timeout=30` should be `timeout=DEFAULT_TIMEOUT`)
-          - Buffer sizes (e.g., `1024`, `4096`)
-          - Retry counts
-          - Token limits
-
-          Exceptions (don't flag):
-          - 0, 1, -1 in common idioms
-          - Line numbers in assertions
-          - Test data
-
   # Code generation features
   finishing_touches:
     docstrings:
