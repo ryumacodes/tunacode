@@ -144,25 +144,12 @@ class StateManager:
         """Load user configuration from file and merge with defaults."""
         from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
         from tunacode.configuration.models import get_model_context_window
-        from tunacode.utils.config import load_config
+        from tunacode.utils.config import load_config_with_defaults
 
-        # Load user config from file
-        user_config = load_config()
-        if user_config:
-            # Merge with defaults: user config takes precedence
-            merged_config = DEFAULT_USER_CONFIG.copy()
-            merged_config.update(user_config)
-
-            # Merge nested settings
-            if "settings" in user_config:
-                merged_config["settings"] = DEFAULT_USER_CONFIG["settings"].copy()
-                merged_config["settings"].update(user_config["settings"])
-
-            # Update session with merged configuration
-            self._session.user_config = merged_config
-        else:
-            # No user config file found, use defaults
-            self._session.user_config = DEFAULT_USER_CONFIG.copy()
+        # No config file - setup will be shown and replace this reference
+        default_user_config = DEFAULT_USER_CONFIG
+        merged_user_config = load_config_with_defaults(default_user_config)
+        self._session.user_config = merged_user_config
 
         # Update current_model to match the loaded user config
         if self._session.user_config.get("default_model"):
