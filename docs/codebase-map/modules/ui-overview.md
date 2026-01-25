@@ -51,11 +51,16 @@ Implements the terminal user interface using the Textual framework, following Ne
 Modal screens for specific workflows:
 - **ModelPickerScreen** - Model selection interface
 - **SessionPickerScreen** - Session load/save interface
-- **SetupScreen** - Initial configuration wizard
+- **SetupScreen** - Initial configuration wizard (auto-shown on first run when no config exists)
 - **ThemePickerScreen** - Theme selection
 - **UpdateConfirmScreen** - Tool change confirmation
 
 Each screen uses `app.push_screen()` / `app.dismiss()` pattern.
+
+**First-Run Behavior** (`main.py`):
+- `_config_exists()` checks for `~/.config/tunacode.json`
+- If no config file exists, SetupScreen is auto-pushed on mount
+- Setup creates a new config from `deepcopy(DEFAULT_USER_CONFIG)` with user's model/API key
 
 ### Renderer System (renderers/)
 

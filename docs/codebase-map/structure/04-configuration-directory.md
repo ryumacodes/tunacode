@@ -44,9 +44,7 @@ Configuration is loaded in priority order:
 Manages user preferences:
 ```python
 class Settings:
-    # API Configuration
-    api_key: str
-    base_url: str | None
+    # Model Configuration
     model: str
 
     # Behavior
@@ -56,12 +54,19 @@ class Settings:
 
     # UI Preferences
     theme: str
-    color_scheme: str
 
-    # Advanced
-    context_window: int
-    max_tokens: int
+    # Provider-Specific Settings
+    providers: {
+        "<provider_name>": {
+            "base_url": str | None  # Per-provider base URL override
+        }
+    }
 ```
+
+**Base URL Resolution** (in `agent_config.py`):
+1. Per-provider config: `settings.providers.<provider>.base_url`
+2. Registry default: `models_registry.json` → provider `api` field
+3. OpenAI escape hatch: `OPENAI_BASE_URL` env var (non-Anthropic only)
 
 **Settings Features**:
 - **Schema Validation**: Pydantic models validate settings

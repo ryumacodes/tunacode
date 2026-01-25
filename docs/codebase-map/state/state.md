@@ -170,7 +170,6 @@ DEFAULT_USER_CONFIG = {
 - Loads model metadata from `models_registry.json`
 - Provides:
   - `get_provider_env_var()`: Provider-specific environment variable names
-  - `get_provider_base_url()`: API base URLs
   - `get_model_context_window()`: Model context window sizes
 
 ### 3.2 Environment Variable Handling
@@ -183,8 +182,15 @@ def _create_model_with_retry(state_manager: StateManager):
     # Retrieves API keys from user_config["env"]
     api_keys = state_manager.session.user_config.get("env", {})
 
-    # Resolves API base URLs: OS env > user config > settings
-    base_url = os.getenv("ENV_OPENAI_BASE_URL") or settings.base_url
+    # Resolves base_url: per-provider config > registry default
+    provider_settings = settings.get("providers", {}).get(provider_name, {})
+    base_url = provider_settings.get("base_url") or registry_config.api
+
+    # For OpenAI-compatible providers: OPENAI_BASE_URL as escape hatch
+    if provider_name != "anthropic":
+        env_base_url = env.get("OPENAI_BASE_URL")
+        if env_base_url:
+            base_url = env_base_url
 ```
 
 **Tool Execution:**
