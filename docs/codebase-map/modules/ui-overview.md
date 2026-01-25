@@ -51,11 +51,16 @@ Implements the terminal user interface using the Textual framework, following Ne
 Modal screens for specific workflows:
 - **ModelPickerScreen** - Model selection interface
 - **SessionPickerScreen** - Session load/save interface
-- **SetupScreen** - Initial configuration wizard
+- **SetupScreen** - Initial configuration wizard (auto-shown on first run when no config exists)
 - **ThemePickerScreen** - Theme selection
 - **UpdateConfirmScreen** - Tool change confirmation
 
 Each screen uses `app.push_screen()` / `app.dismiss()` pattern.
+
+**First-Run Behavior** (`main.py`):
+- `_config_exists()` checks for `~/.config/tunacode.json`
+- If no config file exists, SetupScreen is auto-pushed on mount
+- Setup creates a new config from `deepcopy(DEFAULT_USER_CONFIG)` with user's model/API key
 
 ### Renderer System (renderers/)
 
@@ -123,7 +128,7 @@ REPL command implementations:
 - **ClearCommand** - `/clear` - Clear agent working state (UI, thoughts, todos) - messages preserved for /resume
 - **YoloCommand** - `/yolo` - Toggle auto-confirm for tool executions
 - **DebugCommand** - `/debug` - Toggle debug logging to screen (logs to ~/.local/share/tunacode/logs/)
-- **ModelCommand** - `/model` - Open model picker or switch directly
+- **ModelCommand** - `/model` - Reload config, then open model picker or switch directly (invalidates agent cache)
 - **BranchCommand** - `/branch` - Create conversation branch
 - **PlanCommand** - `/plan` - Toggle plan mode
 - **ThemeCommand** - `/theme` - Switch UI theme

@@ -635,9 +635,8 @@ class RequestOrchestrator:
                 return ac.AgentRunWithState(run_handle, response_state)
 
         except (UserAbortError, asyncio.CancelledError):
-            if agent_run is not None:
-                self._persist_run_messages(agent_run, baseline_message_count)
-            # Clean up dangling tool calls to prevent API errors on next request
+            # DON'T persist agent_run messages - they contain the dangling tool call
+            # Just clean up what's already in session.messages
             cleanup_applied = remove_dangling_tool_calls(
                 self.state_manager.session.messages,
                 self.state_manager.session.tool_call_args_by_id,
@@ -685,15 +684,30 @@ async def _finalize_buffered_tasks(
 
 
 def _message_has_tool_calls(message: Any) -> bool:
-    """Return True if message is a model response containing tool calls."""
-    # Check parts for tool-call part_kind
-    parts = getattr(message, "parts", [])
+    """Return True if message contains tool calls in parts or metadata.
+
+    Handles both pydantic-ai message objects and raw dicts (from failed deserialization).
+    """
+    # Handle both object and dict forms (dicts occur when deserialization fails)
+    if isinstance(message, dict):
+        parts = message.get("parts", [])
+        tool_calls = message.get("tool_calls", [])
+    else:
+        parts = getattr(message, "parts", [])
+        tool_calls = getattr(message, "tool_calls", [])
+
+    if tool_calls:
+        return True
+
     for part in parts:
-        if getattr(part, "part_kind", None) == "tool-call":
+        if isinstance(part, dict):
+            part_kind = part.get("part_kind")
+        else:
+            part_kind = getattr(part, "part_kind", None)
+        if part_kind == "tool-call":
             return True
-    # Check tool_calls attribute
-    tool_calls = getattr(message, "tool_calls", [])
-    return bool(tool_calls)
+
+    return False
 
 
 def get_agent_tool() -> tuple[type[Agent], type[Tool]]:
