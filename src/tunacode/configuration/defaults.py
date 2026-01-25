@@ -41,5 +41,8 @@ DEFAULT_USER_CONFIG: UserConfig = {
             "timeout": 5.0,
             "max_diagnostics": 20,
         },
+        "enable_rolling_summaries": False,
+        "summary_threshold": 40000,
+        "local_summary_threshold": 6000,
     },
 }
