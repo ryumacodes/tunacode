@@ -1,4 +1,4 @@
-"""Utilities for formatting and truncating LSP diagnostics."""
+"""Shared formatting helpers."""
 
 from __future__ import annotations
 

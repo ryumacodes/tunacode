@@ -58,6 +58,7 @@ The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. T
 - Enforce `ruff check --fix .` before PRs.
 - Use explicit typing. `cast(...)` and `assert ...` are OK.
 - `# type: ignore` only with strong justification.
+- **Mypy Status (2026-01-26):** 58 errors in 19 files. These will be resolved after Gate 2 (dependency direction) work completes. Use `git commit -n` to bypass pre-commit hooks if blocked. Do NOT introduce new type errors.
 - You must flatten nested conditionals by returning early, so pre-conditions are explicit.
 - If it is never executed, remove it. You MUST make sure what we remove has been committed before in case we need to rollback.
 - Normalize symmetries: you must make identical things look identical and different things look different for faster pattern-spotting.
@@ -279,12 +280,27 @@ ui → core → tools → utils/types
 infrastructure (filesystem, shell, network)
 ```
 
+**Dependency Map:** `docs/architecture/DEPENDENCY_MAP.md`
+
+The current dependency graph is frozen as a baseline (2026-01-26). **DO NOT add new cross-layer violations.**
+
+- If you fix one violation but create another, that's not progress
+- UI should only push into CORE, not scatter imports everywhere
+- Keep it as clean as possible - we're actively cleaning this up
+- Verify with grimp: `uv run python -c "import grimp; g = grimp.build_graph('tunacode'); ..."`
+
+**Utils-level modules** (can be imported by any layer):
+- `utils/` - helper functions, no business logic
+- `types/` - type definitions, no behavior
+- `configuration/` - read-only static data (models, providers, defaults)
+- `constants.py` - module-level constants
+
 **Rules:**
 
 - Inner layers know nothing about outer layers
   - core/ never imports from ui/
   - tools/ never imports from ui/
-  - utils/ and types/ import from nothing
+  - utils/, types/, configuration/ import from nothing (except each other)
 - Infrastructure is a plugin
   - Filesystem, shell, network = details
   - Core logic doesn't know or care which system provider

@@ -11,10 +11,11 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.types import (
+    AuthorizationToolHandlerProtocol,
     ConversationState,
     InputSessions,
     ModelName,
@@ -32,7 +33,7 @@ from tunacode.types.canonical import UsageMetrics
 from tunacode.utils.messaging import estimate_tokens, get_content
 
 if TYPE_CHECKING:
-    from tunacode.tools.authorization.handler import ToolHandler
+    from tunacode.core.indexing_service import IndexingService
 
 
 ERROR_SESSION_TODOS_NOT_LIST = "Session todos must be a list, got {todo_type}"
@@ -113,7 +114,8 @@ class StateManager:
 
     def __init__(self) -> None:
         self._session = SessionState()
-        self._tool_handler: ToolHandler | None = None
+        self._tool_handler: AuthorizationToolHandlerProtocol | None = None
+        self._indexing_service: IndexingService | None = None
         self._load_user_configuration()
 
     def _load_user_configuration(self) -> None:
@@ -157,11 +159,26 @@ class StateManager:
         return self._session.usage
 
     @property
-    def tool_handler(self) -> Optional["ToolHandler"]:
+    def tool_handler(self) -> AuthorizationToolHandlerProtocol:
+        """Get or create the tool handler (lazy initialization)."""
+        if self._tool_handler is None:
+            from tunacode.tools.authorization.handler import ToolHandler
+
+            self._tool_handler = ToolHandler(self)
         return self._tool_handler
 
-    def set_tool_handler(self, handler: "ToolHandler") -> None:
+    def set_tool_handler(self, handler: AuthorizationToolHandlerProtocol) -> None:
+        """Set a custom tool handler (useful for testing)."""
         self._tool_handler = handler
+
+    @property
+    def indexing_service(self) -> "IndexingService":
+        """Get or create the indexing service (lazy initialization)."""
+        if self._indexing_service is None:
+            from tunacode.core.indexing_service import IndexingService
+
+            self._indexing_service = IndexingService()
+        return self._indexing_service
 
     def push_recursive_context(self, context: dict[str, Any]) -> None:
         """Push a new context onto the recursive execution stack."""

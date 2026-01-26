@@ -44,6 +44,7 @@ The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. T
 - Enforce `ruff check --fix .` before PRs.
 - Use explicit typing. `cast(...)` and `assert ...` are OK.
 - `# type: ignore` only with strong justification.
+- **Mypy Status (2026-01-26):** 58 errors in 19 files. These will be resolved after Gate 2 (dependency direction) work completes. Use `git commit -n` to bypass pre-commit hooks if blocked. Do NOT introduce new type errors.
 - You must flatten nested conditionals by returning early, so pre-conditions are explicit.
 - If it is never executed, remove it. You MUST make sure what we remove has been committed before in case we need to rollback.
 - Normalize symmetries: you must make identical things look identical and different things look different for faster pattern-spotting.
@@ -265,12 +266,26 @@ ui → core → tools → utils/types
 infrastructure (filesystem, shell, network)
 ```
 
+**Dependency Map:** `docs/architecture/DEPENDENCY_MAP.md`
+
+The current dependency graph is frozen as a baseline. **DO NOT add new cross-layer violations.**
+
+- If you fix one violation but create another, that's not progress
+- UI should only push into CORE, not scatter imports everywhere
+- Verify with grimp before committing: `uv run python -c "import grimp; ..."`
+
+**Utils-level modules** (can be imported by any layer):
+- `utils/` - helper functions
+- `types/` - type definitions
+- `configuration/` - static config data
+- `constants.py` - module constants
+
 **Rules:**
 
 - Inner layers know nothing about outer layers
   - core/ never imports from ui/
   - tools/ never imports from ui/
-  - utils/ and types/ import from nothing
+  - utils/, types/, configuration/ import only from each other
 - Infrastructure is a plugin
   - Filesystem, shell, network = details
   - Core logic doesn't know or care which system provider
