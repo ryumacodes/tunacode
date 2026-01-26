@@ -75,7 +75,6 @@ from tunacode.ui.widgets import (
 
 # Throttle streaming display updates to reduce visual churn
 STREAM_THROTTLE_MS: float = 100.0
-DEFAULT_COMPLETION_TOKENS = 0
 
 
 class TextualReplApp(App[None]):
@@ -255,8 +254,7 @@ class TextualReplApp(App[None]):
 
                 duration_ms = (time.monotonic() - self._request_start_time) * 1000
                 session = self.state_manager.session
-                usage = session.usage.last_call_usage or {}
-                tokens = int(usage.get("completion_tokens", DEFAULT_COMPLETION_TOKENS))
+                tokens = session.usage.last_call_usage.completion_tokens
                 model = session.current_model or ""
 
                 panel = render_agent_response(
@@ -471,7 +469,7 @@ class TextualReplApp(App[None]):
             model=session.current_model or "No model selected",
             tokens=context_tokens,
             max_tokens=conversation.max_tokens or 200000,
-            session_cost=usage.get("cost", 0.0),
+            session_cost=usage.cost,
         )
 
         # Sync status bar mode indicator with session state
