@@ -8,49 +8,14 @@ from textual.widgets import Static
 from tunacode.constants import RESOURCE_BAR_COST_FORMAT, RESOURCE_BAR_SEPARATOR
 from tunacode.types import UserConfig
 
+from tunacode.core.lsp_status import get_lsp_status
+
 from tunacode.ui.styles import (
     STYLE_ERROR,
     STYLE_MUTED,
     STYLE_SUCCESS,
     STYLE_WARNING,
 )
-
-
-def _check_lsp_status(user_config: UserConfig) -> tuple[bool, str | None]:
-    """Check LSP configuration and server availability.
-
-    Returns:
-        Tuple of (is_enabled, server_name_or_none)
-    """
-    from pathlib import Path
-
-    from tunacode.lsp.servers import get_server_command
-
-    settings = user_config.get("settings", {})
-    lsp_config = settings.get("lsp", {})
-    is_enabled = lsp_config.get("enabled", False)
-
-    if not is_enabled:
-        return False, None
-
-    # Check what server would actually be used for a .py file
-    # This reflects the real LSP config, not just what's installed
-    command = get_server_command(Path("test.py"))
-    if command:
-        # Extract server name from command (e.g., "ruff" from ["ruff", "server", "--stdio"])
-        binary = command[0]
-        # Friendly name mapping
-        name_map = {
-            "ruff": "ruff",
-            "pyright-langserver": "pyright",
-            "pylsp": "pylsp",
-            "typescript-language-server": "tsserver",
-            "gopls": "gopls",
-            "rust-analyzer": "rust-analyzer",
-        }
-        return True, name_map.get(binary, binary)
-
-    return True, None
 
 
 class ResourceBar(Static):
@@ -75,7 +40,7 @@ class ResourceBar(Static):
         if user_config is None:
             return
 
-        self._lsp_enabled, self._lsp_server = _check_lsp_status(user_config)
+        self._lsp_enabled, self._lsp_server = get_lsp_status(user_config)
 
     def _get_user_config(self) -> UserConfig | None:
         app = getattr(self, "app", None)

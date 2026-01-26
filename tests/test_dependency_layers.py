@@ -62,9 +62,7 @@ def find_violations() -> list[tuple[str, str, str, str]]:
 
 
 # Known violations we're actively fixing (baseline frozen 2026-01-26)
-KNOWN_VIOLATIONS = {
-    ("ui", "lsp", "tunacode.ui.widgets.resource_bar", "tunacode.lsp.servers"),
-}
+KNOWN_VIOLATIONS: set[tuple[str, str, str, str]] = set()
 
 
 def test_no_new_layer_violations():

@@ -86,6 +86,10 @@ Aggregates authorization rules:
 **requests.py** - ToolConfirmationRequest/Response
 - Data structures for confirmation flow
 
+**lsp_status.py** - LSP status helper
+- Derives enabled/server name from config and installed binaries
+- Used by core LSP facade for UI display
+
 ## Tool Implementations
 
 ### bash.py

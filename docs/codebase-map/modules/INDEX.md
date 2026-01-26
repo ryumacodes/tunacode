@@ -30,6 +30,7 @@ Each module file includes:
 - **[core-compaction.md](./core-compaction.md)** - Context window management (prune_old_tool_outputs)
 - **[core-logging.md](./core-logging.md)** - Unified structured logging (LogManager, LogRecord, FileHandler)
 - **[core-sanitize.md](./core-sanitize.md)** - Message history cleanup (run_cleanup_loop, remove_dangling_tool_calls)
+- **[core-lsp-status.md](./core-lsp-status.md)** - UI-facing LSP status facade (get_lsp_status)
 
 ### UI Module
 - **[ui-overview.md](./ui-overview.md)** - Textual TUI interface (TextualReplApp, screens, renderers)
@@ -93,6 +94,7 @@ src/tunacode/
 │   ├── prompting/ → core-prompting.md
 │   ├── state.py → core-state.md
 │   ├── compaction.py → core-compaction.md
+│   ├── lsp_status.py → core-lsp-status.md
 ├── ui/ → ui-overview.md
 ├── tools/ → tools-overview.md
 ├── configuration/ → configuration.md
