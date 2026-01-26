@@ -14,8 +14,6 @@ from tunacode.types.canonical import (
     SystemPromptPart,
     TextPart,
     ThoughtPart,
-    TodoItem,
-    TodoStatus,
     ToolCallPart,
     ToolCallStatus,
     ToolReturnPart,
@@ -202,63 +200,6 @@ class TestCanonicalToolCall:
             error="something went wrong",
         )
         assert failed.is_complete
-
-
-class TestTodoItem:
-    """Tests for TodoItem."""
-
-    def test_todo_item_creation(self) -> None:
-        item = TodoItem(
-            content="Write tests",
-            status=TodoStatus.PENDING,
-            active_form="Writing tests",
-        )
-        assert item.content == "Write tests"
-        assert item.status == TodoStatus.PENDING
-        assert item.active_form == "Writing tests"
-
-    def test_todo_item_from_dict(self) -> None:
-        data = {
-            "content": "Fix bug",
-            "status": "in_progress",
-            "activeForm": "Fixing bug",
-        }
-        item = TodoItem.from_dict(data)
-        assert item.content == "Fix bug"
-        assert item.status == TodoStatus.IN_PROGRESS
-        assert item.active_form == "Fixing bug"
-
-    def test_todo_item_from_dict_snake_case(self) -> None:
-        data = {
-            "content": "Review PR",
-            "status": "completed",
-            "active_form": "Reviewing PR",
-        }
-        item = TodoItem.from_dict(data)
-        assert item.active_form == "Reviewing PR"
-
-    def test_todo_item_to_dict(self) -> None:
-        item = TodoItem(
-            content="Deploy",
-            status=TodoStatus.COMPLETED,
-            active_form="Deploying",
-        )
-        result = item.to_dict()
-        assert result == {
-            "content": "Deploy",
-            "status": "completed",
-            "activeForm": "Deploying",
-        }
-
-    def test_todo_item_round_trip(self) -> None:
-        original = TodoItem(
-            content="Test round trip",
-            status=TodoStatus.IN_PROGRESS,
-            active_form="Testing round trip",
-        )
-        as_dict = original.to_dict()
-        restored = TodoItem.from_dict(as_dict)
-        assert restored == original
 
 
 class TestUsageMetrics:

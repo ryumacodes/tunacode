@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from tunacode.types.canonical import TodoItem, UsageMetrics
+from tunacode.types.canonical import UsageMetrics
 from tunacode.types.pydantic_ai import MessageHistory
 from tunacode.types.tool_registry import ToolCallRegistry
 
@@ -32,9 +32,8 @@ class ConversationState:
 
 @dataclass(slots=True)
 class TaskState:
-    """Todo state and original task context."""
+    """Original task context."""
 
-    todos: list[TodoItem] = field(default_factory=list)
     original_query: str = DEFAULT_ORIGINAL_QUERY
 
 

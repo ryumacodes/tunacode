@@ -71,8 +71,6 @@ from tunacode.types.canonical import (
     SystemPromptPart,
     TextPart,
     ThoughtPart,
-    TodoItem,
-    TodoStatus,
     ToolCallStatus,
     UsageMetrics,
 )
@@ -120,7 +118,6 @@ from tunacode.types.state import (
     SessionStateProtocol,
     StateManagerProtocol,
     TemplateProtocol,
-    TodoProtocol,
 )
 from tunacode.types.state_structures import (
     ConversationState,
@@ -197,7 +194,6 @@ __all__ = [
     "PlanApprovalProtocol",
     "PlanSessionProtocol",
     "TemplateProtocol",
-    "TodoProtocol",
     "ConversationState",
     "RuntimeState",
     "TaskState",
@@ -227,8 +223,6 @@ __all__ = [
     "SystemPromptPart",
     "TextPart",
     "ThoughtPart",
-    "TodoItem",
-    "TodoStatus",
     "ToolCallStatus",
     "UsageMetrics",
 ]

@@ -71,7 +71,7 @@ class HelpCommand(Command):
 
 class ClearCommand(Command):
     name = "clear"
-    description = "Clear agent working state (UI, thoughts, todos)"
+    description = "Clear agent working state (UI, thoughts)"
 
     async def execute(self, app: TextualReplApp, args: str) -> None:
         session = app.state_manager.session
@@ -84,8 +84,6 @@ class ClearCommand(Command):
         session.conversation.thoughts = []
         session.runtime.tool_registry.clear()
         session.conversation.files_in_context = set()
-
-        app.state_manager.clear_todos()
 
         session.runtime.iteration_count = 0
         session.runtime.current_iteration = 0

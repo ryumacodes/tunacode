@@ -23,7 +23,6 @@ from tunacode.types import (
     RuntimeState,
     SessionId,
     TaskState,
-    TodoItem,
     ToolName,
     ToolProgressCallback,
     UsageState,
@@ -34,12 +33,6 @@ from tunacode.utils.messaging import estimate_tokens, get_content
 
 if TYPE_CHECKING:
     from tunacode.core.indexing_service import IndexingService
-
-
-ERROR_SESSION_TODOS_NOT_LIST = "Session todos must be a list, got {todo_type}"
-ERROR_SESSION_TODO_ITEM_NOT_DICT = (
-    "Session todo entry at index {index} must be a dict, got {item_type}"
-)
 
 
 @dataclass
@@ -65,7 +58,6 @@ class SessionState:
     undo_initialized: bool = False
     show_thoughts: bool = False
     conversation: ConversationState = field(default_factory=ConversationState)
-    # CLAUDE_ANCHOR[todos]: Session todo list for task tracking
     task: TaskState = field(default_factory=TaskState)
     runtime: RuntimeState = field(default_factory=RuntimeState)
     usage: UsageState = field(default_factory=UsageState)
@@ -214,19 +206,6 @@ class StateManager:
         self._session.iteration_budgets.clear()
         self._session.recursive_context_stack.clear()
 
-    # Todo list helpers
-    def get_todos(self) -> list[TodoItem]:
-        """Return the current todo list."""
-        return self._session.task.todos
-
-    def set_todos(self, todos: list[TodoItem]) -> None:
-        """Replace the entire todo list."""
-        self._session.task.todos = todos
-
-    def clear_todos(self) -> None:
-        """Clear the todo list."""
-        self._session.task.todos = []
-
     def reset_session(self) -> None:
         """Reset the session to a fresh state."""
         self._session = SessionState()
@@ -307,30 +286,6 @@ class StateManager:
 
         return thoughts, cleaned_messages
 
-    def _serialize_todos(self) -> list[dict[str, Any]]:
-        """Serialize todo items to legacy dict format."""
-        todos = self._session.task.todos
-        serialized: list[dict[str, Any]] = []
-        for todo in todos:
-            serialized.append(todo.to_dict())
-        return serialized
-
-    def _deserialize_todos(self, todos: Any) -> list[TodoItem]:
-        """Deserialize todo items from legacy dict format."""
-        if not isinstance(todos, list):
-            todo_type = type(todos).__name__
-            raise TypeError(ERROR_SESSION_TODOS_NOT_LIST.format(todo_type=todo_type))
-
-        todo_items: list[TodoItem] = []
-        for index, todo in enumerate(todos):
-            if not isinstance(todo, dict):
-                item_type = type(todo).__name__
-                raise TypeError(
-                    ERROR_SESSION_TODO_ITEM_NOT_DICT.format(index=index, item_type=item_type)
-                )
-            todo_items.append(TodoItem.from_dict(todo))
-        return todo_items
-
     def save_session(self) -> bool:
         """Save current session to disk."""
         if not self._session.project_id:
@@ -351,7 +306,6 @@ class StateManager:
             "session_total_usage": self._session.usage.session_total_usage.to_dict(),
             "tool_ignore": self._session.tool_ignore,
             "yolo": self._session.yolo,
-            "todos": self._serialize_todos(),
             "thoughts": self._session.conversation.thoughts,
             "messages": self._serialize_messages(),
         }
@@ -403,9 +357,6 @@ class StateManager:
             tool_ignore = data.get("tool_ignore", [])
             self._session.tool_ignore = tool_ignore
             self._session.yolo = data.get("yolo", False)
-            todos_data = data.get("todos", [])
-            deserialized_todos = self._deserialize_todos(todos_data)
-            self._session.task.todos = deserialized_todos
             loaded_messages = self._deserialize_messages(data.get("messages", []))
             stored_thoughts = data.get("thoughts") or []
             extracted_thoughts, cleaned_messages = self._split_thought_messages(loaded_messages)

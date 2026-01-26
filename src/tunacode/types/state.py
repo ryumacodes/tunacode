@@ -7,7 +7,6 @@ creating circular imports with the concrete implementation.
 from typing import TYPE_CHECKING, Any, Protocol
 
 from tunacode.types.base import ToolArgs, ToolName
-from tunacode.types.canonical import TodoItem
 from tunacode.types.state_structures import (
     ConversationState,
     RuntimeState,
@@ -18,22 +17,6 @@ from tunacode.types.state_structures import (
 if TYPE_CHECKING:
     from tunacode.types.callbacks import PlanApprovalCallback, ToolProgressCallback
     from tunacode.types.dataclasses import ToolConfirmationRequest, ToolConfirmationResponse
-
-
-class TodoProtocol(Protocol):
-    """Protocol for todo tools to read/write todo state."""
-
-    def get_todos(self) -> list[TodoItem]:
-        """Get the current todo list."""
-        ...
-
-    def set_todos(self, todos: list[TodoItem]) -> None:
-        """Replace the entire todo list."""
-        ...
-
-    def clear_todos(self) -> None:
-        """Clear the todo list."""
-        ...
 
 
 class PlanSessionProtocol(Protocol):
@@ -129,7 +112,7 @@ class SessionStateProtocol(PlanSessionProtocol, AuthorizationSessionProtocol, Pr
     working_directory: str
 
 
-class StateManagerProtocol(TodoProtocol, PlanApprovalProtocol, AuthorizationProtocol, Protocol):
+class StateManagerProtocol(PlanApprovalProtocol, AuthorizationProtocol, Protocol):
     """Protocol defining the StateManager interface.
 
     This protocol enables type-safe references to StateManager without
@@ -210,5 +193,4 @@ __all__ = [
     "SessionStateProtocol",
     "StateManagerProtocol",
     "TemplateProtocol",
-    "TodoProtocol",
 ]

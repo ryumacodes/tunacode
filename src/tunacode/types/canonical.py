@@ -175,50 +175,6 @@ class CanonicalToolCall:
 
 
 # =============================================================================
-# Todo Types
-# =============================================================================
-# These replace todos: list[dict[str, Any]]
-
-
-class TodoStatus(Enum):
-    """Status of a todo item."""
-
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-
-
-@dataclass(frozen=True, slots=True)
-class TodoItem:
-    """Typed todo item.
-
-    Replaces ad-hoc dicts like {"content": "...", "status": "...", "activeForm": "..."}
-    """
-
-    content: str
-    status: TodoStatus
-    active_form: str
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "TodoItem":
-        """Convert from legacy dict format."""
-        status_str = data.get("status", "pending")
-        return cls(
-            content=data.get("content", ""),
-            status=TodoStatus(status_str),
-            active_form=data.get("activeForm", data.get("active_form", "")),
-        )
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to legacy dict format for backward compatibility."""
-        return {
-            "content": self.content,
-            "status": self.status.value,
-            "activeForm": self.active_form,
-        }
-
-
-# =============================================================================
 # Usage Types
 # =============================================================================
 # These complement existing TokenUsage/CostBreakdown in dataclasses.py
@@ -307,9 +263,6 @@ __all__ = [
     # Tool call types
     "ToolCallStatus",
     "CanonicalToolCall",
-    # Todo types
-    "TodoStatus",
-    "TodoItem",
     # Usage types
     "UsageMetrics",
     # Recursive context types
