@@ -11,9 +11,9 @@ LAYERS = ["ui", "core", "tools", "indexing", "lsp", "templates"]
 UTILS_LEVEL = ["utils", "types", "configuration", "constants", "exceptions"]
 
 # What each layer is allowed to import (besides utils-level)
-# UI should NOT import core directly - we're fixing this
+# UI may only import core directly
 ALLOWED_IMPORTS = {
-    "ui": set(),  # UI must go through proper interfaces
+    "ui": {"core"},
     "core": {"tools", "indexing"},
     "tools": {"indexing", "lsp", "templates"},
     "indexing": set(),
@@ -35,6 +35,8 @@ def get_layer(module: str) -> str | None:
 
 def is_valid_import(from_layer: str, to_layer: str) -> bool:
     """Check if import direction is valid."""
+    if from_layer == "ui":
+        return to_layer in {"ui", "core"}
     if to_layer in UTILS_LEVEL:
         return True
     if from_layer == to_layer:
@@ -63,19 +65,7 @@ def find_violations() -> list[tuple[str, str, str, str]]:
 
 
 # Known violations we're actively fixing (baseline frozen 2026-01-26)
-# UI should not import core directly - these need facades/interfaces
-KNOWN_VIOLATIONS: set[tuple[str, str, str, str]] = {
-    ("ui", "core", "tunacode.ui.app", "tunacode.core.agents.main"),
-    ("ui", "core", "tunacode.ui.app", "tunacode.core.logging"),
-    ("ui", "core", "tunacode.ui.app", "tunacode.core.state"),
-    ("ui", "core", "tunacode.ui.commands", "tunacode.core.agents.agent_components.agent_config"),
-    ("ui", "core", "tunacode.ui.commands", "tunacode.core.logging"),
-    ("ui", "core", "tunacode.ui.main", "tunacode.core.agents.main"),
-    ("ui", "core", "tunacode.ui.main", "tunacode.core.state"),
-    ("ui", "core", "tunacode.ui.repl_support", "tunacode.core.state"),
-    ("ui", "core", "tunacode.ui.screens.setup", "tunacode.core.state"),
-    ("ui", "core", "tunacode.ui.widgets.resource_bar", "tunacode.core.lsp_status"),
-}
+KNOWN_VIOLATIONS: set[tuple[str, str, str, str]] = set()
 
 
 def test_no_new_layer_violations():
