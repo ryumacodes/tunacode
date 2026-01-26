@@ -27,21 +27,45 @@ constants   ┘
 
 | From | To | Count | Status |
 |------|----|-------|--------|
-| ui → core | 9 | ✅ valid |
-| ui → utils-level | 49 | ✅ valid |
-| core → tools | 18 | ✅ valid |
+| configuration → constants | 3 | ✅ valid |
+| configuration → types | 3 | ✅ valid |
+| core → configuration | 4 | ✅ valid |
+| core → constants | 4 | ✅ valid |
+| core → exceptions | 3 | ✅ valid |
 | core → indexing | 2 | ✅ valid |
-| core → utils-level | 43 | ✅ valid |
-| tools → indexing | 1 | ✅ valid |
-| tools → lsp | 1 | ✅ valid |
-| tools → templates | 2 | ✅ valid |
-| tools → utils-level | 19 | ✅ valid |
+| core → tools | 18 | ✅ valid |
+| core → types | 22 | ✅ valid |
+| core → utils | 13 | ✅ valid |
+| exceptions → types | 1 | ✅ valid |
 | indexing → utils | 1 | ✅ valid |
 | lsp → utils | 1 | ✅ valid |
+| tools → configuration | 2 | ✅ valid |
+| tools → constants | 5 | ✅ valid |
+| tools → exceptions | 3 | ✅ valid |
+| tools → indexing | 1 | ✅ valid |
+| tools → lsp | 1 | ✅ valid |
+| tools → templates | 1 | ✅ valid |
+| tools → types | 8 | ✅ valid |
+| tools → utils | 4 | ✅ valid |
+| ui → configuration | 8 | ✅ valid |
+| ui → constants | 24 | ✅ valid |
+| ui → core | 9 | ✅ valid |
+| ui → exceptions | 2 | ✅ valid |
+| ui → types | 6 | ✅ valid |
+| ui → utils | 11 | ✅ valid |
+| utils → configuration | 2 | ✅ valid |
+| utils → constants | 6 | ✅ valid |
+| utils → exceptions | 2 | ✅ valid |
+| utils → types | 4 | ✅ valid |
+| ui → lsp | 1 | ❌ violation |
 
 ### Violations
 
-**None.** All dependencies flow in valid directions.
+**1 violations found.** UI must not import directly from tools/lsp.
+
+| From Layer | To Layer | Importer | Imported |
+|------------|----------|----------|----------|
+| ui | lsp | `ui.widgets.resource_bar` | `lsp.servers` |
 
 ## Rules
 
@@ -52,36 +76,19 @@ constants   ┘
 ## Verification
 
 ```bash
-uv run python -c "
-import grimp
-g = grimp.build_graph('tunacode')
-layers = (
-    grimp.Layer('ui'),
-    grimp.Layer('core'),
-    grimp.Layer('tools'),
-    grimp.Layer('indexing'),
-    grimp.Layer('lsp'),
-    grimp.Layer('templates'),
-    grimp.Layer('utils'),
-    grimp.Layer('configuration'),
-    grimp.Layer('types'),
-)
-violations = g.find_illegal_dependencies_for_layers(layers=layers, containers={'tunacode'})
-print('Violations:', len(violations))
-for v in violations:
-    print(f'  {v.importer} -> {v.imported}')
-"
+uv run python scripts/generate-dependency-map.py
 ```
 
 ## UI Layer Detail
 
 Starting point for clean mapping. The UI layer imports:
 
-- **core (9)**: Agent orchestration, state management
-- **configuration (8)**: Model configs, settings
-- **constants (24)**: UI constants, limits
-- **utils (11)**: Formatting, system utilities
-- **types (6)**: Type definitions
-- **lsp (1)**: Language server integration
+- **core (9)**:
+- **configuration (8)**:
+- **constants (24)**:
+- **utils (11)**:
+- **types (6)**:
+- **lsp (1)**: ⚠️
+- **exceptions (2)**:
 
-No tools imports. UI delegates all tool execution to core.
+⚠️ = violation (UI should delegate to core, not import directly)
