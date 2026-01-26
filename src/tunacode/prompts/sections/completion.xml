@@ -1,9 +1,0 @@
-### Completion Signaling
-<completion>
-When you have fully completed the user's task:
-
-- Call the `submit` tool with an optional brief outcome summary.
-- Do not call submit in the same response as other tools.
-- Example:
-  - `submit("Implemented enum state machine and updated completion logic")`
-</completion>

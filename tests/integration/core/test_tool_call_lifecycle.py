@@ -72,13 +72,12 @@ TOOL_CALL_TEXT_SUFFIX = "end"
 SUPPRESS_HEALTH_CHECKS = [HealthCheck.function_scoped_fixture, HealthCheck.too_slow]
 
 READ_ONLY_TOOL_NAMES = [
-    tool.value for tool in READ_ONLY_TOOLS if tool != ToolName.RESEARCH_CODEBASE
+    tool.value for tool in READ_ONLY_TOOLS
 ]
 WRITE_EXECUTE_TOOL_NAMES = [tool.value for tool in WRITE_TOOLS + EXECUTE_TOOLS] + [
     ToolName.SUBMIT.value
 ]
-RESEARCH_TOOL_NAME = ToolName.RESEARCH_CODEBASE.value
-ALL_TOOL_NAMES = READ_ONLY_TOOL_NAMES + WRITE_EXECUTE_TOOL_NAMES + [RESEARCH_TOOL_NAME]
+ALL_TOOL_NAMES = READ_ONLY_TOOL_NAMES + WRITE_EXECUTE_TOOL_NAMES
 
 TOOL_CALL_FORMATS = ("qwen2_xml", "hermes", "code_fence", "raw_json")
 
@@ -867,7 +866,7 @@ async def test_extract_fallback_tool_calls_records_args(
 async def test_dispatch_tools_batches_by_category(
     parts: list[ToolCallPart], monkeypatch: pytest.MonkeyPatch, state_manager: StateManager
 ) -> None:
-    """dispatch_tools should batch read-only and research tools separately."""
+    """dispatch_tools should batch read-only tools."""
     tool_registry = state_manager.session.runtime.tool_registry
     tool_registry.clear()
     state_manager.session.runtime.batch_counter = 0
@@ -905,8 +904,7 @@ async def test_dispatch_tools_batches_by_category(
     )
 
     expected_read_only = [name for name in tool_names if name in READ_ONLY_TOOL_NAMES]
-    expected_research = [name for name in tool_names if name == RESEARCH_TOOL_NAME]
-    expected_parallel = expected_research + expected_read_only
+    expected_parallel = expected_read_only
     parallel_batches = [name for batch in recorded_batches for name in batch]
 
     assert dispatch_result.has_tool_calls is True
@@ -980,9 +978,7 @@ async def test_dispatch_tools_uses_fallback_for_text_only_calls(
     assert len(tool_registry.list_calls()) == 1
     assert response_state.current_state == AgentState.RESPONSE
 
-    is_parallel_tool = (
-        expected_tool_name in READ_ONLY_TOOL_NAMES or expected_tool_name == RESEARCH_TOOL_NAME
-    )
+    is_parallel_tool = expected_tool_name in READ_ONLY_TOOL_NAMES
     if is_parallel_tool:
         assert len(recorded_batches) == 1
         return

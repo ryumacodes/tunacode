@@ -12,7 +12,6 @@ Callback contracts (preconditions/postconditions):
 """
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 from tunacode.types.base import ModelName, ToolArgs, ToolName
@@ -24,30 +23,12 @@ if TYPE_CHECKING:
     from pydantic_ai.result import StreamedRunResult  # noqa: F401
 
 
-@dataclass(frozen=True, slots=True)
-class ToolProgress:
-    """Structured progress information for subagent tool execution.
-
-    Attributes:
-        subagent: Name of the subagent (e.g., "research")
-        operation: Description of current operation (e.g., "grep pattern...")
-        current: Current operation count (1-indexed)
-        total: Total expected operations (0 if unknown)
-    """
-
-    subagent: str
-    operation: str
-    current: int
-    total: int
-
-
 # Tool callbacks
 ToolCallback: TypeAlias = Callable[
     ["ToolCallPart", "StreamedRunResult[None, str]"],
     Awaitable[None],
 ]
 ToolStartCallback: TypeAlias = Callable[[str], None]
-ToolProgressCallback: TypeAlias = Callable[[ToolProgress], None]
 ToolResultCallback: TypeAlias = Callable[
     [ToolName, str, ToolArgs, str | None, float | None],
     None,
@@ -86,8 +67,6 @@ __all__ = [
     "ProcessRequestCallback",
     "StreamingCallback",
     "ToolCallback",
-    "ToolProgress",
-    "ToolProgressCallback",
     "ToolResultCallback",
     "ToolStartCallback",
     "NoticeCallback",

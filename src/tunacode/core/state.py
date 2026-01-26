@@ -23,7 +23,6 @@ from tunacode.types import (
     SessionId,
     TaskState,
     ToolName,
-    ToolProgressCallback,
     UsageState,
     UserConfig,
 )
@@ -47,7 +46,6 @@ class SessionState:
     current_model: ModelName = DEFAULT_USER_CONFIG["default_model"]
     spinner: Any | None = None
     tool_ignore: list[ToolName] = field(default_factory=list)
-    tool_progress_callback: ToolProgressCallback | None = None
     yolo: bool = False
     debug_mode: bool = False
     undo_initialized: bool = False

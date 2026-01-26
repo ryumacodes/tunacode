@@ -23,8 +23,6 @@ from tunacode.types import (
     ToolConfirmationRequest,
     ToolConfirmationResponse,
     ToolName,
-    ToolProgress,
-    ToolProgressCallback,
     ToolResultCallback,
     ToolStartCallback,
 )
@@ -121,8 +119,6 @@ class StatusBarLike(Protocol):
 
     def update_running_action(self, tool_name: str) -> None: ...
 
-    def update_subagent_progress(self, progress: ToolProgress) -> None: ...
-
 
 class AppForCallbacks(ConfirmationRequester, Protocol):
     status_bar: StatusBarLike
@@ -218,15 +214,6 @@ def build_tool_start_callback(app: AppForCallbacks) -> ToolStartCallback:
 
     def _callback(tool_name: ToolName) -> None:
         app.status_bar.update_running_action(tool_name)
-
-    return _callback
-
-
-def build_tool_progress_callback(app: AppForCallbacks) -> ToolProgressCallback:
-    """Build callback for subagent tool progress notifications."""
-
-    def _callback(progress: ToolProgress) -> None:
-        app.status_bar.update_subagent_progress(progress)
 
     return _callback
 

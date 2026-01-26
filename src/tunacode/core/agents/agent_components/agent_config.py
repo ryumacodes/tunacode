@@ -34,19 +34,8 @@ from tunacode.tools.update_file import update_file
 from tunacode.tools.web_fetch import web_fetch
 from tunacode.tools.write_file import write_file
 
-# TODO: Re-enable research_codebase subagent after fixing parameter name mismatch
-# See: memory-bank/research/2026-01-25_limited-read-file-parameter-mismatch.md
-# from tunacode.core.agents.delegation_tools import create_research_codebase_tool
 from tunacode.core.logging import get_logger
-from tunacode.core.prompting import (
-    LOCAL_TEMPLATE,
-    MAIN_TEMPLATE,
-    TEMPLATE_OVERRIDES,
-    SectionLoader,
-    SystemPromptSection,
-    compose_prompt,
-    resolve_prompt,
-)
+from tunacode.core.prompting import resolve_prompt
 from tunacode.core.state import StateManager
 
 # Module-level cache for AGENTS.md context
@@ -183,63 +172,46 @@ def get_agent_tool() -> tuple[type[Agent], type["Tool"]]:
 
 
 def load_system_prompt(base_path: Path, model: str | None = None) -> str:
-    """Load the system prompt with section-based composition.
+    """Load the system prompt from a single MD file.
 
-    Loads individual section files from prompts/sections/ and composes them
-    using the template system.
+    Local mode is being deleted - only one prompt file needed.
 
     Args:
         base_path: Base path to the tunacode package
-        model: Optional model name for template overrides
+        model: Optional model name (reserved for future use)
+
+    Returns:
+        System prompt with dynamic placeholders resolved
 
     Raises:
-        FileNotFoundError: If prompts/sections/ does not exist.
+        FileNotFoundError: If system_prompt.md does not exist.
     """
-    prompts_dir = base_path / "prompts"
-    sections_dir = prompts_dir / "sections"
+    prompt_file = base_path / "prompts" / "system_prompt.md"
 
-    if not sections_dir.exists():
+    if not prompt_file.exists():
         raise FileNotFoundError(
-            f"Required sections directory not found: {sections_dir}. "
-            "The prompts/sections/ directory must exist."
+            f"Required prompt file not found: {prompt_file}"
         )
 
-    loader = SectionLoader(sections_dir)
-    sections = {s.value: loader.load_section(s) for s in SystemPromptSection}
-
-    # Get template (local mode, model-specific override, or default)
-    if is_local_mode():
-        template = LOCAL_TEMPLATE
-    elif model:
-        template = TEMPLATE_OVERRIDES.get(model, MAIN_TEMPLATE)
-    else:
-        template = MAIN_TEMPLATE
-
-    # Compose sections into template, then resolve dynamic placeholders
-    prompt = compose_prompt(template, sections)
-    return resolve_prompt(prompt)
+    content = prompt_file.read_text(encoding="utf-8")
+    return resolve_prompt(content)
 
 
 def load_tunacode_context() -> str:
     """Load guide file context if it exists with caching.
 
-    For local_mode: loads local_prompt.md from prompting directory.
-    Otherwise: uses guide_file from settings (defaults to AGENTS.md).
+    Uses guide_file from settings (defaults to AGENTS.md).
+    Local mode support removed - no longer loads local_prompt.md.
     """
     logger = get_logger()
+
     try:
-        if is_local_mode():
-            # Load condensed prompt from prompting directory
-            prompting_dir = Path(__file__).parent.parent.parent / "prompting"
-            tunacode_path = prompting_dir / "local_prompt.md"
-            guide_file = "local_prompt.md"
-        else:
-            # Load guide_file from cwd (defaults to AGENTS.md)
-            config = load_config()
-            guide_file = "AGENTS.md"
-            if config and "settings" in config:
-                guide_file = config["settings"].get("guide_file", "AGENTS.md")
-            tunacode_path = Path.cwd() / guide_file
+        # Load guide_file from cwd (defaults to AGENTS.md)
+        config = load_config()
+        guide_file = "AGENTS.md"
+        if config and "settings" in config:
+            guide_file = config["settings"].get("guide_file", "AGENTS.md")
+        tunacode_path = Path.cwd() / guide_file
 
         cache_key = str(tunacode_path)
 
@@ -395,9 +367,9 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         tool_strict_validation = settings.get("tool_strict_validation", False)
 
         # Check for local_mode - use minimal tools with short descriptions
+        strict = tool_strict_validation
         if is_local_mode():
             # Minimal tool set with short descriptions to save tokens
-            strict = tool_strict_validation
             tools_list = [
                 Tool(bash, max_retries=max_retries, strict=strict, description="Shell"),
                 Tool(read_file, max_retries=max_retries, strict=strict, description="Read"),
@@ -419,15 +391,6 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
                 Tool(web_fetch, max_retries=max_retries, strict=tool_strict_validation),
                 Tool(write_file, max_retries=max_retries, strict=tool_strict_validation),
             ]
-
-            # TODO: Re-enable research_codebase subagent after fixing parameter name mismatch
-            # See: memory-bank/research/2026-01-25_limited-read-file-parameter-mismatch.md
-            # research_codebase = create_research_codebase_tool(state_manager.session)
-            # tools_list.append(
-            #     Tool(research_codebase, max_retries=max_retries, strict=tool_strict_validation)
-            # )
-
-            strict = tool_strict_validation
 
             # Add submit tool for completion signaling
             tools_list.append(Tool(submit, max_retries=max_retries, strict=strict))

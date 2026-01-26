@@ -13,7 +13,6 @@ from tunacode.ui.renderers.tools.glob import GlobRenderer
 from tunacode.ui.renderers.tools.grep import GrepRenderer
 from tunacode.ui.renderers.tools.list_dir import ListDirRenderer
 from tunacode.ui.renderers.tools.read_file import ReadFileRenderer
-from tunacode.ui.renderers.tools.research import ResearchRenderer
 from tunacode.ui.renderers.tools.update_file import UpdateFileRenderer
 from tunacode.ui.renderers.tools.web_fetch import WebFetchRenderer
 
@@ -33,7 +32,6 @@ def test_registry_contains_unified_renderers() -> None:
     assert "grep" in renderers
     assert "update_file" in renderers
     assert "web_fetch" in renderers
-    assert "research_codebase" in renderers
 
 
 def test_truncate_line_short() -> None:
@@ -71,7 +69,6 @@ UNIFIED_RENDERERS = {
     "grep": GrepRenderer,
     "update_file": UpdateFileRenderer,
     "web_fetch": WebFetchRenderer,
-    "research_codebase": ResearchRenderer,
 }
 
 

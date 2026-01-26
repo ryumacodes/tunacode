@@ -42,7 +42,6 @@ from tunacode.ui.renderers.panels import tool_panel_smart
 from tunacode.ui.repl_support import (
     PendingConfirmationState,
     build_textual_tool_callback,
-    build_tool_progress_callback,
     build_tool_result_callback,
     build_tool_start_callback,
     format_user_message,
@@ -225,9 +224,6 @@ class TextualReplApp(App[None]):
         try:
             session = self.state_manager.session
             model_name = session.current_model or "openai/gpt-4o"
-
-            # Set progress callback on session for subagent progress tracking
-            session.tool_progress_callback = build_tool_progress_callback(self)
 
             self._current_request_task = asyncio.create_task(
                 process_request(

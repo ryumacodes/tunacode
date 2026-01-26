@@ -20,14 +20,11 @@ from ..response_state import ResponseState
 
 PART_KIND_TEXT = "text"
 PART_KIND_TOOL_CALL = "tool-call"
-RESEARCH_TOOL_NAME = "research_codebase"
 UNKNOWN_TOOL_NAME = "unknown"
 TOOL_BATCH_PREVIEW_COUNT = 3
 TEXT_PART_JOINER = "\n"
 TOOL_NAME_JOINER = ", "
 TOOL_NAME_SUFFIX = "..."
-
-TOOL_START_RESEARCH_LABEL = "research"
 
 # Maximum tool names to display in lifecycle logs before truncating
 TOOL_NAMES_DISPLAY_LIMIT = 5
@@ -240,7 +237,6 @@ async def dispatch_tools(
     used_fallback = False
 
     read_only_tasks: list[tuple[Any, Any]] = []
-    research_agent_tasks: list[tuple[Any, Any]] = []
     write_execute_tasks: list[tuple[Any, Any]] = []
     tool_call_records: list[tuple[Any, ToolArgs]] = []
 
@@ -279,9 +275,7 @@ async def dispatch_tools(
         if not tool_callback:
             continue
 
-        if tool_name == RESEARCH_TOOL_NAME:
-            research_agent_tasks.append((part, node))
-        elif tool_name in READ_ONLY_TOOLS:
+        if tool_name in READ_ONLY_TOOLS:
             read_only_tasks.append((part, node))
         else:
             write_execute_tasks.append((part, node))
@@ -300,26 +294,13 @@ async def dispatch_tools(
             for part, tool_args in fallback_tool_calls:
                 tool_call_records.append((part, tool_args))
                 tool_name = getattr(part, "tool_name", UNKNOWN_TOOL_NAME)
-                if tool_name == RESEARCH_TOOL_NAME:
-                    research_agent_tasks.append((part, node))
-                elif tool_name in READ_ONLY_TOOLS:
+                if tool_name in READ_ONLY_TOOLS:
                     read_only_tasks.append((part, node))
                 else:
                     write_execute_tasks.append((part, node))
 
     def tool_failure_callback(part: Any, error: Exception) -> None:
         _record_tool_failure(state_manager, part, error)
-
-    if research_agent_tasks and tool_callback:
-        _mark_tool_calls_running(state_manager, research_agent_tasks)
-        if tool_start_callback:
-            tool_start_callback(TOOL_START_RESEARCH_LABEL)
-
-        await execute_tools_parallel(
-            research_agent_tasks,
-            tool_callback,
-            tool_failure_callback=tool_failure_callback,
-        )
 
     if read_only_tasks and tool_callback:
         _mark_tool_calls_running(state_manager, read_only_tasks)

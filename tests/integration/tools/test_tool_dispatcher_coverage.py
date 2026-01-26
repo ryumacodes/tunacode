@@ -27,7 +27,6 @@ LONG_TOOL_NAME_CHAR = "a"
 SUSPICIOUS_TOOL_NAME = "bad<tool"
 NORMAL_TOOL_NAME = "read_file"
 WRITE_TOOL_NAME = "write_file"
-RESEARCH_TOOL_NAME = "research_codebase"
 GREP_TOOL_NAME = "grep"
 GLOB_TOOL_NAME = "glob"
 LIST_DIR_TOOL_NAME = "list_dir"
@@ -42,7 +41,6 @@ READ_ONLY_TOOL_CALL_COUNT = tool_dispatcher.TOOL_BATCH_PREVIEW_COUNT + 1
 RESPONSE_OUTPUT = "done"
 CALLBACK_RETURN = None
 RESULT_LABEL = "result"
-RESEARCH_LABEL = tool_dispatcher.TOOL_START_RESEARCH_LABEL
 EXPECTED_JOINER = tool_dispatcher.TOOL_NAME_JOINER
 EXPECTED_SUFFIX = tool_dispatcher.TOOL_NAME_SUFFIX
 SUBMIT_TOOL_NAME = ToolName.SUBMIT.value
@@ -59,10 +57,6 @@ READ_TOOL_CALL_TEXT = json.dumps(
 )
 READ_TOOL_CALL_TAGGED = f"<tool_call>{READ_TOOL_CALL_TEXT}</tool_call>"
 INVALID_TOOL_CALL_TAGGED = "<tool_call>{}</tool_call>"
-RESEARCH_TOOL_CALL_TEXT = json.dumps(
-    {"name": RESEARCH_TOOL_NAME, "arguments": {}},
-)
-RESEARCH_TOOL_CALL_TAGGED = f"<tool_call>{RESEARCH_TOOL_CALL_TEXT}</tool_call>"
 SUBMIT_TOOL_CALL_TEXT = json.dumps(
     {"name": SUBMIT_TOOL_NAME, "arguments": {}},
 )
@@ -230,35 +224,6 @@ async def test_dispatch_debug_logging_and_skips_callbacks(
     assert result.used_fallback is False
     tool_registry = state_manager.session.runtime.tool_registry
     assert len(tool_registry.list_calls()) == len(parts)
-
-
-@pytest.mark.asyncio
-async def test_dispatch_fallback_research_tool_triggers_start(
-    state_manager: StateManager, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    response_state = _make_response_state()
-    parts = [TextPart(part_kind=PART_KIND_TEXT, content=RESEARCH_TOOL_CALL_TAGGED)]
-    started_labels: list[str] = []
-
-    def tool_start_callback(label: str) -> None:
-        started_labels.append(label)
-
-    monkeypatch.setattr(
-        "tunacode.core.agents.agent_components.tool_executor.execute_tools_parallel",
-        _capture_parallel_exec,
-    )
-
-    await tool_dispatcher.dispatch_tools(
-        parts=parts,
-        node=DummyNode(result=None),
-        state_manager=state_manager,
-        tool_callback=AsyncMock(),
-        _tool_result_callback=None,
-        tool_start_callback=tool_start_callback,
-        response_state=response_state,
-    )
-
-    assert started_labels == [RESEARCH_LABEL]
 
 
 @pytest.mark.asyncio

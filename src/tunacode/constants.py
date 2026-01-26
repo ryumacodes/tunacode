@@ -75,7 +75,6 @@ class ToolName(str, Enum):
     GREP = "grep"
     LIST_DIR = "list_dir"
     GLOB = "glob"
-    RESEARCH_CODEBASE = "research_codebase"
     WEB_FETCH = "web_fetch"
     SUBMIT = "submit"
 
@@ -85,7 +84,6 @@ READ_ONLY_TOOLS = [
     ToolName.GREP,
     ToolName.LIST_DIR,
     ToolName.GLOB,
-    ToolName.RESEARCH_CODEBASE,
     ToolName.WEB_FETCH,
     ToolName.SUBMIT,
 ]
