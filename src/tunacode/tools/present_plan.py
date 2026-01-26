@@ -10,7 +10,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from tunacode.constants import EXIT_PLAN_MODE_SENTINEL
-from tunacode.types import StateManagerProtocol
+from tunacode.types import PlanApprovalCallback, PlanApprovalProtocol
 
 from tunacode.tools.xml_helper import load_prompt_from_xml
 
@@ -30,7 +30,7 @@ PLAN_NOT_IN_PLAN_MODE = (
 )
 
 
-def create_present_plan_tool(state_manager: StateManagerProtocol) -> Callable:
+def create_present_plan_tool(state_manager: PlanApprovalProtocol) -> Callable:
     """Factory to create a present_plan tool bound to a state manager.
 
     The tool requires a plan_approval_callback to be set on the session
@@ -66,7 +66,11 @@ def create_present_plan_tool(state_manager: StateManagerProtocol) -> Callable:
             return PLAN_NOT_IN_PLAN_MODE
 
         # Check if there's an approval callback (set by UI)
-        approval_callback = getattr(session, "plan_approval_callback", None)
+        approval_callback: PlanApprovalCallback | None = getattr(
+            session,
+            "plan_approval_callback",
+            None,
+        )
 
         if approval_callback is not None:
             # Interactive mode - wait for user approval

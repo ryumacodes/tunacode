@@ -2,15 +2,29 @@
 
 Contains callback signatures and the ToolProgress dataclass for
 structured progress reporting.
+
+Callback contracts (preconditions/postconditions):
+- ToolResultCallback: Preconditions: tool_name is registered, args are normalized,
+  status reflects tool lifecycle. Postconditions: side effects only (UI/logging) and
+  should not raise.
+- PlanApprovalCallback: Preconditions: plan_content is a complete markdown plan and
+  plan mode is active. Postconditions: returns (approved, feedback) where feedback is ""
+  on approval or EXIT_PLAN_MODE_SENTINEL on exit.
+- StreamingCallback: Preconditions: chunk is ordered text delta. Postconditions:
+  enqueue or render the chunk without raising.
 """
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
+
+from tunacode.types.base import ModelName, ToolArgs, ToolName
+from tunacode.types.pydantic_ai import AgentRun
+from tunacode.types.state import StateManagerProtocol
 
 if TYPE_CHECKING:
-    from pydantic_ai.messages import ToolCallPart
-    from pydantic_ai.result import StreamedRunResult
+    from pydantic_ai.messages import ToolCallPart  # noqa: F401
+    from pydantic_ai.result import StreamedRunResult  # noqa: F401
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,29 +45,57 @@ class ToolProgress:
 
 
 # Tool callbacks
-ToolCallback = Callable[["ToolCallPart", "StreamedRunResult[None, str]"], Awaitable[None]]
-ToolStartCallback = Callable[[str], None]
-ToolProgressCallback = Callable[[ToolProgress], None]
-NoticeCallback = Callable[[str], None]
+ToolCallback: TypeAlias = Callable[
+    ["ToolCallPart", "StreamedRunResult[None, str]"],
+    Awaitable[None],
+]
+ToolStartCallback: TypeAlias = Callable[[str], None]
+ToolProgressCallback: TypeAlias = Callable[[ToolProgress], None]
+ToolResultCallback: TypeAlias = Callable[
+    [ToolName, str, ToolArgs, str | None, float | None],
+    None,
+]
+NoticeCallback: TypeAlias = Callable[[str], None]
 
 # UI callbacks
-UICallback = Callable[[str], Awaitable[None]]
-UIInputCallback = Callable[[str, str], Awaitable[str]]
+StreamingCallback: TypeAlias = Callable[[str], Awaitable[None]]
+UICallback: TypeAlias = Callable[[str], Awaitable[None]]
+UIInputCallback: TypeAlias = Callable[[str, str], Awaitable[str]]
+PlanApprovalCallback: TypeAlias = Callable[[str], Awaitable[tuple[bool, str]]]
+
+# Request orchestration callbacks
+ProcessRequestCallback: TypeAlias = Callable[
+    [
+        str,
+        ModelName,
+        StateManagerProtocol,
+        ToolCallback | None,
+        StreamingCallback | None,
+        ToolResultCallback | None,
+        ToolStartCallback | None,
+        NoticeCallback | None,
+    ],
+    Awaitable[AgentRun],
+]
 
 # Async function types
-AsyncFunc = Callable[..., Awaitable[Any]]
-AsyncToolFunc = Callable[..., Awaitable[str]]
-AsyncVoidFunc = Callable[..., Awaitable[None]]
+AsyncFunc: TypeAlias = Callable[..., Awaitable[Any]]
+AsyncToolFunc: TypeAlias = Callable[..., Awaitable[str]]
+AsyncVoidFunc: TypeAlias = Callable[..., Awaitable[None]]
 
 __all__ = [
     "AsyncFunc",
     "AsyncToolFunc",
     "AsyncVoidFunc",
+    "ProcessRequestCallback",
+    "StreamingCallback",
     "ToolCallback",
     "ToolProgress",
     "ToolProgressCallback",
+    "ToolResultCallback",
     "ToolStartCallback",
     "NoticeCallback",
+    "PlanApprovalCallback",
     "UICallback",
     "UIInputCallback",
 ]

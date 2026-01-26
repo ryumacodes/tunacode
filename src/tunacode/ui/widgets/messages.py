@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any
 
 from textual.message import Message
+
+from tunacode.types import ToolArgs, ToolName
 
 
 class EditorCompletionsAvailable(Message):
@@ -32,9 +33,9 @@ class ToolResultDisplay(Message):
     def __init__(
         self,
         *,
-        tool_name: str,
+        tool_name: ToolName,
         status: str,
-        args: dict[str, Any],
+        args: ToolArgs,
         result: str | None = None,
         duration_ms: float | None = None,
     ) -> None:

@@ -8,6 +8,8 @@ src/tunacode/tools is the tools that are used to code and debug code or general 
 
 Tests are located in the `tests/` directory covering tool decorators, tool conformance, compaction, and tool retry logic.
 
+This project uses a CLI ticket system for task management. Run `tk help` when you need to use it.
+
 ## Design Philosophy
 
 The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. This choice reflects a commitment to **"the next step of uniformity"**.

@@ -1,7 +1,6 @@
 """Tool categorization and execution for agent responses."""
 
 import time
-from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -12,7 +11,7 @@ from tunacode.constants import (
 )
 from tunacode.exceptions import StateError, UserAbortError
 from tunacode.types import AgentState, ToolArgs, ToolCallId
-from tunacode.types.callbacks import ToolCallback, ToolStartCallback
+from tunacode.types.callbacks import ToolCallback, ToolResultCallback, ToolStartCallback
 
 from tunacode.core.logging import get_logger
 from tunacode.core.state import StateManager
@@ -219,9 +218,6 @@ async def _extract_fallback_tool_calls(
         results.append((part, tool_args))
 
     return results
-
-
-ToolResultCallback = Callable[..., None]
 
 
 async def dispatch_tools(

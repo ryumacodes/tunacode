@@ -15,9 +15,11 @@ tags:
   - quality-gates
   - workflow
 created_at: 2025-01-01T00:00:00Z
-updated_at: 2026-01-08T00:00:00Z
+updated_at: 2026-01-26T00:02:37Z
 uuid: claude-md-tunacode-001
 ---
+
+This project uses a CLI ticket system for task management. Run `tk help` when you need to use it.
 
 ## Tunacode
 

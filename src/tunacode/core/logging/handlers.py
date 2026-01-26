@@ -4,13 +4,15 @@ import os
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from tunacode.core.logging.levels import LogLevel
 from tunacode.core.logging.records import LogRecord
 
 if TYPE_CHECKING:
     from rich.console import RenderableType
+
+TuiWriteCallback = Callable[["RenderableType"], None]
 
 # Lifecycle log prefixes for semantic coloring
 # These must match the prefixes used in lifecycle log calls throughout the codebase
@@ -136,13 +138,13 @@ class TUIHandler(Handler):
 
     def __init__(
         self,
-        write_callback: Callable[["RenderableType"], Any] | None = None,
+        write_callback: TuiWriteCallback | None = None,
         min_level: LogLevel = LogLevel.DEBUG,
     ):
         super().__init__(min_level)
         self._write_callback = write_callback
 
-    def set_write_callback(self, callback: Callable[["RenderableType"], Any]) -> None:
+    def set_write_callback(self, callback: TuiWriteCallback) -> None:
         """Set the callback for writing to TUI (injected from app)."""
         self._write_callback = callback
 

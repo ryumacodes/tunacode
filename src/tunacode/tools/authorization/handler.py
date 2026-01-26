@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from tunacode.templates.loader import Template
 from tunacode.types import (
-    StateManagerProtocol,
+    AuthorizationProtocol,
     ToolArgs,
     ToolConfirmationRequest,
     ToolConfirmationResponse,
@@ -22,7 +22,7 @@ class ToolHandler:
 
     def __init__(
         self,
-        state_manager: StateManagerProtocol,
+        state_manager: AuthorizationProtocol,
         policy: AuthorizationPolicy | None = None,
         notifier: ToolRejectionNotifier | None = None,
         factory: ConfirmationRequestFactory | None = None,

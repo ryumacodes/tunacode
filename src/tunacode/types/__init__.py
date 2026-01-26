@@ -6,9 +6,6 @@ used throughout the TunaCode codebase.
 All types are re-exported from this module for backward compatibility.
 """
 
-from collections.abc import Awaitable, Callable
-from typing import Any
-
 # Base types
 from tunacode.types.base import (
     AgentConfig,
@@ -50,9 +47,13 @@ from tunacode.types.callbacks import (
     AsyncToolFunc,
     AsyncVoidFunc,
     NoticeCallback,
+    PlanApprovalCallback,
+    ProcessRequestCallback,
+    StreamingCallback,
     ToolCallback,
     ToolProgress,
     ToolProgressCallback,
+    ToolResultCallback,
     ToolStartCallback,
     UICallback,
     UIInputCallback,
@@ -111,8 +112,15 @@ from tunacode.types.pydantic_ai import (
 
 # State protocol
 from tunacode.types.state import (
+    AuthorizationProtocol,
+    AuthorizationSessionProtocol,
+    AuthorizationToolHandlerProtocol,
+    PlanApprovalProtocol,
+    PlanSessionProtocol,
     SessionStateProtocol,
     StateManagerProtocol,
+    TemplateProtocol,
+    TodoProtocol,
 )
 from tunacode.types.state_structures import (
     ConversationState,
@@ -121,9 +129,6 @@ from tunacode.types.state_structures import (
     UsageState,
 )
 from tunacode.types.tool_registry import ToolCallRegistry
-
-# ProcessRequestCallback uses the protocol, not concrete implementation
-ProcessRequestCallback = Callable[[str, StateManagerProtocol, bool], Awaitable[Any]]
 
 __all__ = [
     # Base types
@@ -173,16 +178,26 @@ __all__ = [
     "AsyncToolFunc",
     "AsyncVoidFunc",
     "ProcessRequestCallback",
+    "StreamingCallback",
     "ToolCallback",
     "ToolProgress",
     "ToolProgressCallback",
+    "ToolResultCallback",
     "ToolStartCallback",
     "NoticeCallback",
+    "PlanApprovalCallback",
     "UICallback",
     "UIInputCallback",
     # State
     "SessionStateProtocol",
     "StateManagerProtocol",
+    "AuthorizationProtocol",
+    "AuthorizationSessionProtocol",
+    "AuthorizationToolHandlerProtocol",
+    "PlanApprovalProtocol",
+    "PlanSessionProtocol",
+    "TemplateProtocol",
+    "TodoProtocol",
     "ConversationState",
     "RuntimeState",
     "TaskState",

@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from tunacode.types.callbacks import ProcessRequestCallback
+
 if TYPE_CHECKING:
     from tunacode.types.state import StateManagerProtocol
 
@@ -74,7 +76,7 @@ class CommandContext:
     """Context passed to command handlers."""
 
     state_manager: "StateManagerProtocol"
-    process_request: Any | None = None
+    process_request: ProcessRequestCallback | None = None
 
 
 @dataclass

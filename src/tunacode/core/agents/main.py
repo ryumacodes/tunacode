@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -24,7 +23,11 @@ from tunacode.types import (
     AgentRun,
     ModelName,
     NoticeCallback,
+    StateManagerProtocol,
+    StreamingCallback,
     ToolCallback,
+    ToolResultCallback,
+    ToolStartCallback,
 )
 from tunacode.utils.ui import DotDict
 
@@ -37,7 +40,6 @@ from tunacode.core.agents.resume.sanitize import (
     sanitize_history_for_resume,
 )
 from tunacode.core.logging import get_logger
-from tunacode.core.state import StateManager
 
 from . import agent_components as ac
 
@@ -72,7 +74,7 @@ class EmptyResponseHandler:
 
     def __init__(
         self,
-        state_manager: StateManager,
+        state_manager: StateManagerProtocol,
         notice_callback: NoticeCallback | None,
     ) -> None:
         self.state_manager = state_manager
@@ -100,7 +102,7 @@ class EmptyResponseHandler:
 
         # Create a minimal state-like object for compatibility
         class StateProxy:
-            def __init__(self, sm: StateManager) -> None:
+            def __init__(self, sm: StateManagerProtocol) -> None:
                 self.sm = sm
                 self.show_thoughts = bool(getattr(sm.session, "show_thoughts", False))
 
@@ -115,7 +117,7 @@ class EmptyResponseHandler:
 class IterationManager:
     """Manages iteration tracking."""
 
-    def __init__(self, state_manager: StateManager) -> None:
+    def __init__(self, state_manager: StateManagerProtocol) -> None:
         self.state_manager = state_manager
 
     def update_counters(self, iteration: int) -> None:
@@ -132,11 +134,11 @@ class RequestOrchestrator:
         self,
         message: str,
         model: ModelName,
-        state_manager: StateManager,
+        state_manager: StateManagerProtocol,
         tool_callback: ToolCallback | None,
-        streaming_callback: Callable[[str], Awaitable[None]] | None,
-        tool_result_callback: Callable[..., None] | None = None,
-        tool_start_callback: Callable[[str], None] | None = None,
+        streaming_callback: StreamingCallback | None,
+        tool_result_callback: ToolResultCallback | None = None,
+        tool_start_callback: ToolStartCallback | None = None,
         notice_callback: NoticeCallback | None = None,
     ) -> None:
         self.message = message
@@ -209,7 +211,7 @@ class RequestOrchestrator:
             _coerce_global_request_timeout,
         )
 
-        timeout = _coerce_global_request_timeout(self.state_manager)
+        timeout = _coerce_global_request_timeout(self.state_manager.session)
         if timeout is None:
             return await self._run_impl()
 
@@ -461,7 +463,7 @@ class RequestOrchestrator:
 async def _finalize_buffered_tasks(
     tool_buffer: ac.ToolBuffer,
     tool_callback: ToolCallback | None,
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
 ) -> None:
     """Finalize and execute any buffered read-only tasks."""
     if not tool_callback or not tool_buffer.has_tasks():
@@ -517,7 +519,7 @@ async def check_query_satisfaction(
     agent: Agent,
     original_query: str,
     response: str,
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
 ) -> bool:
     """Legacy hook for compatibility; completion still signaled via DONE marker."""
     return True
@@ -526,11 +528,11 @@ async def check_query_satisfaction(
 async def process_request(
     message: str,
     model: ModelName,
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
     tool_callback: ToolCallback | None = None,
-    streaming_callback: Callable[[str], Awaitable[None]] | None = None,
-    tool_result_callback: Callable[..., None] | None = None,
-    tool_start_callback: Callable[[str], None] | None = None,
+    streaming_callback: StreamingCallback | None = None,
+    tool_result_callback: ToolResultCallback | None = None,
+    tool_start_callback: ToolStartCallback | None = None,
     notice_callback: NoticeCallback | None = None,
 ) -> AgentRun:
     orchestrator = RequestOrchestrator(

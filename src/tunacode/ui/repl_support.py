@@ -9,19 +9,24 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from rich.console import Console
 from rich.text import Text
 
 from tunacode.constants import MAX_CALLBACK_CONTENT
 from tunacode.types import (
+    AuthorizationProtocol,
+    ToolArgs,
+    ToolCallback,
     ToolConfirmationRequest,
     ToolConfirmationResponse,
+    ToolName,
     ToolProgress,
     ToolProgressCallback,
+    ToolResultCallback,
+    ToolStartCallback,
 )
 
 from tunacode.tools.authorization.handler import ToolHandler
@@ -44,6 +49,10 @@ CALLBACK_TRUNCATION_NOTICE: str = "\n... [truncated for safety]"
 CALLBACK_TRUNCATION_NOTICE_LEN: int = len(CALLBACK_TRUNCATION_NOTICE)
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from pydantic_ai.messages import ToolCallPart
+    from pydantic_ai.result import StreamedRunResult
 
 
 def _format_prefixed_wrapped_lines(
@@ -133,9 +142,12 @@ class AppForCallbacks(ConfirmationRequester, Protocol):
 
 def build_textual_tool_callback(
     app: ConfirmationRequester,
-    state_manager: StateManager,
-) -> Callable[[Any, Any | None], Awaitable[None]]:
-    async def _callback(part: Any, _node: Any = None) -> None:
+    state_manager: AuthorizationProtocol,
+) -> ToolCallback:
+    async def _callback(
+        part: ToolCallPart,
+        _node: StreamedRunResult[None, str],
+    ) -> None:
         tool_handler = state_manager.tool_handler or ToolHandler(state_manager)
         state_manager.set_tool_handler(tool_handler)
 
@@ -145,7 +157,7 @@ def build_textual_tool_callback(
         from tunacode.exceptions import UserAbortError
         from tunacode.utils.parsing.command_parser import parse_args
 
-        args = await parse_args(part.args)
+        args: ToolArgs = await parse_args(part.args)
         request = tool_handler.create_confirmation_request(part.tool_name, args)
         response = await app.request_tool_confirmation(request)
         if not tool_handler.process_confirmation(response, part.tool_name):
@@ -182,11 +194,11 @@ def _truncate_for_safety(content: str | None) -> str | None:
     return truncated_result
 
 
-def build_tool_result_callback(app: AppForCallbacks) -> Callable[..., None]:
+def build_tool_result_callback(app: AppForCallbacks) -> ToolResultCallback:
     def _callback(
-        tool_name: str,
+        tool_name: ToolName,
         status: str,
-        args: dict[str, Any],
+        args: ToolArgs,
         result: str | None = None,
         duration_ms: float | None = None,
     ) -> None:
@@ -212,10 +224,10 @@ def build_tool_result_callback(app: AppForCallbacks) -> Callable[..., None]:
     return _callback
 
 
-def build_tool_start_callback(app: AppForCallbacks) -> Callable[[str], None]:
+def build_tool_start_callback(app: AppForCallbacks) -> ToolStartCallback:
     """Build callback for tool start notifications."""
 
-    def _callback(tool_name: str) -> None:
+    def _callback(tool_name: ToolName) -> None:
         app.status_bar.update_running_action(tool_name)
 
     return _callback

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypedDict
 
 from pydantic_ai.exceptions import ModelRetry
 
-from tunacode.types import StateManagerProtocol, TodoItem, TodoStatus
+from tunacode.types import TodoItem, TodoProtocol, TodoStatus
 
 from tunacode.tools.xml_helper import load_prompt_from_xml
 
@@ -36,6 +36,13 @@ STATUS_SYMBOLS = {
     TODO_STATUS_IN_PROGRESS: "[>]",
     TODO_STATUS_COMPLETED: "[x]",
 }
+
+
+class TodoPayload(TypedDict, total=False):
+    content: str
+    status: str
+    activeForm: str
+    active_form: str
 
 
 def _validate_todo(todo: Any, index: int) -> TodoItem:
@@ -126,7 +133,7 @@ def _format_todos(todos: list[TodoItem]) -> str:
     return "\n".join(lines)
 
 
-def create_todowrite_tool(state_manager: StateManagerProtocol) -> Callable:
+def create_todowrite_tool(state_manager: TodoProtocol) -> Callable:
     # Heavily yoinked from https://github.com/sst/opencode/blob/dev/packages/opencode/src/tool/todo.ts
     # and adapted for python.
     """Factory to create a todowrite tool bound to a state manager.
@@ -138,7 +145,7 @@ def create_todowrite_tool(state_manager: StateManagerProtocol) -> Callable:
         An async function that implements the todowrite tool.
     """
 
-    async def todowrite(todos: list[dict[str, Any]]) -> str:
+    async def todowrite(todos: list[TodoPayload]) -> str:
         """Create or update the todo list for tracking task progress.
 
         Use this tool to manage and display tasks during complex multi-step operations.
@@ -166,7 +173,7 @@ def create_todowrite_tool(state_manager: StateManagerProtocol) -> Callable:
     return todowrite
 
 
-def create_todoread_tool(state_manager: StateManagerProtocol) -> Callable:
+def create_todoread_tool(state_manager: TodoProtocol) -> Callable:
     # Heavily yoinked from https://github.com/sst/opencode/blob/dev/packages/opencode/src/tool/todo.ts
     # and adapted for python.
     """Factory to create a todoread tool bound to a state manager.
@@ -198,7 +205,7 @@ def create_todoread_tool(state_manager: StateManagerProtocol) -> Callable:
     return todoread
 
 
-def create_todoclear_tool(state_manager: StateManagerProtocol) -> Callable:
+def create_todoclear_tool(state_manager: TodoProtocol) -> Callable:
     """Factory to create a todoclear tool bound to a state manager.
 
     Args:

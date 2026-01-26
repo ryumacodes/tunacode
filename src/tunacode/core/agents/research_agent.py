@@ -10,7 +10,7 @@ from pydantic_ai import Agent, Tool
 from pydantic_ai.retries import AsyncTenacityTransport, RetryConfig, wait_retry_after
 from tenacity import retry_if_exception_type, stop_after_attempt
 
-from tunacode.types import ModelName, ToolProgress, ToolProgressCallback
+from tunacode.types import ModelName, SessionStateProtocol, ToolProgress, ToolProgressCallback
 
 from tunacode.tools.decorators import file_tool
 from tunacode.tools.glob import glob
@@ -26,7 +26,6 @@ from tunacode.core.prompting import (
     compose_prompt,
     resolve_prompt,
 )
-from tunacode.core.state import StateManager
 
 # Maximum wait time in seconds for retry backoff
 # move this to the defualt config TODO, for now let it pass, but handle this in its own pr
@@ -162,7 +161,7 @@ class ProgressTracker:
 
 def create_research_agent(
     model: ModelName,
-    state_manager: StateManager,
+    session: SessionStateProtocol,
     max_files: int = 3,
     progress_callback: ToolProgressCallback | None = None,
 ) -> Agent[None, str]:
@@ -172,7 +171,7 @@ def create_research_agent(
 
     Args:
         model: The model name to use (same as main agent)
-        state_manager: State manager for session context
+        session: Session context for configuration
         max_files: Maximum number of files the agent can read (hard limit, default: 3)
         progress_callback: Optional callback for tool execution progress updates
 
@@ -184,9 +183,9 @@ def create_research_agent(
     # Load research-specific system prompt
     system_prompt = _load_research_prompt()
 
-    # Get configuration from state manager
-    max_retries = state_manager.session.user_config.get("settings", {}).get("max_retries", 3)
-    tool_strict_validation = state_manager.session.user_config.get("settings", {}).get(
+    # Get configuration from session
+    max_retries = session.user_config.get("settings", {}).get("max_retries", 3)
+    tool_strict_validation = session.user_config.get("settings", {}).get(
         "tool_strict_validation", False
     )
 
@@ -207,11 +206,11 @@ def create_research_agent(
         ),
         validate_response=lambda r: r.raise_for_status(),
     )
-    request_delay = _coerce_request_delay(state_manager)
+    request_delay = _coerce_request_delay(session)
     event_hooks = _build_request_hooks(request_delay)
     http_client = AsyncClient(transport=transport, event_hooks=event_hooks)
 
-    model_instance = _create_model_with_retry(model, http_client, state_manager)
+    model_instance = _create_model_with_retry(model, http_client, session)
 
     # Create limited read_file tool that enforces max_files cap
     limited_read_file = _create_limited_read_file(max_files)

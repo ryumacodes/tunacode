@@ -1,10 +1,14 @@
 """Node orchestration for agent responses."""
 
-from collections.abc import Awaitable, Callable
 from typing import Any
 
 from tunacode.types import AgentState
-from tunacode.types.callbacks import ToolCallback, ToolStartCallback
+from tunacode.types.callbacks import (
+    StreamingCallback,
+    ToolCallback,
+    ToolResultCallback,
+    ToolStartCallback,
+)
 
 from tunacode.core.agents.resume.sanitize_debug import (
     DEBUG_NEWLINE_REPLACEMENT,
@@ -33,9 +37,6 @@ TOOL_RESULT_STATUS_COMPLETED = "completed"
 THOUGHT_PREVIEW_LENGTH = 80
 RESPONSE_PREVIEW_LENGTH = 100
 DEBUG_PART_PREVIEW_LENGTH = RESPONSE_PREVIEW_LENGTH
-
-ToolResultCallback = Callable[..., None]
-StreamingCallback = Callable[[str], Awaitable[None]]
 
 
 def _emit_tool_returns(

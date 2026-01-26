@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import Awaitable, Callable
 from typing import Any
 
 from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
+
+from tunacode.types.callbacks import StreamingCallback
 
 from tunacode.core.logging import get_logger
 from tunacode.core.state import StateManager
@@ -122,7 +123,7 @@ async def stream_model_request_node(
     node: Any,
     agent_run_ctx: Any,
     state_manager: StateManager,
-    streaming_callback: Callable[[str], Awaitable[None]] | None,
+    streaming_callback: StreamingCallback | None,
     request_id: str,
     iteration_index: int,
 ) -> None:

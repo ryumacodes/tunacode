@@ -6,6 +6,7 @@ creating circular imports with the concrete implementation.
 
 from typing import TYPE_CHECKING, Any, Protocol
 
+from tunacode.types.base import ToolName
 from tunacode.types.canonical import TodoItem
 from tunacode.types.state_structures import (
     ConversationState,
@@ -15,22 +16,92 @@ from tunacode.types.state_structures import (
 )
 
 if TYPE_CHECKING:
-    from tunacode.types.callbacks import ToolProgressCallback
+    from tunacode.types.callbacks import PlanApprovalCallback, ToolProgressCallback
 
 
-class SessionStateProtocol(Protocol):
+class TodoProtocol(Protocol):
+    """Protocol for todo tools to read/write todo state."""
+
+    def get_todos(self) -> list[TodoItem]:
+        """Get the current todo list."""
+        ...
+
+    def set_todos(self, todos: list[TodoItem]) -> None:
+        """Replace the entire todo list."""
+        ...
+
+    def clear_todos(self) -> None:
+        """Clear the todo list."""
+        ...
+
+
+class PlanSessionProtocol(Protocol):
+    """Protocol for plan mode session state."""
+
+    plan_mode: bool
+    plan_approval_callback: "PlanApprovalCallback | None"
+
+
+class PlanApprovalProtocol(Protocol):
+    """Protocol for plan approval tools to access plan mode state."""
+
+    @property
+    def session(self) -> PlanSessionProtocol:
+        """Access the current session state."""
+        ...
+
+
+class TemplateProtocol(Protocol):
+    """Protocol for template metadata used in authorization."""
+
+    allowed_tools: list[str]
+
+
+class AuthorizationSessionProtocol(Protocol):
+    """Protocol for authorization flows to access session state."""
+
+    yolo: bool
+    plan_mode: bool
+    tool_ignore: list[ToolName]
+    conversation: ConversationState
+
+    def update_token_count(self) -> None:
+        """Calculate total token count from conversation messages."""
+        ...
+
+
+class AuthorizationToolHandlerProtocol(Protocol):
+    """Protocol for tool handlers exposing template context."""
+
+    active_template: TemplateProtocol | None
+
+
+class AuthorizationProtocol(Protocol):
+    """Protocol for authorization tools to access minimal state."""
+
+    @property
+    def session(self) -> AuthorizationSessionProtocol:
+        """Access the current session state."""
+        ...
+
+    @property
+    def tool_handler(self) -> AuthorizationToolHandlerProtocol | None:
+        """Get the current tool handler."""
+        ...
+
+    def set_tool_handler(self, handler: AuthorizationToolHandlerProtocol) -> None:
+        """Set the tool handler instance."""
+        ...
+
+
+class SessionStateProtocol(PlanSessionProtocol, AuthorizationSessionProtocol, Protocol):
     """Protocol for session state access."""
 
     user_config: dict[str, Any]
     current_model: str
     tool_progress_callback: "ToolProgressCallback | None"
-    tool_ignore: list[str]
-    yolo: bool
     debug_mode: bool
-    plan_mode: bool
-    plan_approval_callback: Any | None
     show_thoughts: bool
-    conversation: ConversationState
     task: TaskState
     runtime: RuntimeState
     usage: UsageState
@@ -40,12 +111,8 @@ class SessionStateProtocol(Protocol):
     created_at: str
     working_directory: str
 
-    def update_token_count(self) -> None:
-        """Calculate total token count from conversation messages."""
-        ...
 
-
-class StateManagerProtocol(Protocol):
+class StateManagerProtocol(TodoProtocol, PlanApprovalProtocol, AuthorizationProtocol, Protocol):
     """Protocol defining the StateManager interface.
 
     This protocol enables type-safe references to StateManager without
@@ -58,11 +125,11 @@ class StateManagerProtocol(Protocol):
         ...
 
     @property
-    def tool_handler(self) -> Any:
+    def tool_handler(self) -> AuthorizationToolHandlerProtocol | None:
         """Get the current tool handler."""
         ...
 
-    def set_tool_handler(self, handler: Any) -> None:
+    def set_tool_handler(self, handler: AuthorizationToolHandlerProtocol) -> None:
         """Set the tool handler instance."""
         ...
 
@@ -84,19 +151,6 @@ class StateManagerProtocol(Protocol):
     @property
     def usage(self) -> UsageState:
         """Access the usage sub-state."""
-        ...
-
-    # Todo list methods
-    def get_todos(self) -> list[TodoItem]:
-        """Get the current todo list."""
-        ...
-
-    def set_todos(self, todos: list[TodoItem]) -> None:
-        """Replace the entire todo list."""
-        ...
-
-    def clear_todos(self) -> None:
-        """Clear the todo list."""
         ...
 
     # Recursive execution methods
@@ -131,6 +185,13 @@ class StateManagerProtocol(Protocol):
 
 
 __all__ = [
+    "AuthorizationProtocol",
+    "AuthorizationSessionProtocol",
+    "AuthorizationToolHandlerProtocol",
+    "PlanApprovalProtocol",
+    "PlanSessionProtocol",
     "SessionStateProtocol",
     "StateManagerProtocol",
+    "TemplateProtocol",
+    "TodoProtocol",
 ]

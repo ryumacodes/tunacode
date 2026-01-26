@@ -5,14 +5,13 @@ from __future__ import annotations
 import threading
 from dataclasses import fields
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from tunacode.core.logging.handlers import FileHandler, Handler, TUIHandler
+from tunacode.types import StateManagerProtocol
+
+from tunacode.core.logging.handlers import FileHandler, Handler, TUIHandler, TuiWriteCallback
 from tunacode.core.logging.levels import LogLevel
 from tunacode.core.logging.records import LogRecord
-
-if TYPE_CHECKING:
-    from tunacode.core.state import StateManager
 
 LOG_RECORD_EXTRA_FIELD: str = "extra"
 LOG_RECORD_TOOL_NAME_FIELD: str = "tool_name"
@@ -33,7 +32,7 @@ class LogManager:
 
     def __init__(self) -> None:
         self._handlers: list[Handler] = []
-        self._state_manager: StateManager | None = None
+        self._state_manager: StateManagerProtocol | None = None
         self._lock = threading.RLock()
 
         # Always register file handler
@@ -60,11 +59,11 @@ class LogManager:
         with cls._instance_lock:
             cls._instance = None
 
-    def set_state_manager(self, state_manager: StateManager) -> None:
+    def set_state_manager(self, state_manager: StateManagerProtocol) -> None:
         """Bind state manager for debug_mode checking."""
         self._state_manager = state_manager
 
-    def set_tui_callback(self, callback: Any) -> None:
+    def set_tui_callback(self, callback: TuiWriteCallback) -> None:
         """Set the TUI write callback (called from app initialization)."""
         self._tui_handler.set_write_callback(callback)
 

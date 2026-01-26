@@ -20,7 +20,7 @@ from tenacity import retry_if_exception_type, stop_after_attempt
 
 from tunacode.configuration.models import load_models_registry
 from tunacode.constants import ENV_OPENAI_BASE_URL
-from tunacode.types import ModelName, PydanticAgent
+from tunacode.types import ModelName, PydanticAgent, SessionStateProtocol
 from tunacode.utils.config.user_configuration import load_config
 from tunacode.utils.limits import get_max_tokens, is_local_mode
 
@@ -64,9 +64,9 @@ async def _sleep_with_delay(total_delay: float) -> None:
     await asyncio.sleep(total_delay)
 
 
-def _coerce_request_delay(state_manager: StateManager) -> float:
-    """Return validated request_delay from config."""
-    settings = state_manager.session.user_config.get("settings", {})
+def _coerce_request_delay(session: SessionStateProtocol) -> float:
+    """Return validated request_delay from session config."""
+    settings = session.user_config.get("settings", {})
     request_delay_raw = settings.get("request_delay", 0.0)
     request_delay = float(request_delay_raw)
 
@@ -76,9 +76,9 @@ def _coerce_request_delay(state_manager: StateManager) -> float:
     return request_delay
 
 
-def _coerce_global_request_timeout(state_manager: StateManager) -> float | None:
-    """Return validated global_request_timeout from config, or None if disabled."""
-    settings = state_manager.session.user_config.get("settings", {})
+def _coerce_global_request_timeout(session: SessionStateProtocol) -> float | None:
+    """Return validated global_request_timeout from session config, or None if disabled."""
+    settings = session.user_config.get("settings", {})
     timeout_raw = settings.get("global_request_timeout", 90.0)
     timeout = float(timeout_raw)
 
@@ -297,7 +297,7 @@ def _get_provider_config_from_registry(provider_name: str) -> _ProviderConfig:
 
 
 def _create_model_with_retry(
-    model_string: str, http_client: AsyncClient, state_manager: StateManager
+    model_string: str, http_client: AsyncClient, session: SessionStateProtocol
 ) -> AnthropicModel | OpenAIChatModel | str:
     """Create a model instance with retry-enabled HTTP client.
 
@@ -307,8 +307,8 @@ def _create_model_with_retry(
     Uses models_registry.json for provider configuration (api URL, env vars).
     Only 'anthropic' provider uses AnthropicModel, all others use OpenAI.
     """
-    env = state_manager.session.user_config.get("env", {})
-    settings = state_manager.session.user_config.get("settings", {})
+    env = session.user_config.get("env", {})
+    settings = session.user_config.get("settings", {})
 
     # Parse model string
     if ":" in model_string:
@@ -350,7 +350,7 @@ def _create_model_with_retry(
 def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
     """Get existing agent or create new one for the specified model."""
     logger = get_logger()
-    request_delay = _coerce_request_delay(state_manager)
+    request_delay = _coerce_request_delay(state_manager.session)
     settings = state_manager.session.user_config.get("settings", {})
     agent_version = _compute_agent_version(settings, request_delay)
 
@@ -424,7 +424,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
 
             # TODO: Re-enable research_codebase subagent after fixing parameter name mismatch
             # See: memory-bank/research/2026-01-25_limited-read-file-parameter-mismatch.md
-            # research_codebase = create_research_codebase_tool(state_manager)
+            # research_codebase = create_research_codebase_tool(state_manager.session)
             # tools_list.append(
             #     Tool(research_codebase, max_retries=max_retries, strict=tool_strict_validation)
             # )
@@ -471,7 +471,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         )
 
         # Create model instance with retry-enabled HTTP client
-        model_instance = _create_model_with_retry(model, http_client, state_manager)
+        model_instance = _create_model_with_retry(model, http_client, state_manager.session)
 
         # Apply max_tokens if configured (local_mode sets default, explicit overrides)
         max_tokens = get_max_tokens()

@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from pydantic_ai.messages import UserPromptPart
 
-from tunacode.types import ModelRequest, StateManagerProtocol, ToolConfirmationResponse, ToolName
+from tunacode.types import (
+    AuthorizationProtocol,
+    ModelRequest,
+    ToolConfirmationResponse,
+    ToolName,
+)
 
 MODEL_REQUEST_KIND: str = "request"
 USER_PROMPT_PART_KIND: str = "user-prompt"
@@ -15,7 +20,7 @@ class ToolRejectionNotifier:
         self,
         tool_name: ToolName,
         response: ToolConfirmationResponse,
-        state: StateManagerProtocol,
+        state: AuthorizationProtocol,
     ) -> None:
         guidance = getattr(response, "instructions", "").strip()
         if guidance:

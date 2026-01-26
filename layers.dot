@@ -1,0 +1,36 @@
+digraph tunacode_layers {
+  rankdir=TB;
+  node [shape=box, style=filled, fontname="Arial"];
+
+  ui [label="ui", fillcolor="#ff6b6b"];
+  core [label="core", fillcolor="#4d96ff"];
+  tools [label="tools", fillcolor="#6bcb77"];
+  utils [label="utils", fillcolor="#ffd93d"];
+  types [label="types", fillcolor="#9d4edd"];
+  configuration [label="configuration", fillcolor="#adb5bd"];
+  indexing [label="indexing", fillcolor="#ff922b"];
+  lsp [label="lsp", fillcolor="#e599f7"];
+  templates [label="templates", fillcolor="#20c997"];
+
+  configuration -> types [label="3", penwidth=1.6];
+  core -> configuration [label="4", penwidth=1.8];
+  core -> tools [label="18", penwidth=4.6];
+  core -> types [label="20", penwidth=5.0];
+  core -> utils [label="13", penwidth=3.6];
+  indexing -> tools [label="1", penwidth=1.2];
+  tools -> configuration [label="2", penwidth=1.4];
+  tools -> indexing [label="1", penwidth=1.2];
+  tools -> lsp [label="1", penwidth=1.2];
+  tools -> templates [label="2", penwidth=1.4];
+  tools -> types [label="8", penwidth=2.6];
+  tools -> utils [label="4", penwidth=1.8];
+  ui -> configuration [label="8", penwidth=2.6];
+  ui -> core [label="9", penwidth=2.8];
+  ui -> indexing [label="2", penwidth=1.4];
+  ui -> lsp [label="2", penwidth=1.4];
+  ui -> tools [label="3", penwidth=1.6];
+  ui -> types [label="5", penwidth=2.0];
+  ui -> utils [label="10", penwidth=3.0];
+  utils -> configuration [label="2", penwidth=1.4];
+  utils -> types [label="4", penwidth=1.8];
+}
