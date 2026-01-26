@@ -30,7 +30,7 @@ core/
 │   ├── research_agent.py          # Codebase research specialist
 │   ├── delegation_tools.py        # Agent tool delegation logic
 │   └── agent_components/          # Agent building blocks
-│       ├── (state, planning, tools)
+│       ├── (state, tools)
 ├── prompting/
 │   ├── (prompt builders, templates)
 ├── state/
@@ -66,7 +66,6 @@ The agent system follows a **specialized agent pattern**:
 3. **Agent Components** (`agents/agent_components/`)
    - Modular agent capabilities
    - State management components
-   - Planning and reasoning modules
    - Tool orchestration logic
 
 ### State Management

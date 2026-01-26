@@ -50,9 +50,7 @@ def show_welcome(rich_log: RichLog) -> None:
 
     # Group 2: Mode toggles
     welcome.append("   /yolo", style=STYLE_PRIMARY)
-    welcome.append("       - Toggle auto-confirm\n")
-    welcome.append("   /plan", style=STYLE_PRIMARY)
-    welcome.append("       - Toggle planning mode\n\n")
+    welcome.append("       - Toggle auto-confirm\n\n")
     welcome.append(SECTION_DIVIDER, style=STYLE_MUTED)
 
     # Group 3: Switching

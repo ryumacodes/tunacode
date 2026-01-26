@@ -19,7 +19,6 @@ from tunacode.types import (
     ConversationState,
     InputSessions,
     ModelName,
-    PlanApprovalCallback,
     RuntimeState,
     SessionId,
     TaskState,
@@ -51,10 +50,6 @@ class SessionState:
     tool_progress_callback: ToolProgressCallback | None = None
     yolo: bool = False
     debug_mode: bool = False
-    plan_mode: bool = False
-    # Callback for present_plan tool to get user approval
-    # Signature: async (plan_content: str) -> tuple[bool, str] (approved, feedback)
-    plan_approval_callback: PlanApprovalCallback | None = None
     undo_initialized: bool = False
     show_thoughts: bool = False
     conversation: ConversationState = field(default_factory=ConversationState)

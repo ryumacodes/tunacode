@@ -288,38 +288,6 @@ class BranchCommand(Command):
             app.rich_log.write(f"Error: {e}")
 
 
-class PlanCommand(Command):
-    name = "plan"
-    description = "Toggle read-only planning mode"
-
-    async def execute(self, app: TextualReplApp, args: str) -> None:
-        session = app.state_manager.session
-        session.plan_mode = not session.plan_mode
-
-        if session.plan_mode:
-            # Set up the approval callback for the present_plan tool
-            async def plan_approval_callback(plan_content: str) -> tuple[bool, str]:
-                return await app.request_plan_approval(plan_content)
-
-            session.plan_approval_callback = plan_approval_callback
-
-            # NeXTSTEP: Modes must be visually apparent at all times
-            app.status_bar.set_mode("PLAN")
-            app.notify("Plan mode ON - write/bash tools blocked")
-            app.rich_log.write(
-                "[bold]Plan mode active[/bold]\n"
-                "Blocked: write_file, update_file, bash\n"
-                "Use read-only tools to gather context, then call present_plan."
-            )
-        else:
-            # Clear the callback
-            session.plan_approval_callback = None
-
-            # NeXTSTEP: Clear mode indicator
-            app.status_bar.set_mode(None)
-            app.notify("Plan mode OFF - all tools available")
-
-
 class ThemeCommand(Command):
     name = "theme"
     description = "Open theme picker or switch directly"
@@ -548,7 +516,6 @@ COMMANDS: dict[str, Command] = {
     "debug": DebugCommand(),
     "model": ModelCommand(),
     "branch": BranchCommand(),
-    "plan": PlanCommand(),
     "theme": ThemeCommand(),
     "resume": ResumeCommand(),
     "update": UpdateCommand(),

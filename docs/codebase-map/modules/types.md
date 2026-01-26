@@ -36,7 +36,6 @@ State-related types:
 - **ToolProgressCallback** - Progress update callback
 - **InputSessions** - Session list structure
 - **TodoProtocol** - Minimal todo tool contract
-- **PlanApprovalProtocol** - Plan mode approval contract
 - **AuthorizationProtocol** - Authorization tool contract
 
 ### state_structures.py
@@ -57,7 +56,6 @@ Callback type definitions:
 - **ToolStartCallback** - Tool start notification callback
 - **ToolProgressCallback** - Subagent progress updates
 - **StreamingCallback** - Response streaming callback
-- **PlanApprovalCallback** - Plan approval request callback
 - **NoticeCallback** - System notice callback
 
 ### pydantic_ai.py
@@ -81,13 +79,13 @@ Callback type definitions:
 ### Callback Types
 - Synchronous and async callbacks
 - Progress, streaming, and tool lifecycle callbacks
-- Plan approval and authorization callbacks
+- Authorization callbacks
 
 ### Protocol Types
 - ToolExecutor protocol
 - StateManager protocol
 - Renderer protocol
-- TodoProtocol, PlanApprovalProtocol, AuthorizationProtocol
+- TodoProtocol, AuthorizationProtocol
 
 ## Integration Points
 

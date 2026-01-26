@@ -64,7 +64,6 @@ src/tunacode/
 │   │   ├── delegation_tools.py  # Agent tool delegation
 │   │   └── agent_components/    # Agent building blocks
 │   │       ├── (state modules)
-│   │       ├── (planning modules)
 │   │       └── (tool orchestrators)
 │   │
 │   ├── state/                   # State management

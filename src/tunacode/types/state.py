@@ -15,24 +15,8 @@ from tunacode.types.state_structures import (
 )
 
 if TYPE_CHECKING:
-    from tunacode.types.callbacks import PlanApprovalCallback, ToolProgressCallback
+    from tunacode.types.callbacks import ToolProgressCallback
     from tunacode.types.dataclasses import ToolConfirmationRequest, ToolConfirmationResponse
-
-
-class PlanSessionProtocol(Protocol):
-    """Protocol for plan mode session state."""
-
-    plan_mode: bool
-    plan_approval_callback: "PlanApprovalCallback | None"
-
-
-class PlanApprovalProtocol(Protocol):
-    """Protocol for plan approval tools to access plan mode state."""
-
-    @property
-    def session(self) -> PlanSessionProtocol:
-        """Access the current session state."""
-        ...
 
 
 class TemplateProtocol(Protocol):
@@ -45,7 +29,6 @@ class AuthorizationSessionProtocol(Protocol):
     """Protocol for authorization flows to access session state."""
 
     yolo: bool
-    plan_mode: bool
     tool_ignore: list[ToolName]
     conversation: ConversationState
 
@@ -94,7 +77,7 @@ class AuthorizationProtocol(Protocol):
         ...
 
 
-class SessionStateProtocol(PlanSessionProtocol, AuthorizationSessionProtocol, Protocol):
+class SessionStateProtocol(AuthorizationSessionProtocol, Protocol):
     """Protocol for session state access."""
 
     user_config: dict[str, Any]
@@ -112,7 +95,7 @@ class SessionStateProtocol(PlanSessionProtocol, AuthorizationSessionProtocol, Pr
     working_directory: str
 
 
-class StateManagerProtocol(PlanApprovalProtocol, AuthorizationProtocol, Protocol):
+class StateManagerProtocol(AuthorizationProtocol, Protocol):
     """Protocol defining the StateManager interface.
 
     This protocol enables type-safe references to StateManager without
@@ -188,8 +171,6 @@ __all__ = [
     "AuthorizationProtocol",
     "AuthorizationSessionProtocol",
     "AuthorizationToolHandlerProtocol",
-    "PlanApprovalProtocol",
-    "PlanSessionProtocol",
     "SessionStateProtocol",
     "StateManagerProtocol",
     "TemplateProtocol",

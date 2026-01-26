@@ -130,7 +130,6 @@ REPL command implementations:
 - **DebugCommand** - `/debug` - Toggle debug logging to screen (logs to ~/.local/share/tunacode/logs/)
 - **ModelCommand** - `/model` - Reload config, then open model picker or switch directly (invalidates agent cache)
 - **BranchCommand** - `/branch` - Create conversation branch
-- **PlanCommand** - `/plan` - Toggle plan mode
 - **ThemeCommand** - `/theme` - Switch UI theme
 - **ResumeCommand** - `/resume` - Resume previous session
 - **UpdateCommand** - `/update` - Check for and install updates

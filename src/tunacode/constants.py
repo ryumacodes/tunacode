@@ -77,7 +77,6 @@ class ToolName(str, Enum):
     GLOB = "glob"
     RESEARCH_CODEBASE = "research_codebase"
     WEB_FETCH = "web_fetch"
-    PRESENT_PLAN = "present_plan"
     SUBMIT = "submit"
 
 
@@ -88,7 +87,6 @@ READ_ONLY_TOOLS = [
     ToolName.GLOB,
     ToolName.RESEARCH_CODEBASE,
     ToolName.WEB_FETCH,
-    ToolName.PRESENT_PLAN,
     ToolName.SUBMIT,
 ]
 
@@ -100,9 +98,6 @@ WRITE_TOOLS = [
 EXECUTE_TOOLS = [
     ToolName.BASH,
 ]
-
-# Plan mode sentinel for exit without revision
-EXIT_PLAN_MODE_SENTINEL = "__EXIT_PLAN_MODE__"
 
 TUNACODE_HOME_DIR = ".tunacode"
 SESSIONS_SUBDIR = "sessions"

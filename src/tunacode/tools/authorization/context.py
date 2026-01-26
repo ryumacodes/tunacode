@@ -14,7 +14,6 @@ class AuthContext:
     """Immutable context for authorization decisions."""
 
     yolo_mode: bool
-    plan_mode: bool
     tool_ignore_list: tuple[ToolName, ...]
     active_template: Template | None
 
@@ -27,7 +26,6 @@ class AuthContext:
 
         return cls(
             yolo_mode=state.session.yolo,
-            plan_mode=state.session.plan_mode,
             tool_ignore_list=tuple(state.session.tool_ignore),
             active_template=active_template,
         )

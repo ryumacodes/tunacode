@@ -7,9 +7,6 @@ Callback contracts (preconditions/postconditions):
 - ToolResultCallback: Preconditions: tool_name is registered, args are normalized,
   status reflects tool lifecycle. Postconditions: side effects only (UI/logging) and
   should not raise.
-- PlanApprovalCallback: Preconditions: plan_content is a complete markdown plan and
-  plan mode is active. Postconditions: returns (approved, feedback) where feedback is ""
-  on approval or EXIT_PLAN_MODE_SENTINEL on exit.
 - StreamingCallback: Preconditions: chunk is ordered text delta. Postconditions:
   enqueue or render the chunk without raising.
 """
@@ -61,7 +58,6 @@ NoticeCallback: TypeAlias = Callable[[str], None]
 StreamingCallback: TypeAlias = Callable[[str], Awaitable[None]]
 UICallback: TypeAlias = Callable[[str], Awaitable[None]]
 UIInputCallback: TypeAlias = Callable[[str, str], Awaitable[str]]
-PlanApprovalCallback: TypeAlias = Callable[[str], Awaitable[tuple[bool, str]]]
 
 # Request orchestration callbacks
 ProcessRequestCallback: TypeAlias = Callable[
@@ -95,7 +91,6 @@ __all__ = [
     "ToolResultCallback",
     "ToolStartCallback",
     "NoticeCallback",
-    "PlanApprovalCallback",
     "UICallback",
     "UIInputCallback",
 ]
