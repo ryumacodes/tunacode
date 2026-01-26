@@ -91,8 +91,6 @@ For advanced settings including **local mode** for small context models, see the
 | /model   | Change AI model              |
 | /clear   | Clear agent state (UI, thoughts, todos) - messages preserved for /resume |
 | /yolo    | Toggle auto-confirm mode     |
-| /branch  | Create and switch git branch |
-| /plan    | Toggle read-only planning    |
 | /theme   | Change UI theme              |
 | /resume  | Load/delete saved sessions   |
 | !<cmd>   | Run shell command            |

@@ -259,35 +259,6 @@ class ModelCommand(Command):
             )
 
 
-class BranchCommand(Command):
-    name = "branch"
-    description = "Create and switch to a new git branch"
-    usage = "/branch <name>"
-
-    async def execute(self, app: TextualReplApp, args: str) -> None:
-        import subprocess
-
-        if not args:
-            app.notify("Usage: /branch <name>", severity="warning")
-            return
-
-        branch_name = args.strip()
-        try:
-            result = subprocess.run(
-                ["git", "checkout", "-b", branch_name],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if result.returncode == 0:
-                app.notify(f"Created branch: {branch_name}")
-                app.status_bar._refresh_location()
-            else:
-                app.rich_log.write(f"Error: {result.stderr.strip()}")
-        except Exception as e:
-            app.rich_log.write(f"Error: {e}")
-
-
 class ThemeCommand(Command):
     name = "theme"
     description = "Open theme picker or switch directly"
@@ -515,7 +486,6 @@ COMMANDS: dict[str, Command] = {
     "yolo": YoloCommand(),
     "debug": DebugCommand(),
     "model": ModelCommand(),
-    "branch": BranchCommand(),
     "theme": ThemeCommand(),
     "resume": ResumeCommand(),
     "update": UpdateCommand(),

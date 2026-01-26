@@ -60,9 +60,7 @@ def show_welcome(rich_log: RichLog) -> None:
     welcome.append("      - Switch theme\n\n")
     welcome.append(SECTION_DIVIDER, style=STYLE_MUTED)
 
-    # Group 4: Git/shell
-    welcome.append("   /branch", style=STYLE_PRIMARY)
-    welcome.append("     - Create git branch\n")
+    # Group 4: Shell
     welcome.append("   !<cmd>", style=STYLE_PRIMARY)
     welcome.append("      - Run shell commands\n\n")
     rich_log.write(welcome)

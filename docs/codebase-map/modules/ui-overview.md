@@ -129,7 +129,6 @@ REPL command implementations:
 - **YoloCommand** - `/yolo` - Toggle auto-confirm for tool executions
 - **DebugCommand** - `/debug` - Toggle debug logging to screen (logs to ~/.local/share/tunacode/logs/)
 - **ModelCommand** - `/model` - Reload config, then open model picker or switch directly (invalidates agent cache)
-- **BranchCommand** - `/branch` - Create conversation branch
 - **ThemeCommand** - `/theme` - Switch UI theme
 - **ResumeCommand** - `/resume` - Resume previous session
 - **UpdateCommand** - `/update` - Check for and install updates
