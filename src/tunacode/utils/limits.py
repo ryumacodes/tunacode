@@ -1,21 +1,16 @@
 """Centralized limit configuration with cascading defaults.
 
-Precedence: explicit setting > local_mode default > standard default
+Precedence: explicit setting > standard default
 
 This allows:
-- local_mode to set aggressive defaults for small context windows
-- Users to override individual limits regardless of local_mode
-- Big model users to set custom limits without enabling local_mode
+- Users to override individual limits
+- Big model users to set custom limits
 """
 
 from functools import lru_cache
 
 from tunacode.constants import (
     DEFAULT_READ_LIMIT,
-    LOCAL_DEFAULT_READ_LIMIT,
-    LOCAL_MAX_COMMAND_OUTPUT,
-    LOCAL_MAX_FILES_IN_DIR,
-    LOCAL_MAX_LINE_LENGTH,
     MAX_COMMAND_OUTPUT,
     MAX_FILES_IN_DIR,
     MAX_LINE_LENGTH,
@@ -39,10 +34,10 @@ def clear_cache() -> None:
     _load_settings.cache_clear()
 
 
-def _get_limit(key: str, default: int, local_default: int) -> int:
+def _get_limit(key: str, default: int) -> int:
     """Get a limit value with proper precedence.
 
-    Precedence: explicit setting > local_mode default > standard default
+    Precedence: explicit setting > standard default
     """
     settings = _load_settings()
 
@@ -50,35 +45,27 @@ def _get_limit(key: str, default: int, local_default: int) -> int:
     if key in settings:
         return settings[key]
 
-    # Otherwise use local_mode default or standard default
-    if settings.get("local_mode", False):
-        return local_default
     return default
-
-
-def is_local_mode() -> bool:
-    """Check if local_mode is enabled."""
-    return _load_settings().get("local_mode", False)
 
 
 def get_read_limit() -> int:
     """Get default line limit for read_file tool."""
-    return _get_limit("read_limit", DEFAULT_READ_LIMIT, LOCAL_DEFAULT_READ_LIMIT)
+    return _get_limit("read_limit", DEFAULT_READ_LIMIT)
 
 
 def get_max_line_length() -> int:
     """Get max line length before truncation."""
-    return _get_limit("max_line_length", MAX_LINE_LENGTH, LOCAL_MAX_LINE_LENGTH)
+    return _get_limit("max_line_length", MAX_LINE_LENGTH)
 
 
 def get_command_limit() -> int:
     """Get max command output length for bash tool."""
-    return _get_limit("max_command_output", MAX_COMMAND_OUTPUT, LOCAL_MAX_COMMAND_OUTPUT)
+    return _get_limit("max_command_output", MAX_COMMAND_OUTPUT)
 
 
 def get_max_files_in_dir() -> int:
     """Get max files to list in list_dir tool."""
-    return _get_limit("max_files_in_dir", MAX_FILES_IN_DIR, LOCAL_MAX_FILES_IN_DIR)
+    return _get_limit("max_files_in_dir", MAX_FILES_IN_DIR)
 
 
 def get_max_tokens() -> int | None:
@@ -88,9 +75,5 @@ def get_max_tokens() -> int | None:
     # Explicit setting takes precedence
     if "max_tokens" in settings:
         return settings["max_tokens"]
-
-    # local_mode has a default cap
-    if settings.get("local_mode", False):
-        return settings.get("local_max_tokens", 1000)
 
     return None

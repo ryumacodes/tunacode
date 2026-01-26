@@ -7,7 +7,6 @@ depth: 2
 seams: [A, M, D]
 ontological_relations:
   - relates_to: [[core-compaction]]
-  - relates_to: [[utils-limits]]
   - relates_to: [[core-state]]
   - relates_to: [[core-agents]]
   - affects: [[session-messages]]
@@ -72,7 +71,6 @@ updated_at: 2026-01-20T16:25:00Z
           ┌─────────────────────┐                                                   │
           │     limits.py       │                                                   │
           │                     │                                                   │
-          │  is_local_mode()    │                                                   │
           │  _load_settings()   │                                                   │
           └─────────────────────┘                                                   │
                                                                                     │
@@ -103,9 +101,8 @@ updated_at: 2026-01-20T16:25:00Z
 
 | Entity | Type | Location | Description |
 |--------|------|----------|-------------|
-| `Threshold` | Config | `compaction.py:14-18` | Pruning boundaries |
-| `Placeholder` | Constant | `compaction.py:21` | Replacement text |
-| `Mode` | State | `limits.py` | Local vs Standard |
+| `Threshold` | Config | `compaction.py` | Pruning boundaries |
+| `Placeholder` | Constant | `compaction.py` | Replacement text |
 | `Session` | State | `state.py` | Conversation container |
 
 ## Relationships
@@ -127,15 +124,12 @@ Session
 | `prune_old_tool_outputs` | scans | `messages` |
 | `prune_old_tool_outputs` | identifies | `tool-return` parts |
 | `prune_old_tool_outputs` | mutates | `part.content` |
-| `get_prune_thresholds` | reads | `is_local_mode()` |
 | `estimate_part_tokens` | delegates-to | `estimate_tokens()` |
 
 ### Dependency (DEPENDS-ON)
 
 ```
 compaction.py
-    │
-    ├──▶ limits.py::is_local_mode()
     │
     └──▶ token_counter.py::estimate_tokens()
 
@@ -192,8 +186,6 @@ OUTPUT:
 
 ## Threshold Ontology
 
-### Standard Mode (Cloud APIs)
-
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                     200,000 token context window                     │
@@ -204,22 +196,6 @@ OUTPUT:
 │  │                                          │                   │   │
 │  │  Only pruned if total > 20,000 tokens    │  Never pruned     │   │
 │  └──────────────────────────────────────────┴───────────────────┘   │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### Local Mode (Small Context)
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      10,000 token context window                     │
-│                                                                      │
-│  ┌────────────────────────────────────────────────┬─────────────┐   │
-│  │              PRUNABLE ZONE                     │ PROTECTED   │   │
-│  │              (aggressive)                      │ (2,000)     │   │
-│  │                                                │             │   │
-│  │  Pruned if total > 500 tokens                  │ Never       │   │
-│  └────────────────────────────────────────────────┴─────────────┘   │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -275,7 +251,6 @@ OUTPUT:
 | Document | Relationship |
 |----------|--------------|
 | [[core-compaction]] | Implementation details |
-| [[utils-limits]] | Mode detection |
 | [[core-state]] | Session/message storage |
 | [[core-agents]] | Integration point |
 | [[conversation-turns]] | Message structure |

@@ -8,14 +8,11 @@ Inspired by OpenCode's compaction strategy.
 
 from typing import Any
 
-from tunacode.utils.limits import is_local_mode
 from tunacode.utils.messaging import estimate_tokens
 
-# Pruning thresholds - binary switch based on local_mode
+# Pruning thresholds
 PRUNE_PROTECT_TOKENS: int = 40_000  # Protect last 40k tokens
 PRUNE_MINIMUM_THRESHOLD: int = 20_000  # Only prune if savings exceed 20k
-LOCAL_PRUNE_PROTECT_TOKENS: int = 2_000  # Aggressive for small context
-LOCAL_PRUNE_MINIMUM_THRESHOLD: int = 500
 
 PRUNE_MIN_USER_TURNS: int = 2  # Require at least 2 user turns before pruning
 PRUNE_PLACEHOLDER: str = "[Old tool result content cleared]"
@@ -28,13 +25,11 @@ __all__ = [
 
 
 def get_prune_thresholds() -> tuple[int, int]:
-    """Get pruning thresholds based on local_mode (binary switch).
+    """Get pruning thresholds.
 
     Returns:
         Tuple of (protect_tokens, minimum_threshold)
     """
-    if is_local_mode():
-        return (LOCAL_PRUNE_PROTECT_TOKENS, LOCAL_PRUNE_MINIMUM_THRESHOLD)
     return (PRUNE_PROTECT_TOKENS, PRUNE_MINIMUM_THRESHOLD)
 
 
@@ -209,7 +204,7 @@ def prune_old_tool_outputs(
     if not tool_parts:
         return (messages, 0)
 
-    # Get dynamic thresholds based on local_mode
+    # Get pruning thresholds
     protect_tokens, minimum_threshold = get_prune_thresholds()
 
     # Phase 2: Determine pruning boundary

@@ -71,7 +71,7 @@ Main entry point. Returns `(pruned_count, tokens_reclaimed)`.
 
 ### get_prune_thresholds()
 
-Returns `(protect_tokens, minimum_threshold)` based on `is_local_mode()`.
+Returns `(protect_tokens, minimum_threshold)`.
 
 ### is_tool_return_part(part)
 
@@ -100,14 +100,9 @@ Replaces part content with placeholder. Returns tokens reclaimed or 0 if immutab
 
 ## Pruning Thresholds
 
-Binary switch based on `is_local_mode()`:
-
 | Mode | protect_tokens | minimum_threshold | Behavior |
 |------|----------------|-------------------|----------|
-| Standard (API) | 40,000 | 20,000 | Keep ~40k recent tokens |
-| Local | 2,000 | 500 | Aggressive - keep only ~2k tokens |
-
-Local mode prunes **20x more aggressively** to preserve limited context windows.
+| Standard | 40,000 | 20,000 | Keep ~40k recent tokens |
 
 Thresholds are defined at lines 14-18 and are not user-configurable.
 
@@ -137,20 +132,17 @@ Defined as `PRUNE_PLACEHOLDER` at line 21.
 
 | Component | File | Integration |
 |-----------|------|-------------|
-| Mode detection | `utils/limits.py` | `is_local_mode()` for threshold selection |
-| Trigger point | `core/agents/main.py:369` | Called at request start |
-| Token counting | `utils/messaging/token_counter.py` | `estimate_tokens()` |
-| Message types | `types/pydantic_ai.py` | `ToolReturnPart`, `ModelRequest` |
+| Trigger point | `core/agents/main.py` | Called at request start |
+| Token counting | `utils/messaging` | `estimate_tokens()` |
+| Message types | `pydantic_ai` | `ToolReturnPart`, `ModelRequest` |
 | State | `core/state.py` | `session.conversation.messages` storage |
 
 ## Constants
 
 ```python
-PRUNE_PROTECT_TOKENS = 40_000       # Standard mode
-PRUNE_MINIMUM_THRESHOLD = 20_000    # Standard mode
-LOCAL_PRUNE_PROTECT_TOKENS = 2_000  # Local mode
-LOCAL_PRUNE_MINIMUM_THRESHOLD = 500 # Local mode
-PRUNE_MIN_USER_TURNS = 2            # Safety guard
+PRUNE_PROTECT_TOKENS = 40_000
+PRUNE_MINIMUM_THRESHOLD = 20_000
+PRUNE_MIN_USER_TURNS = 2
 PRUNE_PLACEHOLDER = "[Old tool result content cleared]"
 ```
 

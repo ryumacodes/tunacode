@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 
 # Summary generation threshold (tokens)
 SUMMARY_THRESHOLD: int = 40_000
-LOCAL_SUMMARY_THRESHOLD: int = 6_000
 
 # Summary marker for detection
 SUMMARY_MARKER: str = "[CONVERSATION_SUMMARY]"
@@ -95,13 +94,12 @@ def is_summary_message(message: Any) -> bool:
     return False
 
 
-def should_compact(messages: list[Any], model_name: str, local_mode: bool = False) -> bool:
+def should_compact(messages: list[Any], model_name: str) -> bool:
     """Check if conversation should trigger summary generation.
 
     Args:
         messages: Message history
         model_name: Model for token estimation
-        local_mode: Whether running in local mode (lower threshold)
 
     Returns:
         True if token count exceeds threshold
@@ -109,7 +107,7 @@ def should_compact(messages: list[Any], model_name: str, local_mode: bool = Fals
     if not messages:
         return False
 
-    threshold = LOCAL_SUMMARY_THRESHOLD if local_mode else SUMMARY_THRESHOLD
+    threshold = SUMMARY_THRESHOLD
 
     # Estimate total tokens in history
     total_tokens = 0

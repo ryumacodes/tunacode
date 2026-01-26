@@ -16,16 +16,14 @@ Manages AI agent lifecycle using pydantic-ai framework, including agent creation
 
 ## Provider Architecture
 
-**Both local and API modes use identical providers.** There are no separate LocalProvider implementations.
-
-At `agent_config.py:308-359`, the `_create_model_with_retry()` function creates providers:
+At `agent_config.py`, the `_create_model_with_retry()` function creates providers:
 
 | Model Type | Provider Class |
 |------------|----------------|
 | Anthropic models | `AnthropicProvider` |
 | All other models | `OpenAIProvider` |
 
-The same HTTP client, retry logic, and provider instances are used regardless of mode. All optimization happens at the **message preparation layer** before any provider interaction.
+The same HTTP client, retry logic, and provider instances are used for all requests.
 
 ## Message Flow
 
@@ -33,26 +31,22 @@ The same HTTP client, retry logic, and provider instances are used regardless of
 User Message
      |
      v
-process_request() [main.py:527]
+process_request() [main.py]
      |
      v
-RequestOrchestrator created [main.py:536-544]
+RequestOrchestrator created [main.py]
      |
      v
 get_or_create_agent() [agent_config.py]
-     |   - Selects template (LOCAL_TEMPLATE vs MAIN_TEMPLATE)
-     |   - Selects tools (6 vs 11)
-     |   - Applies max_tokens
+     |   - Always uses full tool set
+     |   - Applies max_tokens (if set)
      v
-prune_old_tool_outputs() [main.py:369]
+prune_old_tool_outputs() [main.py]
      |   - Backward scan messages
      |   - Protect recent outputs
      |   - Replace old with placeholder
      v
 agent.iter() -> Provider HTTP Request
-     |
-     v
-(Same pydantic-ai message format for both modes)
 ```
 
 ## Key Components
@@ -61,7 +55,7 @@ agent.iter() -> Provider HTTP Request
 
 **process_request()** in `main.py`
 - Creates RequestOrchestrator with agent configuration
-- **Prunes old tool outputs before iteration** (line 369)
+- **Prunes old tool outputs before iteration**
 - Iterates through agent responses until completion
 - Handles tool execution and result aggregation
 - Tracks iteration counters during the run
@@ -73,12 +67,8 @@ agent.iter() -> Provider HTTP Request
 
 - **get_or_create_agent()** - Factory for cached Agent instances
 - **_create_model_with_retry()** - Model initialization with fallback
-- **load_system_prompt()** - Selects template based on mode (lines 236-245):
-  - Standard mode: `MAIN_TEMPLATE` (11 sections, ~3,500 tokens)
-  - Local mode: `LOCAL_TEMPLATE` (3 sections, ~1,100 tokens)
-- **load_tunacode_context()** - Loads guide file into system prompt:
-  - Standard mode: loads `AGENTS.md` (or `settings.guide_file`)
-  - Local mode: loads `local_prompt.md` for minimal tokens
+- **load_system_prompt()** - Loads system prompt
+- **load_tunacode_context()** - Loads guide file into system prompt (defaults to `AGENTS.md`)
 
 #### node_processor.py
 - **_process_node()** - Core response processing loop
@@ -125,7 +115,7 @@ agent.iter() -> Provider HTTP Request
 
 ## Tool Categories
 
-### Standard Mode
+### Tool set
 
 Full tool set with detailed descriptions:
 
@@ -136,37 +126,6 @@ Full tool set with detailed descriptions:
 | Completion | submit |
 | Todo | todowrite, todoread, todoclear |
 | Delegation | research_codebase |
-
-### Local Mode
-
-Minimal tool set for small context windows (8k-16k tokens):
-
-| Tool | Description | Standard Description |
-|------|-------------|---------------------|
-| bash | "Shell" | Full multi-paragraph description |
-| read_file | "Read" | Full multi-paragraph description |
-| update_file | "Edit" | Full multi-paragraph description |
-| write_file | "Write" | Full multi-paragraph description |
-| glob | "Find" | Full multi-paragraph description |
-| list_dir | "List" | Full multi-paragraph description |
-| submit | "Submit" | Full multi-paragraph description |
-
-**Excluded in local mode:** grep, web_fetch, todo tools, research_codebase
-
-Tool selection at `agent_config.py:406-444`.
-
-### Token Budget Comparison
-
-| Component | Standard Mode | Local Mode |
-|-----------|--------------|------------|
-| System prompt | ~3,500 tokens | ~1,100 tokens |
-| Guide file | ~2,000+ tokens | ~500 tokens |
-| Tool schemas | ~1,800 tokens | ~575 tokens |
-| **Total base** | **~7,300+** | **~2,200** |
-
-With 10k context window:
-- Standard mode: ~2,700 tokens for conversation
-- Local mode: ~7,800 tokens for conversation
 
 ## Message Types
 
@@ -202,7 +161,7 @@ See `main.py:577-601` for the abort handling logic and `main.py:626-653` for the
 | Component | File | Integration |
 |-----------|------|-------------|
 | State | `core/state.py` | Session state, message history |
-| Limits | `utils/limits.py` | `is_local_mode()`, `get_max_tokens()` |
+| Limits | `utils/limits.py` | `get_max_tokens()` |
 | Compaction | `core/compaction.py` | `prune_old_tool_outputs()` |
 | Prompting | `core/prompting/` | System prompt composition |
 | Tools | `tools/` | Tool function registry |

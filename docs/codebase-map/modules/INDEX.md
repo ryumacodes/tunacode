@@ -42,7 +42,7 @@ Each module file includes:
 - **[configuration.md](./configuration.md)** - User settings and model registry (load_user_config, ModelRegistry)
 - **[types.md](./types.md)** - Type definitions and protocols (UserConfig, MessageHistory, ToolCallback)
 - **[utils.md](./utils.md)** - Shared utilities (estimate_tokens, parse_json)
-- **[utils-limits.md](./utils-limits.md)** - Tool output limits with cascading defaults (get_read_limit, is_local_mode)
+- **[utils-limits.md](./utils-limits.md)** - Tool output limits with cascading defaults (get_read_limit)
 - **[indexing.md](./indexing.md)** - Fast codebase indexing (CodeIndex)
 - **[lsp.md](./lsp.md)** - Language Server Protocol client (LSPClient, get_diagnostics)
 - **[templates.md](./templates.md)** - Template management system (TemplateLoader)

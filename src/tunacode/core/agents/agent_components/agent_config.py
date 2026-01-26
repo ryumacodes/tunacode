@@ -22,7 +22,7 @@ from tunacode.configuration.models import load_models_registry
 from tunacode.constants import ENV_OPENAI_BASE_URL
 from tunacode.types import ModelName, PydanticAgent, SessionStateProtocol
 from tunacode.utils.config.user_configuration import load_config
-from tunacode.utils.limits import get_max_tokens, is_local_mode
+from tunacode.utils.limits import get_max_tokens
 
 from tunacode.tools.bash import bash
 from tunacode.tools.glob import glob
@@ -366,34 +366,19 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         # compatibility)
         tool_strict_validation = settings.get("tool_strict_validation", False)
 
-        # Check for local_mode - use minimal tools with short descriptions
-        strict = tool_strict_validation
-        if is_local_mode():
-            # Minimal tool set with short descriptions to save tokens
-            tools_list = [
-                Tool(bash, max_retries=max_retries, strict=strict, description="Shell"),
-                Tool(read_file, max_retries=max_retries, strict=strict, description="Read"),
-                Tool(update_file, max_retries=max_retries, strict=strict, description="Edit"),
-                Tool(write_file, max_retries=max_retries, strict=strict, description="Write"),
-                Tool(glob, max_retries=max_retries, strict=strict, description="Find"),
-                Tool(list_dir, max_retries=max_retries, strict=strict, description="List"),
-                Tool(submit, max_retries=max_retries, strict=strict, description="Submit"),
-            ]
-        else:
-            # Full tool set with detailed descriptions
-            tools_list = [
-                Tool(bash, max_retries=max_retries, strict=tool_strict_validation),
-                Tool(glob, max_retries=max_retries, strict=tool_strict_validation),
-                Tool(grep, max_retries=max_retries, strict=tool_strict_validation),
-                Tool(list_dir, max_retries=max_retries, strict=tool_strict_validation),
-                Tool(read_file, max_retries=max_retries, strict=tool_strict_validation),
-                Tool(update_file, max_retries=max_retries, strict=tool_strict_validation),
-                Tool(web_fetch, max_retries=max_retries, strict=tool_strict_validation),
-                Tool(write_file, max_retries=max_retries, strict=tool_strict_validation),
-            ]
-
+        # Full tool set with detailed descriptions
+        tools_list = [
+            Tool(bash, max_retries=max_retries, strict=tool_strict_validation),
+            Tool(glob, max_retries=max_retries, strict=tool_strict_validation),
+            Tool(grep, max_retries=max_retries, strict=tool_strict_validation),
+            Tool(list_dir, max_retries=max_retries, strict=tool_strict_validation),
+            Tool(read_file, max_retries=max_retries, strict=tool_strict_validation),
+            Tool(update_file, max_retries=max_retries, strict=tool_strict_validation),
+            Tool(web_fetch, max_retries=max_retries, strict=tool_strict_validation),
+            Tool(write_file, max_retries=max_retries, strict=tool_strict_validation),
             # Add submit tool for completion signaling
-            tools_list.append(Tool(submit, max_retries=max_retries, strict=strict))
+            Tool(submit, max_retries=max_retries, strict=tool_strict_validation),
+        ]
 
         # Configure HTTP client with retry logic at transport layer
         # This handles retries BEFORE node creation, avoiding pydantic-ai's
@@ -423,7 +408,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManager) -> Pydant
         # Create model instance with retry-enabled HTTP client
         model_instance = _create_model_with_retry(model, http_client, state_manager.session)
 
-        # Apply max_tokens if configured (local_mode sets default, explicit overrides)
+        # Apply max_tokens if configured
         max_tokens = get_max_tokens()
         if max_tokens is not None:
             agent = Agent(
