@@ -7,7 +7,7 @@ from textual.widgets import Static
 
 from tunacode.core.constants import RESOURCE_BAR_COST_FORMAT, RESOURCE_BAR_SEPARATOR
 from tunacode.core.lsp_status import get_lsp_status
-from tunacode.core.types import UserConfig
+from tunacode.core.shared_types import UserConfig
 
 from tunacode.ui.styles import (
     STYLE_ERROR,

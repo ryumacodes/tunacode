@@ -47,7 +47,6 @@ from tunacode.types.callbacks import (
     AsyncToolFunc,
     AsyncVoidFunc,
     NoticeCallback,
-    ProcessRequestCallback,
     StreamingCallback,
     ToolCallback,
     ToolResultCallback,
@@ -80,13 +79,10 @@ from tunacode.types.canonical import (
 
 # Dataclasses
 from tunacode.types.dataclasses import (
-    AgentState,
-    CommandContext,
     CostBreakdown,
     ModelConfig,
     ModelPricing,
     ModelRegistry,
-    ResponseState,
     TokenUsage,
 )
 
@@ -102,19 +98,6 @@ from tunacode.types.pydantic_ai import (
     PydanticAgent,
     normalize_request_usage,
 )
-
-# State protocol
-from tunacode.types.state import (
-    SessionStateProtocol,
-    StateManagerProtocol,
-)
-from tunacode.types.state_structures import (
-    ConversationState,
-    RuntimeState,
-    TaskState,
-    UsageState,
-)
-from tunacode.types.tool_registry import ToolCallRegistry
 
 __all__ = [
     # Base types
@@ -163,7 +146,6 @@ __all__ = [
     "AsyncFunc",
     "AsyncToolFunc",
     "AsyncVoidFunc",
-    "ProcessRequestCallback",
     "StreamingCallback",
     "ToolCallback",
     "ToolResultCallback",
@@ -171,22 +153,11 @@ __all__ = [
     "NoticeCallback",
     "UICallback",
     "UIInputCallback",
-    # State
-    "SessionStateProtocol",
-    "StateManagerProtocol",
-    "ConversationState",
-    "RuntimeState",
-    "TaskState",
-    "UsageState",
-    "ToolCallRegistry",
     # Dataclasses
-    "AgentState",
-    "CommandContext",
     "CostBreakdown",
     "ModelConfig",
     "ModelPricing",
     "ModelRegistry",
-    "ResponseState",
     "TokenUsage",
     # Canonical types (new)
     "CanonicalMessage",

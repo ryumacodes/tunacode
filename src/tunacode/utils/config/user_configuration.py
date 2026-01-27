@@ -8,14 +8,25 @@ Handles loading, saving, and updating user preferences including model selection
 import copy
 import json
 from json import JSONDecodeError
-from typing import TYPE_CHECKING
+from typing import Protocol
 
 from tunacode.configuration.settings import ApplicationSettings
 from tunacode.exceptions import ConfigurationError
 from tunacode.types import ModelName, UserConfig
 
-if TYPE_CHECKING:
-    from tunacode.types.state import StateManagerProtocol
+
+class UserConfigSession(Protocol):
+    """Minimal session interface for user config persistence."""
+
+    user_config: UserConfig
+
+
+class UserConfigStateManager(Protocol):
+    """State manager interface needed for config persistence."""
+
+    @property
+    def session(self) -> UserConfigSession:
+        """Return the session containing user config."""
 
 
 def load_config() -> UserConfig | None:
@@ -61,7 +72,7 @@ def load_config_with_defaults(default_config: UserConfig) -> UserConfig:
     return merge_user_config(default_config, user_config)
 
 
-def save_config(state_manager: "StateManagerProtocol") -> None:
+def save_config(state_manager: UserConfigStateManager) -> None:
     """Save user config to file."""
     app_settings = ApplicationSettings()
     try:
@@ -81,7 +92,7 @@ def save_config(state_manager: "StateManagerProtocol") -> None:
         raise ConfigurationError(f"Unexpected error saving configuration: {e}") from e
 
 
-def set_default_model(model_name: ModelName, state_manager: "StateManagerProtocol") -> None:
+def set_default_model(model_name: ModelName, state_manager: UserConfigStateManager) -> None:
     """Set the default model in the user config and save."""
     state_manager.session.user_config["default_model"] = model_name
     save_config(state_manager)

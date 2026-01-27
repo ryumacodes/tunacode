@@ -7,11 +7,10 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
-from tunacode.types import StateManagerProtocol
-
 from tunacode.core.logging.handlers import FileHandler, Handler, TUIHandler, TuiWriteCallback
 from tunacode.core.logging.levels import LogLevel
 from tunacode.core.logging.records import LogRecord
+from tunacode.core.types import StateManagerProtocol
 
 LOG_RECORD_EXTRA_FIELD: str = "extra"
 LOG_RECORD_TOOL_NAME_FIELD: str = "tool_name"

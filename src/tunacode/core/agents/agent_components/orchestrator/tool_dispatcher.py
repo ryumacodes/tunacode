@@ -9,11 +9,12 @@ from tunacode.constants import (
     ERROR_TOOL_CALL_ID_MISSING,
 )
 from tunacode.exceptions import StateError, UserAbortError
-from tunacode.types import AgentState, ToolArgs, ToolCallId
+from tunacode.types import ToolArgs, ToolCallId
 from tunacode.types.callbacks import ToolCallback, ToolResultCallback, ToolStartCallback
 
 from tunacode.core.logging import get_logger
 from tunacode.core.state import StateManager
+from tunacode.core.types import AgentState
 
 from ..response_state import ResponseState
 

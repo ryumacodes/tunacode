@@ -97,7 +97,7 @@ class ClearCommand(Command):
         session._debug_events = []
         session._debug_raw_stream_accum = ""
 
-        from tunacode.core.types import UsageMetrics
+        from tunacode.core.shared_types import UsageMetrics
 
         session.usage.last_call_usage = UsageMetrics()
         # Keep session_total_usage - tracks lifetime session cost

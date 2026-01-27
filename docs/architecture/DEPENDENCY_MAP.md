@@ -1,6 +1,6 @@
 # Dependency Map
 
-> **Baseline frozen: 2026-01-26**
+> **Baseline frozen: 2026-01-27**
 > Generated with [grimp](https://github.com/python-grimp/grimp)
 
 ## Layer Hierarchy (high to low)
@@ -33,7 +33,7 @@ constants   ┘
 | core → exceptions | 4 | ✅ valid |
 | core → indexing | 2 | ✅ valid |
 | core → tools | 10 | ✅ valid |
-| core → types | 26 | ✅ valid |
+| core → types | 24 | ✅ valid |
 | core → utils | 18 | ✅ valid |
 | exceptions → types | 1 | ✅ valid |
 | indexing → utils | 1 | ✅ valid |
@@ -49,7 +49,7 @@ constants   ┘
 | utils → configuration | 2 | ✅ valid |
 | utils → constants | 5 | ✅ valid |
 | utils → exceptions | 2 | ✅ valid |
-| utils → types | 4 | ✅ valid |
+| utils → types | 3 | ✅ valid |
 
 ### Violations
 

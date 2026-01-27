@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from tunacode.types import UserConfig
-from tunacode.types.state import StateManagerProtocol
 from tunacode.utils.config import load_config_with_defaults as _load_config_with_defaults
-from tunacode.utils.config.user_configuration import save_config as _save_config
+from tunacode.utils.config.user_configuration import (
+    UserConfigStateManager,
+)
+from tunacode.utils.config.user_configuration import (
+    save_config as _save_config,
+)
 
 __all__: list[str] = ["load_config_with_defaults", "save_config"]
 
@@ -22,6 +26,6 @@ def load_config_with_defaults(default_config: UserConfig) -> UserConfig:
     return _load_config_with_defaults(default_config)
 
 
-def save_config(state_manager: StateManagerProtocol) -> None:
+def save_config(state_manager: UserConfigStateManager) -> None:
     """Persist the current user configuration to disk."""
     _save_config(state_manager)

@@ -10,11 +10,11 @@ from pydantic_ai.messages import ToolCallPart
 
 from tunacode.constants import ToolName
 from tunacode.exceptions import UserAbortError
-from tunacode.types import AgentState
 
 from tunacode.core.agents.agent_components.orchestrator import tool_dispatcher
 from tunacode.core.agents.agent_components.response_state import ResponseState
 from tunacode.core.state import StateManager
+from tunacode.core.types import AgentState
 
 # =============================================================================
 # Test Constants

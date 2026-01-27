@@ -10,26 +10,21 @@ digraph tunacode_layers {
   configuration [label="configuration", fillcolor="#adb5bd"];
   indexing [label="indexing", fillcolor="#ff922b"];
   lsp [label="lsp", fillcolor="#e599f7"];
-  templates [label="templates", fillcolor="#20c997"];
 
   configuration -> types [label="3", penwidth=1.6];
-  core -> configuration [label="4", penwidth=1.8];
+  core -> configuration [label="8", penwidth=2.6];
   core -> indexing [label="2", penwidth=1.4];
-  core -> tools [label="19", penwidth=4.8];
-  core -> types [label="23", penwidth=5];
-  core -> utils [label="13", penwidth=3.6];
+  core -> tools [label="10", penwidth=3.0];
+  core -> types [label="24", penwidth=5];
+  core -> utils [label="18", penwidth=4.6];
   indexing -> utils [label="1", penwidth=1.2];
   lsp -> utils [label="1", penwidth=1.2];
   tools -> configuration [label="2", penwidth=1.4];
   tools -> indexing [label="1", penwidth=1.2];
   tools -> lsp [label="2", penwidth=1.4];
-  tools -> templates [label="1", penwidth=1.2];
-  tools -> types [label="9", penwidth=2.8];
+  tools -> types [label="1", penwidth=1.2];
   tools -> utils [label="4", penwidth=1.8];
-  ui -> configuration [label="8", penwidth=2.6];
-  ui -> core [label="10", penwidth=3.0];
-  ui -> types [label="6", penwidth=2.2];
-  ui -> utils [label="11", penwidth=3.2];
+  ui -> core [label="51", penwidth=5];
   utils -> configuration [label="2", penwidth=1.4];
-  utils -> types [label="4", penwidth=1.8];
+  utils -> types [label="3", penwidth=1.6];
 }

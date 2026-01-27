@@ -20,7 +20,7 @@ from tenacity import retry_if_exception_type, stop_after_attempt
 
 from tunacode.configuration.models import load_models_registry
 from tunacode.constants import ENV_OPENAI_BASE_URL
-from tunacode.types import ModelName, PydanticAgent, SessionStateProtocol
+from tunacode.types import ModelName, PydanticAgent
 from tunacode.utils.config.user_configuration import load_config
 from tunacode.utils.limits import get_max_tokens
 
@@ -37,6 +37,7 @@ from tunacode.tools.write_file import write_file
 from tunacode.core.logging import get_logger
 from tunacode.core.prompting import resolve_prompt
 from tunacode.core.state import StateManager
+from tunacode.core.types import SessionStateProtocol
 
 # Module-level cache for AGENTS.md context
 _TUNACODE_CACHE: dict[str, tuple[str, float]] = {}
@@ -189,9 +190,7 @@ def load_system_prompt(base_path: Path, model: str | None = None) -> str:
     prompt_file = base_path / "prompts" / "system_prompt.md"
 
     if not prompt_file.exists():
-        raise FileNotFoundError(
-            f"Required prompt file not found: {prompt_file}"
-        )
+        raise FileNotFoundError(f"Required prompt file not found: {prompt_file}")
 
     content = prompt_file.read_text(encoding="utf-8")
     return resolve_prompt(content)

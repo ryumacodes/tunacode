@@ -14,18 +14,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
-from tunacode.types import (
-    ConversationState,
-    InputSessions,
-    ModelName,
-    RuntimeState,
-    SessionId,
-    TaskState,
-    UsageState,
-    UserConfig,
-)
+from tunacode.types import InputSessions, ModelName, SessionId, UserConfig
 from tunacode.types.canonical import UsageMetrics
 from tunacode.utils.messaging import estimate_tokens, get_content
+
+from tunacode.core.types import ConversationState, RuntimeState, TaskState, UsageState
 
 if TYPE_CHECKING:
     from tunacode.core.indexing_service import IndexingService

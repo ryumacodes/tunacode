@@ -4,7 +4,7 @@ import threading
 from dataclasses import dataclass
 from enum import Enum
 
-from tunacode.types import AgentState
+from tunacode.core.types import AgentState
 
 
 class InvalidStateTransitionError(Exception):

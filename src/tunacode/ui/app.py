@@ -25,8 +25,8 @@ from tunacode.core.constants import (
     build_nextstep_theme,
     build_tunacode_theme,
 )
+from tunacode.core.shared_types import ModelName
 from tunacode.core.state import StateManager
-from tunacode.core.types import ModelName
 
 from tunacode.ui.renderers.agent_response import render_agent_streaming
 from tunacode.ui.renderers.errors import render_exception

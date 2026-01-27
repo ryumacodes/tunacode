@@ -2,7 +2,6 @@
 
 from typing import Any
 
-from tunacode.types import AgentState
 from tunacode.types.callbacks import (
     StreamingCallback,
     ToolCallback,
@@ -16,6 +15,7 @@ from tunacode.core.agents.resume.sanitize_debug import (
 )
 from tunacode.core.logging import get_logger
 from tunacode.core.state import StateManager
+from tunacode.core.types import AgentState
 
 from ..response_state import ResponseState
 from ..tool_buffer import ToolBuffer

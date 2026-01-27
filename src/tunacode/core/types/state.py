@@ -6,7 +6,7 @@ creating circular imports with the concrete implementation.
 
 from typing import Any, Protocol
 
-from tunacode.types.state_structures import (
+from tunacode.core.types.state_structures import (
     ConversationState,
     RuntimeState,
     TaskState,
