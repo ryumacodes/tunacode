@@ -87,7 +87,6 @@ Specialized renderers for each tool:
 - **update_file.py** - Diff visualization
 - **list_dir.py** - Directory tree view
 - **web_fetch.py** - Web content summary
-- **research.py** - Research agent results
 - **diagnostics.py** - LSP error display
 
 Tool renderers clamp content widths against the viewport and account for prefixes

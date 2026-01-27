@@ -127,18 +127,6 @@ Fetches web content:
 - Content size limits
 - Timeout handling
 
-### todo.py
-Task management for agents:
-**Tools:**
-- **todowrite** - Create/update tasks
-- **todoread** - Read task list
-- **todoclear** - Clear all tasks
-
-**Task States:**
-- `pending` - Not started
-- `in_progress` - Currently working
-- `completed` - Finished
-
 ### submit.py
 Completion signaling tool:
 - `submit` marks the task as complete for the orchestrator

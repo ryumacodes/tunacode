@@ -89,8 +89,7 @@ For advanced settings including **local mode** for small context models, see the
 | -------- | ---------------------------- |
 | /help    | Show available commands      |
 | /model   | Change AI model              |
-| /clear   | Clear agent state (UI, thoughts, todos) - messages preserved for /resume |
-| /yolo    | Toggle auto-confirm mode     |
+| /clear   | Clear agent state (UI, thoughts) - messages preserved for /resume |
 | /theme   | Change UI theme              |
 | /resume  | Load/delete saved sessions   |
 | !<cmd>   | Run shell command            |
