@@ -1,7 +1,7 @@
 ---
 id: tun-2cd6
 status: open
-deps: []
+deps: [tun-3149]
 links: []
 created: 2026-01-27T20:19:17Z
 type: task
