@@ -74,3 +74,19 @@ Phase 2 - Reimplementation (Keep in Tools):
 CLOSED (design changed):
 - tun-3149: check_file tool (not needed)
 - tun-2cd6: Tool registration (not needed)
+
+**2026-01-27T20:27:57Z**
+
+PHASE 1 COMPLETE: All LSP code removed
+
+Commits:
+- ba84e4c4: Delete src/tunacode/lsp/ directory (tun-486f)
+- f75b8a89: Remove LSP status files and UI indicator (tun-d9c6, tun-0db4)
+
+Deleted:
+- src/tunacode/lsp/ (entire directory)
+- src/tunacode/tools/lsp_status.py
+- src/tunacode/core/lsp_status.py
+- LSP indicator from UI resource bar
+
+Ready for Phase 2: Reimplementation in tools layer.
