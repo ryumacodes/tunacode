@@ -70,6 +70,19 @@ def write_layers_dot(layers: list[str], edges: dict[tuple[str, str], int]) -> No
     lines.append("}")
     LAYERS_DOT_PATH.write_text("\n".join(lines) + "\n")
 
+    # Also generate PNG if graphviz is available
+    try:
+        import subprocess
+
+        subprocess.run(
+            ["dot", "-Tpng", str(LAYERS_DOT_PATH), "-o", str(LAYER_GRAPH_PATH)],
+            check=True,
+            capture_output=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # graphviz not installed, skip PNG generation
+        pass
+
 
 def main() -> None:
     graph = grimp.build_graph(PACKAGE)
