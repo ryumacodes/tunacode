@@ -1,6 +1,6 @@
 ---
 id: psr-53c0
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-26T23:39:42Z

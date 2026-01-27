@@ -1,6 +1,6 @@
 ---
 id: psr-e147
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-26T23:39:36Z
