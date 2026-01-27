@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Architecture Layers</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 40px;
+        }
+        h1 {
+            color: #fff;
+            border-bottom: 2px solid #444;
+            padding-bottom: 10px;
+        }
+        .container {
+            display: flex;
+            gap: 60px;
+            flex-wrap: wrap;
+        }
+        .chart {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 12px;
+            flex: 1;
+            min-width: 400px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #ff6b6b;
+        }
+        .ideal h2 {
+            color: #69db7c;
+        }
+        .rules {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 12px;
+            margin-top: 40px;
+        }
+        .rules h2 {
+            color: #ffd43b;
+        }
+        .rule {
+            padding: 12px 0;
+            border-bottom: 1px solid #444;
+        }
+        .rule:last-child {
+            border-bottom: none;
+        }
+        .good {
+            color: #69db7c;
+        }
+        .bad {
+            color: #ff6b6b;
+        }
+        .foundation {
+            color: #a855f7;
+        }
+        code {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        pre {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>TunaCode Architecture Layers</h1>
+
+    <div class="container">
+        <div class="chart current">
+            <h2>Current</h2>
+            <div class="mermaid">
+graph TD
+    ui[ui]-->|51|core[core]
+    core-->|10|tools[tools]
+    core-->|2|indexing[indexing]
+    core-->|18|lsp[lsp]
+    core-->|24|types[types]
+    core-->|8|configuration[configuration]
+    tools-->|1|indexing
+    tools-->|2|lsp
+    tools-->|1|utils[utils]
+    indexing-->|1|utils
+    lsp-->|1|utils
+    lsp-->|4|configuration
+    utils-->|3|types
+    utils-->|2|configuration
+    configuration-->|3|types
+
+    style ui fill:#f66,stroke:#333
+    style core fill:#4a9eff,stroke:#333
+    style tools fill:#4ade80,stroke:#333
+    style indexing fill:#fb923c,stroke:#333
+    style lsp fill:#c084fc,stroke:#333
+    style utils fill:#facc15,stroke:#333
+    style types fill:#a855f7,stroke:#333
+    style configuration fill:#94a3b8,stroke:#333
+            </div>
+        </div>
+
+        <div class="chart ideal">
+            <h2>Ideal</h2>
+            <div class="mermaid">
+graph TD
+    ui[ui]-->core[core]
+    core-->tools[tools]
+    core-->indexing[indexing]
+    core-->lsp[lsp]
+    tools-->utils[utils]
+    indexing-->utils
+    lsp-->utils
+
+    subgraph foundation [Foundation - exempt from layers]
+        types[types]
+        configuration[configuration]
+    end
+
+    style ui fill:#f66,stroke:#333
+    style core fill:#4a9eff,stroke:#333
+    style tools fill:#4ade80,stroke:#333
+    style indexing fill:#fb923c,stroke:#333
+    style lsp fill:#c084fc,stroke:#333
+    style utils fill:#facc15,stroke:#333
+    style types fill:#a855f7,stroke:#333
+    style configuration fill:#94a3b8,stroke:#333
+    style foundation fill:none,stroke:#a855f7,stroke-width:2px,stroke-dasharray:5
+            </div>
+        </div>
+    </div>
+
+    <div class="rules">
+        <h2>The Rules</h2>
+        <div class="rule">
+            <strong>Application Layers:</strong> <code>ui → core → tools | indexing | lsp → utils</code><br>
+            Enforced top-to-bottom. No upward imports.
+        </div>
+        <div class="rule">
+            <strong class="foundation">Foundation:</strong> <code>types</code> and <code>configuration</code><br>
+            Exempt from layer rules. Any module can import them directly. They import nothing (or only each other).
+        </div>
+        <div class="rule">
+            <span class="good">✓ Allowed:</span> <code>ui → core</code>, <code>core → tools</code>, <code>core → types</code>, <code>utils → configuration</code>
+        </div>
+        <div class="rule">
+            <span class="bad">✗ Forbidden:</span> <code>utils → core</code>, <code>tools → ui</code>, <code>types → utils</code>, <code>configuration → core</code>
+        </div>
+        <div class="rule">
+            <strong>import-linter config:</strong>
+            <pre>[importlinter]
+root_package = tunacode
+
+[importlinter:contract:layers]
+name = Application layers
+type = layers
+layers =
+    tunacode.ui
+    tunacode.core
+    tunacode.tools | tunacode.indexing | tunacode.lsp
+    tunacode.utils
+exhaustive = true
+exhaustive_ignores =
+    types
+    configuration</pre>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark'
+        });
+    </script>
+</body>
+</html>
