@@ -6,7 +6,7 @@ from collections.abc import Iterable
 
 from textual.message import Message
 
-from tunacode.core.types import ToolArgs, ToolName
+from tunacode.core.shared_types import ToolArgs, ToolName
 
 
 class EditorCompletionsAvailable(Message):

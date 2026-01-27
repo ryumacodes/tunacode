@@ -14,9 +14,7 @@ Callback contracts (preconditions/postconditions):
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, TypeAlias
 
-from tunacode.types.base import ModelName, ToolArgs, ToolName
-from tunacode.types.pydantic_ai import AgentRun
-from tunacode.types.state import StateManagerProtocol
+from tunacode.types.base import ToolArgs, ToolName
 
 if TYPE_CHECKING:
     from pydantic_ai.messages import ToolCallPart  # noqa: F401
@@ -40,21 +38,6 @@ StreamingCallback: TypeAlias = Callable[[str], Awaitable[None]]
 UICallback: TypeAlias = Callable[[str], Awaitable[None]]
 UIInputCallback: TypeAlias = Callable[[str, str], Awaitable[str]]
 
-# Request orchestration callbacks
-ProcessRequestCallback: TypeAlias = Callable[
-    [
-        str,
-        ModelName,
-        StateManagerProtocol,
-        ToolCallback | None,
-        StreamingCallback | None,
-        ToolResultCallback | None,
-        ToolStartCallback | None,
-        NoticeCallback | None,
-    ],
-    Awaitable[AgentRun],
-]
-
 # Async function types
 AsyncFunc: TypeAlias = Callable[..., Awaitable[Any]]
 AsyncToolFunc: TypeAlias = Callable[..., Awaitable[str]]
@@ -64,7 +47,6 @@ __all__ = [
     "AsyncFunc",
     "AsyncToolFunc",
     "AsyncVoidFunc",
-    "ProcessRequestCallback",
     "StreamingCallback",
     "ToolCallback",
     "ToolResultCallback",

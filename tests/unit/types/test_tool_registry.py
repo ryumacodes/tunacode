@@ -3,7 +3,8 @@
 from datetime import UTC, datetime
 
 from tunacode.types.canonical import ToolCallStatus
-from tunacode.types.tool_registry import ToolCallRegistry
+
+from tunacode.core.types import ToolCallRegistry
 
 TOOL_CALL_ID = "tool-call-1"
 TOOL_NAME = "read_file"

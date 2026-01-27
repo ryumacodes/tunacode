@@ -17,7 +17,6 @@ from typing import Any
 
 from tunacode.types import ToolCallId
 from tunacode.types.canonical import CanonicalMessage, MessageRole, SystemPromptPart
-from tunacode.types.tool_registry import ToolCallRegistry
 from tunacode.utils.messaging import (
     _get_attr,
     _get_parts,
@@ -26,6 +25,7 @@ from tunacode.utils.messaging import (
 )
 
 from tunacode.core.logging import get_logger
+from tunacode.core.types import ToolCallRegistry
 
 PART_KIND_ATTR: str = "part_kind"
 TOOL_CALL_ID_ATTR: str = "tool_call_id"

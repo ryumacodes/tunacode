@@ -3,7 +3,7 @@
 import threading
 from dataclasses import dataclass, field
 
-from tunacode.types import AgentState
+from tunacode.core.types import AgentState
 
 from .state_transition import AGENT_TRANSITION_RULES, AgentStateMachine
 

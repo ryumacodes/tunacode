@@ -14,14 +14,14 @@ from rich.console import Console
 from rich.text import Text
 
 from tunacode.core.constants import MAX_CALLBACK_CONTENT
-from tunacode.core.state import StateManager
-from tunacode.core.types import (
+from tunacode.core.shared_types import (
     ToolArgs,
     ToolCallback,
     ToolName,
     ToolResultCallback,
     ToolStartCallback,
 )
+from tunacode.core.state import StateManager
 
 from tunacode.ui.widgets import ToolResultDisplay
 

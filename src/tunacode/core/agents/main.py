@@ -23,7 +23,6 @@ from tunacode.types import (
     AgentRun,
     ModelName,
     NoticeCallback,
-    StateManagerProtocol,
     StreamingCallback,
     ToolCallback,
     ToolResultCallback,
@@ -40,6 +39,7 @@ from tunacode.core.agents.resume.sanitize import (
     sanitize_history_for_resume,
 )
 from tunacode.core.logging import get_logger
+from tunacode.core.types import StateManagerProtocol
 
 from . import agent_components as ac
 

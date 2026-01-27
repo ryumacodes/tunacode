@@ -7,7 +7,8 @@ from typing import Any
 
 from tunacode.types.canonical import UsageMetrics
 from tunacode.types.pydantic_ai import MessageHistory
-from tunacode.types.tool_registry import ToolCallRegistry
+
+from tunacode.core.types.tool_registry import ToolCallRegistry
 
 DEFAULT_BATCH_COUNTER = 0
 DEFAULT_CONSECUTIVE_EMPTY_RESPONSES = 0
