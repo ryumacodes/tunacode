@@ -6,7 +6,6 @@ digraph tunacode_layers {
   core [label="core"];
   infrastructure [label="infrastructure"];
   tools [label="tools"];
-  lsp [label="lsp"];
   utils [label="utils"];
   configuration [label="configuration"];
   constants [label="constants"];
@@ -20,19 +19,17 @@ digraph tunacode_layers {
   core -> constants [label="5"];
   core -> exceptions [label="4"];
   core -> infrastructure [label="1"];
-  core -> tools [label="18"];
-  core -> types [label="24"];
+  core -> tools [label="17"];
+  core -> types [label="23"];
   exceptions -> types [label="1"];
   infrastructure -> configuration [label="1"];
   infrastructure -> constants [label="1"];
-  lsp -> utils [label="1"];
-  tools -> configuration [label="4"];
+  tools -> configuration [label="6"];
   tools -> constants [label="3"];
   tools -> exceptions [label="4"];
-  tools -> lsp [label="1"];
-  tools -> types [label="2"];
-  tools -> utils [label="1"];
-  ui -> core [label="51"];
+  tools -> types [label="1"];
+  tools -> utils [label="2"];
+  ui -> core [label="49"];
   utils -> configuration [label="2"];
   utils -> types [label="1"];
 }

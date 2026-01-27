@@ -90,3 +90,25 @@ Deleted:
 - LSP indicator from UI resource bar
 
 Ready for Phase 2: Reimplementation in tools layer.
+
+**2026-01-27T20:30:58Z**
+
+PHASE 2 COMPLETE: LSP reimplemented in tools layer
+
+Commits:
+- 5f2a0902: Create tools/lsp/ sub-package (tun-d150)
+- ecda2c82: Add LSP diagnostics to write_file and update_file (tun-2d43, tun-22f7)
+
+Architecture:
+- tools/lsp/ provides get_diagnostics(), format_diagnostics()
+- write_file and update_file call tools.lsp automatically
+- Dependencies: tools -> tools.lsp (same layer, valid)
+
+Flow:
+1. Agent calls write_file/update_file
+2. Tool writes/updates file
+3. If LSP enabled in config, fetches diagnostics
+4. Appends <file_diagnostics> block to result
+5. Agent sees feedback and decides what to do
+
+EPIC COMPLETE.
