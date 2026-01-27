@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Issue #313: Core → Utils Layer Violation Fix</title>
+    <title>Issue #314: Layer 2 Lateral Coupling Fix</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <style>
         body {
@@ -142,19 +142,35 @@
             height: 16px;
             border-radius: 4px;
         }
+        .prereq {
+            background: rgba(105, 219, 124, 0.1);
+            border: 1px solid #69db7c;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .prereq h3 {
+            color: #69db7c;
+            margin-top: 0;
+        }
     </style>
 </head>
 <body>
-    <h1>Issue <a class="issue-link" href="https://github.com/alchemiststudiosDOTai/tunacode/issues/313">#313</a>: Core → Utils Layer Violation</h1>
-    <p>The <code>core</code> layer (Layer 1) imports directly from <code>utils</code> (Layer 3), skipping Layer 2 (tools/indexing/lsp).</p>
+    <h1>Issue <a class="issue-link" href="https://github.com/alchemiststudiosDOTai/tunacode/issues/314">#314</a>: Layer 2 Lateral Coupling</h1>
+    <p>Layer 2 modules (<code>tools</code>, <code>indexing</code>, <code>lsp</code>, <code>infrastructure</code>) should NOT import from each other. They are peers.</p>
+
+    <div class="prereq">
+        <h3>✓ Prerequisite Complete: Issue #313</h3>
+        <p>PR #317 eliminated all <code>core → utils</code> violations. The architecture is now clean enough to address lateral coupling.</p>
+    </div>
 
     <div class="summary">
         <div class="summary-box bad">
-            <div class="summary-number violation">24</div>
-            <div class="summary-label">imports from core → utils</div>
+            <div class="summary-number violation">3</div>
+            <div class="summary-label">lateral imports</div>
         </div>
         <div class="summary-box bad">
-            <div class="summary-number violation">13</div>
+            <div class="summary-number violation">2</div>
             <div class="summary-label">files affected</div>
         </div>
         <div class="summary-box good">
@@ -168,217 +184,188 @@
             <h2>BEFORE (Current State)</h2>
             <div class="mermaid">
 graph TD
-    ui[ui Layer 0]-->|51|core[core Layer 1]
-    core-->|10|tools[tools]
+    ui[ui]-->|51|core[core]
+    core-->|18|tools[tools]
     core-->|2|indexing[indexing]
-    core-->|18|lsp[lsp]
-    core-.->|24 imports|utils[utils Layer 3]
-    tools-->|1|utils
-    indexing-->|1|utils
+    core-->|1|infrastructure[infrastructure]
+
+    tools-.->|1 ❌|indexing
+    tools-.->|2 ❌|lsp[lsp]
+
+    tools-->|1|utils[utils]
+    indexing-->|1|configuration
     lsp-->|1|utils
 
-    subgraph layer2 [Layer 2]
+    subgraph layer2 [Layer 2 - should be independent]
         tools
         indexing
         lsp
+        infrastructure
     end
 
-    subgraph foundation [Foundation - exempt]
+    subgraph foundation [Foundation]
         types[types]
         configuration[configuration]
     end
 
-    core-->|24|types
-    core-->|8|configuration
-
     linkStyle 4 stroke:#ff6b6b,stroke-width:3px,stroke-dasharray:5
+    linkStyle 5 stroke:#ff6b6b,stroke-width:3px,stroke-dasharray:5
 
     style ui fill:#f66,stroke:#333
     style core fill:#4a9eff,stroke:#333
     style tools fill:#4ade80,stroke:#333
     style indexing fill:#fb923c,stroke:#333
     style lsp fill:#c084fc,stroke:#333
+    style infrastructure fill:#38bdf8,stroke:#333
     style utils fill:#facc15,stroke:#333
     style types fill:#a855f7,stroke:#333
     style configuration fill:#94a3b8,stroke:#333
-    style layer2 fill:none,stroke:#4ade80,stroke-width:2px,stroke-dasharray:5
+    style layer2 fill:none,stroke:#ff6b6b,stroke-width:2px,stroke-dasharray:5
     style foundation fill:none,stroke:#a855f7,stroke-width:2px,stroke-dasharray:5
             </div>
-            <p class="violation">Problem: core skips Layer 2 and imports directly from utils</p>
+            <p class="violation">Problem: tools imports from indexing and lsp (lateral coupling)</p>
         </div>
 
         <div class="chart after">
             <h2>AFTER (Target State)</h2>
             <div class="mermaid">
 graph TD
-    ui[ui Layer 0]-->|51|core[core Layer 1]
-    core-->|10+msg|tools[tools]
+    ui[ui]-->|51|core[core]
+    core-->|18|tools[tools]
     core-->|2|indexing[indexing]
-    core-->|18|lsp[lsp]
-    tools-->|parsing,msg|utils[utils Layer 3]
-    indexing-->|1|utils
+    core-->|1|infrastructure[infrastructure]
+    core-.->|orchestrates|lsp[lsp]
+
+    tools-->|1|utils[utils]
+    indexing-->|1|configuration
     lsp-->|1|utils
 
-    subgraph layer2 [Layer 2]
+    subgraph layer2 [Layer 2 - fully independent]
         tools
         indexing
         lsp
+        infrastructure
     end
 
-    subgraph foundation [Foundation - exempt]
+    subgraph foundation [Foundation]
         types[types]
         configuration[configuration]
     end
-
-    core-->types
-    core-->configuration
 
     style ui fill:#f66,stroke:#333
     style core fill:#4a9eff,stroke:#333
     style tools fill:#4ade80,stroke:#333
     style indexing fill:#fb923c,stroke:#333
     style lsp fill:#c084fc,stroke:#333
+    style infrastructure fill:#38bdf8,stroke:#333
     style utils fill:#facc15,stroke:#333
     style types fill:#a855f7,stroke:#333
     style configuration fill:#94a3b8,stroke:#333
-    style layer2 fill:none,stroke:#4ade80,stroke-width:2px,stroke-dasharray:5
+    style layer2 fill:none,stroke:#69db7c,stroke-width:2px,stroke-dasharray:5
     style foundation fill:none,stroke:#a855f7,stroke-width:2px,stroke-dasharray:5
             </div>
-            <p class="fixed">Fixed: core imports only from Layer 2 or Foundation (types/ has no behavior)</p>
+            <p class="fixed">Fixed: Layer 2 modules only depend downward, core orchestrates cross-module calls</p>
         </div>
     </div>
 
     <div class="migration">
-        <h2>Migration Plan</h2>
+        <h2>Current Violations</h2>
+        <table>
+            <tr>
+                <th>File</th>
+                <th>Line</th>
+                <th>Import</th>
+                <th>Used For</th>
+            </tr>
+            <tr>
+                <td><code>tools/glob.py</code></td>
+                <td>12</td>
+                <td><code>from tunacode.indexing import CodeIndex</code></td>
+                <td>Checking if file is indexed</td>
+            </tr>
+            <tr>
+                <td><code>tools/lsp_status.py</code></td>
+                <td>5</td>
+                <td><code>from tunacode.lsp.servers import get_server_command</code></td>
+                <td>Getting LSP server info</td>
+            </tr>
+            <tr>
+                <td><code>tools/decorators.py</code></td>
+                <td>73</td>
+                <td><code>from tunacode.lsp import format_diagnostics, get_diagnostics</code></td>
+                <td>LSP diagnostics in tool output</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="migration">
+        <h2>Fix Strategy</h2>
 
         <div class="legend">
             <div class="legend-item">
-                <div class="legend-color" style="background: #a855f7;"></div>
-                <span>Move to Foundation</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #4ade80;"></div>
-                <span>Move/Facade to Layer 2</span>
-            </div>
-            <div class="legend-item">
                 <div class="legend-color" style="background: #4a9eff;"></div>
-                <span>Inline into Core</span>
+                <span>Push to Core (orchestration)</span>
             </div>
             <div class="legend-item">
-                <div class="legend-color" style="background: #ff6b6b;"></div>
-                <span>Delete</span>
+                <div class="legend-color" style="background: #a855f7;"></div>
+                <span>Extract to types/ (protocol)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #facc15;"></div>
+                <span>Move to utils/ (shared)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #c084fc;"></div>
+                <span>Move tool to lsp/</span>
             </div>
         </div>
 
         <div class="phase">
-            <div class="phase-header">Phase 1: Inline Tiny Modules (2 modules)</div>
-            <div class="move"><code>utils/formatting.py</code> <span class="arrow">→</span> inline into <code>core/formatting.py</code> (6 lines)</div>
-            <div class="move"><code>utils/ui/helpers.py</code> DotDict <span class="arrow">→</span> inline into <code>core/agents/main.py</code> (14 lines)</div>
+            <div class="phase-header">Fix 1: tools/glob.py → indexing (CodeIndex)</div>
+            <div class="move"><strong>Option A:</strong> Inject <code>is_indexed: Callable[[Path], bool]</code> from core</div>
+            <div class="move"><strong>Option B:</strong> Create <code>types/indexing.py</code> with <code>IndexProtocol</code></div>
+            <div class="move"><strong>Option C:</strong> Remove indexing check from glob (simplest)</div>
+            <div style="font-size: 12px; color: #888; margin-top: 5px;">Recommendation: Option C - glob shouldn't need to know about indexing state</div>
         </div>
 
         <div class="phase">
-            <div class="phase-header">Phase 2: Move to Foundation - configuration/ (4 modules)</div>
-            <div class="move"><code>utils/system/ignore_patterns.py</code> <span class="arrow">→</span> <code>configuration/ignore_patterns.py</code></div>
-            <div class="move"><code>utils/config/user_configuration.py</code> <span class="arrow">→</span> <code>configuration/user_config.py</code></div>
-            <div class="move"><code>utils/limits.py</code> <span class="arrow">→</span> <code>configuration/limits.py</code></div>
-            <div class="move"><code>utils/system/paths.py</code> <span class="arrow">→</span> <code>configuration/paths.py</code></div>
+            <div class="phase-header">Fix 2: tools/lsp_status.py → lsp (get_server_command)</div>
+            <div class="move"><strong>Option A:</strong> Move <code>lsp_status.py</code> to <code>lsp/tools/status.py</code></div>
+            <div class="move"><strong>Option B:</strong> Extract server info to <code>configuration/lsp_servers.py</code></div>
+            <div style="font-size: 12px; color: #888; margin-top: 5px;">Recommendation: Option A - this tool IS about LSP, belongs in lsp/</div>
         </div>
 
         <div class="phase">
-            <div class="phase-header">Phase 3: Route through Layer 2 - tools/messaging/ (facade)</div>
-            <div class="move"><code>core/*</code> <span class="arrow">→</span> imports from <code>tools/messaging/</code> <span class="arrow">→</span> re-exports from <code>utils/messaging/</code></div>
-            <div style="font-size: 12px; color: #888; margin-top: 5px;">Facade pattern: tools/messaging/__init__.py re-exports estimate_tokens, get_content, find_dangling_tool_calls. utils/messaging/ stays in Layer 3. types/ has no behavior.</div>
-        </div>
-
-        <div class="phase">
-            <div class="phase-header">Phase 4: Create Infrastructure Layer (1 module)</div>
-            <div class="move"><code>utils/ui/file_filter.py</code> <span class="arrow">→</span> <code>infrastructure/file_filter.py</code></div>
-        </div>
-
-        <div class="phase">
-            <div class="phase-header">Phase 5: Move to Layer 2 - tools/ (1 module)</div>
-            <div class="move"><code>utils/parsing/</code> <span class="arrow">→</span> <code>tools/parsing/</code></div>
-            <div style="font-size: 12px; color: #888; margin-top: 5px;">Tool-specific parsing (Qwen2 XML, Hermes, JSON formats)</div>
-        </div>
-
-        <div class="phase">
-            <div class="phase-header">Phase 6: Cleanup</div>
-            <div class="move"><span class="delete">utils/formatting.py</span></div>
-            <div class="move"><span class="delete">utils/ui/helpers.py</span></div>
-            <div class="move"><span class="delete">utils/config/</span> (empty after moves)</div>
-            <div class="move"><span class="delete">utils/system/</span> (empty after moves)</div>
-            <div class="move"><span class="delete">utils/parsing/</span> (moved to tools/parsing)</div>
-            <div class="move" style="color: #4ade80;"><code>utils/messaging/</code> stays in Layer 3 (accessed via tools/messaging/ facade)</div>
+            <div class="phase-header">Fix 3: tools/decorators.py → lsp (diagnostics)</div>
+            <div class="move"><strong>Option A:</strong> Inject diagnostics callback from core: <code>get_diagnostics: Callable | None</code></div>
+            <div class="move"><strong>Option B:</strong> Move diagnostic formatting to <code>utils/diagnostics.py</code></div>
+            <div class="move"><strong>Option C:</strong> Make LSP diagnostics optional, only call if available</div>
+            <div style="font-size: 12px; color: #888; margin-top: 5px;">Recommendation: Option A - core already orchestrates tool execution, can inject LSP</div>
         </div>
     </div>
 
     <div class="migration">
-        <h2>Import Changes by Core File</h2>
+        <h2>Import Changes Summary</h2>
         <table>
             <tr>
-                <th>Core File</th>
-                <th>Before (utils)</th>
+                <th>File</th>
+                <th>Before</th>
                 <th>After</th>
             </tr>
             <tr>
-                <td><code>core/state.py</code></td>
-                <td><code>utils.messaging</code>, <code>utils.config</code>, <code>utils.system.paths</code></td>
-                <td><code>tools.messaging</code>, <code>configuration.user_config</code>, <code>configuration.paths</code></td>
+                <td><code>tools/glob.py</code></td>
+                <td><code>from tunacode.indexing import CodeIndex</code></td>
+                <td>(removed - glob doesn't check index)</td>
             </tr>
             <tr>
-                <td><code>core/agents/resume/sanitize.py</code></td>
-                <td><code>utils.messaging</code></td>
-                <td><code>tools.messaging</code></td>
+                <td><code>tools/lsp_status.py</code></td>
+                <td><code>from tunacode.lsp.servers import ...</code></td>
+                <td>(moved to <code>lsp/tools/status.py</code>)</td>
             </tr>
             <tr>
-                <td><code>core/agents/resume/prune.py</code></td>
-                <td><code>utils.messaging</code></td>
-                <td><code>tools.messaging</code></td>
-            </tr>
-            <tr>
-                <td><code>core/agents/resume/summary.py</code></td>
-                <td><code>utils.messaging</code></td>
-                <td><code>tools.messaging</code></td>
-            </tr>
-            <tr>
-                <td><code>core/agents/.../tool_dispatcher.py</code></td>
-                <td><code>utils.parsing</code></td>
-                <td><code>tools.parsing</code></td>
-            </tr>
-            <tr>
-                <td><code>core/agents/.../agent_config.py</code></td>
-                <td><code>utils.config</code>, <code>utils.limits</code></td>
-                <td><code>configuration.user_config</code>, <code>configuration.limits</code></td>
-            </tr>
-            <tr>
-                <td><code>core/agents/main.py</code></td>
-                <td><code>utils.ui.DotDict</code></td>
-                <td>(inlined)</td>
-            </tr>
-            <tr>
-                <td><code>core/formatting.py</code></td>
-                <td><code>utils.formatting</code></td>
-                <td>(inlined)</td>
-            </tr>
-            <tr>
-                <td><code>core/user_configuration.py</code></td>
-                <td><code>utils.config</code></td>
-                <td><code>configuration.user_config</code></td>
-            </tr>
-            <tr>
-                <td><code>core/system_paths.py</code></td>
-                <td><code>utils.system.paths</code></td>
-                <td><code>configuration.paths</code></td>
-            </tr>
-            <tr>
-                <td><code>core/file_filter.py</code></td>
-                <td><code>utils.ui.file_filter</code></td>
-                <td><code>infrastructure.file_filter</code></td>
-            </tr>
-            <tr>
-                <td><code>core/messaging.py</code></td>
-                <td><code>utils.messaging</code></td>
-                <td><code>tools.messaging</code></td>
+                <td><code>tools/decorators.py</code></td>
+                <td><code>from tunacode.lsp import get_diagnostics</code></td>
+                <td><code>diagnostics_fn: Callable | None</code> (injected)</td>
             </tr>
         </table>
     </div>
@@ -387,15 +374,54 @@ graph TD
         <h2>Validation</h2>
         <p>After migration, run:</p>
         <pre style="background: #333; padding: 15px; border-radius: 8px;">
-# Verify no core → utils imports remain
-grep -rn "from tunacode.utils" src/tunacode/core/
-grep -rn "import tunacode.utils" src/tunacode/core/
+# Verify no lateral imports in Layer 2
+grep -rn "from tunacode.indexing" src/tunacode/tools/
+grep -rn "from tunacode.lsp" src/tunacode/tools/
+grep -rn "from tunacode.tools" src/tunacode/indexing/
+grep -rn "from tunacode.tools" src/tunacode/lsp/
 
-# Run import-linter (once configured)
-uv run lint-imports
+# All should return empty
 
 # Run tests
-uv run pytest</pre>
+uv run pytest
+
+# Verify with grimp
+uv run python -c "
+import grimp
+g = grimp.build_graph('tunacode')
+# Should find no chains between Layer 2 modules
+"</pre>
+    </div>
+
+    <div class="migration">
+        <h2>Why This Matters</h2>
+        <table>
+            <tr>
+                <th>Problem</th>
+                <th>With Lateral Coupling</th>
+                <th>After Fix</th>
+            </tr>
+            <tr>
+                <td>Testing</td>
+                <td class="violation">Can't test tools without lsp</td>
+                <td class="fixed">Each module testable in isolation</td>
+            </tr>
+            <tr>
+                <td>Changes</td>
+                <td class="violation">Changing lsp might break tools</td>
+                <td class="fixed">Modules change independently</td>
+            </tr>
+            <tr>
+                <td>Circular risk</td>
+                <td class="violation">Could become bidirectional</td>
+                <td class="fixed">Impossible - all go downward</td>
+            </tr>
+            <tr>
+                <td>Deployment</td>
+                <td class="violation">Must deploy together</td>
+                <td class="fixed">Can split modules later</td>
+            </tr>
+        </table>
     </div>
 
     <script>
