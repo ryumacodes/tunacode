@@ -59,7 +59,6 @@ This directory contains the **structure analysis** of the TunaCode codebase, gen
   - `utils/` - General utilities
   - `tutorial/` - Interactive tutorials
   - `prompts/` - Prompt templates
-  - `templates/` - Code generation
   - `tools_utils/` - Shared tool utilities
 
 ## Directory Structure Summary
@@ -136,7 +135,6 @@ src/tunacode/
 ├── prompts/                 # Prompt templates
 │   ├── research/sections/
 │   └── sections/
-├── templates/               # Code templates
 └── tools_utils/             # Shared tool utilities
 ```
 

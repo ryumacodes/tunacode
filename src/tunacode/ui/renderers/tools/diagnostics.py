@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from rich.console import Group, RenderableType
 from rich.text import Text
 
-from tunacode.constants import UI_COLORS
-from tunacode.utils.formatting import truncate_diagnostic_message
+from tunacode.core.constants import UI_COLORS
+from tunacode.core.formatting import truncate_diagnostic_message
 
 MAX_DIAGNOSTICS_DISPLAY = 10
 

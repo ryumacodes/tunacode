@@ -5,7 +5,7 @@ from __future__ import annotations
 from rich.text import Text
 from textual.widgets import RichLog
 
-from tunacode.constants import APP_NAME, APP_VERSION
+from tunacode.core.constants import APP_NAME, APP_VERSION
 
 from tunacode.ui.logo_assets import LOGO_WELCOME_FILENAME, read_logo_ansi
 from tunacode.ui.styles import (

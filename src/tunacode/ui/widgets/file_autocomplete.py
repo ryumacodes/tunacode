@@ -5,7 +5,7 @@ from __future__ import annotations
 from textual.widgets import Input
 from textual_autocomplete import AutoComplete, DropdownItem, TargetState
 
-from tunacode.utils.ui.file_filter import FileFilter
+from tunacode.core.file_filter import FileFilter
 
 
 class FileAutoComplete(AutoComplete):

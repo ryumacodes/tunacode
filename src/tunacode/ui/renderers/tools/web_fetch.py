@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from rich.console import RenderableType
 from rich.text import Text
 
-from tunacode.constants import MIN_VIEWPORT_LINES, URL_DISPLAY_MAX_LENGTH
+from tunacode.core.constants import MIN_VIEWPORT_LINES, URL_DISPLAY_MAX_LENGTH
 
 from tunacode.ui.renderers.tools.base import (
     BaseToolRenderer,

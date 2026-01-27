@@ -364,7 +364,6 @@ Level 1 (Utilities):
 │   ├── messaging
 │   ├── parsing
 │   └── system
-├── templates
 ├── lsp
 ├── prompting
 │   └── sections

@@ -9,8 +9,8 @@ from textual.screen import Screen
 from textual.widgets import Input, OptionList, Static
 from textual.widgets.option_list import Option
 
-from tunacode.configuration.models import get_models_for_provider, get_providers
-from tunacode.constants import MODEL_PICKER_UNFILTERED_LIMIT
+from tunacode.core.configuration import get_models_for_provider, get_providers
+from tunacode.core.constants import MODEL_PICKER_UNFILTERED_LIMIT
 
 
 def _filter_visible_items(
@@ -233,7 +233,7 @@ class ModelPickerScreen(Screen[str | None]):
 
     def _rebuild_options(self) -> None:
         """Rebuild OptionList with filtered items and pricing."""
-        from tunacode.configuration.pricing import format_pricing_display, get_model_pricing
+        from tunacode.core.configuration import format_pricing_display, get_model_pricing
 
         option_list = self.query_one("#model-list", OptionList)
         option_list.clear_options()

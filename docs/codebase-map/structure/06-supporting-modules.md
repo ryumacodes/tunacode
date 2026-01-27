@@ -4,7 +4,7 @@ path: tunacode
 type: directory
 depth: 1
 description: Indexing, LSP, services, types, utilities, and tutorials
-seams: [indexing, lsp, services, types, utils, tutorial, prompts, templates]
+seams: [indexing, lsp, services, types, utils, tutorial, prompts]
 ---
 
 # Supporting Modules (`src/tunacode/*`)
@@ -21,7 +21,6 @@ This document covers the **supporting modules** that enable core TunaCode functi
 - **`utils/`** - General utility functions
 - **`tutorial/`** - Interactive tutorial system
 - **`prompts/`** - Prompt template library
-- **`templates/`** - Code generation templates
 - **`tools_utils/`** - Shared tool utilities
 
 ## Module Details
@@ -142,21 +141,6 @@ prompts/
 - Code analysis prompts
 - Task-specific instructions
 - Context formatting
-
-### Templates Module (`src/tunacode/templates/`)
-**Purpose**: Code generation templates.
-
-**Contents**:
-- Project scaffolding templates
-- File templates for different languages
-- Code pattern templates
-- Configuration file templates
-
-**Use Cases**:
-- Bootstrapping new projects
-- Generating boilerplate code
-- Consistent file structure
-- Best practices enforcement
 
 ### Tools Utils (`src/tunacode/tools_utils/`)
 **Purpose**: Shared utilities for tool implementations.

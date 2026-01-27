@@ -97,9 +97,6 @@ src/tunacode/
 │   ├── system/            # Gitignore, paths
 │   └── ui/                # File filtering
 │
-├── templates/              # Template management system
-│   └── loader.py          # TemplateLoader
-│
 ├── prompts/                # Modular prompt sections
 │   ├── sections/          # agent_role.md, critical_rules.md
 │   └── research/sections/ # Research-specific prompts
@@ -134,7 +131,6 @@ src/tunacode/
 | **utils/** | Shared utilities | estimate_tokens, parse_json | M |
 | **indexing/** | Fast codebase indexing | CodeIndex, index_files, search_files | M |
 | **lsp/** | Language Server Protocol | LSPClient, get_diagnostics | M |
-| **templates/** | Template management | TemplateLoader | M |
 | **prompts/** | Prompt templates | agent_role.md, critical_rules.md | M |
 | **cli/** | Command-line interface | REPL commands, slash commands | M, D |
 | **exceptions.py** | Exception hierarchy | TunaCodeError, ToolExecutionError | M |
@@ -415,7 +411,6 @@ Located in `/Users/tuna/Desktop/tunacode/tests/`:
   - [utils.md](./modules/utils.md) - Utilities
   - [indexing.md](./modules/indexing.md) - Code indexing
   - [lsp.md](./modules/lsp.md) - Language Server Protocol
-  - [templates.md](./modules/templates.md) - Templates
   - [prompts.md](./modules/prompts.md) - Prompt sections
   - [exceptions.md](./modules/exceptions.md) - Exception hierarchy
   - [constants.md](./modules/constants.md) - Global constants

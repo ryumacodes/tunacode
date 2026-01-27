@@ -12,7 +12,7 @@ from typing import Any
 from rich.console import RenderableType
 from rich.text import Text
 
-from tunacode.constants import (
+from tunacode.core.constants import (
     MIN_VIEWPORT_LINES,
     SYNTAX_LINE_NUMBER_PADDING,
     SYNTAX_LINE_NUMBER_SEPARATOR_WIDTH,

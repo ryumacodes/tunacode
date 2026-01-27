@@ -32,7 +32,7 @@ core/
 │   └── agent_components/          # Agent building blocks
 │       ├── (state, tools)
 ├── prompting/
-│   ├── (prompt builders, templates)
+│   ├── (prompt builders)
 ├── state/
 │   ├── (application state models)
 ├── setup/

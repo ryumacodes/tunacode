@@ -19,7 +19,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import (
+from tunacode.core.constants import (
     BOX_HORIZONTAL,
     SEPARATOR_WIDTH,
     UI_COLORS,

@@ -69,7 +69,7 @@ seams: [S]
    - Seams: commands, repl_components, textual_repl
 
 7. **06-supporting-modules.md** (6.0 KB)
-   - Indexing, LSP, services, types, utils, tutorial, prompts, templates
+   - Indexing, LSP, services, types, utils, tutorial, prompts
    - Seams: indexing, lsp, services, types, utils, tutorial
 
 ### Supporting Files

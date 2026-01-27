@@ -14,7 +14,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from tunacode.constants import (
+from tunacode.core.constants import (
     MAX_PANEL_LINES,
     MAX_SEARCH_RESULTS_DISPLAY,
     TOOL_PANEL_WIDTH_DEBUG,

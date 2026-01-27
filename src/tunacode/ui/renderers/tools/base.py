@@ -21,7 +21,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.constants import (
+from tunacode.core.constants import (
     BOX_HORIZONTAL,
     HOOK_ARROW_PREFIX,
     MIN_TOOL_PANEL_LINE_WIDTH,

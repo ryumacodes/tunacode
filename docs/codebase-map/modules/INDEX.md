@@ -31,6 +31,14 @@ Each module file includes:
 - **[core-logging.md](./core-logging.md)** - Unified structured logging (LogManager, LogRecord, FileHandler)
 - **[core-sanitize.md](./core-sanitize.md)** - Message history cleanup (run_cleanup_loop, remove_dangling_tool_calls)
 - **[core-lsp-status.md](./core-lsp-status.md)** - UI-facing LSP status facade (get_lsp_status)
+- **[core-configuration.md](./core-configuration.md)** - Configuration defaults and model registry facade
+- **[core-constants.md](./core-constants.md)** - UI-facing constants and theme facade
+- **[core-types.md](./core-types.md)** - UI-facing type exports
+- **[core-messaging.md](./core-messaging.md)** - Core message content facade (get_content)
+- **[core-user-configuration.md](./core-user-configuration.md)** - User config persistence facade
+- **[core-system-paths.md](./core-system-paths.md)** - Session/update helpers facade
+- **[core-formatting.md](./core-formatting.md)** - Formatting helpers facade
+- **[core-file-filter.md](./core-file-filter.md)** - File autocomplete filter facade
 
 ### UI Module
 - **[ui-overview.md](./ui-overview.md)** - Textual TUI interface (TextualReplApp, screens, renderers)
@@ -45,7 +53,6 @@ Each module file includes:
 - **[utils-limits.md](./utils-limits.md)** - Tool output limits with cascading defaults (get_read_limit)
 - **[indexing.md](./indexing.md)** - Fast codebase indexing (CodeIndex)
 - **[lsp.md](./lsp.md)** - Language Server Protocol client (LSPClient, get_diagnostics)
-- **[templates.md](./templates.md)** - Template management system (TemplateLoader)
 - **[prompts.md](./prompts.md)** - Modular prompt sections (agent_role.md, critical_rules.md)
 - **[exceptions.md](./exceptions.md)** - Custom exception hierarchy (TunaCodeError, ToolExecutionError)
 - **[constants.md](./constants.md)** - Global constants and UI text (UI_COLORS, TOOL_NAMES)
@@ -72,7 +79,6 @@ Each module file includes:
 
 **Configuration:**
 - configuration.md
-- templates.md
 
 **Utilities:**
 - types.md
@@ -95,6 +101,14 @@ src/tunacode/
 │   ├── state.py → core-state.md
 │   ├── compaction.py → core-compaction.md
 │   ├── lsp_status.py → core-lsp-status.md
+│   ├── configuration.py → core-configuration.md
+│   ├── constants.py → core-constants.md
+│   ├── types.py → core-types.md
+│   ├── messaging.py → core-messaging.md
+│   ├── user_configuration.py → core-user-configuration.md
+│   ├── system_paths.py → core-system-paths.md
+│   ├── formatting.py → core-formatting.md
+│   ├── file_filter.py → core-file-filter.md
 ├── ui/ → ui-overview.md
 ├── tools/ → tools-overview.md
 ├── configuration/ → configuration.md
@@ -103,7 +117,6 @@ src/tunacode/
 │   └── limits.py → utils-limits.md
 ├── indexing/ → indexing.md
 ├── lsp/ → lsp.md
-├── templates/ → templates.md
 ├── prompts/ → prompts.md
 ├── exceptions.py → exceptions.md
 └── constants.py → constants.md

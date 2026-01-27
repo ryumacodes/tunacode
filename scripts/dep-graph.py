@@ -19,15 +19,14 @@ from grimp import build_graph
 
 # Layer colors for graphviz
 LAYER_COLORS = {
-    "ui": "#ff6b6b",      # red
-    "core": "#4d96ff",    # blue
-    "tools": "#6bcb77",   # green
-    "utils": "#ffd93d",   # yellow
-    "types": "#9d4edd",   # purple
+    "ui": "#ff6b6b",  # red
+    "core": "#4d96ff",  # blue
+    "tools": "#6bcb77",  # green
+    "utils": "#ffd93d",  # yellow
+    "types": "#9d4edd",  # purple
     "configuration": "#adb5bd",  # gray
     "indexing": "#ff922b",  # orange
-    "lsp": "#e599f7",      # pink
-    "templates": "#20c997",  # teal
+    "lsp": "#e599f7",  # pink
 }
 
 
@@ -41,6 +40,7 @@ def get_layer(module: str) -> str:
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--layers", action="store_true", help="Show only layer-level deps")
     args = parser.parse_args()
@@ -77,7 +77,7 @@ def generate_layer_graph(graph):
     # Output Graphviz DOT format
     print("digraph tunacode_layers {")
     print("  rankdir=TB;")
-    print("  node [shape=box, style=filled, fontname=\"Arial\"];")
+    print('  node [shape=box, style=filled, fontname="Arial"];')
     print()
 
     # Add nodes
@@ -87,7 +87,7 @@ def generate_layer_graph(graph):
 
     # Add edges with counts
     for (src, dst), count in sorted(layer_edges.items()):
-        print(f'  {src} -> {dst} [label="{count}", penwidth={min(count/5 + 1, 5)}];')
+        print(f'  {src} -> {dst} [label="{count}", penwidth={min(count / 5 + 1, 5)}];')
 
     print("}")
 
@@ -112,9 +112,9 @@ def generate_full_graph(graph):
         if not modules:
             continue
         color = LAYER_COLORS.get(layer, "#cccccc")
-        print(f'  subgraph cluster_{layer} {{')
+        print(f"  subgraph cluster_{layer} {{")
         print(f'    label="{layer}";')
-        print('    style=filled;')
+        print("    style=filled;")
         print(f'    color="{color}";')
         print(f'    fontcolor="{color}";')
         for module in modules:

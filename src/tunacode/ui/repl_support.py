@@ -13,16 +13,15 @@ from typing import TYPE_CHECKING, Protocol
 from rich.console import Console
 from rich.text import Text
 
-from tunacode.constants import MAX_CALLBACK_CONTENT
-from tunacode.types import (
+from tunacode.core.constants import MAX_CALLBACK_CONTENT
+from tunacode.core.state import StateManager
+from tunacode.core.types import (
     ToolArgs,
     ToolCallback,
     ToolName,
     ToolResultCallback,
     ToolStartCallback,
 )
-
-from tunacode.core.state import StateManager
 
 from tunacode.ui.widgets import ToolResultDisplay
 

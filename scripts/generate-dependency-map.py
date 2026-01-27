@@ -8,7 +8,7 @@ from pathlib import Path
 import grimp
 
 # Layer hierarchy (high to low)
-LAYERS = ["ui", "core", "tools", "indexing", "lsp", "templates"]
+LAYERS = ["ui", "core", "tools", "indexing", "lsp"]
 UTILS_LEVEL = ["utils", "types", "configuration", "constants"]
 
 # Valid import directions (from -> to)
@@ -26,7 +26,6 @@ LAYER_COLORS = {
     "configuration": "#adb5bd",
     "indexing": "#ff922b",
     "lsp": "#e599f7",
-    "templates": "#20c997",
     "other": "#cccccc",
 }
 
@@ -94,8 +93,8 @@ def is_valid_import(from_layer: str, to_layer: str) -> bool:
     Rules:
     - ui can only import from: core, utils-level
     - core can only import from: tools, indexing, utils-level
-    - tools can only import from: indexing, lsp, templates, utils-level
-    - indexing/lsp/templates can only import from: utils-level
+    - tools can only import from: indexing, lsp, utils-level
+    - indexing/lsp can only import from: utils-level
     """
     # Utils-level can be imported by anyone
     if to_layer in UTILS_LEVEL or to_layer == "exceptions":
@@ -109,10 +108,9 @@ def is_valid_import(from_layer: str, to_layer: str) -> bool:
     allowed = {
         "ui": {"core"},  # UI only goes through core
         "core": {"tools", "indexing"},  # Core orchestrates tools
-        "tools": {"indexing", "lsp", "templates"},  # Tools use infra
+        "tools": {"indexing", "lsp"},  # Tools use infra
         "indexing": set(),  # Infra is leaf
         "lsp": set(),
-        "templates": set(),
     }
 
     if from_layer in allowed:
@@ -157,7 +155,6 @@ core        → business logic
 tools       → agent tools
 indexing    → code indexing infrastructure
 lsp         → language server protocol
-templates   → prompt templates
 ─────────────────────────────────
 utils       ┐
 types       │ utils-level (importable from anywhere)

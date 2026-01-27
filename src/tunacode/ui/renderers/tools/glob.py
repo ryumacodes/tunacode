@@ -13,7 +13,7 @@ from typing import Any
 from rich.console import Group, RenderableType
 from rich.text import Text
 
-from tunacode.constants import MIN_VIEWPORT_LINES, TOOL_VIEWPORT_LINES
+from tunacode.core.constants import MIN_VIEWPORT_LINES, TOOL_VIEWPORT_LINES
 
 from tunacode.ui.renderers.tools.base import (
     BaseToolRenderer,
@@ -196,7 +196,7 @@ class GlobRenderer(BaseToolRenderer[GlobData]):
         max_line_width: int,
     ) -> Text:
         """Zone 4: Status with source, truncation info, timing."""
-        from tunacode.constants import TOOL_VIEWPORT_LINES
+        from tunacode.core.constants import TOOL_VIEWPORT_LINES
 
         status_items: list[str] = []
 

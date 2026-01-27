@@ -16,7 +16,8 @@ from textual.binding import Binding
 from textual.containers import Container
 from textual.widgets import LoadingIndicator, RichLog, Static
 
-from tunacode.constants import (
+from tunacode.core.agents.main import process_request
+from tunacode.core.constants import (
     MIN_TOOL_PANEL_LINE_WIDTH,
     RICHLOG_CLASS_PAUSED,
     RICHLOG_CLASS_STREAMING,
@@ -24,10 +25,8 @@ from tunacode.constants import (
     build_nextstep_theme,
     build_tunacode_theme,
 )
-from tunacode.types import ModelName
-
-from tunacode.core.agents.main import process_request
 from tunacode.core.state import StateManager
+from tunacode.core.types import ModelName
 
 from tunacode.ui.renderers.agent_response import render_agent_streaming
 from tunacode.ui.renderers.errors import render_exception
@@ -127,7 +126,7 @@ class TextualReplApp(App[None]):
         self.theme = saved_theme if saved_theme in self.available_themes else "dracula"
 
         # Initialize session persistence metadata
-        from tunacode.utils.system.paths import get_project_id
+        from tunacode.core.system_paths import get_project_id
 
         session = self.state_manager.session
         session.project_id = get_project_id()
@@ -327,7 +326,7 @@ class TextualReplApp(App[None]):
         """Render loaded session messages to RichLog."""
         from pydantic_ai.messages import ModelRequest, ModelResponse
 
-        from tunacode.utils.messaging import get_content
+        from tunacode.core.messaging import get_content
 
         conversation = self.state_manager.session.conversation
         for msg in conversation.messages:

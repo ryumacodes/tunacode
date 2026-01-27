@@ -4,7 +4,7 @@ path: src/tunacode
 type: directory
 depth: 0
 description: Root module structure for TunaCode CLI application
-exports: [core, ui, tools, configuration, types, utils, indexing, lsp, templates, prompts]
+exports: [core, ui, tools, configuration, types, utils, indexing, lsp, prompts]
 seams: [M, D]
 ---
 
@@ -25,7 +25,6 @@ The TunaCode CLI is organized into focused modules with clear responsibilities:
 - **utils/** - Shared utilities (parsing, messaging)
 - **indexing/** - Fast codebase indexing
 - **lsp/** - Language Server Protocol client
-- **templates/** - Template management system
 - **prompts/** - Prompt template sections
 
 ## Module Dependencies

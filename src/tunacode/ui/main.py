@@ -7,12 +7,11 @@ import sys
 
 import typer
 
-from tunacode.configuration.settings import ApplicationSettings
-from tunacode.constants import ENV_OPENAI_BASE_URL
-from tunacode.exceptions import UserAbortError
-from tunacode.utils.system import check_for_updates
-
+from tunacode.core import ConfigurationError, UserAbortError
+from tunacode.core.configuration import ApplicationSettings
+from tunacode.core.constants import ENV_OPENAI_BASE_URL
 from tunacode.core.state import StateManager
+from tunacode.core.system_paths import check_for_updates
 
 from tunacode.ui.headless import resolve_output
 from tunacode.ui.repl_support import run_textual_repl
@@ -20,6 +19,8 @@ from tunacode.ui.repl_support import run_textual_repl
 DEFAULT_TIMEOUT_SECONDS = 600
 BASE_URL_HELP_TEXT = "API base URL (e.g., https://openrouter.ai/api/v1)"
 HEADLESS_NO_RESPONSE_ERROR = "Error: No response generated"
+AUTO_APPROVE_SETTING_KEY = "auto_approve"
+USER_SETTINGS_KEY = "settings"
 
 app_settings = ApplicationSettings()
 app = typer.Typer(help="TunaCode - OS AI-powered development assistant")
@@ -39,7 +40,7 @@ def _handle_background_task_error(task: asyncio.Task) -> None:
 
 
 def _print_version() -> None:
-    from tunacode.constants import APP_VERSION
+    from tunacode.core.constants import APP_VERSION
 
     print(f"tunacode {APP_VERSION}")
 
@@ -75,8 +76,6 @@ async def _run_textual_app(*, model: str | None, show_setup: bool) -> None:
         update_task.cancel()
         return
     except Exception as exc:
-        from tunacode.exceptions import ConfigurationError
-
         if isinstance(exc, ConfigurationError):
             print(f"Error: {exc}")
             update_task.cancel()
@@ -156,6 +155,11 @@ def main(
 def run_headless(
     prompt: str = typer.Argument(..., help="The prompt/instruction to execute"),
     output_json: bool = typer.Option(False, "--output-json", help="Output trajectory as JSON"),
+    auto_approve: bool = typer.Option(
+        False,
+        "--auto-approve",
+        help="Automatically approve tool actions in headless mode",
+    ),
     timeout: int = typer.Option(
         DEFAULT_TIMEOUT_SECONDS, "--timeout", help="Execution timeout in seconds"
     ),
@@ -180,6 +184,9 @@ def run_headless(
             state_manager.session.current_model = model
 
         _apply_base_url_override(state_manager, baseurl)
+
+        settings = state_manager.session.user_config.setdefault(USER_SETTINGS_KEY, {})
+        settings[AUTO_APPROVE_SETTING_KEY] = auto_approve
 
         try:
             agent_run = await asyncio.wait_for(

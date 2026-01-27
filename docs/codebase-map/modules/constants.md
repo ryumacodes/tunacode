@@ -101,7 +101,6 @@ Tool panel line width is computed from available viewport width; there is no fix
 **Configuration:**
 - **CONFIG_DIR** - Default config directory
 - **SESSIONS_DIR** - Sessions storage directory
-- **TEMPLATES_DIR** - Templates directory
 
 **Limits:**
 - **MAX_ITERATIONS** - Default agent loop limit
