@@ -21,9 +21,6 @@ from pydantic_ai.messages import ToolCallPart, ToolReturnPart
 from tunacode.constants import (
     ERROR_TOOL_ARGS_MISSING,
     ERROR_TOOL_CALL_ID_MISSING,
-    EXECUTE_TOOLS,
-    READ_ONLY_TOOLS,
-    WRITE_TOOLS,
     ToolName,
 )
 from tunacode.exceptions import StateError
@@ -71,13 +68,7 @@ TOOL_CALL_TEXT_PREFIX = "assistant:"
 TOOL_CALL_TEXT_SUFFIX = "end"
 SUPPRESS_HEALTH_CHECKS = [HealthCheck.function_scoped_fixture, HealthCheck.too_slow]
 
-READ_ONLY_TOOL_NAMES = [
-    tool.value for tool in READ_ONLY_TOOLS
-]
-WRITE_EXECUTE_TOOL_NAMES = [tool.value for tool in WRITE_TOOLS + EXECUTE_TOOLS] + [
-    ToolName.SUBMIT.value
-]
-ALL_TOOL_NAMES = READ_ONLY_TOOL_NAMES + WRITE_EXECUTE_TOOL_NAMES
+ALL_TOOL_NAMES = [tool.value for tool in ToolName]
 
 TOOL_CALL_FORMATS = ("qwen2_xml", "hermes", "code_fence", "raw_json")
 
@@ -903,26 +894,20 @@ async def test_dispatch_tools_batches_by_category(
         response_state=response_state,
     )
 
-    expected_read_only = [name for name in tool_names if name in READ_ONLY_TOOL_NAMES]
-    expected_parallel = expected_read_only
     parallel_batches = [name for batch in recorded_batches for name in batch]
 
     assert dispatch_result.has_tool_calls is True
     assert dispatch_result.used_fallback is False
-    assert parallel_batches == expected_parallel
+    assert parallel_batches == tool_names
     assert tool_callback.call_count == len(parts)
     unique_tool_call_ids = {part.tool_call_id for part in parts}
     assert len(tool_registry.list_calls()) == len(unique_tool_call_ids)
     assert response_state.current_state == AgentState.RESPONSE
+    assert len(recorded_batches) == 1
 
     # NOTE: submit tool no longer sets task_completed - pydantic-ai loop ends naturally
     # if ToolName.SUBMIT.value in tool_names:
     #     assert response_state.task_completed is True
-
-    for part in parts:
-        if part.tool_name in expected_parallel:
-            continue
-        assert part.tool_name in WRITE_EXECUTE_TOOL_NAMES
 
 
 @given(tool_call=tool_call_text_strategy())
@@ -978,12 +963,7 @@ async def test_dispatch_tools_uses_fallback_for_text_only_calls(
     assert len(tool_registry.list_calls()) == 1
     assert response_state.current_state == AgentState.RESPONSE
 
-    is_parallel_tool = expected_tool_name in READ_ONLY_TOOL_NAMES
-    if is_parallel_tool:
-        assert len(recorded_batches) == 1
-        return
-
-    assert len(recorded_batches) == 0
+    assert len(recorded_batches) == 1
 
 
 # =============================================================================

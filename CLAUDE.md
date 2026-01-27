@@ -135,7 +135,7 @@ Examples:
 ```python
 ✅ MAX_FILE_SIZE = 100 * 1024
 ✅ DEFAULT_ENCODING = "utf-8"
-✅ READ_ONLY_TOOLS = ["read_file", "list_dir"]
+✅ SUPPORTED_TOOL_NAMES = ["read_file", "list_dir"]
 ✅ _internal_cache: dict[str, Any] = {}
 
 ❌ maxFileSize = 100 * 1024

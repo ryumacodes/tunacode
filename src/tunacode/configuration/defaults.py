@@ -22,7 +22,6 @@ DEFAULT_USER_CONFIG: UserConfig = {
         "max_iterations": 40,
         "request_delay": 0.0,
         "global_request_timeout": 120.0,
-        "tool_ignore": [],
         "guide_file": GUIDE_FILE_NAME,
         "theme": "dracula",
         "ripgrep": {

@@ -1,43 +1,4 @@
 /* ============================================
- * MODAL OVERLAYS - Tool Confirmation
- * NeXTSTEP: "Controls change appearance immediately"
- * ============================================ */
-ToolConfirmationModal {
-    align: center middle;
-}
-
-#modal-body {
-    width: 60;
-    height: auto;
-    border: solid $primary;
-    background: $surface;
-    padding: 1 2;
-}
-
-#modal-body Label {
-    margin-bottom: 1;
-}
-
-#modal-body Checkbox {
-    margin-top: 1;
-}
-
-#tool-title {
-    text-style: bold;
-    color: $primary;
-    margin-bottom: 1;
-}
-
-#actions {
-    margin-top: 1;
-    align: center middle;
-}
-
-#actions Button {
-    margin: 0 1;
-}
-
-/* ============================================
  * SETUP SCREEN - First-time Configuration
  * NeXTSTEP: Clean wizard flow with clear affordances
  * ============================================ */

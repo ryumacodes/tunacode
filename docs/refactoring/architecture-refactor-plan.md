@@ -163,7 +163,7 @@ The adapter provides:
 - **Task state**: todos, task_hierarchy, recursive_context_stack
 - **Runtime state**: spinner, is_streaming_active, streaming_panel
 - **Usage state**: total_tokens, last_call_usage, session_total_usage
-- **Config state**: user_config, current_model, yolo, debug_mode
+- **Config state**: user_config, current_model, debug_mode
 
 **Target structure**:
 

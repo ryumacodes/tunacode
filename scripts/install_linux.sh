@@ -494,7 +494,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
     "settings": {
         "max_retries": 10,
         "max_iterations": 40,
-        "tool_ignore": ["read_file"],
         "guide_file": "AGENTS.md",
         "fallback_response": true,
         "fallback_verbosity": "normal",

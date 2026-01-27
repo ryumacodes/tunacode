@@ -34,7 +34,7 @@ This directory contains the **structure analysis** of the TunaCode codebase, gen
 **[03-tools-directory.md](03-tools-directory.md)**
 - Location: `src/tunacode/tools/`
 - Purpose: Agent capability implementations
-- Key Components: File operations, search, execution, authorization
+- Key Components: File operations, search, execution
 
 **[04-configuration-directory.md](04-configuration-directory.md)**
 - Location: `src/tunacode/configuration/`
@@ -105,7 +105,6 @@ src/tunacode/
 │   ├── web_fetch.py        # HTTP requests
 │   ├── todo.py             # TODO management
 │   ├── decorators.py       # Tool decorators
-│   ├── authorization/      # Permission system
 │   ├── grep_components/    # Search implementation
 │   ├── prompts/            # Tool descriptions
 │   └── utils/              # Tool utilities

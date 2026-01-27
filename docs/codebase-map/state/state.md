@@ -25,7 +25,7 @@ The `SessionState` class encapsulates the entire user session runtime state:
 - **Runtime State:** `runtime` (iteration counters, request_id, tool registry, streaming flags)
 - **Usage State:** `usage` (per-call and cumulative metrics)
 - **Configuration:** `user_config` (merged defaults + user settings)
-- **Tool State:** `runtime.tool_registry`, `tool_ignore`, `yolo` mode
+- **Tool State:** `runtime.tool_registry`
 - **UI State:** `runtime.operation_cancelled`, `runtime.is_streaming_active`
 - **Metadata:** `session_id`, `project_id`, `created_at`, `last_modified`, `working_directory`
 
@@ -49,7 +49,6 @@ Several state classes manage agent behavior:
 
 - **`TextualReplApp`:** Core UI state including:
   - `request_queue`: Asynchronous event queue
-  - `pending_confirmation`: Async interaction state
   - Streaming flags: `_streaming_paused`, `_stream_buffer`, `current_stream_text`
   - Task references: `_current_request_task`
 
@@ -313,7 +312,6 @@ CLI commands allow runtime preference changes:
 
 - **`/model`:** Reloads config from disk, updates `user_config["default_model"]`, and invalidates the agent cache
 - **`/theme`:** Updates `user_config["settings"]["theme"]`
-- **`/yolo`:** Toggles auto-approve mode for tool execution
 
 ## Summary
 

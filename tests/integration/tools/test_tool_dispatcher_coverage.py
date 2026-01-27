@@ -37,7 +37,7 @@ TOOL_CALL_ID_SECOND = "call_dispatcher_2"
 EMPTY_TEXT = ""
 NO_INDICATOR_TEXT = "just text"
 USER_ABORT_MESSAGE = "stop"
-READ_ONLY_TOOL_CALL_COUNT = tool_dispatcher.TOOL_BATCH_PREVIEW_COUNT + 1
+TOOL_CALL_COUNT = tool_dispatcher.TOOL_BATCH_PREVIEW_COUNT + 1
 RESPONSE_OUTPUT = "done"
 CALLBACK_RETURN = None
 RESULT_LABEL = "result"
@@ -45,7 +45,7 @@ EXPECTED_JOINER = tool_dispatcher.TOOL_NAME_JOINER
 EXPECTED_SUFFIX = tool_dispatcher.TOOL_NAME_SUFFIX
 SUBMIT_TOOL_NAME = ToolName.SUBMIT.value
 
-READ_ONLY_TOOL_SEQUENCE = [
+TOOL_SEQUENCE = [
     NORMAL_TOOL_NAME,
     GREP_TOOL_NAME,
     GLOB_TOOL_NAME,
@@ -227,7 +227,7 @@ async def test_dispatch_debug_logging_and_skips_callbacks(
 
 
 @pytest.mark.asyncio
-async def test_dispatch_read_only_preview_suffix(
+async def test_dispatch_preview_suffix(
     state_manager: StateManager, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     response_state = _make_response_state()
@@ -238,7 +238,7 @@ async def test_dispatch_read_only_preview_suffix(
 
     parts = [
         ToolCallPart(tool_name=name, args={}, tool_call_id=f"{TOOL_CALL_ID}_{index}")
-        for index, name in enumerate(READ_ONLY_TOOL_SEQUENCE)
+        for index, name in enumerate(TOOL_SEQUENCE)
     ]
 
     monkeypatch.setattr(
@@ -256,9 +256,9 @@ async def test_dispatch_read_only_preview_suffix(
         response_state=response_state,
     )
 
-    preview_names = READ_ONLY_TOOL_SEQUENCE[: tool_dispatcher.TOOL_BATCH_PREVIEW_COUNT]
+    preview_names = TOOL_SEQUENCE[: tool_dispatcher.TOOL_BATCH_PREVIEW_COUNT]
     expected_label = EXPECTED_JOINER.join(preview_names) + EXPECTED_SUFFIX
-    assert len(READ_ONLY_TOOL_SEQUENCE) == READ_ONLY_TOOL_CALL_COUNT
+    assert len(TOOL_SEQUENCE) == TOOL_CALL_COUNT
     assert started_labels[0] == expected_label
 
 

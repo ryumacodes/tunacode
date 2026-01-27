@@ -126,7 +126,6 @@ Custom Textual widgets:
 REPL command implementations:
 - **HelpCommand** - `/help` - Show available commands
 - **ClearCommand** - `/clear` - Clear agent working state (UI, thoughts, todos) - messages preserved for /resume
-- **YoloCommand** - `/yolo` - Toggle auto-confirm for tool executions
 - **DebugCommand** - `/debug` - Toggle debug logging to screen (logs to ~/.local/share/tunacode/logs/)
 - **ModelCommand** - `/model` - Reload config, then open model picker or switch directly (invalidates agent cache)
 - **BranchCommand** - `/branch` - Create conversation branch
@@ -141,7 +140,7 @@ Helper functions and callbacks:
 - **format_user_message()** - Message formatting
 - **build_tool_result_callback()** - Tool result handling
 - **build_tool_progress_callback()** - Progress updates
-- **build_textual_tool_callback()** - Tool execution
+- **build_textual_tool_callback()** - Tool execution hook
 
 #### shell_runner.py
 **ShellRunner Class**
@@ -175,12 +174,6 @@ process_request() → streaming_callback() → streaming_output widget
   → Tool results → on_tool_result_display() → tool_panel_smart() → RichLog
 ```
 
-### Tool Confirmation Flow
-```
-Tool call → request_tool_confirmation() → _show_inline_confirmation()
-  → User input (1/2/3) → on_key() → Authorization decision → Tool execution
-```
-
 ## NeXTSTEP Design Principles
 
 1. **Uniformity** - Consistent panel layouts and styling
@@ -192,7 +185,7 @@ Tool call → request_tool_confirmation() → _show_inline_confirmation()
 
 - **core/agents/** - Request processing via process_request()
 - **core/state/** - StateManager for UI updates
-- **tools/** - Tool execution and authorization
+- **tools/** - Tool execution
 - **renderers/** - Specialized output formatting
 
 ## Seams (M, D)

@@ -51,7 +51,6 @@ Manages application configuration including user settings, model registry, prici
 Default configuration values:
 - **default_model** - Default LLM to use
 - **theme** - UI theme preference
-- **yolo_mode** - Authorization bypass
 - **max_iterations** - Agent loop limit
 - And more...
 
@@ -74,8 +73,6 @@ Default configuration values:
 {
   "default_model": str,
   "theme": str,
-  "yolo_mode": bool,
-  "tool_ignore": list[str],
   "max_iterations": int,
   "timeout_seconds": int,
   # ... additional settings

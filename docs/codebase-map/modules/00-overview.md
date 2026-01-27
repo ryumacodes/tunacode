@@ -17,7 +17,7 @@ The TunaCode CLI is organized into focused modules with clear responsibilities:
 ### Core Modules
 - **core/** - Agent orchestration, state management, and prompt engineering
 - **ui/** - Textual-based TUI interface
-- **tools/** - Tool implementations and authorization system
+- **tools/** - Tool implementations
 
 ### Supporting Modules
 - **configuration/** - User settings, model registry, and pricing
@@ -44,8 +44,7 @@ ui/
 
 tools/
   ├── types/ (type definitions)
-  ├── utils/ (shared helpers)
-  └── authorization/ (tool policies)
+  └── utils/ (shared helpers)
 ```
 
 ## Design Principles

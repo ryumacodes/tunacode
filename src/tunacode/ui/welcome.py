@@ -48,19 +48,14 @@ def show_welcome(rich_log: RichLog) -> None:
     welcome.append("     - Load saved session\n\n")
     welcome.append(SECTION_DIVIDER, style=STYLE_MUTED)
 
-    # Group 2: Mode toggles
-    welcome.append("   /yolo", style=STYLE_PRIMARY)
-    welcome.append("       - Toggle auto-confirm\n\n")
-    welcome.append(SECTION_DIVIDER, style=STYLE_MUTED)
-
-    # Group 3: Switching
+    # Group 2: Switching
     welcome.append("   /model", style=STYLE_PRIMARY)
     welcome.append("      - Switch model\n")
     welcome.append("   /theme", style=STYLE_PRIMARY)
     welcome.append("      - Switch theme\n\n")
     welcome.append(SECTION_DIVIDER, style=STYLE_MUTED)
 
-    # Group 4: Git/shell
+    # Group 3: Git/shell
     welcome.append("   /branch", style=STYLE_PRIMARY)
     welcome.append("     - Create git branch\n")
     welcome.append("   !<cmd>", style=STYLE_PRIMARY)

@@ -57,7 +57,7 @@ seams: [S]
    - Seams: agents, state, prompting, setup
 
 4. **03-tools-directory.md** (6.3 KB)
-   - Tool implementations, authorization, decorators
+   - Tool implementations and decorators
    - Seams: bash, grep, read_file, write_file, decorators
 
 5. **04-configuration-directory.md** (5.6 KB)
@@ -127,7 +127,7 @@ Presentation (UI/CLI) → Business Logic (Core) → Capabilities (Tools) → Con
 
 **2. Decorator Pattern** (Tools Module)
 - Cross-cutting concerns via decorators
-- Retry logic, logging, authorization
+- Retry logic, logging
 - Consistent tool behavior
 
 **3. Builder Pattern** (Prompting)

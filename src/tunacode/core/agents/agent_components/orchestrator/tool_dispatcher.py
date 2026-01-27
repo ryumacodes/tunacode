@@ -1,4 +1,4 @@
-"""Tool categorization and execution for agent responses."""
+"""Tool execution and tracking for agent responses."""
 
 import time
 from dataclasses import dataclass
@@ -7,7 +7,6 @@ from typing import Any
 from tunacode.constants import (
     ERROR_TOOL_ARGS_MISSING,
     ERROR_TOOL_CALL_ID_MISSING,
-    READ_ONLY_TOOLS,
 )
 from tunacode.exceptions import StateError, UserAbortError
 from tunacode.types import AgentState, ToolArgs, ToolCallId
@@ -226,7 +225,7 @@ async def dispatch_tools(
     tool_start_callback: ToolStartCallback | None,
     response_state: ResponseState | None,
 ) -> ToolDispatchResult:
-    """Categorize, batch, and execute tool calls from response parts."""
+    """Batch and execute tool calls from response parts."""
     from ..tool_executor import execute_tools_parallel
 
     logger = get_logger()
@@ -236,8 +235,7 @@ async def dispatch_tools(
     is_processing_tools = False
     used_fallback = False
 
-    read_only_tasks: list[tuple[Any, Any]] = []
-    write_execute_tasks: list[tuple[Any, Any]] = []
+    tool_tasks: list[tuple[Any, Any]] = []
     tool_call_records: list[tuple[Any, ToolArgs]] = []
 
     debug_mode = getattr(session, "debug_mode", False)
@@ -275,10 +273,7 @@ async def dispatch_tools(
         if not tool_callback:
             continue
 
-        if tool_name in READ_ONLY_TOOLS:
-            read_only_tasks.append((part, node))
-        else:
-            write_execute_tasks.append((part, node))
+        tool_tasks.append((part, node))
 
     if not tool_call_records and tool_callback:
         fallback_tool_calls = await _extract_fallback_tool_calls(
@@ -293,48 +288,29 @@ async def dispatch_tools(
             logger.lifecycle(f"Fallback tool parsing used (count={len(fallback_tool_calls)})")
             for part, tool_args in fallback_tool_calls:
                 tool_call_records.append((part, tool_args))
-                tool_name = getattr(part, "tool_name", UNKNOWN_TOOL_NAME)
-                if tool_name in READ_ONLY_TOOLS:
-                    read_only_tasks.append((part, node))
-                else:
-                    write_execute_tasks.append((part, node))
+                tool_tasks.append((part, node))
 
     def tool_failure_callback(part: Any, error: Exception) -> None:
         _record_tool_failure(state_manager, part, error)
 
-    if read_only_tasks and tool_callback:
-        _mark_tool_calls_running(state_manager, read_only_tasks)
+    if tool_tasks and tool_callback:
+        _mark_tool_calls_running(state_manager, tool_tasks)
         batch_id = runtime.batch_counter + 1
         runtime.batch_counter = batch_id
 
         if tool_start_callback:
-            preview_tasks = read_only_tasks[:TOOL_BATCH_PREVIEW_COUNT]
+            preview_tasks = tool_tasks[:TOOL_BATCH_PREVIEW_COUNT]
             preview_names = [
                 getattr(part, "tool_name", UNKNOWN_TOOL_NAME) for part, _ in preview_tasks
             ]
-            suffix = TOOL_NAME_SUFFIX if len(read_only_tasks) > TOOL_BATCH_PREVIEW_COUNT else ""
+            suffix = TOOL_NAME_SUFFIX if len(tool_tasks) > TOOL_BATCH_PREVIEW_COUNT else ""
             tool_start_callback(TOOL_NAME_JOINER.join(preview_names) + suffix)
 
         await execute_tools_parallel(
-            read_only_tasks,
+            tool_tasks,
             tool_callback,
             tool_failure_callback=tool_failure_callback,
         )
-
-    if tool_callback is not None:
-        for part, task_node in write_execute_tasks:
-            if tool_start_callback:
-                tool_start_callback(getattr(part, "tool_name", UNKNOWN_TOOL_NAME))
-
-            try:
-                _mark_tool_calls_running(state_manager, [(part, task_node)])
-                await tool_callback(part, task_node)
-            except UserAbortError as error:
-                _record_tool_failure(state_manager, part, error)
-                raise
-            except Exception as error:
-                _record_tool_failure(state_manager, part, error)
-                raise
 
     if (
         is_processing_tools

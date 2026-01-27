@@ -3,7 +3,7 @@ title: Tools Module
 path: tunacode/tools
 type: directory
 depth: 1
-description: Agent tool implementations with authorization and retry logic
+description: Agent tool implementations with retry logic
 seams: [bash, grep, read_file, write_file, decorators]
 ---
 
@@ -21,7 +21,6 @@ Implements the **tool system** that gives the AI agent real-world capabilities:
 - **Ignore Management**: `ignore.py` for shared ignore rules
 - **Web Operations**: `web_fetch.py` for HTTP requests
 - **Task Management**: `todo.py` for TODO list tracking
-- **Authorization**: `authorization/` for permission handling
 - **Decorators**: `decorators.py` for tool wrapping and retry logic
 - **Utilities**: `utils/` for tool-specific helpers
 
@@ -40,8 +39,6 @@ tools/
 ├── todo.py                 # TODO list management
 ├── decorators.py           # Tool decorators (retry, logging)
 ├── xml_helper.py           # XML parsing utilities
-├── authorization/          # Permission system
-│   └── (authorization logic)
 ├── grep_components/        # Grep implementation details
 │   └── (search engine parts)
 ├── prompts/                # Tool-specific prompts
@@ -75,7 +72,6 @@ Tools are wrapped with cross-cutting concerns:
 - **Logging**: Structured logging of tool calls and results
 - **Error Handling**: Consistent exception conversion
 - **Token Tracking**: Tool usage attribution
-- **Authorization**: Pre-execution permission checks
 
 ### Tool Categories
 
@@ -87,7 +83,6 @@ Tools are wrapped with cross-cutting concerns:
 
 - **`write_file`**: Creates new files
   - Validates file doesn't exist
-  - Requires user confirmation for destructive operations
   - Creates parent directories if needed
 
 - **`update_file`**: Edits existing files via string replacement
@@ -114,13 +109,6 @@ Tools are wrapped with cross-cutting concerns:
   - Background execution support
   - stdout/stderr capture
 
-### Authorization System (`authorization/`)
-Manages user consent for tool execution:
-- **Tool Whitelisting**: Pre-approved tools skip confirmation
-- **Permission Prompts**: UI dialogs for approval
-- **Batch Authorization**: Group multiple tool approvals
-- **Dangerous Operation Detection**: Extra prompts for destructive commands
-
 ### Grep Implementation (`grep_components/`)
 Complex search functionality decomposed into:
 - Pattern compilation and validation
@@ -130,7 +118,7 @@ Complex search functionality decomposed into:
 
 ## Why
 **Capability Abstraction**: Tools provide a clean interface between AI and system:
-- **Safety**: Authorization prevents unintended destructive actions
+- **Safety**: Validation and limits prevent unintended destructive actions
 - **Reliability**: Retry logic handles transient failures
 - **Observability**: Logging enables debugging and analytics
 - **Composability**: Tools can be combined for complex workflows
@@ -140,7 +128,6 @@ Complex search functionality decomposed into:
 2. **Validation**: Fail fast with clear error messages
 3. **Limiting**: Enforce resource limits (file size, execution time)
 4. **Atomicity**: Operations complete fully or not at all
-5. **User Control**: Dangerous operations require explicit approval
 
 ## Integration Points
 - **Core Agents**: `tunacode.core.agents` invokes tools via function calling

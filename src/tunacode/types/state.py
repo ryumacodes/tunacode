@@ -4,9 +4,8 @@ Defines the StateManager protocol to enable type-safe usage without
 creating circular imports with the concrete implementation.
 """
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import Any, Protocol
 
-from tunacode.types.base import ToolArgs, ToolName
 from tunacode.types.state_structures import (
     ConversationState,
     RuntimeState,
@@ -14,88 +13,30 @@ from tunacode.types.state_structures import (
     UsageState,
 )
 
-if TYPE_CHECKING:
-    from tunacode.types.callbacks import ToolProgressCallback
-    from tunacode.types.dataclasses import ToolConfirmationRequest, ToolConfirmationResponse
 
-
-class TemplateProtocol(Protocol):
-    """Protocol for template metadata used in authorization."""
-
-    allowed_tools: list[str]
-
-
-class AuthorizationSessionProtocol(Protocol):
-    """Protocol for authorization flows to access session state."""
-
-    yolo: bool
-    tool_ignore: list[ToolName]
-    conversation: ConversationState
-
-    def update_token_count(self) -> None:
-        """Calculate total token count from conversation messages."""
-        ...
-
-
-class AuthorizationToolHandlerProtocol(Protocol):
-    """Protocol for tool handlers exposing template context and authorization."""
-
-    active_template: TemplateProtocol | None
-
-    def should_confirm(self, tool_name: ToolName) -> bool:
-        """Check if tool needs user confirmation."""
-        ...
-
-    def create_confirmation_request(
-        self, tool_name: ToolName, args: ToolArgs
-    ) -> "ToolConfirmationRequest":
-        """Create a confirmation request for user approval."""
-        ...
-
-    def process_confirmation(
-        self, response: "ToolConfirmationResponse", tool_name: ToolName
-    ) -> bool:
-        """Process user confirmation response. Returns True if approved."""
-        ...
-
-
-class AuthorizationProtocol(Protocol):
-    """Protocol for authorization tools to access minimal state."""
-
-    @property
-    def session(self) -> AuthorizationSessionProtocol:
-        """Access the current session state."""
-        ...
-
-    @property
-    def tool_handler(self) -> AuthorizationToolHandlerProtocol | None:
-        """Get the current tool handler."""
-        ...
-
-    def set_tool_handler(self, handler: AuthorizationToolHandlerProtocol) -> None:
-        """Set the tool handler instance."""
-        ...
-
-
-class SessionStateProtocol(AuthorizationSessionProtocol, Protocol):
+class SessionStateProtocol(Protocol):
     """Protocol for session state access."""
 
     user_config: dict[str, Any]
     current_model: str
-    tool_progress_callback: "ToolProgressCallback | None"
     debug_mode: bool
     show_thoughts: bool
     task: TaskState
     runtime: RuntimeState
     usage: UsageState
+    conversation: ConversationState
     # Persistence fields
     session_id: str
     project_id: str
     created_at: str
     working_directory: str
 
+    def update_token_count(self) -> None:
+        """Calculate total token count from conversation messages."""
+        ...
 
-class StateManagerProtocol(AuthorizationProtocol, Protocol):
+
+class StateManagerProtocol(Protocol):
     """Protocol defining the StateManager interface.
 
     This protocol enables type-safe references to StateManager without
@@ -105,15 +46,6 @@ class StateManagerProtocol(AuthorizationProtocol, Protocol):
     @property
     def session(self) -> SessionStateProtocol:
         """Access the current session state."""
-        ...
-
-    @property
-    def tool_handler(self) -> AuthorizationToolHandlerProtocol | None:
-        """Get the current tool handler."""
-        ...
-
-    def set_tool_handler(self, handler: AuthorizationToolHandlerProtocol) -> None:
-        """Set the tool handler instance."""
         ...
 
     @property
@@ -168,10 +100,6 @@ class StateManagerProtocol(AuthorizationProtocol, Protocol):
 
 
 __all__ = [
-    "AuthorizationProtocol",
-    "AuthorizationSessionProtocol",
-    "AuthorizationToolHandlerProtocol",
     "SessionStateProtocol",
     "StateManagerProtocol",
-    "TemplateProtocol",
 ]

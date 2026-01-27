@@ -59,7 +59,6 @@ def test_escape_clears_editor_when_no_streaming_or_shell_running() -> None:
         "FakeApp",
         (),
         {
-            "pending_confirmation": None,
             "_current_request_task": None,
             "_shell_command_task": None,
             "editor": _FakeEditor("! ls"),
