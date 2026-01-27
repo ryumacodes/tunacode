@@ -2,12 +2,6 @@
 
 Generated: 2026-01-27
 
-## LSP Feedback Collected
-
-- **LSP modules detected - beta feature feedback needed**
-  - Modules: 3 total
-  - Details: tunacode.tools.lsp.client, tunacode.tools.lsp.servers, tunacode.tools.lsp
-
 ## Layer Order (topological)
 
 ```

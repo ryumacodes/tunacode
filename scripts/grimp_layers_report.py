@@ -72,18 +72,8 @@ def write_layers_dot(layers: list[str], edges: dict[tuple[str, str], int]) -> No
 
 
 def main() -> None:
-    # TODO test comment
     graph = grimp.build_graph(PACKAGE)
     modules = set(graph.modules)
-    
-    # Check for LSP-related modules and collect feedback
-    lsp_modules = [module for module in modules if 'lsp' in module.lower()]
-    if lsp_modules:
-        lsp_feedback_collected.append({
-            'lsp_modules': lsp_modules,
-            'count': len(lsp_modules),
-            'action': 'LSP modules detected - beta feature feedback needed'
-        })
 
     layers = {layer for module in modules if (layer := get_layer(module))}
     edges: dict[tuple[str, str], int] = defaultdict(int)
@@ -109,21 +99,9 @@ def main() -> None:
         "",
         f"Generated: {today}",
         "",
-        "## LSP Feedback Collected",
+        "## Layer Order (topological)",
         "",
     ]
-    
-    if lsp_feedback_collected:
-        for feedback in lsp_feedback_collected:
-            report_lines.append(f"- **{feedback['action']}**")
-            report_lines.append(f"  - Modules: {feedback['count']} total")
-            report_lines.append(f"  - Details: {', '.join(feedback['lsp_modules'])}")
-    else:
-        report_lines.append("- No LSP-specific feedback collected")
-    
-    report_lines.append("")
-    report_lines.append("## Layer Order (topological)")
-    report_lines.append("")
 
     if has_cycle:
         report_lines.append(
