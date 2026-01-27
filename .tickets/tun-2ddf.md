@@ -1,6 +1,6 @@
 ---
 id: tun-2ddf
-status: in_progress
+status: closed
 deps: [tun-8218]
 links: []
 created: 2026-01-27T19:17:17Z
@@ -16,3 +16,9 @@ Move get_lsp_status() logic from tools/lsp_status.py to core/lsp_status.py. Dele
 
 tools/lsp_status.py deleted; grep 'from tunacode.lsp' tools/lsp_status.py returns no match; tests pass
 
+
+## Notes
+
+**2026-01-27T19:31:13Z**
+
+Completed in commit b1ae6dc5
