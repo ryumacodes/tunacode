@@ -102,9 +102,7 @@ def main() -> None:
             edges[(src_layer, dst_layer)] += 1
 
     ordered_layers = topo_sort(layers, edges)
-    has_cycle = set(ordered_layers) != layers or any(
-        src == dst for (src, dst) in edges
-    )
+    has_cycle = set(ordered_layers) != layers or any(src == dst for (src, dst) in edges)
 
     today = datetime.now().strftime("%Y-%m-%d")
     report_lines = [
