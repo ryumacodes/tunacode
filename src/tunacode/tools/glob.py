@@ -9,8 +9,6 @@ from pathlib import Path
 
 from pydantic_ai.exceptions import ModelRetry
 
-from tunacode.indexing import CodeIndex
-
 from tunacode.tools.decorators import base_tool
 from tunacode.tools.ignore import IgnoreManager, get_ignore_manager
 
@@ -64,33 +62,21 @@ async def glob(
     sort_order = _parse_sort_order(sort_by)
     patterns = _expand_brace_pattern(pattern)
 
-    # Try CodeIndex for faster lookup
-    code_index = _get_code_index(directory)
-    source = "filesystem"
-
-    has_code_index = code_index is not None
-    should_use_index = has_code_index and not include_hidden and recursive
-    if should_use_index:
-        matches = await _glob_with_index(
-            code_index, patterns, root_path, ignore_manager, max_results, case_sensitive
-        )
-        source = "index"
-    else:
-        matches = await _glob_filesystem(
-            root_path,
-            patterns,
-            recursive,
-            include_hidden,
-            ignore_manager,
-            max_results,
-            case_sensitive,
-        )
+    matches = await _glob_filesystem(
+        root_path,
+        patterns,
+        recursive,
+        include_hidden,
+        ignore_manager,
+        max_results,
+        case_sensitive,
+    )
 
     if not matches:
-        return f"[source:{source}]\nNo files found matching pattern: {pattern}"
+        return f"No files found matching pattern: {pattern}"
 
     matches = await _sort_matches(matches, sort_order)
-    return _format_output(pattern, matches, max_results, source)
+    return _format_output(pattern, matches, max_results)
 
 
 def _parse_sort_order(sort_by: str) -> SortOrder:
@@ -121,18 +107,6 @@ def _normalize_exclude_dir_patterns(exclude_dirs: list[str] | None) -> tuple[str
         pattern = stripped_name if has_suffix else f"{stripped_name}{EXCLUDE_DIR_SUFFIX}"
         patterns.append(pattern)
     return tuple(patterns)
-
-
-def _get_code_index(directory: str) -> CodeIndex | None:
-    """Get CodeIndex instance if searching from project root."""
-    if directory != "." and directory != os.getcwd():
-        return None
-    try:
-        index = CodeIndex.get_instance()
-        index.build_index()
-        return index
-    except Exception:
-        return None
 
 
 def _expand_brace_pattern(pattern: str) -> list[str]:
@@ -171,59 +145,6 @@ def _expand_brace_pattern(pattern: str) -> list[str]:
             expanded.append(current)
 
     return expanded
-
-
-async def _glob_with_index(
-    code_index: CodeIndex,
-    patterns: list[str],
-    root: Path,
-    ignore_manager: IgnoreManager,
-    max_results: int,
-    case_sensitive: bool,
-) -> list[str]:
-    """Use CodeIndex for faster file matching."""
-    all_files = code_index.get_all_files()
-    matches = []
-
-    for file_path in all_files:
-        abs_path = code_index.root_dir / file_path
-
-        for pattern in patterns:
-            path_matches = _match_pattern(str(file_path), pattern, case_sensitive)
-            if not path_matches:
-                continue
-            is_ignored = ignore_manager.should_ignore(file_path)
-            if is_ignored:
-                break
-            matches.append(str(abs_path))
-            if len(matches) >= max_results:
-                return matches
-            break
-
-    return matches
-
-
-def _match_pattern(path: str, pattern: str, case_sensitive: bool) -> bool:
-    """Match a path against a glob pattern."""
-    if "**" in pattern:
-        if pattern.startswith("**/"):
-            suffix = pattern[3:]
-            if case_sensitive:
-                if fnmatch.fnmatch(path, suffix):
-                    return True
-            else:
-                if fnmatch.fnmatch(path.lower(), suffix.lower()):
-                    return True
-
-        regex_pat = pattern.replace("**", "__STARSTAR__")
-        regex_pat = fnmatch.translate(regex_pat)
-        regex_pat = regex_pat.replace("__STARSTAR__", ".*")
-        flags = 0 if case_sensitive else re.IGNORECASE
-        return bool(re.match(regex_pat, path, flags))
-    else:
-        if case_sensitive:
-            return fnmatch.fnmatch(path, pattern)
-        return fnmatch.fnmatch(path.lower(), pattern.lower())
 
 
 async def _glob_filesystem(
@@ -331,22 +252,20 @@ async def _sort_matches(matches: list[str], sort_by: SortOrder) -> list[str]:
     return await asyncio.to_thread(sort_sync)
 
 
-def _format_output(pattern: str, matches: list[str], max_results: int, source: str) -> str:
-    """Format glob results with source marker and header for rich panel parsing.
+def _format_output(pattern: str, matches: list[str], max_results: int) -> str:
+    """Format glob results with header for rich panel parsing.
 
     Args:
         pattern: The glob pattern used.
         matches: List of matching file paths.
         max_results: Maximum results limit.
-        source: "index" or "filesystem" to indicate cache hit/miss.
 
     Returns:
-        Formatted output with source marker and file count header.
+        Formatted output with file count header.
     """
-    parts = [f"[source:{source}]"]
     file_count = len(matches)
     file_word = "file" if file_count == 1 else "files"
-    parts.append(f"Found {file_count} {file_word} matching pattern: {pattern}")
+    parts = [f"Found {file_count} {file_word} matching pattern: {pattern}"]
 
     if matches:
         parts.append("")  # Blank line

@@ -1,6 +1,6 @@
 ---
 id: tun-27ea
-status: open
+status: closed
 deps: []
 links: []
 created: 2026-01-27T19:22:21Z
@@ -16,3 +16,9 @@ Delete entire src/tunacode/indexing/ directory (code_index.py, constants.py, __i
 
 indexing/ dir deleted; core/indexing_service.py deleted; no import errors
 
+
+## Notes
+
+**2026-01-27T19:26:21Z**
+
+Completed in commit 802712ac
