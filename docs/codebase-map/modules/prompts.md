@@ -50,4 +50,3 @@ Single source of truth for the agent system prompt:
 **Best Practices:**
 - Keep sections ordered and consistent
 - Avoid duplicating tool prompt content
-
