@@ -550,8 +550,6 @@ Types: bug, smell, pattern, lesson, antipattern
 
 [2026-01-25] [bug] **Orphaned retry-prompt parts after dangling tool call cleanup.** When pruning dangling tool calls, `_filter_dangling_tool_calls_from_parts()` only removed `tool-call` parts. This left behind `retry-prompt` parts (pydantic-ai's error response for failed tools like 403). **Fix:** Filter ANY part with `tool_call_id` matching a dangling ID, not just `part_kind == "tool-call"`. **Key insight:** pydantic-ai uses multiple part kinds (`tool-call`, `tool-return`, `retry-prompt`) that all reference the same `tool_call_id`. Cleanup must be ID-based, not kind-based.
 
-[2026-01-27] [lesson] **Only lint/format new or changed code.** When editing a file for import changes, don't let ruff auto-format unrelated lines. PR #316 had a formatting change (`raise FileNotFoundError` collapsed from 3 lines to 1) that wasn't part of the PR's purpose. This is scope creep. **Prevention:** Review diffs before committing. If a hunk isn't related to your change, revert it.
-
 ---
 
 We are currently in the middle of a large rewrite few test exist and documentation and that is okay. We will build the test and documentation as we go
