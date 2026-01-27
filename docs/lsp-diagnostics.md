@@ -1,6 +1,31 @@
+---
+summary: |
+  LSP diagnostics provide automatic feedback when files are written or updated.
+  Language servers (ruff, tsserver, etc.) check code and report errors/warnings
+  as part of the tool result. The agent receives this context and decides how
+  to respond.
+when_to_read: |
+  - When you want to enable or configure LSP diagnostics
+  - When adding support for a new language
+  - When debugging why diagnostics are not appearing
+  - When understanding the architecture of LSP integration
+---
+
 # LSP Diagnostics
 
 TunaCode provides automatic LSP diagnostics feedback when files are written or updated.
+
+## File Map
+
+```
+tools/
+├── lsp/                          # LSP implementation (tools layer)
+│   ├── __init__.py               # get_diagnostics(), format_diagnostics()
+│   ├── client.py                 # LSPClient - JSON-RPC over stdio
+│   └── servers.py                # Server command mapping by extension
+├── write_file.py                 # Calls tools.lsp after writing
+└── update_file.py                # Calls tools.lsp after updating
+```
 
 ## How It Works
 
