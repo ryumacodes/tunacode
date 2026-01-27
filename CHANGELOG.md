@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Architecture:** Delete indexing system (~620 lines) and fix LSP lateral coupling (#318)
+  - Removed entire `indexing/` module and `core/indexing_service.py`
+  - Merged `tools/lsp_status.py` into `core/lsp_status.py`
+  - Simplified `file_tool` decorator (removed LSP diagnostics and `writes` parameter)
+- **Architecture:** Resolve layer violations — eliminated 24 direct imports from `core` to `utils` (#317)
+  - Moved `utils/parsing/` → `tools/parsing/`
+  - Moved `utils/config/` → `configuration/`
+  - Moved `utils/limits.py`, `utils/system/paths.py` → `configuration/`
+  - Deleted empty utility packages
+- **Architecture:** Resolve core types layering and namespace collision (#316)
+  - Introduced `core/shared_types` facade for UI-shared types
+  - Created `core/types` package for core-only state types
+  - Added `AgentState` enum for explicit state machine transitions
+  - Made `ResponseState` thread-safe with `threading.RLock`
+
 ## [0.1.43] - 2026-01-22
 
 ### Added
