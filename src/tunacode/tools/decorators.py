@@ -10,7 +10,7 @@ import inspect
 import logging
 from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Any, ParamSpec, TypeVar, overload
+from typing import Any, ParamSpec, TypeVar
 
 from pydantic_ai.exceptions import ModelRetry
 

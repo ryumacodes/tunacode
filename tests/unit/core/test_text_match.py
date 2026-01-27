@@ -1,37 +1,17 @@
-"""Tests for update_file tool and text matching.
-
-Key findings from debugging:
-- replace() function is FAST (0.000s with fail-fast optimization)
-- The "freeze" is from LSP diagnostics timeout (5s default)
-- LSP polls every 0.1s waiting for pyright/language server response
-- If no server responds, it waits the FULL timeout
-
-These tests mock LSP to test the actual text matching logic.
-"""
+"""Tests for update_file tool and text matching."""
 
 import time
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 from tunacode.tools.update_file import update_file
 
 
-@pytest.fixture
-def disable_lsp():
-    """Disable LSP to test text matching without 5s timeout."""
-    with patch(
-        "tunacode.tools.decorators._get_lsp_config",
-        return_value={"enabled": False},
-    ):
-        yield
-
-
 class TestTextMatchReplacers:
     """Test the fuzzy text matching in update_file."""
 
-    async def test_exact_match(self, tmp_path: Path, mock_no_xml_prompt, disable_lsp):
+    async def test_exact_match(self, tmp_path: Path, mock_no_xml_prompt):
         """Exact string match - simple_replacer."""
         code = "def foo():\n    return 1\n"
         filepath = tmp_path / "test.py"
@@ -46,7 +26,7 @@ class TestTextMatchReplacers:
         assert "updated successfully" in result
         assert "return 42" in filepath.read_text()
 
-    async def test_wrong_indentation(self, tmp_path: Path, mock_no_xml_prompt, disable_lsp):
+    async def test_wrong_indentation(self, tmp_path: Path, mock_no_xml_prompt):
         """Wrong indentation level - indentation_flexible_replacer."""
         code = "class Foo:\n    def bar(self):\n        pass\n"
         filepath = tmp_path / "test.py"
@@ -62,7 +42,7 @@ class TestTextMatchReplacers:
         assert "updated successfully" in result
         assert "return 42" in filepath.read_text()
 
-    async def test_trailing_whitespace(self, tmp_path: Path, mock_no_xml_prompt, disable_lsp):
+    async def test_trailing_whitespace(self, tmp_path: Path, mock_no_xml_prompt):
         """Trailing whitespace mismatch - line_trimmed_replacer."""
         code = "def foo():   \n    return 1   \n"  # trailing spaces
         filepath = tmp_path / "test.py"
@@ -78,7 +58,7 @@ class TestTextMatchReplacers:
         assert "updated successfully" in result
         assert "return 42" in filepath.read_text()
 
-    async def test_fuzzy_anchor_match(self, tmp_path: Path, mock_no_xml_prompt, disable_lsp):
+    async def test_fuzzy_anchor_match(self, tmp_path: Path, mock_no_xml_prompt):
         """Middle lines differ slightly - block_anchor_replacer."""
         code = "def calc():\n    x = compute_value()\n    return x\n"
         filepath = tmp_path / "test.py"
@@ -94,7 +74,7 @@ class TestTextMatchReplacers:
         assert "updated successfully" in result
         assert "return 42" in filepath.read_text()
 
-    async def test_large_file_performance(self, tmp_path: Path, mock_no_xml_prompt, disable_lsp):
+    async def test_large_file_performance(self, tmp_path: Path, mock_no_xml_prompt):
         """Large file completes fast - verifies fail-fast optimization."""
         lines = [f"    x{i} = {i}" for i in range(2000)]
         code = "class Config:\n" + "\n".join(lines) + "\n"

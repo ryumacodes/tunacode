@@ -38,12 +38,7 @@ from tunacode.ui.repl_support import (
     format_user_message,
 )
 from tunacode.ui.shell_runner import ShellRunner
-from tunacode.ui.styles import (
-    STYLE_MUTED,
-    STYLE_PRIMARY,
-    STYLE_SUCCESS,
-    STYLE_WARNING,
-)
+from tunacode.ui.styles import STYLE_PRIMARY, STYLE_WARNING
 from tunacode.ui.welcome import show_welcome
 from tunacode.ui.widgets import (
     CommandAutoComplete,
