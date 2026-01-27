@@ -108,7 +108,7 @@ src/tunacode/tools/
 @tool
 async def check_file(filepath: str) -> str:
     """Check a file for errors using the appropriate language server.
-    
+
     Returns diagnostics (errors, warnings) or empty string if clean.
     """
     # Spawn LSP, get diagnostics, format result
