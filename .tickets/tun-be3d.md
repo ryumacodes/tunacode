@@ -1,6 +1,6 @@
 ---
 id: tun-be3d
-status: in_progress
+status: closed
 deps: [tun-2ddf]
 links: []
 created: 2026-01-27T19:17:26Z
@@ -16,3 +16,9 @@ Remove lazy import of tunacode.lsp in _get_lsp_diagnostics() from tools/decorato
 
 grep 'from tunacode.lsp' src/tunacode/tools/decorators.py returns empty; tests pass
 
+
+## Notes
+
+**2026-01-27T19:32:58Z**
+
+Completed in commit 690c4760
