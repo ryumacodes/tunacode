@@ -9,7 +9,6 @@
 ui          → outer layer (TUI)
 core        → business logic
 tools       → agent tools
-indexing    → code indexing infrastructure
 lsp         → language server protocol
 ─────────────────────────────────
 utils       ┐
@@ -32,16 +31,13 @@ constants   ┘
 | core → configuration | 14 | ✅ valid |
 | core → constants | 5 | ✅ valid |
 | core → exceptions | 4 | ✅ valid |
-| core → indexing | 2 | ✅ valid |
 | core → tools | 18 | ✅ valid |
 | core → types | 24 | ✅ valid |
 | exceptions → types | 1 | ✅ valid |
-| indexing → configuration | 1 | ✅ valid |
 | lsp → utils | 1 | ✅ valid |
 | tools → configuration | 6 | ✅ valid |
 | tools → constants | 3 | ✅ valid |
 | tools → exceptions | 4 | ✅ valid |
-| tools → indexing | 1 | ✅ valid |
 | tools → lsp | 2 | ✅ valid |
 | tools → types | 2 | ✅ valid |
 | tools → utils | 1 | ✅ valid |

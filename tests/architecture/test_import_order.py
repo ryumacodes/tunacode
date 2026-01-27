@@ -34,7 +34,6 @@ SHARED_LAYER_MODULES: tuple[str, ...] = (
     "configuration",
     "constants",
     "exceptions",
-    "indexing",
     "lsp",
     "prompts",
     "types",

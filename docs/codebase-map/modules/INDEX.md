@@ -51,7 +51,6 @@ Each module file includes:
 - **[types.md](./types.md)** - Type definitions and protocols (UserConfig, MessageHistory, ToolCallback)
 - **[utils.md](./utils.md)** - Shared utilities (estimate_tokens, parse_json)
 - **[utils-limits.md](./utils-limits.md)** - Tool output limits with cascading defaults (get_read_limit)
-- **[indexing.md](./indexing.md)** - Fast codebase indexing (CodeIndex)
 - **[lsp.md](./lsp.md)** - Language Server Protocol client (LSPClient, get_diagnostics)
 - **[prompts.md](./prompts.md)** - Modular prompt sections (agent_role.md, critical_rules.md)
 - **[exceptions.md](./exceptions.md)** - Custom exception hierarchy (TunaCodeError, ToolExecutionError)
@@ -83,7 +82,6 @@ Each module file includes:
 **Utilities:**
 - types.md
 - utils.md
-- indexing.md
 - lsp.md
 
 **Error Handling:**
@@ -115,7 +113,6 @@ src/tunacode/
 ├── types/ → types.md
 ├── utils/ → utils.md
 │   └── limits.py → utils-limits.md
-├── indexing/ → indexing.md
 ├── lsp/ → lsp.md
 ├── prompts/ → prompts.md
 ├── exceptions.py → exceptions.md

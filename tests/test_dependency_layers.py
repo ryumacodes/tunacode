@@ -7,16 +7,15 @@ import grimp
 import pytest
 
 # Layer hierarchy (high to low)
-LAYERS = ["ui", "core", "tools", "indexing", "lsp"]
+LAYERS = ["ui", "core", "tools", "lsp"]
 UTILS_LEVEL = ["utils", "types", "configuration", "constants", "exceptions"]
 
 # What each layer is allowed to import (besides utils-level)
 # UI may only import core directly
 ALLOWED_IMPORTS = {
     "ui": {"core"},
-    "core": {"tools", "indexing"},
-    "tools": {"indexing", "lsp"},
-    "indexing": set(),
+    "core": {"tools"},
+    "tools": {"lsp"},
     "lsp": set(),
 }
 
