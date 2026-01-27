@@ -63,8 +63,8 @@ class PatternMatcher:
                         if pos == -1:
                             break
 
-                        match = SimpleMatch(pos, pos + len(search_pattern))
-                        matches.append(match)
+                        simple_match = SimpleMatch(pos, pos + len(search_pattern))
+                        matches.append(simple_match)
                         start = pos + 1
 
                 # Create results for each match

@@ -103,7 +103,7 @@ class StatusBarLike(Protocol):
 class AppForCallbacks(Protocol):
     status_bar: StatusBarLike
 
-    def post_message(self, message: ToolResultDisplay) -> None: ...
+    def post_message(self, message: ToolResultDisplay) -> bool: ...
 
 
 def build_textual_tool_callback() -> ToolCallback:

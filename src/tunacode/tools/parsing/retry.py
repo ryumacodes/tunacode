@@ -35,7 +35,7 @@ def retry_on_json_error(
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs) -> Any:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             last_exception = None
 
             for attempt in range(max_retries + 1):
@@ -58,7 +58,7 @@ def retry_on_json_error(
                 raise last_exception
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs) -> Any:
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             last_exception = None
 
             for attempt in range(max_retries + 1):
@@ -115,7 +115,7 @@ def retry_json_parse(
         base_delay=base_delay,
         max_delay=max_delay,
     )
-    def _parse():
+    def _parse() -> Any:
         return json.loads(json_string)
 
     return _parse()
@@ -147,7 +147,7 @@ async def retry_json_parse_async(
         base_delay=base_delay,
         max_delay=max_delay,
     )
-    async def _parse():
+    async def _parse() -> Any:
         return json.loads(json_string)
 
     return await _parse()

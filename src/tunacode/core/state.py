@@ -177,6 +177,7 @@ class StateManager:
 
     def _serialize_messages(self) -> list[dict]:
         """Serialize mixed message list to JSON-compatible dicts."""
+        msg_adapter: Any | None = None
         try:
             from pydantic import TypeAdapter
             from pydantic_ai.messages import ModelMessage
@@ -203,6 +204,7 @@ class StateManager:
 
     def _deserialize_messages(self, data: list[dict]) -> list:
         """Deserialize JSON dicts back to message objects."""
+        msg_adapter: Any | None = None
         try:
             from pydantic import TypeAdapter
             from pydantic_ai.messages import ModelMessage

@@ -4,12 +4,13 @@ import hashlib
 import os
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from tunacode.configuration.settings import ApplicationSettings
 from tunacode.constants import SESSIONS_SUBDIR, TUNACODE_HOME_DIR
 
 
-def get_tunacode_home():
+def get_tunacode_home() -> Path:
     """
     Get the path to the TunaCode home directory (~/.tunacode).
     Creates it if it doesn't exist.
@@ -22,7 +23,7 @@ def get_tunacode_home():
     return home
 
 
-def get_session_dir(state_manager):
+def get_session_dir(state_manager: Any) -> Path:
     """
     Get the path to the current session directory.
 
@@ -37,7 +38,7 @@ def get_session_dir(state_manager):
     return session_dir
 
 
-def get_cwd():
+def get_cwd() -> str:
     """Returns the current working directory."""
     return os.getcwd()
 
@@ -77,7 +78,7 @@ def get_session_storage_dir() -> Path:
     return storage_dir
 
 
-def cleanup_session(state_manager):
+def cleanup_session(state_manager: Any) -> bool:
     """
     Clean up temporary session runtime files after the CLI exits.
     Session data is preserved in XDG_DATA_HOME for persistence.
@@ -127,7 +128,7 @@ def delete_session_file(project_id: str, session_id: str) -> bool:
         return False
 
 
-def check_for_updates():
+def check_for_updates() -> tuple[bool, str]:
     """
     Check if there's a newer version of tunacode-cli available on PyPI.
 

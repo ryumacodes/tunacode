@@ -5,6 +5,7 @@ Provides gitignore pattern matching and file listing with ignore support.
 """
 
 import os
+from collections.abc import Iterable
 
 from tunacode.configuration.ignore_patterns import (
     DEFAULT_IGNORE_PATTERNS,
@@ -13,7 +14,7 @@ from tunacode.configuration.ignore_patterns import (
 )
 
 
-def _load_gitignore_patterns(filepath=".gitignore"):
+def _load_gitignore_patterns(filepath: str = ".gitignore") -> Iterable[str] | None:
     """Loads patterns from a .gitignore file."""
     patterns = set()
     try:
@@ -31,7 +32,7 @@ def _load_gitignore_patterns(filepath=".gitignore"):
     return patterns
 
 
-def list_cwd(max_depth=3):
+def list_cwd(max_depth: int = 3) -> list[str]:
     """
     Lists files in the current working directory up to a specified depth,
     respecting .gitignore rules or a default ignore list.

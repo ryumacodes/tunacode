@@ -36,8 +36,7 @@ from tunacode.tools.write_file import write_file
 
 from tunacode.core.logging import get_logger
 from tunacode.core.prompting import resolve_prompt
-from tunacode.core.state import StateManager
-from tunacode.core.types import SessionStateProtocol
+from tunacode.core.types import SessionStateProtocol, StateManagerProtocol
 
 # Module-level cache for AGENTS.md context
 _TUNACODE_CACHE: dict[str, tuple[str, float]] = {}
@@ -126,7 +125,7 @@ def clear_all_caches() -> None:
     _AGENT_CACHE_VERSION.clear()
 
 
-def invalidate_agent_cache(model: str, state_manager: "StateManager") -> bool:
+def invalidate_agent_cache(model: str, state_manager: StateManagerProtocol) -> bool:
     """Invalidate cached agent for a specific model.
 
     Call this after an abort or timeout to ensure the HTTP client is recreated.
@@ -134,7 +133,7 @@ def invalidate_agent_cache(model: str, state_manager: "StateManager") -> bool:
 
     Args:
         model: The model name to invalidate
-        state_manager: StateManager to clear session-level cache
+        state_manager: StateManagerProtocol to clear session-level cache
 
     Returns:
         True if an agent was invalidated, False if not cached.
@@ -316,7 +315,7 @@ def _create_model_with_retry(
     return OpenAIChatModel(model_name, provider=openai_provider)
 
 
-def get_or_create_agent(model: ModelName, state_manager: StateManager) -> PydanticAgent:
+def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -> PydanticAgent:
     """Get existing agent or create new one for the specified model."""
     logger = get_logger()
     request_delay = _coerce_request_delay(state_manager.session)

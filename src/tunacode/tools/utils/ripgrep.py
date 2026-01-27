@@ -8,6 +8,7 @@ import platform
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 PROCESS_OUTPUT_ENCODING = locale.getpreferredencoding(False)
 RIPGREP_MATCH_FOUND_EXIT_CODE = 0
@@ -130,7 +131,7 @@ def _check_ripgrep_version(rg_path: Path, min_version: str = "13.0.0") -> bool:
 class RipgrepExecutor:
     """Wrapper for executing ripgrep commands with error handling."""
 
-    def __init__(self, binary_path: Path | None = None):
+    def __init__(self, binary_path: Path | None = None) -> None:
         """Initialize the executor.
 
         Args:
@@ -151,7 +152,7 @@ class RipgrepExecutor:
         multiline: bool = False,
         context_before: int = 0,
         context_after: int = 0,
-        **kwargs,
+        **kwargs: Any,
     ) -> list[str]:
         """Execute a ripgrep search.
 
@@ -309,12 +310,12 @@ class RipgrepExecutor:
 class RipgrepMetrics:
     """Collect performance metrics for ripgrep operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.search_count = 0
         self.total_search_time = 0.0
         self.fallback_count = 0
 
-    def record_search(self, duration: float, used_fallback: bool = False):
+    def record_search(self, duration: float, used_fallback: bool = False) -> None:
         """Record a search operation."""
         self.search_count += 1
         self.total_search_time += duration

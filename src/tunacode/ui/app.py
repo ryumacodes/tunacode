@@ -6,7 +6,7 @@ import asyncio
 import os
 import time
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Never
 
 from rich.console import RenderableType
 from rich.markdown import Markdown
@@ -32,6 +32,7 @@ from tunacode.ui.renderers.agent_response import render_agent_streaming
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
 from tunacode.ui.repl_support import (
+    StatusBarLike,
     build_textual_tool_callback,
     build_tool_result_callback,
     build_tool_start_callback,
@@ -89,7 +90,7 @@ class TextualReplApp(App[None]):
         self.rich_log: RichLog
         self.editor: Editor
         self.resource_bar: ResourceBar
-        self.status_bar: StatusBar
+        self.status_bar: StatusBarLike
         self.streaming_output: Static
 
     def compose(self) -> ComposeResult:
@@ -147,7 +148,7 @@ class TextualReplApp(App[None]):
         if new_theme:
             self.add_class(f"theme-{new_theme}")
 
-    def _on_setup_complete(self, completed: bool) -> None:
+    def _on_setup_complete(self, completed: bool | None) -> None:
         """Called when setup screen is dismissed."""
         if completed:
             self._update_resource_bar()
@@ -160,14 +161,18 @@ class TextualReplApp(App[None]):
         # Initialize logging with TUI callback
         logger = get_logger()
         logger.set_state_manager(self.state_manager)
-        logger.set_tui_callback(lambda text: self.rich_log.write(text))
+
+        def _write_tui(renderable: RenderableType) -> None:
+            self.rich_log.write(renderable)
+
+        logger.set_tui_callback(_write_tui)
 
         self.set_focus(self.editor)
         self.run_worker(self._request_worker, exclusive=False)
         self._update_resource_bar()
         show_welcome(self.rich_log)
 
-    async def _request_worker(self) -> None:
+    async def _request_worker(self) -> Never:
         while True:
             request = await self.request_queue.get()
             try:

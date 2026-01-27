@@ -9,7 +9,7 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Protocol
+from typing import Literal, Protocol
 
 from rich.console import RenderableType
 from rich.text import Text
@@ -66,7 +66,15 @@ class ShellRunContext:
 
 
 class ShellRunnerHost(Protocol):
-    def notify(self, message: str, severity: str = "information") -> None: ...
+    def notify(
+        self,
+        message: str,
+        *,
+        title: str = "",
+        severity: Literal["information", "warning", "error"] = "information",
+        timeout: float | None = None,
+        markup: bool = True,
+    ) -> None: ...
 
     def write_shell_output(self, renderable: RenderableType) -> None: ...
 

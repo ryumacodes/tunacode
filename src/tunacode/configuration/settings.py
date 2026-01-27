@@ -12,13 +12,13 @@ from tunacode.types import ConfigFile, ConfigPath
 
 
 class PathConfig:
-    def __init__(self):
+    def __init__(self) -> None:
         self.config_dir: ConfigPath = Path.home() / ".config"
         self.config_file: ConfigFile = self.config_dir / CONFIG_FILE_NAME
 
 
 class ApplicationSettings:
-    def __init__(self):
+    def __init__(self) -> None:
         self.version = APP_VERSION
         self.name = APP_NAME
         self.guide_file = f"{self.name.upper()}.md"

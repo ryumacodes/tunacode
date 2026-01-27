@@ -25,6 +25,10 @@ class SessionStateProtocol(Protocol):
     runtime: RuntimeState
     usage: UsageState
     conversation: ConversationState
+    agents: dict[str, Any]
+    agent_versions: dict[str, int]
+    _debug_events: list[str]
+    _debug_raw_stream_accum: str
     # Persistence fields
     session_id: str
     project_id: str

@@ -117,7 +117,7 @@ def _replace_message_fields(message: Any, updates: dict[str, Any]) -> Any:
         new_message.update(updates)
         return new_message
 
-    if is_dataclass(message):
+    if is_dataclass(message) and not isinstance(message, type):
         return replace(message, **updates)
 
     model_copy = getattr(message, "model_copy", None)

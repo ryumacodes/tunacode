@@ -4,6 +4,7 @@ import asyncio
 import os
 import re
 import subprocess
+from asyncio.subprocess import Process
 
 from pydantic_ai.exceptions import ModelRetry
 
@@ -180,7 +181,7 @@ def _check_common_errors(command: str, returncode: int, stderr: str) -> None:
         return
 
 
-async def _cleanup_process(process) -> None:
+async def _cleanup_process(process: Process | None) -> None:
     """Ensure process cleanup."""
     if process is None or process.returncode is not None:
         return
