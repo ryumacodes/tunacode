@@ -26,3 +26,18 @@ Files:
 - tools/lsp/servers.py (server command mapping)
 
 Acceptance: Package created, imports work within tools/
+
+**2026-01-27T20:24:56Z**
+
+DESIGN UPDATE: tools.lsp provides get_diagnostics() for file tools
+
+Package structure:
+- tools/lsp/__init__.py: exports get_diagnostics, format_diagnostics
+- tools/lsp/client.py: LSPClient (JSON-RPC implementation)
+- tools/lsp/servers.py: server command mapping
+
+Usage in file tools:
+
+
+Dependencies:
+tools.write_file → tools.lsp (same layer, valid)

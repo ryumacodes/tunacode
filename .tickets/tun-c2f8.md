@@ -39,3 +39,38 @@ Phase 2 Acceptance Criteria:
 - tools/check_file.py tool implemented
 - Tool registered in agent when LSP enabled
 - Agent can request diagnostics via check_file tool
+
+**2026-01-27T20:24:41Z**
+
+DECISION 2026-01-27: Option 2 - Keep LSP in Tools Layer
+
+LSP is a tools concern only. File tools (write_file, update_file) will:
+1. Perform the file operation
+2. Call tools.lsp.get_diagnostics(filepath) automatically
+3. Append diagnostics to the result
+
+Agent receives contextual feedback and decides what to do with it.
+
+Dependencies:
+- tools.write_file → tools.lsp (same layer, valid)
+- tools.update_file → tools.lsp (same layer, valid)
+
+No core changes needed. Clean, simple, explicit.
+
+**2026-01-27T20:25:22Z**
+
+UPDATED TICKET STRUCTURE:
+
+Phase 1 - Removal:
+- tun-486f: Delete src/tunacode/lsp/ directory
+- tun-d9c6: Delete tools/lsp_status.py  
+- tun-0db4: Delete core/lsp_status.py facade
+
+Phase 2 - Reimplementation (Keep in Tools):
+- tun-d150: Create tools/lsp/ sub-package
+- tun-2d43: Update write_file to call LSP diagnostics
+- tun-22f7: Update update_file to call LSP diagnostics
+
+CLOSED (design changed):
+- tun-3149: check_file tool (not needed)
+- tun-2cd6: Tool registration (not needed)
