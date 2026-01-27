@@ -120,6 +120,16 @@ repos:
         files: ^src/.*\.py$
         exclude: ^(tests/|scripts/)
 
+      # DISABLED: Check for duplicate code - uncomment when ready to enforce
+      # - id: pylint-duplicates
+      #   name: Check for duplicate code
+      #   entry: uv run pylint --disable=all --enable=R0801
+      #   language: system
+      #   files: ^src/.*\.py$
+      #   exclude: ^(tests/|scripts/|__pycache__/)
+      #   pass_filenames: true
+      #   stages: [pre-commit]
+
   # Import sorting with isort - DISABLED (ruff handles this with extend-select = ["I"])
   # - repo: https://github.com/pycqa/isort
   #   rev: 5.13.2
