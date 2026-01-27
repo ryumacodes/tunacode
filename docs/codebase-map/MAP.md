@@ -74,10 +74,6 @@ src/tunacode/
 │   ├── commands/          # Slash commands
 │   └── repl_components/   # REPL building blocks
 │
-├── indexing/               # Fast codebase indexing
-│   ├── code_index.py      # CodeIndex class
-│   └── constants.py       # Indexing thresholds
-│
 ├── lsp/                    # Language Server Protocol client
 │   └── client.py          # LSPClient, diagnostics
 │
@@ -129,7 +125,6 @@ src/tunacode/
 | **configuration/** | Settings & models | load_user_config, ModelRegistry, get_pricing | M |
 | **types/** | Type definitions | UserConfig, MessageHistory, ModelName, ToolCallback | M |
 | **utils/** | Shared utilities | estimate_tokens, parse_json | M |
-| **indexing/** | Fast codebase indexing | CodeIndex, index_files, search_files | M |
 | **lsp/** | Language Server Protocol | LSPClient, get_diagnostics | M |
 | **prompts/** | Prompt templates | agent_role.md, critical_rules.md | M |
 | **cli/** | Command-line interface | REPL commands, slash commands | M, D |
@@ -409,7 +404,6 @@ Located in `/Users/tuna/Desktop/tunacode/tests/`:
   - [configuration.md](./modules/configuration.md) - Configuration
   - [types.md](./modules/types.md) - Type definitions
   - [utils.md](./modules/utils.md) - Utilities
-  - [indexing.md](./modules/indexing.md) - Code indexing
   - [lsp.md](./modules/lsp.md) - Language Server Protocol
   - [prompts.md](./modules/prompts.md) - Prompt sections
   - [exceptions.md](./modules/exceptions.md) - Exception hierarchy

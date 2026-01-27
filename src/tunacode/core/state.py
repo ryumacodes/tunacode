@@ -11,7 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.types import InputSessions, ModelName, SessionId, UserConfig
@@ -20,9 +20,6 @@ from tunacode.types.canonical import UsageMetrics
 from tunacode.tools.messaging import estimate_tokens, get_content
 
 from tunacode.core.types import ConversationState, RuntimeState, TaskState, UsageState
-
-if TYPE_CHECKING:
-    from tunacode.core.indexing_service import IndexingService
 
 
 @dataclass
@@ -89,7 +86,6 @@ class StateManager:
 
     def __init__(self) -> None:
         self._session = SessionState()
-        self._indexing_service: IndexingService | None = None
         self._load_user_configuration()
 
     def _load_user_configuration(self) -> None:
@@ -131,15 +127,6 @@ class StateManager:
     @property
     def usage(self) -> UsageState:
         return self._session.usage
-
-    @property
-    def indexing_service(self) -> "IndexingService":
-        """Get or create the indexing service (lazy initialization)."""
-        if self._indexing_service is None:
-            from tunacode.core.indexing_service import IndexingService
-
-            self._indexing_service = IndexingService()
-        return self._indexing_service
 
     def push_recursive_context(self, context: dict[str, Any]) -> None:
         """Push a new context onto the recursive execution stack."""

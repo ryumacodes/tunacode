@@ -1,6 +1,6 @@
 ---
 id: tun-5f58
-status: open
+status: closed
 deps: [tun-27ea]
 links: []
 created: 2026-01-27T19:22:32Z
@@ -16,3 +16,9 @@ Remove CodeIndex import and optimization from tools/glob.py (delete _get_code_in
 
 grep CodeIndex src/tunacode/ returns empty; grep IndexingService src/tunacode/ returns empty; app starts without indexing
 
+
+## Notes
+
+**2026-01-27T19:28:26Z**
+
+Completed in commit 611bda11
