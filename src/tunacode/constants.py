@@ -73,24 +73,6 @@ class ToolName(str, Enum):
     SUBMIT = "submit"
 
 
-READ_ONLY_TOOLS = [
-    ToolName.READ_FILE,
-    ToolName.GREP,
-    ToolName.LIST_DIR,
-    ToolName.GLOB,
-    ToolName.WEB_FETCH,
-    ToolName.SUBMIT,
-]
-
-WRITE_TOOLS = [
-    ToolName.WRITE_FILE,
-    ToolName.UPDATE_FILE,
-]
-
-EXECUTE_TOOLS = [
-    ToolName.BASH,
-]
-
 TUNACODE_HOME_DIR = ".tunacode"
 SESSIONS_SUBDIR = "sessions"
 

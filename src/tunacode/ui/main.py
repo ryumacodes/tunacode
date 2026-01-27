@@ -70,9 +70,6 @@ async def _run_textual_app(*, model: str | None, show_setup: bool) -> None:
         state_manager.session.current_model = model
 
     try:
-        # Touch tool_handler to trigger lazy initialization
-        _ = state_manager.tool_handler
-
         await run_textual_repl(state_manager, show_setup=show_setup)
     except (KeyboardInterrupt, UserAbortError):
         update_task.cancel()
@@ -158,9 +155,6 @@ def main(
 @app.command(name="run")
 def run_headless(
     prompt: str = typer.Argument(..., help="The prompt/instruction to execute"),
-    auto_approve: bool = typer.Option(
-        False, "--auto-approve", help="Skip tool authorization prompts"
-    ),
     output_json: bool = typer.Option(False, "--output-json", help="Output trajectory as JSON"),
     timeout: int = typer.Option(
         DEFAULT_TIMEOUT_SECONDS, "--timeout", help="Execution timeout in seconds"
@@ -186,13 +180,6 @@ def run_headless(
             state_manager.session.current_model = model
 
         _apply_base_url_override(state_manager, baseurl)
-
-        # Auto-approve mode (reuses existing yolo infrastructure)
-        if auto_approve:
-            state_manager.session.yolo = True
-
-        # Touch tool_handler to trigger lazy initialization
-        _ = state_manager.tool_handler
 
         try:
             agent_run = await asyncio.wait_for(

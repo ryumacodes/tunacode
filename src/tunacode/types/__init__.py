@@ -88,8 +88,6 @@ from tunacode.types.dataclasses import (
     ModelRegistry,
     ResponseState,
     TokenUsage,
-    ToolConfirmationRequest,
-    ToolConfirmationResponse,
 )
 
 # Pydantic-AI wrappers
@@ -107,12 +105,8 @@ from tunacode.types.pydantic_ai import (
 
 # State protocol
 from tunacode.types.state import (
-    AuthorizationProtocol,
-    AuthorizationSessionProtocol,
-    AuthorizationToolHandlerProtocol,
     SessionStateProtocol,
     StateManagerProtocol,
-    TemplateProtocol,
 )
 from tunacode.types.state_structures import (
     ConversationState,
@@ -180,10 +174,6 @@ __all__ = [
     # State
     "SessionStateProtocol",
     "StateManagerProtocol",
-    "AuthorizationProtocol",
-    "AuthorizationSessionProtocol",
-    "AuthorizationToolHandlerProtocol",
-    "TemplateProtocol",
     "ConversationState",
     "RuntimeState",
     "TaskState",
@@ -198,8 +188,6 @@ __all__ = [
     "ModelRegistry",
     "ResponseState",
     "TokenUsage",
-    "ToolConfirmationRequest",
-    "ToolConfirmationResponse",
     # Canonical types (new)
     "CanonicalMessage",
     "CanonicalPart",

@@ -3,15 +3,15 @@ title: Tools Module
 path: src/tunacode/tools
 type: directory
 depth: 1
-description: Tool implementations, decorators, and authorization system
-exports: [base_tool, file_tool, ToolHandler, bash, glob, grep, read_file, write_file, update_file]
+description: Tool implementations and decorators
+exports: [base_tool, file_tool, bash, glob, grep, read_file, write_file, update_file]
 seams: [M, D]
 ---
 
 # Tools Module
 
 ## Purpose
-Provides AI agent capabilities through a robust tool system with decorators, authorization, and specialized implementations.
+Provides AI agent capabilities through a robust tool system with decorators and specialized implementations.
 
 ## Tool Decorator System (decorators.py)
 
@@ -35,56 +35,7 @@ Specialized decorator for file system tools:
 - `submit_prompt.xml` - Submit tool documentation
 - etc.
 
-## Authorization System (authorization/)
-
-### ToolHandler (handler.py)
-Central authorization coordinator:
-- Evaluates if tool requires confirmation
-- Manages user confirmation responses
-- Updates tool_ignore list for future skips
-- Coordinates with policy and rules
-
-### AuthorizationPolicy (policy.py)
-Aggregates authorization rules:
-- Evaluates rules in priority order
-- Determines if confirmation can be bypassed
-- Composite pattern for flexible policies
-
-### Authorization Rules (rules.py)
-
-**ReadOnlyToolRule**
-- Bypasses confirmation for safe read-only tools
-- Covers: glob, grep, read_file, list_dir
-
-**TemplateAllowedToolsRule**
-- Respects template's allowed_tools list
-- Template-specific permission grants
-
-**YoloModeRule**
-- System-wide bypass when enabled
-- For advanced users requiring full automation
-
-**ToolIgnoreListRule**
-- Honors "skip future confirmations" user choice
-- Persistent per-session tool approvals
-
-### Context (context.py)
-**AuthContext Dataclass:**
-- **yolo_mode** - Global bypass setting
-- **tool_ignore_list** - Previously approved tools
-- **active_template** - Current template constraints
-
-### Supporting Components
-
-**factory.py** - ConfirmationRequestFactory
-- Generates detailed confirmation requests
-- Includes file diffs for review
-
-**notifier.py** - ToolRejectionNotifier
-- Informs agent of cancelled tool executions
-
-**requests.py** - ToolConfirmationRequest/Response
-- Data structures for confirmation flow
+## Supporting Components
 
 **lsp_status.py** - LSP status helper
 - Derives enabled/server name from config and installed binaries
@@ -213,18 +164,15 @@ Ripgrep integration wrapper:
 - **core/agents/** - Tool registration and execution
 - **core/agents/tool_executor.py** - Parallel execution
 - **ui/renderers/** - Specialized output rendering
-- **authorization/** - Permission management
 
 ## Seams (M, D)
 
 **Modification Points:**
 - Add new tool implementations
 - Extend decorator system with new features
-- Customize authorization rules
 - Add new fuzzy matching algorithms
 
 **Extension Points:**
 - Create custom tool types
-- Implement specialized authorizers
 - Add tool-specific validation
 - Extend prompt XML system

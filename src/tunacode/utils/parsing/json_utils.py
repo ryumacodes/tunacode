@@ -7,8 +7,6 @@ JSON parsing utilities with enhanced error handling and concatenated object supp
 import json
 from typing import Any
 
-from tunacode.constants import READ_ONLY_TOOLS
-
 
 class ConcatenatedJSONError(Exception):
     """Raised when concatenated JSON objects are detected but cannot be safely handled."""
@@ -94,16 +92,9 @@ def validate_tool_args_safety(objects: list[dict[str, Any]], tool_name: str | No
     if len(objects) <= 1:
         return True
 
-    # Check if tool is read-only (safer to execute multiple times)
-    if tool_name and tool_name in READ_ONLY_TOOLS:
-        return True
-
-    # For write/execute tools, multiple objects are potentially dangerous
-    if tool_name is None:
-        return False
-
+    tool_label = tool_name or "<unknown>"
     raise ConcatenatedJSONError(
-        f"Multiple JSON objects not safe for tool {tool_name}",
+        f"Multiple JSON objects not supported for tool {tool_label}",
         objects_found=len(objects),
         tool_name=tool_name,
     )
@@ -137,15 +128,8 @@ def safe_json_parse(
         # Try to split concatenated objects
         objects = split_concatenated_json(json_string)
 
-        # Validate safety - fail loud if multiple objects would be discarded
-        if not validate_tool_args_safety(objects, tool_name):
-            if len(objects) > 1:
-                raise ConcatenatedJSONError(
-                    "Multiple JSON objects detected but tool safety unknown",
-                    objects_found=len(objects),
-                    tool_name=tool_name,
-                ) from None
-            return objects[0]
+        # Validate safety - fail loud if multiple objects are found
+        validate_tool_args_safety(objects, tool_name)
 
         if len(objects) == 1:
             return objects[0]

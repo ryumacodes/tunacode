@@ -72,24 +72,6 @@ class TestTUIInitialization:
         assert state_manager is not None
         assert state_manager.session is not None
 
-    def test_tool_handler_lazy_initialization(self) -> None:
-        """Verify tool_handler property uses lazy initialization."""
-        from tunacode.core.state import StateManager
-
-        state_manager = StateManager()
-        # Before access, _tool_handler should be None
-        assert state_manager._tool_handler is None
-
-        # Access triggers lazy init
-        tool_handler = state_manager.tool_handler
-        assert tool_handler is not None
-        assert state_manager._tool_handler is not None
-
-        # Verify it's the correct type
-        from tunacode.tools.authorization.handler import ToolHandler
-
-        assert isinstance(tool_handler, ToolHandler)
-
     def test_ui_main_imports_without_tools_layer(self) -> None:
         """Verify ui/main.py has no direct imports from tunacode.tools."""
         import tunacode.ui.main as main_module
@@ -146,25 +128,3 @@ class TestHeadlessModeMocked:
         result = resolve_output(mock_run, messages)
         # Should return None or handle gracefully
         assert result is None
-
-    def test_state_manager_tool_handler_injection(self) -> None:
-        """Test that custom tool handlers can be injected via set_tool_handler."""
-        from tunacode.core.state import StateManager
-
-        state_manager = StateManager()
-        mock_handler = MagicMock()
-
-        state_manager.set_tool_handler(mock_handler)
-        assert state_manager.tool_handler is mock_handler
-
-    def test_headless_cli_processes_auto_approve(self) -> None:
-        """Verify --auto-approve flag sets yolo mode."""
-        # This is a unit test for the flag parsing behavior
-        from tunacode.core.state import StateManager
-
-        state_manager = StateManager()
-        assert state_manager.session.yolo is False
-
-        # Simulate what headless mode does with --auto-approve
-        state_manager.session.yolo = True
-        assert state_manager.session.yolo is True

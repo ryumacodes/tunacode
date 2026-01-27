@@ -25,8 +25,6 @@ Dataclass container for all session data with decomposed sub-structures:
 - **agents** - Cached pydantic-ai Agent instances
 - **agent_versions** - Version tracking for cache invalidation
 - **current_model** - Active model name
-- **tool_ignore** - Tools approved for auto-execution
-- **tool_progress_callback** - UI callback for tool updates
 
 ### StateManager
 Singleton class with global instance access:
@@ -53,7 +51,6 @@ Initial → Configured → Active → Paused → Saved
 - **core/agents/** - Agent creation and caching
 - **ui/** - Real-time state updates in TUI
 - **configuration/** - User config loading
-- **tools/** - Tool authorization state
 
 ## Seams (M)
 

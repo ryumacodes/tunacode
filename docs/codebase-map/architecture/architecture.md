@@ -85,8 +85,8 @@ The project follows a **pragmatic layered architecture** with strong component-b
 │  │   Tool       │  │    Tool      │  │    Tool      │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │    Glob      │  │Authorization │  │   Decorators │          │
-│  │   Tool       │  │    Handler   │  │              │          │
+│  │    Glob      │  │    Tool      │  │   Decorators │          │
+│  │   Tool       │  │  Utilities   │  │              │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 └──────────────────────────────────────────────────────────────────┘
          │                      │                      │
@@ -170,10 +170,9 @@ USER INPUT
     │
     ▼
 ┌───────────────────────────────────────────────────────────────┐
-│ 5. AUTHORIZATION (Tools Layer)                                │
-│    - ToolHandler checks authorization policy                  │
-│    - User confirmation requested if needed                    │
-│    - Tool execution approved or denied                        │
+│ 5. TOOL DISPATCH (Core Layer)                                 │
+│    - Tool calls registered and batched                        │
+│    - Parallel execution scheduled                             │
 └───────────────────────────────────────────────────────────────┘
     │
     ▼
@@ -282,11 +281,11 @@ def read_file(file_path: str) -> str:
 
 @base_tool
 def bash(command: str) -> str:
-    # Decorator adds authorization and error handling
+    # Decorator adds error handling and retry logic
     ...
 ```
 
-**Purpose**: Add cross-cutting concerns (error handling, authorization) without cluttering tool logic.
+**Purpose**: Add cross-cutting concerns (error handling, retries) without cluttering tool logic.
 
 ### 4. Observer Pattern
 
@@ -322,27 +321,7 @@ def research_codebase(query: str) -> str:
 
 **Purpose**: Enable hierarchical agent organization where agents can delegate to specialized sub-agents.
 
-### 6. Policy Pattern
-
-**Location**: `src/tunacode/tools/authorization/`
-
-```python
-class AuthorizationPolicy:
-    def __init__(self, rules: List[AuthorizationRule]):
-        self.rules = rules
-
-    def should_confirm(self, tool_name: str) -> bool:
-        return any(rule.should_confirm(tool_name) for rule in self.rules)
-
-# Concrete rules
-ReadOnlyToolRule()
-YoloModeRule()
-DangerousToolRule()
-```
-
-**Purpose**: Allow flexible composition of authorization rules.
-
-### 7. State Management Pattern
+### 6. State Management Pattern
 
 **Location**: `src/tunacode/core/state.py`
 
@@ -399,7 +378,6 @@ Level 2 (Core Logic):
 │   ├── setup
 │   └── token_usage
 └── tools
-    ├── authorization
     ├── grep_components
     ├── prompts
     └── utils
@@ -500,18 +478,6 @@ Level 3 (Application):
 **Files**:
 - `/Users/tuna/Desktop/tunacode/src/tunacode/core/state.py`
 
-### Decision 5: Tool Authorization System
-
-**Rationale**: Balance safety with usability, allow user control over dangerous operations
-
-**Implementation**:
-- Policy-based authorization system
-- Composable rules (read-only, yolo mode, dangerous tools)
-- User confirmation for unauthorized operations
-
-**Files**:
-- `/Users/tuna/Desktop/tunacode/src/tunacode/tools/authorization/`
-
 ---
 
 ## 7. Separation of Concerns
@@ -556,7 +522,6 @@ Level 3 (Application):
 - `bash.py` - Shell command execution
 - `grep.py` - Code search
 - `read_file.py` - File reading
-- `authorization/` - Tool authorization
 
 **Does NOT**:
 - Orchestrate agent flow
@@ -603,7 +568,6 @@ Level 3 (Application):
 - `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/agent_components/agent_config.py`
 
 **Tools → Core**:
-- `/Users/tuna/Desktop/tunacode/src/tunacode/tools/authorization/`
 - `/Users/tuna/Desktop/tunacode/src/tunacode/tools/todo.py`
 
 ---
@@ -681,11 +645,11 @@ Located in `/Users/tuna/Desktop/tunacode/tests/`:
 
 ## 13. Security Considerations
 
-### Tool Authorization
+### Tool Safety
 
-- Policy-based authorization system
-- User confirmation for dangerous operations
-- Yolo mode for experienced users
+- Tool definitions enforce validation and limits
+- Bash commands validated before execution
+- File operations enforce size and path checks
 
 ### Input Validation
 

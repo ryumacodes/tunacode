@@ -109,16 +109,6 @@ class ClearCommand(Command):
         app.state_manager.save_session()
 
 
-class YoloCommand(Command):
-    name = "yolo"
-    description = "Toggle auto-confirm for tool executions"
-
-    async def execute(self, app: TextualReplApp, args: str) -> None:
-        app.state_manager.session.yolo = not app.state_manager.session.yolo
-        status = "ON" if app.state_manager.session.yolo else "OFF"
-        app.notify(f"YOLO mode: {status}")
-
-
 class DebugCommand(Command):
     name = "debug"
     description = "Toggle debug logging to screen"
@@ -483,7 +473,6 @@ class UpdateCommand(Command):
 COMMANDS: dict[str, Command] = {
     "help": HelpCommand(),
     "clear": ClearCommand(),
-    "yolo": YoloCommand(),
     "debug": DebugCommand(),
     "model": ModelCommand(),
     "theme": ThemeCommand(),

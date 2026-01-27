@@ -25,7 +25,6 @@ TunaCodeError (base)
 ├── UserAbortError
 ├── ConfigurationError
 ├── StateError
-├── AuthorizationError
 └── GlobalRequestTimeoutError
 ```
 
@@ -89,12 +88,6 @@ State management errors:
 - Session load failure
 - State corruption
 - Invalid state transition
-
-### AuthorizationError
-Authorization failures:
-- Tool authorization denied
-- Permission errors
-- Policy violations
 
 ### GlobalRequestTimeoutError
 Request timeout:

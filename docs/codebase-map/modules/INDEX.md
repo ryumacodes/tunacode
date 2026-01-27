@@ -36,7 +36,7 @@ Each module file includes:
 - **[ui-overview.md](./ui-overview.md)** - Textual TUI interface (TextualReplApp, screens, renderers)
 
 ### Tools Module
-- **[tools-overview.md](./tools-overview.md)** - Tool implementations and authorization (base_tool, file_tool, ToolHandler)
+- **[tools-overview.md](./tools-overview.md)** - Tool implementations and decorators (base_tool, file_tool)
 
 ### Supporting Modules
 - **[configuration.md](./configuration.md)** - User settings and model registry (load_user_config, ModelRegistry)
@@ -67,7 +67,7 @@ Each module file includes:
 - ui-overview.md
 - constants.md
 
-**Tools & Authorization:**
+**Tools:**
 - tools-overview.md
 
 **Configuration:**

@@ -6,10 +6,8 @@ while hosting small, testable helpers and callback builders.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import re
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from rich.console import Console
@@ -17,11 +15,8 @@ from rich.text import Text
 
 from tunacode.constants import MAX_CALLBACK_CONTENT
 from tunacode.types import (
-    AuthorizationProtocol,
     ToolArgs,
     ToolCallback,
-    ToolConfirmationRequest,
-    ToolConfirmationResponse,
     ToolName,
     ToolResultCallback,
     ToolStartCallback,
@@ -98,20 +93,6 @@ def format_collapsed_message(text: str, style: str, *, width: int) -> Text:
     return _format_prefixed_wrapped_lines(render_lines, width=width)
 
 
-@dataclass
-class PendingConfirmationState:
-    """Tracks pending tool confirmation state."""
-
-    future: asyncio.Future[ToolConfirmationResponse]
-    request: ToolConfirmationRequest
-
-
-class ConfirmationRequester(Protocol):
-    async def request_tool_confirmation(
-        self, request: ToolConfirmationRequest
-    ) -> ToolConfirmationResponse: ...
-
-
 class StatusBarLike(Protocol):
     def add_edited_file(self, filepath: str) -> None: ...
 
@@ -120,33 +101,18 @@ class StatusBarLike(Protocol):
     def update_running_action(self, tool_name: str) -> None: ...
 
 
-class AppForCallbacks(ConfirmationRequester, Protocol):
+class AppForCallbacks(Protocol):
     status_bar: StatusBarLike
 
     def post_message(self, message: ToolResultDisplay) -> None: ...
 
 
-def build_textual_tool_callback(
-    app: ConfirmationRequester,
-    state_manager: AuthorizationProtocol,
-) -> ToolCallback:
+def build_textual_tool_callback() -> ToolCallback:
     async def _callback(
-        part: ToolCallPart,
+        _part: ToolCallPart,
         _node: StreamedRunResult[None, str],
     ) -> None:
-        tool_handler = state_manager.tool_handler
-
-        if not tool_handler.should_confirm(part.tool_name):
-            return
-
-        from tunacode.exceptions import UserAbortError
-        from tunacode.utils.parsing.command_parser import parse_args
-
-        args: ToolArgs = await parse_args(part.args)
-        request = tool_handler.create_confirmation_request(part.tool_name, args)
-        response = await app.request_tool_confirmation(request)
-        if not tool_handler.process_confirmation(response, part.tool_name):
-            raise UserAbortError("User aborted tool execution")
+        return None
 
     return _callback
 

@@ -76,17 +76,7 @@ class Editor(Input):
             return None
 
     def on_key(self, event: events.Key) -> None:
-        """Handle key events for confirmation and bash-mode auto-spacing."""
-        if event.key in ("1", "2", "3"):
-            app = self.app
-            if (
-                hasattr(app, "pending_confirmation")
-                and app.pending_confirmation is not None
-                and not app.pending_confirmation.future.done()
-            ):
-                event.prevent_default()
-                return
-
+        """Handle key events for bash-mode auto-spacing."""
         has_paste_buffer = bool(getattr(self, "has_paste_buffer", False))
         if has_paste_buffer and not self.value and event.key == "backspace":
             event.prevent_default()

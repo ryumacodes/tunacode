@@ -60,10 +60,6 @@ src/tunacode/
 │   ├── web_fetch.py       # HTTP requests
 │   ├── todo.py            # TODO management
 │   ├── decorators.py      # @base_tool, @file_tool
-│   ├── authorization/     # Permission system
-│   │   ├── handler.py     # ToolHandler
-│   │   ├── policy.py      # AuthorizationPolicy
-│   │   └── rules.py       # ReadOnly, YoloMode, etc.
 │   ├── grep_components/   # Search implementation
 │   └── tools_utils/       # Shared utilities
 │
@@ -167,7 +163,6 @@ The Structure Agent completed a comprehensive **depth 0 analysis** of the TunaCo
 5. Strategy Pattern (Configuration) - Multiple configuration sources
 6. Observer Pattern (UI/Core) - Callback-based communication
 7. Composite Pattern (Delegation) - Agents as tools
-8. Policy Pattern (Authorization) - Composable authorization rules
 
 ### Entry Points
 
@@ -190,12 +185,11 @@ The Structure Agent completed a comprehensive **depth 0 analysis** of the TunaCo
 2. **Modular System Prompts**: Composable prompt sections for maintainability
 3. **Agent as Iterator**: Pull-based model for consuming agent execution
 4. **Centralized State Management**: Single source of truth in StateManager
-5. **Tool Authorization System**: Policy-based safety with user control
 
 **Data Flow:**
 ```
 USER INPUT → UI Capture → Request Queue → process_request()
-  → Agent.iter() → LLM API → Tool Selection → Authorization
+  → Agent.iter() → LLM API → Tool Selection → Tool Dispatch
   → Tool Execution → Response Rendering → State Update
 ```
 
@@ -220,7 +214,6 @@ USER INPUT → UI Capture → Request Queue → process_request()
 
 **Tools Module:**
 - Decorator system: @base_tool, @file_tool with XML prompt files
-- Authorization: ToolHandler, AuthorizationPolicy, composable rules
 - Tool implementations: bash, grep (4 strategies), glob, read_file, write_file, update_file
 - Fuzzy matching: line-trimmed, indentation-flexible, block-anchor
 - Todo tools: todowrite, todoread, todoclear

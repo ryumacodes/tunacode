@@ -36,7 +36,6 @@ State-related types:
 - **ToolProgressCallback** - Progress update callback
 - **InputSessions** - Session list structure
 - **TodoProtocol** - Minimal todo tool contract
-- **AuthorizationProtocol** - Authorization tool contract
 
 ### state_structures.py
 SessionState sub-structures:
@@ -79,13 +78,12 @@ Callback type definitions:
 ### Callback Types
 - Synchronous and async callbacks
 - Progress, streaming, and tool lifecycle callbacks
-- Authorization callbacks
 
 ### Protocol Types
 - ToolExecutor protocol
 - StateManager protocol
 - Renderer protocol
-- TodoProtocol, AuthorizationProtocol
+- TodoProtocol
 
 ## Integration Points
 

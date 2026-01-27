@@ -5,7 +5,7 @@ Contains structured data types used throughout the application.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from tunacode.types.callbacks import ProcessRequestCallback
 
@@ -30,26 +30,6 @@ class ModelConfig:
 
 
 ModelRegistry = dict[str, ModelConfig]
-
-
-@dataclass
-class ToolConfirmationRequest:
-    """Request for tool execution confirmation."""
-
-    tool_name: str
-    args: dict[str, Any]
-    filepath: str | None = None
-    diff_content: str | None = None
-
-
-@dataclass
-class ToolConfirmationResponse:
-    """Response from tool confirmation dialog."""
-
-    approved: bool
-    skip_future: bool = False
-    abort: bool = False
-    instructions: str = ""
 
 
 @dataclass
@@ -107,6 +87,4 @@ __all__ = [
     "ModelRegistry",
     "ResponseState",
     "TokenUsage",
-    "ToolConfirmationRequest",
-    "ToolConfirmationResponse",
 ]

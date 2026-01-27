@@ -15,14 +15,12 @@ from typing import TYPE_CHECKING, Any
 
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.types import (
-    AuthorizationToolHandlerProtocol,
     ConversationState,
     InputSessions,
     ModelName,
     RuntimeState,
     SessionId,
     TaskState,
-    ToolName,
     UsageState,
     UserConfig,
 )
@@ -45,8 +43,6 @@ class SessionState:
     # Keep session default in sync with configuration default
     current_model: ModelName = DEFAULT_USER_CONFIG["default_model"]
     spinner: Any | None = None
-    tool_ignore: list[ToolName] = field(default_factory=list)
-    yolo: bool = False
     debug_mode: bool = False
     undo_initialized: bool = False
     show_thoughts: bool = False
@@ -99,7 +95,6 @@ class StateManager:
 
     def __init__(self) -> None:
         self._session = SessionState()
-        self._tool_handler: AuthorizationToolHandlerProtocol | None = None
         self._indexing_service: IndexingService | None = None
         self._load_user_configuration()
 
@@ -142,19 +137,6 @@ class StateManager:
     @property
     def usage(self) -> UsageState:
         return self._session.usage
-
-    @property
-    def tool_handler(self) -> AuthorizationToolHandlerProtocol:
-        """Get or create the tool handler (lazy initialization)."""
-        if self._tool_handler is None:
-            from tunacode.tools.authorization.handler import ToolHandler
-
-            self._tool_handler = ToolHandler(self)
-        return self._tool_handler
-
-    def set_tool_handler(self, handler: AuthorizationToolHandlerProtocol) -> None:
-        """Set a custom tool handler (useful for testing)."""
-        self._tool_handler = handler
 
     @property
     def indexing_service(self) -> "IndexingService":
@@ -297,8 +279,6 @@ class StateManager:
             "current_model": self._session.current_model,
             "total_tokens": self._session.conversation.total_tokens,
             "session_total_usage": self._session.usage.session_total_usage.to_dict(),
-            "tool_ignore": self._session.tool_ignore,
-            "yolo": self._session.yolo,
             "thoughts": self._session.conversation.thoughts,
             "messages": self._serialize_messages(),
         }
@@ -347,9 +327,6 @@ class StateManager:
             self._session.usage.session_total_usage = UsageMetrics.from_dict(
                 data.get("session_total_usage", {})
             )
-            tool_ignore = data.get("tool_ignore", [])
-            self._session.tool_ignore = tool_ignore
-            self._session.yolo = data.get("yolo", False)
             loaded_messages = self._deserialize_messages(data.get("messages", []))
             stored_thoughts = data.get("thoughts") or []
             extracted_thoughts, cleaned_messages = self._split_thought_messages(loaded_messages)

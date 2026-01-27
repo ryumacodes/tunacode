@@ -99,9 +99,6 @@ src/tunacode/
 │   ├── decorators.py            # * Tool decorators (retry, logging)
 │   ├── xml_helper.py            # XML parsing
 │   │
-│   ├── authorization/           # Permission system
-│   │   └── (auth logic)
-│   │
 │   ├── grep_components/         # Search implementation
 │   │   └── (grep internals)
 │   │
