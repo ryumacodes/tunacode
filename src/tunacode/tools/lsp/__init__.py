@@ -6,10 +6,9 @@ It manages server lifecycle and provides formatted diagnostic output.
 
 from pathlib import Path
 
-from tunacode.utils.formatting import truncate_diagnostic_message
-
 from tunacode.tools.lsp.client import Diagnostic, LSPClient
 from tunacode.tools.lsp.servers import get_server_command
+from tunacode.tools.utils.formatting import truncate_diagnostic_message
 
 __all__ = ["get_diagnostics", "format_diagnostics"]
 
