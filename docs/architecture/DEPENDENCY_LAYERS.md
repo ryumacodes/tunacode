@@ -23,15 +23,13 @@ types
 | configuration | constants | 6 |
 | configuration | exceptions | 1 |
 | configuration | types | 4 |
-| core | configuration | 14 |
-| core | constants | 5 |
+| core | configuration | 15 |
+| core | constants | 6 |
 | core | exceptions | 4 |
 | core | infrastructure | 1 |
 | core | tools | 18 |
 | core | types | 23 |
 | exceptions | types | 1 |
-| infrastructure | configuration | 1 |
-| infrastructure | constants | 1 |
 | tools | configuration | 5 |
 | tools | constants | 3 |
 | tools | exceptions | 4 |

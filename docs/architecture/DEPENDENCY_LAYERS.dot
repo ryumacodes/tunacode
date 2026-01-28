@@ -15,15 +15,13 @@ digraph tunacode_layers {
   configuration -> constants [label="6"];
   configuration -> exceptions [label="1"];
   configuration -> types [label="4"];
-  core -> configuration [label="14"];
-  core -> constants [label="5"];
+  core -> configuration [label="15"];
+  core -> constants [label="6"];
   core -> exceptions [label="4"];
   core -> infrastructure [label="1"];
   core -> tools [label="18"];
   core -> types [label="23"];
   exceptions -> types [label="1"];
-  infrastructure -> configuration [label="1"];
-  infrastructure -> constants [label="1"];
   tools -> configuration [label="5"];
   tools -> constants [label="3"];
   tools -> exceptions [label="4"];
