@@ -2,12 +2,6 @@
 
 Generated: 2026-01-28
 
-## Regenerate
-
-```
-uv run python scripts/grimp_layers_report.py
-```
-
 ## Layer Order (topological)
 
 ```
