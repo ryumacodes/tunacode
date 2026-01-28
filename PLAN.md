@@ -1,158 +1,86 @@
-# LSP Architecture Analysis & Plan
+# Plan: Mypy Error Triage and Fixes
 
-## History (Important Context)
+## Objective
+Reduce mypy errors incrementally by investigating root causes first, then fixing in small, safe batches.
 
-**LSP diagnostics were actively used until today.** Commit `690c4760` (Jan 27, 2026) removed them:
+## Current State
+- Last full mypy run (before Batch 3/4 updates) reported 19 errors in 7 files.
+- **Action needed:** re-run full mypy to refresh the error list after Batches 3–5.
 
-```
-refactor(tun-be3d): remove LSP import from file_tool decorator
+## Investigation Phase
+- ✅ Verified initial error list and classified by category/module.
 
-- Remove LSP diagnostics integration from tools/decorators.py
-- Simplify file_tool decorator (remove writes parameter)
-- Update update_file.py and write_file.py to use simplified decorator
-- Eliminates tools→lsp lateral coupling
-```
+## Fix Plan (Incremental Batches)
 
-**How it worked (before removal):**
-- `@file_tool(writes=True)` decorator on `write_file` and `update_file`
-- After file write, automatically called `_get_lsp_diagnostics(filepath)`
-- Appended formatted diagnostics to tool result
-- Agent received immediate feedback on type errors/lint issues
+### Batch 1: Low-risk typing hygiene ✅
+**Scope:** missing return/argument/variable annotations.
+**Files updated:**
+- `src/tunacode/tools/utils/ripgrep.py`
+- `src/tunacode/tools/parsing/retry.py`
+- `src/tunacode/utils/system/gitignore.py`
+- `src/tunacode/configuration/settings.py`
+- `src/tunacode/configuration/paths.py`
+- `src/tunacode/tools/grep.py`
+- `src/tunacode/tools/glob.py`
+- `src/tunacode/tools/bash.py`
+- `src/tunacode/core/state.py`
+**Verification:** mypy for Batch 1 files passed.
 
-**Why it was removed:**
-- Gate 2 dependency violation: `tools → lsp` coupling
-- LSP was positioned as a "layer" but was actually infrastructure
-- Cleanup work to fix architecture before reimplementing properly
+### Batch 2: Optional handling & assignment mismatches ✅
+**Scope:** optional cache handling + ripgrep mismatch.
+**Changes:**
+- Fixed None-attribute access in `src/tunacode/tools/ignore.py` with early return.
+- Ripgrep mismatch not reproducible in current code.
+**Verification:** mypy on `ignore.py` and `ripgrep.py` passed.
 
----
+### Batch 3: Protocol/interface mismatches ✅
+**Scope:** `StateManagerProtocol` alignment + orchestration callback signature.
+**Changes:**
+- Switched agent components to `StateManagerProtocol`.
+- Expanded `SessionStateProtocol` for fields used by agents.
+- Fixed orchestrator tool_result_callback invocation signature.
+**Files updated:**
+- `src/tunacode/core/agents/agent_components/agent_config.py`
+- `src/tunacode/core/agents/agent_components/streaming.py`
+- `src/tunacode/core/agents/agent_components/orchestrator/orchestrator.py`
+- `src/tunacode/core/agents/agent_components/orchestrator/tool_dispatcher.py`
+- `src/tunacode/core/agents/agent_components/orchestrator/message_recorder.py`
+- `src/tunacode/core/agents/agent_components/orchestrator/usage_tracker.py`
+- `src/tunacode/core/types/state.py`
+**Verification:** mypy for touched files passed.
 
-## Current State (After Removal)
+### Batch 4: UI contract mismatches ✅
+**Scope:** UI protocols and callback signatures.
+**Changes:**
+- Aligned `ShellRunnerHost.notify` with Textual notify signature.
+- Updated `AppForCallbacks.post_message` return type and `status_bar` typing.
+- Fixed `_on_setup_complete`, TUI callback typing, and `_request_worker` return type.
+**Files updated:**
+- `src/tunacode/ui/shell_runner.py`
+- `src/tunacode/ui/repl_support.py`
+- `src/tunacode/ui/app.py`
+**Verification:** mypy for UI files passed.
 
-### File Structure
+### Batch 5: Coroutine/task API correctness ✅
+**Scope:** task handling in grep.
+**Verification:** mypy for `src/tunacode/tools/grep.py` passed (no code changes needed).
 
-```
-src/tunacode/
-├── lsp/                          # DORMANT - exists but unused
-│   ├── __init__.py               # get_diagnostics, format_diagnostics (no callers)
-│   ├── client.py                 # LSPClient class (no instances created)
-│   └── servers.py                # Server command mapping (only by lsp_status)
-│
-├── core/
-│   └── lsp_status.py             # FACADE - UI checks if LSP enabled/server available
-│
-├── tools/
-│   └── lsp_status.py             # Imports from lsp.servers for status check
-│
-└── utils/
-    └── formatting.py             # truncate_diagnostic_message (moved from lsp/)
-```
-
-### What's Working
-- UI displays LSP status: `LSP: ruff` or `LSP: no server` or hidden if disabled
-- Status check looks for binary availability (`which ruff`, etc.)
-
-### What's Dormant
-- Full LSP client infrastructure (JSON-RPC, process management, caching)
-- `get_diagnostics()` function exists but has **zero callers**
-- `format_diagnostics()` exists but unused
-
-### Dependencies
-
-```
-ui → core/lsp_status.py → tools/lsp_status.py → lsp/servers.py
-```
-
-- `lsp/__init__.py` exports `get_diagnostics`, `format_diagnostics` → **unused**
-- `lsp/client.py` → **unused**
-- `lsp/servers.py` → only used by `tools/lsp_status.py` for binary detection
-
----
-
-## The Plan: Two-Phase Approach
-
-### Phase 1: Complete Removal (Now)
-
-**Rationale:** The code is already unused. Full removal is cleaner than leaving dormant infrastructure.
-
-**Files to delete:**
-- `src/tunacode/lsp/` (entire directory)
-- `src/tunacode/core/lsp_status.py`
-- `src/tunacode/tools/lsp_status.py`
-
-**UI changes:**
-- Remove LSP indicator from `ResourceBar` (or keep as "not configured")
-
-**Result:** Clean slate. No LSP concepts anywhere in codebase.
-
-### Phase 2: Reimplement as Tool-Only Layer (Later)
-
-**Design principles:**
-1. **LSP is a tool concern** - not a core service, not utils-level
-2. **No automatic diagnostics** - agent must explicitly request them
-3. **Simple architecture** - one module, clear boundaries
-
-**Proposed structure:**
-
-```
-src/tunacode/tools/
-├── check_file.py          # NEW: Tool for explicit diagnostic check
-└── lsp/                   # NEW: Sub-package within tools (not top-level)
-    ├── __init__.py        # Minimal exports
-    ├── client.py          # Same LSPClient (moved from top-level lsp/)
-    └── servers.py         # Server command mapping
-```
-
-**Tool API:**
-```python
-# tools/check_file.py
-@tool
-async def check_file(filepath: str) -> str:
-    """Check a file for errors using the appropriate language server.
-
-    Returns diagnostics (errors, warnings) or empty string if clean.
-    """
-    # Spawn LSP, get diagnostics, format result
-```
-
-**Key differences from old approach:**
-| Old | New |
-|-----|-----|
-| Automatic after write | Explicit tool call |
-| Decorator magic | Explicit in tool function |
-| `tools → lsp` import | `tools.check_file → tools.lsp` import (same layer) |
-| Top-level `lsp/` layer | Nested `tools/lsp/` implementation detail |
-| UI status indicator | Optional - maybe just log when server found |
-
-**Dependency flow (new):**
-```
-core/agent_config.py → tools/check_file.py → tools/lsp/client.py
-```
-
-This is valid: core → tools is allowed. tools.lsp is just an implementation detail of tools.
-
----
-
-## Why This Approach?
-
-1. **Clean slate** - Remove broken architecture completely
-2. **Proper boundaries** - LSP is a tool, lives in tools/
-3. **Explicit over implicit** - Agent asks for diagnostics, not automatic
-4. **Simpler mental model** - One way to get diagnostics: the check_file tool
-5. **No layer violations** - tools.lsp is internal to tools layer
-
----
-
-## Open Questions
-
-1. **Should we keep UI status indicator?** Shows which LSP server is available (ruff, pyright, etc.)
-2. **Should check_file be in the default tool set?** Or only enabled when LSP configured?
-3. **Cache LSP processes?** Old code kept clients alive per workspace. Worth the complexity?
-
----
+## Quality Gates (last run)
+- `ruff check --fix /home/tuna/tunacode` ✅
+- `uv run mypy /home/tuna/tunacode/src/tunacode` ❌ (before Batch 3/4 updates)
+- `uv run pytest` ✅ (510 passed)
+- `grimp` dependency check ✅ (0 violations)
 
 ## Next Steps
+1. Re-run full mypy to refresh remaining errors.
+2. Create new batch plan for any remaining files.
 
-1. **Phase 1:** Delete all LSP-related code
-2. **Test:** Verify no regressions (UI works without LSP indicator)
-3. **Phase 2:** Implement check_file tool with nested tools/lsp/ package
-4. **Register:** Add check_file to agent tool list when LSP enabled
+## Definition of Done (per batch)
+- Mypy errors reduced for the batch scope only.
+- No new type errors introduced.
+- Minimal diffs with explicit typing and early returns.
+
+## Notes
+- Use small, focused diffs.
+- Avoid cross-layer dependency violations.
+- Update docs only if behavior changes.

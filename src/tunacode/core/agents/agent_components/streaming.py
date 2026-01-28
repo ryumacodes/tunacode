@@ -16,7 +16,7 @@ from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
 from tunacode.types.callbacks import StreamingCallback
 
 from tunacode.core.logging import get_logger
-from tunacode.core.state import StateManager
+from tunacode.core.types import StateManagerProtocol
 
 DEBUG_STREAM_EVENT_LOG_LIMIT: int = 5
 DEBUG_STREAM_TEXT_PREVIEW_LEN: int = 120
@@ -122,7 +122,7 @@ def _log_stream_request_parts(node: Any, debug_mode: bool) -> None:
 async def stream_model_request_node(
     node: Any,
     agent_run_ctx: Any,
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
     streaming_callback: StreamingCallback | None,
     request_id: str,
     iteration_index: int,

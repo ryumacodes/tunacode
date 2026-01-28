@@ -158,8 +158,8 @@ async def _glob_filesystem(
 ) -> list[str]:
     """Perform glob search using os.scandir."""
 
-    def search_sync():
-        matches = []
+    def search_sync() -> list[str]:
+        matches: list[str] = []
         stack = [root]
         flags = 0 if case_sensitive else re.IGNORECASE
 
@@ -240,12 +240,12 @@ async def _sort_matches(matches: list[str], sort_by: SortOrder) -> list[str]:
     if not matches:
         return matches
 
-    def sort_sync():
+    def sort_sync() -> list[str]:
         if sort_by == SortOrder.MODIFIED:
             return sorted(matches, key=lambda p: os.path.getmtime(p), reverse=True)
-        elif sort_by == SortOrder.SIZE:
+        if sort_by == SortOrder.SIZE:
             return sorted(matches, key=lambda p: os.path.getsize(p), reverse=True)
-        elif sort_by == SortOrder.DEPTH:
+        if sort_by == SortOrder.DEPTH:
             return sorted(matches, key=lambda p: (p.count(os.sep), p))
         return sorted(matches)
 

@@ -14,8 +14,7 @@ from tunacode.core.agents.resume.sanitize_debug import (
     DEBUG_PREVIEW_SUFFIX,
 )
 from tunacode.core.logging import get_logger
-from tunacode.core.state import StateManager
-from tunacode.core.types import AgentState
+from tunacode.core.types import AgentState, StateManagerProtocol
 
 from ..response_state import ResponseState
 from ..tool_buffer import ToolBuffer
@@ -41,7 +40,7 @@ DEBUG_PART_PREVIEW_LENGTH = RESPONSE_PREVIEW_LENGTH
 
 def _emit_tool_returns(
     request: Any,
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
     tool_result_callback: ToolResultCallback | None,
 ) -> None:
     if not tool_result_callback:
@@ -69,10 +68,11 @@ def _emit_tool_returns(
             tool_registry = state_manager.session.runtime.tool_registry
             tool_registry.complete(tool_call_id, result_str)
         tool_result_callback(
-            tool_name=tool_name,
-            status=TOOL_RESULT_STATUS_COMPLETED,
-            args=tool_args,
-            result=result_str,
+            tool_name,
+            TOOL_RESULT_STATUS_COMPLETED,
+            tool_args,
+            result_str,
+            None,
         )
 
         if debug_mode:
@@ -180,7 +180,7 @@ def _format_tool_return_debug(
 async def process_node(
     node: Any,
     tool_callback: ToolCallback | None,
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
     _tool_buffer: ToolBuffer | None = None,
     _streaming_callback: StreamingCallback | None = None,
     response_state: ResponseState | None = None,

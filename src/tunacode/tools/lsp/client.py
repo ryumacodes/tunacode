@@ -213,9 +213,7 @@ class LSPClient:
 
         try:
             # Read Content-Length header
-            header_line = await asyncio.wait_for(
-                self.process.stdout.readline(), timeout=0.5
-            )
+            header_line = await asyncio.wait_for(self.process.stdout.readline(), timeout=0.5)
             if not header_line:
                 return None
 

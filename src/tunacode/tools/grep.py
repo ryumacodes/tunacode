@@ -38,7 +38,7 @@ from tunacode.tools.utils.ripgrep import metrics as ripgrep_metrics
 class ParallelGrep:
     """Advanced parallel grep tool with multiple search strategies."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._executor = ThreadPoolExecutor(max_workers=8)
         self._file_filter = FileFilter()
         self._pattern_matcher = PatternMatcher()
@@ -289,7 +289,7 @@ class ParallelGrep:
         # Track search progress
         first_match_event = asyncio.Event()
 
-        async def search_with_monitoring(file_path: Path):
+        async def search_with_monitoring(file_path: Path) -> list[SearchResult]:
             """Search a file and signal when first match is found."""
             try:
                 file_results = await self._search_file(file_path, pattern, regex_pattern, config)
@@ -300,13 +300,13 @@ class ParallelGrep:
                 return []
 
         # Create search tasks for candidates only
-        search_tasks = []
+        search_tasks: list[asyncio.Task[list[SearchResult]]] = []
         for file_path in candidates:
-            task = search_with_monitoring(file_path)
+            task = asyncio.create_task(search_with_monitoring(file_path))
             search_tasks.append(task)
 
         # Create a deadline task
-        async def check_deadline():
+        async def check_deadline() -> None:
             """Monitor for first match deadline."""
             await asyncio.sleep(config.first_match_deadline)
             if not first_match_event.is_set():
@@ -395,7 +395,7 @@ class ParallelGrep:
     ) -> list[SearchResult]:
         """Search a single file for the pattern."""
 
-        def search_file_sync():
+        def search_file_sync() -> list[SearchResult]:
             return self._pattern_matcher.search_file(file_path, pattern, regex_pattern, config)
 
         return await asyncio.get_running_loop().run_in_executor(self._executor, search_file_sync)

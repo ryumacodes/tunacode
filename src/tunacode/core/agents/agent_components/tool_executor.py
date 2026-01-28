@@ -41,7 +41,7 @@ NON_RETRYABLE_ERRORS = (
     FileOperationError,
 )
 
-ToolFailureCallback = Callable[["ToolCallPart", Exception], None]
+ToolFailureCallback = Callable[["ToolCallPart", BaseException], None]
 
 
 def _calculate_backoff(attempt: int) -> float:

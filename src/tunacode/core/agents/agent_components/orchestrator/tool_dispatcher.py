@@ -13,8 +13,7 @@ from tunacode.types import ToolArgs, ToolCallId
 from tunacode.types.callbacks import ToolCallback, ToolResultCallback, ToolStartCallback
 
 from tunacode.core.logging import get_logger
-from tunacode.core.state import StateManager
-from tunacode.core.types import AgentState
+from tunacode.core.types import AgentState, StateManagerProtocol
 
 from ..response_state import ResponseState
 
@@ -45,7 +44,7 @@ def _is_suspicious_tool_name(tool_name: str) -> bool:
 
 
 def _register_tool_call(
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
     tool_call_id: ToolCallId | None,
     tool_name: str,
     tool_args: ToolArgs,
@@ -58,7 +57,7 @@ def _register_tool_call(
 
 
 def _mark_tool_calls_running(
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
     tasks: list[tuple[Any, Any]],
 ) -> None:
     """Mark tool calls as running for upcoming tasks."""
@@ -71,9 +70,9 @@ def _mark_tool_calls_running(
 
 
 def _record_tool_failure(
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
     part: Any,
-    error: Exception,
+    error: BaseException,
 ) -> None:
     """Record a failed tool call in the registry."""
     tool_call_id = getattr(part, "tool_call_id", None)
@@ -111,7 +110,7 @@ async def normalize_tool_args(raw_args: Any) -> ToolArgs:
     return parsed_args
 
 
-async def record_tool_call_args(part: Any, state_manager: StateManager) -> ToolArgs:
+async def record_tool_call_args(part: Any, state_manager: StateManagerProtocol) -> ToolArgs:
     """Parse tool args and register the tool call."""
     raw_args = getattr(part, "args", {})
     parsed_args = await normalize_tool_args(raw_args)
@@ -121,7 +120,7 @@ async def record_tool_call_args(part: Any, state_manager: StateManager) -> ToolA
     return parsed_args
 
 
-def consume_tool_call_args(part: Any, state_manager: StateManager) -> ToolArgs:
+def consume_tool_call_args(part: Any, state_manager: StateManagerProtocol) -> ToolArgs:
     """Retrieve stored tool args for a tool return part."""
     tool_call_id: ToolCallId | None = getattr(part, "tool_call_id", None)
     if not tool_call_id:
@@ -140,7 +139,7 @@ def has_tool_calls(parts: list[Any]) -> bool:
 
 async def _extract_fallback_tool_calls(
     parts: list[Any],
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
     response_state: ResponseState | None,
 ) -> list[tuple[Any, ToolArgs]]:
     """Extract tool calls from text parts using fallback parsing."""
@@ -220,7 +219,7 @@ async def _extract_fallback_tool_calls(
 async def dispatch_tools(
     parts: list[Any],
     node: Any,
-    state_manager: StateManager,
+    state_manager: StateManagerProtocol,
     tool_callback: ToolCallback | None,
     _tool_result_callback: ToolResultCallback | None,
     tool_start_callback: ToolStartCallback | None,
@@ -291,7 +290,7 @@ async def dispatch_tools(
                 tool_call_records.append((part, tool_args))
                 tool_tasks.append((part, node))
 
-    def tool_failure_callback(part: Any, error: Exception) -> None:
+    def tool_failure_callback(part: Any, error: BaseException) -> None:
         _record_tool_failure(state_manager, part, error)
 
     if tool_tasks and tool_callback:

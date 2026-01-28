@@ -4,13 +4,12 @@ This module provides the public API for getting diagnostics from language server
 It manages server lifecycle and provides formatted diagnostic output.
 """
 
-import asyncio
 from pathlib import Path
-from typing import Any
+
+from tunacode.utils.formatting import truncate_diagnostic_message
 
 from tunacode.tools.lsp.client import Diagnostic, LSPClient
 from tunacode.tools.lsp.servers import get_server_command
-from tunacode.utils.formatting import truncate_diagnostic_message
 
 __all__ = ["get_diagnostics", "format_diagnostics"]
 
@@ -94,9 +93,7 @@ def format_diagnostics(diagnostics: list[Diagnostic]) -> str:
     lines: list[str] = ["<file_diagnostics>"]
 
     if errors > 0:
-        lines.append(
-            f"ACTION REQUIRED: {errors} error(s) found - fix before continuing"
-        )
+        lines.append(f"ACTION REQUIRED: {errors} error(s) found - fix before continuing")
         if warnings > 0:
             lines.append(f"Additional: {warnings} warning(s)")
     else:

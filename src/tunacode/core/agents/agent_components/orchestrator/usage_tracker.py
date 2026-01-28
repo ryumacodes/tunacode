@@ -7,13 +7,13 @@ from tunacode.types.canonical import UsageMetrics
 from tunacode.types.pydantic_ai import normalize_request_usage
 
 from tunacode.core.logging import get_logger
-from tunacode.core.state import SessionState
+from tunacode.core.types import SessionStateProtocol
 
 DEFAULT_COST = 0.0
 MIN_TOKEN_COUNT = 0
 
 
-def update_usage(session: SessionState, usage: Any | None, model_name: str) -> None:
+def update_usage(session: SessionStateProtocol, usage: Any | None, model_name: str) -> None:
     """Update session usage tracking from model response usage."""
     logger = get_logger()
     normalized_usage = normalize_request_usage(usage)

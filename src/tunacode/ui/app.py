@@ -6,7 +6,7 @@ import asyncio
 import os
 import time
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Never
 
 from rich.console import RenderableType
 from rich.markdown import Markdown
@@ -14,7 +14,7 @@ from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
-from textual.widgets import LoadingIndicator, RichLog, Static
+from textual.widgets import LoadingIndicator, Static
 
 from tunacode.core.agents.main import process_request
 from tunacode.core.constants import (
@@ -32,6 +32,7 @@ from tunacode.ui.renderers.agent_response import render_agent_streaming
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
 from tunacode.ui.repl_support import (
+    StatusBarLike,
     build_textual_tool_callback,
     build_tool_result_callback,
     build_tool_start_callback,
@@ -41,6 +42,7 @@ from tunacode.ui.shell_runner import ShellRunner
 from tunacode.ui.styles import STYLE_PRIMARY, STYLE_WARNING
 from tunacode.ui.welcome import show_welcome
 from tunacode.ui.widgets import (
+    ChatContainer,
     CommandAutoComplete,
     Editor,
     EditorSubmitRequested,
@@ -86,15 +88,15 @@ class TextualReplApp(App[None]):
 
         self.shell_runner = ShellRunner(self)
 
-        self.rich_log: RichLog
+        self.chat_container: ChatContainer
         self.editor: Editor
         self.resource_bar: ResourceBar
-        self.status_bar: StatusBar
+        self.status_bar: StatusBarLike
         self.streaming_output: Static
 
     def compose(self) -> ComposeResult:
         self.resource_bar = ResourceBar()
-        self.rich_log = RichLog(wrap=True, markup=True, highlight=True, auto_scroll=True)
+        self.chat_container = ChatContainer(id="chat-container", auto_scroll=True)
         self.streaming_output = Static("", id="streaming-output")
         self.loading_indicator = LoadingIndicator()
         self.editor = Editor()
@@ -102,13 +104,18 @@ class TextualReplApp(App[None]):
 
         yield self.resource_bar
         with Container(id="viewport"):
-            yield self.rich_log
+            yield self.chat_container
             yield self.loading_indicator
         yield self.streaming_output
         yield self.editor
         yield FileAutoComplete(self.editor)
         yield CommandAutoComplete(self.editor)
         yield self.status_bar
+
+    @property
+    def rich_log(self) -> ChatContainer:
+        """Backward compatibility alias for chat_container."""
+        return self.chat_container
 
     def on_mount(self) -> None:
         tunacode_theme = build_tunacode_theme()
@@ -147,7 +154,7 @@ class TextualReplApp(App[None]):
         if new_theme:
             self.add_class(f"theme-{new_theme}")
 
-    def _on_setup_complete(self, completed: bool) -> None:
+    def _on_setup_complete(self, completed: bool | None) -> None:
         """Called when setup screen is dismissed."""
         if completed:
             self._update_resource_bar()
@@ -160,14 +167,18 @@ class TextualReplApp(App[None]):
         # Initialize logging with TUI callback
         logger = get_logger()
         logger.set_state_manager(self.state_manager)
-        logger.set_tui_callback(lambda text: self.rich_log.write(text))
+
+        def _write_tui(renderable: RenderableType) -> None:
+            self.rich_log.write(renderable)
+
+        logger.set_tui_callback(_write_tui)
 
         self.set_focus(self.editor)
         self.run_worker(self._request_worker, exclusive=False)
         self._update_resource_bar()
         show_welcome(self.rich_log)
 
-    async def _request_worker(self) -> None:
+    async def _request_worker(self) -> Never:
         while True:
             request = await self.request_queue.get()
             try:
@@ -188,6 +199,9 @@ class TextualReplApp(App[None]):
         self.loading_indicator.add_class("active")
 
         self._request_start_time = time.monotonic()
+
+        # Start stream tracking for tool panel insertion
+        self.chat_container.start_stream()
 
         try:
             session = self.state_manager.session
@@ -220,6 +234,10 @@ class TextualReplApp(App[None]):
             self.streaming_output.update("")
             self.streaming_output.remove_class("active")
 
+            # End stream tracking before writing final response
+            # This sets the insertion anchor for any late-arriving tool panels
+            self.chat_container.end_stream()
+
             if self.current_stream_text and not self._streaming_cancelled:
                 from tunacode.ui.renderers.agent_response import render_agent_response
 
@@ -234,8 +252,8 @@ class TextualReplApp(App[None]):
                     duration_ms=duration_ms,
                     model=model,
                 )
-                self.rich_log.write("")
-                self.rich_log.write(panel, expand=True)
+                self.chat_container.write("")
+                self.chat_container.write(panel, expand=True)
 
             self.current_stream_text = ""
             self._streaming_cancelled = False
@@ -274,14 +292,16 @@ class TextualReplApp(App[None]):
             duration_ms=message.duration_ms,
             max_line_width=max_line_width,
         )
-        self.rich_log.write(panel, expand=True)
+        # Use insert_before_stream to position tool panels correctly
+        # even if they arrive after stream ends or is cancelled
+        self.chat_container.insert_before_stream(panel)
 
     def tool_panel_max_width(self) -> int:
         viewport = self.query_one("#viewport")
         width_candidates = [
-            self.rich_log.content_region.width,
+            self.chat_container.content_region.width,
             viewport.content_region.width,
-            self.rich_log.size.width,
+            self.chat_container.size.width,
             viewport.size.width,
             self.size.width,
         ]
@@ -341,7 +361,7 @@ class TextualReplApp(App[None]):
             self._last_display_update = now
             self._update_streaming_panel(now)
             self.streaming_output.add_class("active")
-            self.rich_log.scroll_end()
+            self.chat_container.scroll_end()
 
     def _update_streaming_panel(self, now: float) -> None:
         """Update streaming output with current content and elapsed time."""
@@ -381,6 +401,8 @@ class TextualReplApp(App[None]):
             self._streaming_cancelled = True
             self._stream_buffer.clear()
             self.current_stream_text = ""
+            # Cancel stream tracking to preserve insertion context for late tool panels
+            self.chat_container.cancel_stream()
             self._current_request_task.cancel()
             return
 

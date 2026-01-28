@@ -161,9 +161,7 @@ def get_ignore_manager(root: Path) -> IgnoreManager:
     gitignore_exists = gitignore_path.exists()
     gitignore_mtime = _get_gitignore_mtime(gitignore_path, gitignore_exists)
     cache_entry = IGNORE_MANAGER_CACHE.get(resolved_root)
-    has_cache_entry = cache_entry is not None
-    is_cache_fresh = has_cache_entry and cache_entry.gitignore_mtime == gitignore_mtime
-    if is_cache_fresh:
+    if cache_entry is not None and cache_entry.gitignore_mtime == gitignore_mtime:
         return cache_entry.manager
     gitignore_lines = _read_gitignore_lines(gitignore_path, gitignore_exists)
     ignore_patterns = _build_patterns(gitignore_lines)
