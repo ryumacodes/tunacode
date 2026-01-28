@@ -50,9 +50,9 @@ class TestFormatModel:
     def test_format_model_truncates_long_names(self) -> None:
         """Very long model names (>30 chars) get truncated."""
         # After abbreviation: "ANTH/" + 30 chars = 35 chars, should truncate
-        long_model = "anthropic/" + "x" * 30
+        long_model = "anthropic/" + "x" * 36
         result = _format_model(long_model)
-        assert len(result) == 30  # 27 + "..."
+        assert len(result) == 40  # 37 + "..."
         assert result.endswith("...")
 
     def test_format_model_under_limit_not_truncated(self) -> None:

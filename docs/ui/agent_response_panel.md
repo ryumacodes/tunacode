@@ -18,8 +18,8 @@ Agent text responses are rendered in styled panels matching the NeXTSTEP tool pa
 │  code blocks, lists, and other markdown formatting.          │
 │                                                              │
 │  ──────────                                                  │
-│  ANTH/claude-3.5-sonnet  ·  1.2k  ·  2.3s                   │
-└──────────────────────────────────────── 9:06 PM ─────────────┘
+│  ANTH/claude-3.5-sonnet  ·  2.3s  ·  1.2k                   │
+└─────────────────────────────────────────────┘
 ```
 
 ### Components
@@ -27,7 +27,7 @@ Agent text responses are rendered in styled panels matching the NeXTSTEP tool pa
 1. **Title Bar**: "agent" label in accent color
 2. **Viewport**: Markdown-rendered content (full width)
 3. **Separator**: Horizontal line before status
-4. **Status Bar**: `model · tokens · duration`
+4. **Status Bar**: `model · t/s · tokens`
 5. **Subtitle**: Timestamp (bottom border)
 
 ## Design Decisions
@@ -43,9 +43,9 @@ Model name moved from the top resource bar to the agent response status bar. Thi
 
 ### Status Bar Metrics
 Three metrics provide actionable feedback:
-- **Model**: Capability awareness (Provider abbreviated, e.g., `ANTH/`, `OA/`)
+- **Model**: Capability awareness (Provider abbreviated, e.g., `ANTH/`, `OA/`, max 40 chars)
 - **Tokens**: Cost awareness
-- **Duration**: Performance awareness
+- **Duration**: Performance awareness (removed)
 
 ## Implementation
 

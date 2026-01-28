@@ -72,9 +72,9 @@ def _format_model(model: str) -> str:
         if model.startswith(prefix):
             model = abbrev + model[len(prefix) :]
             break
-    # Truncate absurdly long model names to prevent status bar overflow
-    if len(model) > 30:
-        return model[:27] + "..."
+    # Truncate long model names to prevent status bar overflow
+    if len(model) > 40:
+        return model[:37] + "..."
     return model
 
 
@@ -124,8 +124,6 @@ def render_agent_streaming(
     if model:
         status_parts.append(_format_model(model))
     status_parts.append("streaming")
-    if elapsed_ms > 0:
-        status_parts.append(_format_duration(elapsed_ms))
 
     status = Text()
     status.append("  ·  ".join(status_parts), style=muted_color)
@@ -196,8 +194,6 @@ def render_agent_response(
         status_parts.append(f"{tokens * 1000 / duration_ms:.0f} t/s")
     if tokens > 0:
         status_parts.append(_format_tokens(tokens))
-    if duration_ms > 0:
-        status_parts.append(_format_duration(duration_ms))
 
     status = Text()
     status.append("  ·  ".join(status_parts) if status_parts else "", style=muted_color)
