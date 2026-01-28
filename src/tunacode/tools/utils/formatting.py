@@ -1,4 +1,4 @@
-"""Shared formatting helpers."""
+"""Tools-layer formatting helpers."""
 
 from __future__ import annotations
 
