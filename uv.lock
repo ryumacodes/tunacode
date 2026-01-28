@@ -3288,7 +3288,7 @@ wheels = [
 
 [[package]]
 name = "tunacode-cli"
-version = "0.1.46"
+version = "0.1.47"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
