@@ -25,10 +25,7 @@ ENV_FILE = ".env"
 CONFIG_FILE_NAME = "tunacode.json"
 ENV_OPENAI_BASE_URL = "OPENAI_BASE_URL"
 
-MAX_FILE_SIZE = 100 * KB
 MAX_COMMAND_OUTPUT = 5000
-DEFAULT_READ_LIMIT = 2000
-MAX_LINE_LENGTH = 2000
 MAX_FILES_IN_DIR = 50
 DEFAULT_CONTEXT_WINDOW = 200000
 
@@ -53,10 +50,6 @@ SEPARATOR_WIDTH = 10
 
 AUTOCOMPLETE_MAX_DEPTH = 3
 AUTOCOMPLETE_RESULT_LIMIT = 50
-
-COMMAND_OUTPUT_THRESHOLD = 3500
-COMMAND_OUTPUT_START_INDEX = 2500
-COMMAND_OUTPUT_END_SIZE = 1000
 
 
 class ToolName(str, Enum):
@@ -107,17 +100,8 @@ NEXTSTEP_COLORS = {
     "error": "#1a1a1a",
 }
 
-ERROR_FILE_TOO_LARGE = "Error: File '{filepath}' is too large (> 100KB)."
 ERROR_TOOL_CALL_ID_MISSING = "Tool return missing tool_call_id."
 ERROR_TOOL_ARGS_MISSING = "Tool args missing for tool_call_id '{tool_call_id}'."
-CMD_OUTPUT_TRUNCATED = "\n...\n[truncated]\n...\n"
-
-
-MSG_FILE_SIZE_LIMIT = " Please specify a smaller file or use other tools to process it."
-
-JSON_PARSE_MAX_RETRIES = 10
-JSON_PARSE_BASE_DELAY = 0.1
-JSON_PARSE_MAX_DELAY = 5.0
 
 TOOL_MAX_RETRIES = 3
 TOOL_RETRY_BASE_DELAY = 0.5

@@ -77,7 +77,7 @@ Tools are wrapped with cross-cutting concerns:
 
 #### Filesystem Tools
 - **`read_file`**: Reads file contents with size limits
-  - Enforces `MAX_FILE_SIZE` from constants
+  - Enforces local file-size limit
   - UTF-8 decoding with error handling
   - Line range support via `offset`/`limit`
 

@@ -1,10 +1,10 @@
 ---
 title: Utils Limits
-path: src/tunacode/utils/limits.py
+path: src/tunacode/configuration/limits.py
 type: file
 depth: 1
 description: Centralized tool output limits with cascading defaults
-exports: [get_read_limit, get_max_line_length, get_command_limit, get_max_files_in_dir, get_max_tokens, clear_cache]
+exports: [get_command_limit, get_max_files_in_dir, get_max_tokens, clear_cache]
 seams: [M]
 ---
 
@@ -12,7 +12,7 @@ seams: [M]
 
 ## Purpose
 
-Centralizes all tool output limit configuration with a two-tier precedence system.
+Centralizes tool output limit configuration with a two-tier precedence system.
 
 ## Precedence System
 
@@ -34,16 +34,6 @@ def _get_limit(key: str, default: int) -> int:
 ```
 
 ## Key Functions
-
-### get_read_limit()
-
-Configurable read limit (currently unused by `read_file`).
-- Standard: 2000 lines
-
-### get_max_line_length()
-
-Configurable line truncation limit (currently unused by `read_file`).
-- Standard: 2000 chars
 
 ### get_command_limit()
 
@@ -70,7 +60,6 @@ Clears the `@lru_cache` on settings. Call when config changes at runtime.
 | Consumer | File | Usage |
 |----------|------|-------|
 | Bash tool | `tools/bash.py` | `get_command_limit()` |
-| Read tool | `tools/read_file.py` | Unused (read_file uses local constants) |
 | List dir tool | `tools/list_dir.py` | `get_max_files_in_dir()` |
 | Agent config | `core/agents/agent_components/agent_config.py` | `get_max_tokens()` |
 
@@ -85,8 +74,6 @@ Default values defined in `constants.py`:
 
 ```python
 MAX_COMMAND_OUTPUT = 5000
-DEFAULT_READ_LIMIT = 2000
-MAX_LINE_LENGTH = 2000
 MAX_FILES_IN_DIR = 50
 ```
 

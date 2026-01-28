@@ -174,7 +174,7 @@ from tunacode.exceptions import ToolExecutionError, ValidationError
 ### Constants
 All modules use constants from `tunacode.constants`:
 ```python
-from tunacode.constants import MAX_FILE_SIZE, TIMEOUT_SECONDS
+from tunacode.constants import APP_NAME, UI_COLORS
 ```
 
 ## Why

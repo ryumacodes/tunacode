@@ -25,14 +25,9 @@ Control how much output tools return. Useful for managing context usage.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `read_limit` | 2000 | Configurable read limit (currently ignored by `read_file`) |
-| `max_line_length` | 2000 | Configurable truncation limit (currently ignored by `read_file`) |
 | `max_command_output` | 5000 | Max chars from `bash` output |
 | `max_files_in_dir` | 50 | Max entries from `list_dir` |
 | `max_tokens` | null | Cap model response length (null = no limit) |
-
-Note: `read_file` currently uses local defaults and ignores `read_limit` and
-`max_line_length`.
 
 **Precedence**: explicit setting > standard default
 

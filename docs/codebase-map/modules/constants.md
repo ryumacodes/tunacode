@@ -105,7 +105,6 @@ Tool panel line width is computed from available viewport width; there is no fix
 **Limits:**
 - **MAX_ITERATIONS** - Default agent loop limit
 - **MAX_TOKENS** - Default context limit
-- **MAX_FILE_SIZE** - File size limit for tools
 
 ### Magic Strings
 

@@ -10,10 +10,8 @@ This allows:
 from functools import lru_cache
 
 from tunacode.constants import (
-    DEFAULT_READ_LIMIT,
     MAX_COMMAND_OUTPUT,
     MAX_FILES_IN_DIR,
-    MAX_LINE_LENGTH,
 )
 
 
@@ -46,16 +44,6 @@ def _get_limit(key: str, default: int) -> int:
         return settings[key]
 
     return default
-
-
-def get_read_limit() -> int:
-    """Get default line limit for read_file tool."""
-    return _get_limit("read_limit", DEFAULT_READ_LIMIT)
-
-
-def get_max_line_length() -> int:
-    """Get max line length before truncation."""
-    return _get_limit("max_line_length", MAX_LINE_LENGTH)
 
 
 def get_command_limit() -> int:

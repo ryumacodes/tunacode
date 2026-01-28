@@ -174,7 +174,7 @@ Presentation (UI/CLI) → Business Logic (Core) → Capabilities (Tools) → Con
 ### Code Elements
 - **Classes**: `CamelCase` (e.g., `ToolExecutionError`, `TunaCodeApp`)
 - **Functions/Methods**: `snake_case` (e.g., `read_file()`, `calculate_cost()`)
-- **Constants**: `UPPER_SNAKE_CASE` (e.g., `MAX_FILE_SIZE`, `UI_COLORS`)
+- **Constants**: `UPPER_SNAKE_CASE` (e.g., `APP_NAME`, `UI_COLORS`)
 - **Enums**: `CamelCase` class with `UPPER_SNAKE_CASE` members
 
 ### Type Annotations

@@ -147,7 +147,7 @@ src/tunacode/
 ### Code
 - **Classes**: `CamelCase` - Example: `ToolExecutionError`, `TunaCodeApp`
 - **Functions/Methods**: `snake_case` - Example: `read_file()`, `calculate_cost()`
-- **Constants**: `UPPER_SNAKE_CASE` - Example: `MAX_FILE_SIZE`, `UI_COLORS`
+- **Constants**: `UPPER_SNAKE_CASE` - Example: `APP_NAME`, `UI_COLORS`
 - **Enums**: `CamelCase` class, `UPPER_SNAKE_CASE` members
   ```python
   class ToolName(str, Enum):
