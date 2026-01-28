@@ -20,7 +20,7 @@ from tunacode.ui.renderers.tools.base import (
     build_hook_params_prefix,
     tool_renderer,
 )
-from tunacode.ui.renderers.tools.syntax_utils import get_lexer
+from tunacode.ui.renderers.tools.syntax_utils import get_lexer, get_color
 
 
 @dataclass
@@ -115,20 +115,7 @@ class ListDirRenderer(BaseToolRenderer[ListDirData]):
     def _get_file_style(self, name: str) -> str:
         """Get style based on file name/extension."""
         lexer = get_lexer(name)
-
-        # Color by type
-        if lexer == "python":
-            return "bright_blue"
-        if lexer in ("javascript", "typescript", "jsx", "tsx"):
-            return "yellow"
-        if lexer in ("json", "yaml", "toml"):
-            return "green"
-        if lexer in ("markdown", "rst"):
-            return "cyan"
-        if lexer in ("bash", "zsh"):
-            return "magenta"
-
-        return ""
+        return get_color(lexer)
 
     def _style_tree_line(self, line: str) -> Text:
         """Style a tree line with appropriate colors."""
