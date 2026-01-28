@@ -130,13 +130,11 @@ Completion signaling tool:
 - `submit` marks the task as complete for the orchestrator
 - Optional summary text for the final response
 
-## Tool Utilities (tools_utils/)
+## Tool Utilities (tools/utils/)
 
-### text_match.py
-Fuzzy matching algorithms for update_file:
-- Line-trimmed matching
-- Indentation-flexible matching
-- Block-anchor matching
+### formatting.py
+Diagnostic message formatting helpers:
+- **truncate_diagnostic_message()** - Shortens verbose diagnostic text for LSP output
 
 ### ripgrep.py
 Ripgrep integration wrapper:
@@ -144,6 +142,12 @@ Ripgrep integration wrapper:
 - Output parsing
 - Error handling
 - Async subprocess execution with timeouts
+
+### text_match.py
+Fuzzy matching algorithms for update_file:
+- Line-trimmed matching
+- Indentation-flexible matching
+- Block-anchor matching
 
 ## Integration Points
 
