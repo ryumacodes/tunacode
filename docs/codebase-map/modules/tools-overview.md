@@ -26,20 +26,13 @@ Foundation decorator for all tools:
 Specialized decorator for file system tools:
 - Extends base_tool functionality
 - Handles file-specific errors (FileNotFoundError, PermissionError, UnicodeDecodeError)
-- Fetches LSP diagnostics after writes (when writes=True)
-- Provides immediate code quality feedback
+- Maps errors to appropriate exceptions (ModelRetry for recoverable, FileOperationError for fatal)
 
 **XML Prompt Files:**
 - `bash_prompt.xml` - Bash tool documentation
 - `read_file_prompt.xml` - Read file documentation
 - `submit_prompt.xml` - Submit tool documentation
 - etc.
-
-## Supporting Components
-
-**lsp_status.py** - LSP status helper
-- Derives enabled/server name from config and installed binaries
-- Used by core LSP facade for UI display
 
 ## Tool Implementations
 
@@ -56,7 +49,6 @@ Fast file pattern matching:
 - Recursive searching
 - .gitignore awareness
 - Sorted results
-- Integration with CodeIndex
 - Shared ignore manager in `src/tunacode/tools/ignore.py`
 
 ### grep.py
@@ -126,6 +118,12 @@ Fetches web content:
 - Security validation (blocks private IPs)
 - Content size limits
 - Timeout handling
+
+### lsp/ (sub-package)
+LSP integration for file tools:
+- `client.py` - Minimal LSP client (JSON-RPC over stdin/stdout)
+- `servers.py` - Server config mapping (extension → language server)
+- `diagnostics.py` - `maybe_prepend_lsp_diagnostics()` helper for write/update tools
 
 ### submit.py
 Completion signaling tool:

@@ -8,46 +8,27 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Discord Shield](https://discord.com/api/guilds/1447688577126367346/widget.png?style=shield)](https://discord.gg/TN7Fpynv6H)
 
-A TUI code agent.
+A terminal-based AI coding agent with a NeXTSTEP-inspired interface.
 
 > **Note:** Under active development - expect bugs.
 
+## Features
 
+- **Any model** - Works with any OpenAI-compatible API (Anthropic, OpenAI, Google, Ollama, vLLM, etc.)
+- **File operations** - Read, write, update files with fuzzy matching for edits
+- **Shell access** - Run bash commands with output capture
+- **Code search** - Glob patterns and grep with ripgrep integration
+- **Session persistence** - Resume previous conversations with `/resume`
+- **LSP diagnostics** - Real-time code errors after file writes (Python, TypeScript, Go, Rust)
+- **Themeable UI** - Multiple built-in themes
 
 ## Interface
 
-The Textual-based terminal user interface provides a clean, interactive environment for AI-assisted coding, with a design heavily inspired by the classic NeXTSTEP user interface.
-
 ![Agent Response Panel](docs/media/agent-response.png)
-*Agent response panel with formatted output*
+*Agent response with NeXTSTEP-style panels*
 
 ![Read File Tool](docs/media/read-file-tool.png)
-*Tool rendering with syntax highlighting*
-
-![Plan Approval](docs/media/plan-approval.png)
-*Structured plan approval workflow*
-
-## Theme Support
-
-The interface supports multiple themes for different preferences and environments.
-
-Customize the appearance with built-in themes or create your own color schemes.
-
-## Model Setup
-
-Configure your AI models and settings through the provided setup interface.
-
-**Note:** TunaCode has full bash shell access. This tool assumes you know what you're doing. If you're concerned, run it in a sandboxed environment.
-
-## v0.1.35 - Major Rewrite
-
-This release is a complete rewrite with a new Textual-based TUI.
-
-**Upgrading from v1?** The legacy v1 codebase is preserved in the `legacy-v1` branch and will only receive security updates.
-
-## Requirements
-
-- Python 3.11+
+*Tool output with syntax highlighting*
 
 ## Installation
 
@@ -55,66 +36,83 @@ This release is a complete rewrite with a new Textual-based TUI.
 uv tool install tunacode-cli
 ```
 
-## Quick Start
-
-1. Run the setup wizard to configure your API key:
-
+Or with pip:
 ```bash
-tunacode --setup
+pip install tunacode-cli
 ```
 
-2. Start coding:
+## Quick Start
 
 ```bash
+# Configure API key
+tunacode --setup
+
+# Start coding
 tunacode
 ```
 
 ## Configuration
 
-Set your API key as an environment variable or use the setup wizard:
+Set your API key as an environment variable:
 
 ```bash
-export OPENAI_API_KEY="your-key"
-# or
 export ANTHROPIC_API_KEY="your-key"
+# or
+export OPENAI_API_KEY="your-key"
 ```
 
-Config file location: `~/.config/tunacode.json`
+Config file: `~/.config/tunacode.json`
 
-For advanced settings including **local mode** for small context models, see the [Configuration Guide](docs/configuration/README.md).
+For local models and advanced settings, see the [Configuration Guide](docs/configuration/README.md).
 
 ## Commands
 
-| Command  | Description                  |
-| -------- | ---------------------------- |
-| /help    | Show available commands      |
-| /model   | Change AI model              |
-| /clear   | Clear agent state (UI, thoughts) - messages preserved for /resume |
-| /theme   | Change UI theme              |
-| /resume  | Load/delete saved sessions   |
-| !<cmd>   | Run shell command            |
-| exit     | Quit tunacode                |
+| Command | Description |
+|---------|-------------|
+| `/help` | Show available commands |
+| `/model` | Change AI model |
+| `/clear` | Clear UI state (messages preserved) |
+| `/theme` | Change UI theme |
+| `/resume` | Load previous sessions |
+| `/update` | Check for updates |
+| `!<cmd>` | Run shell command |
+| `exit` | Quit |
 
-## LSP Integration (Beta)
+## Tools
 
-TunaCode includes experimental Language Server Protocol support for real-time diagnostics. When an LSP server is detected in your PATH, it activates automatically.
+The agent has access to:
 
-**Supported languages:**
-| Language   | LSP Server                    |
-| ---------- | ----------------------------- |
-| Python     | `ruff server`                 |
-| TypeScript | `typescript-language-server`  |
-| JavaScript | `typescript-language-server`  |
-| Go         | `gopls`                       |
-| Rust       | `rust-analyzer`               |
+| Tool | Description |
+|------|-------------|
+| `read_file` | Read file contents with line ranges |
+| `write_file` | Create new files |
+| `update_file` | Edit existing files with fuzzy matching |
+| `bash` | Execute shell commands |
+| `glob` | Find files by pattern |
+| `grep` | Search file contents |
+| `list_dir` | List directory tree |
+| `web_fetch` | Fetch web page content |
 
-Diagnostics appear in the UI when editing files. This feature is beta - expect rough edges.
+## LSP Integration
 
-## Discord Server
+Automatic code diagnostics when LSP servers are in PATH:
 
-Join our official discord server to receive help, show us how you're using tunacode, and chat about anything LLM.
+| Language | Server |
+|----------|--------|
+| Python | `ruff server` |
+| TypeScript/JS | `typescript-language-server` |
+| Go | `gopls` |
+| Rust | `rust-analyzer` |
 
-[<img src="https://discord.com/api/guilds/1447688577126367346/widget.png?style=banner3" alt="Discord Banner 3"/>](https://discord.gg/TN7Fpynv6H)
+## Security
+
+TunaCode has **full shell access** with no permission prompts. If you're concerned:
+- Use git so you can revert changes
+- Run in a container/sandbox
+
+## Discord
+
+[<img src="https://discord.com/api/guilds/1447688577126367346/widget.png?style=banner3" alt="Discord"/>](https://discord.gg/TN7Fpynv6H)
 
 ## License
 

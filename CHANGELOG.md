@@ -7,22 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **UI:** ChatContainer widget with insertion anchor tracking for tool panels (#319)
+  - Fixes race condition where tool panels appeared at wrong position after stream cancel/end
+  - New stream lifecycle: `start_stream()`, `end_stream()`, `cancel_stream()`, `insert_before_stream()`
+  - Tool panels now position correctly regardless of async timing
+- **UI:** LSP server status indicator in ResourceBar showing running/stopped state
+- **LSP:** Centralized diagnostics helper `maybe_prepend_lsp_diagnostics()` in `tools/lsp/diagnostics.py`
+  - Tools now explicitly call diagnostics after file writes
+  - Prepends LSP errors/warnings as XML to tool results
+- **Architecture:** Dependency layer visualization with auto-generated PNG (`scripts/grimp_layers_report.py`)
+
 ### Changed
 
 - **Architecture:** Delete indexing system (~620 lines) and fix LSP lateral coupling (#318)
   - Removed entire `indexing/` module and `core/indexing_service.py`
   - Merged `tools/lsp_status.py` into `core/lsp_status.py`
-  - Simplified `file_tool` decorator (removed LSP diagnostics and `writes` parameter)
-- **Architecture:** Resolve layer violations — eliminated 24 direct imports from `core` to `utils` (#317)
+  - Simplified `file_tool` decorator (removed LSP orchestration and `writes` parameter)
+  - `glob.py` now always uses filesystem scanning (removed index optimization path)
+- **Architecture:** Resolve layer violations — eliminated 24 direct `core` → `utils` imports (#317)
   - Moved `utils/parsing/` → `tools/parsing/`
   - Moved `utils/config/` → `configuration/`
   - Moved `utils/limits.py`, `utils/system/paths.py` → `configuration/`
+  - Created `tools/messaging/` facade that re-exports from `utils/messaging/`
+  - Moved `utils/ui/file_filter.py` → `infrastructure/file_filter.py` (standalone, zero internal deps)
   - Deleted empty utility packages
 - **Architecture:** Resolve core types layering and namespace collision (#316)
   - Introduced `core/shared_types` facade for UI-shared types
-  - Created `core/types` package for core-only state types
+  - Created `core/types` package for core-only state types (`AgentState`, `ResponseState`, protocols)
   - Added `AgentState` enum for explicit state machine transitions
   - Made `ResponseState` thread-safe with `threading.RLock`
+- **UI:** Replaced `RichLog` with `ChatContainer` in main app (backward-compatible `rich_log` alias)
+
+### Fixed
+
+- **UI:** Tool panels no longer appear at bottom after stream cancellation
+- **Types:** Resolved mypy errors across configuration, core, and tools modules
+- **Autocomplete:** Fixed fuzzy matching in file filter
 
 ## [0.1.43] - 2026-01-22
 
