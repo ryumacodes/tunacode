@@ -16,7 +16,7 @@ Expose the file autocomplete filter at the core layer so UI widgets do not impor
 ## Key Classes
 
 ### FileFilter
-Gitignore-aware file filtering for autocomplete candidates.
+Gitignore-aware file filtering with fuzzy prefix matching for autocomplete candidates.
 
 ## Integration Points
 

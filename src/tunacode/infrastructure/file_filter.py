@@ -5,6 +5,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import pathspec
+from textual.fuzzy import FuzzySearch
+
+FUZZY_CASE_SENSITIVE = False
+FUZZY_MATCH_SCORE_THRESHOLD = 0.0
 
 
 class FileFilter:
@@ -55,18 +59,28 @@ class FileFilter:
 
         return search_path, name_prefix
 
+    def _is_fuzzy_match(
+        self,
+        fuzzy_search: FuzzySearch,
+        query: str,
+        candidate: str,
+    ) -> bool:
+        score, _ = fuzzy_search.match(query, candidate)
+        return score > FUZZY_MATCH_SCORE_THRESHOLD
+
     def _matches_prefix(self, path: Path, name_prefix: str, search_path: Path) -> bool:
         """Check if path matches name prefix filter."""
         if not name_prefix:
             return True
 
-        prefix_lower = name_prefix.lower()
+        fuzzy_search = FuzzySearch(case_sensitive=FUZZY_CASE_SENSITIVE)
 
         if path.parent == search_path:
-            return path.name.lower().startswith(prefix_lower)
+            candidate = path.name
+            return self._is_fuzzy_match(fuzzy_search, name_prefix, candidate)
 
         rel_path = path.relative_to(search_path)
-        return any(prefix_lower in part.lower() for part in rel_path.parts)
+        return any(self._is_fuzzy_match(fuzzy_search, name_prefix, part) for part in rel_path.parts)
 
     def complete(
         self,
