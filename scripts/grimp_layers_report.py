@@ -10,9 +10,10 @@ from pathlib import Path
 import grimp
 
 PACKAGE = "tunacode"
-REPORT_PATH = Path(__file__).parent.parent / "docs" / "architecture" / "DEPENDENCY_LAYERS.md"
-LAYERS_DOT_PATH = Path(__file__).parent.parent / "docs" / "architecture" / "DEPENDENCY_LAYERS.dot"
-LAYER_GRAPH_PATH = Path(__file__).parent.parent / "docs" / "architecture" / "DEPENDENCY_LAYERS.png"
+OUTPUT_DIR = Path(__file__).parent.parent / "docs" / "architecture" / "dependencies"
+REPORT_PATH = OUTPUT_DIR / "DEPENDENCY_LAYERS.md"
+LAYERS_DOT_PATH = OUTPUT_DIR / "DEPENDENCY_LAYERS.dot"
+LAYER_GRAPH_PATH = OUTPUT_DIR / "DEPENDENCY_LAYERS.png"
 
 
 def get_layer(module: str) -> str | None:
@@ -85,6 +86,7 @@ def write_layers_dot(layers: list[str], edges: dict[tuple[str, str], int]) -> No
 
 
 def main() -> None:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     graph = grimp.build_graph(PACKAGE)
     modules = set(graph.modules)
 

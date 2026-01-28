@@ -2,6 +2,12 @@
 
 Generated: 2026-01-28
 
+## Regenerate
+
+```
+uv run python scripts/grimp_layers_report.py
+```
+
 ## Layer Order (topological)
 
 ```
@@ -31,8 +37,7 @@ types
 | core | types | 23 |
 | core | utils | 6 |
 | exceptions | types | 1 |
-| tools | configuration | 5 |
-| tools | constants | 3 |
+| tools | configuration | 4 |
 | tools | exceptions | 4 |
 | ui | core | 50 |
 | utils | configuration | 2 |

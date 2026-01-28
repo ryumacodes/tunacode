@@ -3,16 +3,17 @@
 import asyncio
 import os
 
-from tunacode.configuration.limits import get_max_line_length, get_read_limit
-from tunacode.constants import (
-    ERROR_FILE_TOO_LARGE,
-    MAX_FILE_SIZE,
-    MSG_FILE_SIZE_LIMIT,
-)
 from tunacode.exceptions import ToolExecutionError
 
 from tunacode.tools.decorators import file_tool
 
+KB_BYTES = 1024
+MAX_FILE_SIZE_KB = 100
+MAX_FILE_SIZE = MAX_FILE_SIZE_KB * KB_BYTES
+ERROR_FILE_TOO_LARGE = f"Error: File '{{filepath}}' is too large (> {MAX_FILE_SIZE_KB}KB)."
+MSG_FILE_SIZE_LIMIT = " Please specify a smaller file or use other tools to process it."
+DEFAULT_READ_LIMIT = 2000
+MAX_LINE_LENGTH = 2000
 DEFAULT_FILE_ENCODING = "utf-8"
 LINE_NUMBER_PAD_WIDTH = 5
 LINE_NUMBER_START = 1
@@ -54,8 +55,8 @@ async def read_file(
             message=ERROR_FILE_TOO_LARGE.format(filepath=filepath) + MSG_FILE_SIZE_LIMIT,
         )
 
-    effective_limit = limit if limit is not None else get_read_limit()
-    max_line_len = get_max_line_length()
+    effective_limit = limit if limit is not None else DEFAULT_READ_LIMIT
+    max_line_len = MAX_LINE_LENGTH
 
     def _read_sync(path: str, line_limit: int, line_offset: int, line_count: int) -> str:
         content_lines: list[str] = []

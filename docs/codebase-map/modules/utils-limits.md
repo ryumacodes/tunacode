@@ -37,12 +37,12 @@ def _get_limit(key: str, default: int) -> int:
 
 ### get_read_limit()
 
-Max lines returned by `read_file`.
+Configurable read limit (currently unused by `read_file`).
 - Standard: 2000 lines
 
 ### get_max_line_length()
 
-Truncate lines longer than this.
+Configurable line truncation limit (currently unused by `read_file`).
 - Standard: 2000 chars
 
 ### get_command_limit()
@@ -70,7 +70,7 @@ Clears the `@lru_cache` on settings. Call when config changes at runtime.
 | Consumer | File | Usage |
 |----------|------|-------|
 | Bash tool | `tools/bash.py` | `get_command_limit()` |
-| Read tool | `tools/read_file.py` | `get_read_limit()`, `get_max_line_length()` |
+| Read tool | `tools/read_file.py` | Unused (read_file uses local constants) |
 | List dir tool | `tools/list_dir.py` | `get_max_files_in_dir()` |
 | Agent config | `core/agents/agent_components/agent_config.py` | `get_max_tokens()` |
 

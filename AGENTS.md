@@ -266,13 +266,15 @@ ui → core → tools → utils/types
 infrastructure (filesystem, shell, network)
 ```
 
-**Dependency Map:** `docs/architecture/DEPENDENCY_MAP.md`
+**Dependency Map:** `docs/architecture/dependencies/DEPENDENCY_LAYERS.md`
 
 The current dependency graph is frozen as a baseline. **DO NOT add new cross-layer violations.**
 
+Note: The current layering is not ideal. We're prioritizing delivery and cleanup in parallel, so this baseline is the starting point. Do not regress from here as we map and converge on the ideal layering.
+
 - If you fix one violation but create another, that's not progress
 - UI should only push into CORE, not scatter imports everywhere
-- Verify with grimp before committing: `uv run python -c "import grimp; ..."`
+- Regenerate the dependency layers report with: `uv run python scripts/grimp_layers_report.py`
 
 **Utils-level modules** (can be imported by any layer):
 - `utils/` - helper functions

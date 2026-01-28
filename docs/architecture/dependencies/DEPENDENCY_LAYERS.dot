@@ -23,8 +23,7 @@ digraph tunacode_layers {
   core -> types [label="23"];
   core -> utils [label="6"];
   exceptions -> types [label="1"];
-  tools -> configuration [label="5"];
-  tools -> constants [label="3"];
+  tools -> configuration [label="4"];
   tools -> exceptions [label="4"];
   ui -> core [label="50"];
   utils -> configuration [label="2"];

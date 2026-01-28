@@ -5,15 +5,14 @@ Command parsing utilities for the Textual REPL."""
 import json
 from typing import Any
 
-from tunacode.constants import (
-    JSON_PARSE_BASE_DELAY,
-    JSON_PARSE_MAX_DELAY,
-    JSON_PARSE_MAX_RETRIES,
-)
 from tunacode.exceptions import ValidationError
 
 from tunacode.tools.parsing.json_utils import safe_json_parse
 from tunacode.tools.parsing.retry import retry_json_parse_async
+
+JSON_PARSE_MAX_RETRIES = 10
+JSON_PARSE_BASE_DELAY = 0.1
+JSON_PARSE_MAX_DELAY = 5.0
 
 
 async def parse_args(args: Any) -> dict[str, Any]:

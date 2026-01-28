@@ -9,27 +9,27 @@ from asyncio.subprocess import Process
 from pydantic_ai.exceptions import ModelRetry
 
 from tunacode.configuration.limits import get_command_limit
-from tunacode.constants import (
-    CMD_OUTPUT_TRUNCATED,
-    COMMAND_OUTPUT_END_SIZE,
-    COMMAND_OUTPUT_START_INDEX,
-    COMMAND_OUTPUT_THRESHOLD,
-)
 
 from tunacode.tools.decorators import base_tool
+
+COMMAND_OUTPUT_THRESHOLD = 3500
+COMMAND_OUTPUT_START_INDEX = 2500
+COMMAND_OUTPUT_END_SIZE = 1000
+CMD_OUTPUT_TRUNCATED = "\n...\n[truncated]\n...\n"
 
 # Enhanced dangerous patterns from run_command.py
 DESTRUCTIVE_PATTERNS = ["rm -rf", "rm -r", "rm /", "dd if=", "mkfs", "fdisk"]
 
 # Comprehensive dangerous patterns from security module
+# not ideal at all but better than nothing
 DANGEROUS_PATTERNS = [
-    r"rm\s+-rf\s+/",  # Dangerous rm commands
-    r"sudo\s+rm",  # Sudo rm commands
-    r">\s*/dev/sd[a-z]",  # Writing to disk devices
-    r"dd\s+.*of=/dev/",  # DD to devices
-    r"mkfs\.",  # Format filesystem
-    r"fdisk",  # Partition manipulation
-    r":\(\)\{.*\}\;",  # Fork bomb pattern
+    r"rm\s+-rf\s+/",
+    r"sudo\s+rm",
+    r">\s*/dev/sd[a-z]",
+    r"dd\s+.*of=/dev/",
+    r"mkfs\.",
+    r"fdisk",
+    r":\(\)\{.*\}\;",
 ]
 
 

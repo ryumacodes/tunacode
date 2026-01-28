@@ -25,19 +25,22 @@ Control how much output tools return. Useful for managing context usage.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `read_limit` | 2000 | Max lines returned by `read_file` |
-| `max_line_length` | 2000 | Truncate lines longer than this |
+| `read_limit` | 2000 | Configurable read limit (currently ignored by `read_file`) |
+| `max_line_length` | 2000 | Configurable truncation limit (currently ignored by `read_file`) |
 | `max_command_output` | 5000 | Max chars from `bash` output |
 | `max_files_in_dir` | 50 | Max entries from `list_dir` |
 | `max_tokens` | null | Cap model response length (null = no limit) |
 
+Note: `read_file` currently uses local defaults and ignores `read_limit` and
+`max_line_length`.
+
 **Precedence**: explicit setting > standard default
 
-Example - shorter file reads for a messy codebase:
+Example - limit bash output for a noisy command:
 ```json
 {
   "settings": {
-    "read_limit": 500
+    "max_command_output": 2000
   }
 }
 ```
