@@ -5,7 +5,6 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import pathspec
-from textual.fuzzy import FuzzySearch
 
 
 class FileFilter:
