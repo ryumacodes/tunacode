@@ -39,7 +39,7 @@ SHARED_LAYER_MODULES: tuple[str, ...] = (
     "types",
     "utils",
 )
-LAYERED_MODULES: tuple[str, ...] = ("tools", "core", "ui")
+LAYERED_MODULES: tuple[str, ...] = ("tools", "infrastructure", "core", "ui")
 ORDERED_LAYER_MODULES: tuple[str, ...] = SHARED_LAYER_MODULES + LAYERED_MODULES
 
 
