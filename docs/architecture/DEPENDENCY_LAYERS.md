@@ -27,14 +27,14 @@ types
 | core | constants | 6 |
 | core | exceptions | 4 |
 | core | infrastructure | 1 |
-| core | tools | 18 |
+| core | tools | 12 |
 | core | types | 23 |
+| core | utils | 6 |
 | exceptions | types | 1 |
 | tools | configuration | 5 |
 | tools | constants | 3 |
 | tools | exceptions | 4 |
 | tools | types | 1 |
-| tools | utils | 2 |
 | ui | core | 50 |
 | utils | configuration | 2 |
 | utils | types | 1 |
