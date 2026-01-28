@@ -105,6 +105,8 @@ class AppForCallbacks(Protocol):
 
     def post_message(self, message: ToolResultDisplay) -> bool: ...
 
+    def update_lsp_for_file(self, filepath: str) -> None: ...
+
 
 def build_textual_tool_callback() -> ToolCallback:
     async def _callback(
@@ -156,6 +158,7 @@ def build_tool_result_callback(app: AppForCallbacks) -> ToolResultCallback:
             filepath = args.get("filepath")
             if filepath:
                 app.status_bar.add_edited_file(filepath)
+                app.update_lsp_for_file(filepath)
 
         app.status_bar.update_last_action(tool_name)
 

@@ -438,3 +438,14 @@ class TextualReplApp(App[None]):
             tokens=context_tokens,
             max_tokens=conversation.max_tokens or 200000,
         )
+
+    def update_lsp_for_file(self, filepath: str) -> None:
+        """Update ResourceBar LSP status based on file type.
+
+        Args:
+            filepath: Path to the file being edited
+        """
+        from tunacode.core.lsp_status import get_lsp_server_info
+
+        info = get_lsp_server_info(filepath)
+        self.resource_bar.update_lsp_status(info.server_name, info.available)

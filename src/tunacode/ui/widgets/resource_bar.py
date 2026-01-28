@@ -16,7 +16,7 @@ from tunacode.ui.styles import (
 
 
 class ResourceBar(Static):
-    """Top bar showing resources: tokens, model, cost."""
+    """Top bar showing resources: tokens, model, cost, LSP status."""
 
     def __init__(self) -> None:
         super().__init__("Loading...")
@@ -25,6 +25,8 @@ class ResourceBar(Static):
         self._model: str = "---"
         self._cost: float = 0.0
         self._session_cost: float = 0.0
+        self._lsp_server: str | None = None
+        self._lsp_available: bool = False
 
     def on_mount(self) -> None:
         self._refresh_display()
@@ -48,6 +50,17 @@ class ResourceBar(Static):
             self._cost = cost
         if session_cost is not None:
             self._session_cost = session_cost
+        self._refresh_display()
+
+    def update_lsp_status(self, server: str | None, available: bool) -> None:
+        """Update LSP server status display.
+
+        Args:
+            server: Server binary name (e.g., 'ruff') or None if unsupported
+            available: True if server binary exists on PATH
+        """
+        self._lsp_server = server
+        self._lsp_available = available
         self._refresh_display()
 
     def _calculate_remaining_pct(self) -> float:
@@ -88,6 +101,13 @@ class ResourceBar(Static):
             (sep, STYLE_MUTED),
             (session_cost_str, STYLE_SUCCESS),
         ]
+
+        if self._lsp_server:
+            lsp_indicator = "●" if self._lsp_available else "○"
+            lsp_color = STYLE_SUCCESS if self._lsp_available else STYLE_MUTED
+            parts.append((sep, STYLE_MUTED))
+            parts.append((f"{self._lsp_server} ", STYLE_MUTED))
+            parts.append((lsp_indicator, lsp_color))
 
         content = Text.assemble(*parts)
         self.update(content)
