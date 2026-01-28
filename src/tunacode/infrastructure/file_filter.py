@@ -1,23 +1,30 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 from pathlib import Path
 
 import pathspec
-
-from tunacode.configuration.ignore_patterns import DEFAULT_IGNORE_PATTERNS
-from tunacode.constants import AUTOCOMPLETE_MAX_DEPTH, AUTOCOMPLETE_RESULT_LIMIT
 
 
 class FileFilter:
     """Gitignore-aware file filtering."""
 
-    def __init__(self, root: Path | None = None) -> None:
+    def __init__(
+        self,
+        ignore_patterns: Sequence[str],
+        result_limit: int,
+        max_depth: int,
+        root: Path | None = None,
+    ) -> None:
         self.root = root or Path(".")
+        self._ignore_patterns = tuple(ignore_patterns)
+        self._result_limit = result_limit
+        self._max_depth = max_depth
         self._spec = self._build_spec()
 
     def _build_spec(self) -> pathspec.PathSpec:
-        patterns = list(DEFAULT_IGNORE_PATTERNS)
+        patterns = list(self._ignore_patterns)
         gitignore = self.root / ".gitignore"
         if gitignore.exists():
             patterns.extend(gitignore.read_text().splitlines())
@@ -64,14 +71,17 @@ class FileFilter:
     def complete(
         self,
         prefix: str = "",
-        limit: int = AUTOCOMPLETE_RESULT_LIMIT,
-        max_depth: int = AUTOCOMPLETE_MAX_DEPTH,
+        limit: int | None = None,
+        max_depth: int | None = None,
     ) -> list[str]:
         """Return filtered file paths matching prefix."""
         search_path, name_prefix = self._parse_prefix(prefix)
 
         if not search_path.exists():
             return []
+
+        effective_limit = self._result_limit if limit is None else limit
+        effective_max_depth = self._max_depth if max_depth is None else max_depth
 
         results_with_depth: list[tuple[int, str]] = []
 
@@ -80,7 +90,7 @@ class FileFilter:
             rel_root = root_path.relative_to(search_path)
             current_depth = len(rel_root.parts)
 
-            if current_depth >= max_depth:
+            if current_depth >= effective_max_depth:
                 dirs[:] = []
 
             dirs[:] = sorted(d for d in dirs if not self.is_ignored(root_path / d))
@@ -93,7 +103,7 @@ class FileFilter:
                 rel = dir_path.relative_to(self.root)
                 results_with_depth.append((current_depth, f"{rel}/"))
 
-                if len(results_with_depth) >= limit:
+                if len(results_with_depth) >= effective_limit:
                     break
 
             for f in sorted(files):
@@ -106,11 +116,11 @@ class FileFilter:
                 rel = file_path.relative_to(self.root)
                 results_with_depth.append((current_depth, str(rel)))
 
-                if len(results_with_depth) >= limit:
+                if len(results_with_depth) >= effective_limit:
                     break
 
-            if len(results_with_depth) >= limit:
+            if len(results_with_depth) >= effective_limit:
                 break
 
         results_with_depth.sort(key=lambda x: (x[0], x[1]))
-        return [path for _, path in results_with_depth[:limit]]
+        return [path for _, path in results_with_depth[:effective_limit]]
