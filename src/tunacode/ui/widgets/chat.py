@@ -48,6 +48,14 @@ class ChatContainer(VerticalScroll):
         self._insertion_anchor: Widget | None = None
         self._auto_scroll = auto_scroll
 
+    def clear_insertion_anchor(self) -> None:
+        """Clear any stored insertion anchor."""
+        self._insertion_anchor = None
+
+    def set_insertion_anchor(self, anchor: Widget) -> None:
+        """Set the widget used as an insertion anchor."""
+        self._insertion_anchor = anchor
+
     def write(
         self,
         renderable: RenderableType,

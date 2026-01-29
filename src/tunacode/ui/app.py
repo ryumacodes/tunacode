@@ -28,7 +28,6 @@ from tunacode.core.constants import (
 from tunacode.core.shared_types import ModelName
 from tunacode.core.state import StateManager
 
-from tunacode.ui.headless import resolve_output
 from tunacode.ui.renderers.agent_response import render_agent_streaming
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
@@ -192,28 +191,20 @@ class TextualReplApp(App[None]):
 
     async def _process_request(self, message: str) -> None:
         session = self.state_manager.session
-        settings = session.user_config.get("settings", {})
-        streaming_enabled = bool(settings.get("enable_streaming", True))
 
         self.current_stream_text = ""
         self._last_display_update = 0.0
         self._streaming_cancelled = False
-        if streaming_enabled:
-            self.query_one("#viewport").add_class(RICHLOG_CLASS_STREAMING)
+        self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
+        self.chat_container.clear_insertion_anchor()
 
         self._loading_indicator_shown = True
         self.loading_indicator.add_class("active")
 
         self._request_start_time = time.monotonic()
 
-        # Start stream tracking for tool panel insertion
-        if streaming_enabled:
-            self.chat_container.start_stream()
-
-        agent_run: Any | None = None
         try:
             model_name = session.current_model or "openai/gpt-4o"
-            streaming_callback = self.streaming_callback if streaming_enabled else None
 
             self._current_request_task = asyncio.create_task(
                 process_request(
@@ -221,13 +212,13 @@ class TextualReplApp(App[None]):
                     model=ModelName(model_name),
                     state_manager=self.state_manager,
                     tool_callback=build_textual_tool_callback(),
-                    streaming_callback=streaming_callback,
+                    streaming_callback=None,
                     tool_result_callback=build_tool_result_callback(self),
                     tool_start_callback=build_tool_start_callback(self),
                     notice_callback=self._show_system_notice,
                 )
             )
-            agent_run = await self._current_request_task
+            await self._current_request_task
         except asyncio.CancelledError:
             self.notify("Cancelled")
         except Exception as e:
@@ -242,22 +233,11 @@ class TextualReplApp(App[None]):
             self.streaming_output.update("")
             self.streaming_output.remove_class("active")
 
-            # End stream tracking before writing final response
-            # This sets the insertion anchor for any late-arriving tool panels
-            if streaming_enabled:
-                self.chat_container.end_stream()
+            output_text = None
+            if not self._streaming_cancelled:
+                output_text = self._get_latest_response_text()
 
-            output_text: str | None = None
-            if not self._streaming_cancelled and agent_run is not None:
-                if self.current_stream_text:
-                    output_text = self.current_stream_text
-                else:
-                    output_text = resolve_output(
-                        agent_run,
-                        session.conversation.messages,
-                    )
-
-            if output_text:
+            if output_text is not None:
                 from tunacode.ui.renderers.agent_response import render_agent_response
 
                 duration_ms = (time.monotonic() - self._request_start_time) * 1000
@@ -272,7 +252,8 @@ class TextualReplApp(App[None]):
                     model=model,
                 )
                 self.chat_container.write("")
-                self.chat_container.write(panel, expand=True)
+                response_widget = self.chat_container.write(panel, expand=True)
+                self.chat_container.set_insertion_anchor(response_widget)
 
             self.current_stream_text = ""
             self._streaming_cancelled = False
@@ -280,6 +261,23 @@ class TextualReplApp(App[None]):
 
             # Auto-save session after processing
             self.state_manager.save_session()
+
+    def _get_latest_response_text(self) -> str | None:
+        from pydantic_ai.messages import ModelResponse
+
+        from tunacode.core.messaging import get_content
+
+        messages = self.state_manager.session.conversation.messages
+        for message in reversed(messages):
+            if not isinstance(message, ModelResponse):
+                continue
+
+            raw_content = get_content(message)
+            normalized_content = raw_content.strip()
+            if normalized_content:
+                return normalized_content
+
+        return None
 
     async def on_editor_submit_requested(self, message: EditorSubmitRequested) -> None:
         from tunacode.ui.commands import handle_command
