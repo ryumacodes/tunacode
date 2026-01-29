@@ -304,6 +304,18 @@ class ToolBatchingJSONError(TunaCodeError):
         )
 
 
+class ToolRetryError(TunaCodeError):
+    """Raised when a tool needs to signal the agent to retry with a hint.
+
+    This exception is caught by the tool decorator and converted to the
+    framework-specific retry exception (e.g., pydantic_ai.ModelRetry).
+    """
+
+    def __init__(self, message: str, original_error: OriginalError = None):
+        super().__init__(message)
+        self.original_error = original_error
+
+
 class AggregateToolError(TunaCodeError):
     """Raised when multiple tools fail in parallel execution after retries exhausted."""
 

@@ -7,7 +7,7 @@ import re
 from enum import Enum
 from pathlib import Path
 
-from pydantic_ai.exceptions import ModelRetry
+from tunacode.exceptions import ToolRetryError
 
 from tunacode.tools.decorators import base_tool
 from tunacode.tools.ignore import IgnoreManager, get_ignore_manager
@@ -54,9 +54,9 @@ async def glob(
     """
     root_path = Path(directory).resolve()
     if not root_path.exists():
-        raise ModelRetry(f"Directory not found: {directory}. Check the path.")
+        raise ToolRetryError(f"Directory not found: {directory}. Check the path.")
     if not root_path.is_dir():
-        raise ModelRetry(f"Not a directory: {directory}. Provide a directory path.")
+        raise ToolRetryError(f"Not a directory: {directory}. Provide a directory path.")
 
     ignore_manager = _build_ignore_manager(root_path, exclude_dirs)
     sort_order = _parse_sort_order(sort_by)

@@ -14,7 +14,7 @@ from typing import Any, ParamSpec, TypeVar
 
 from pydantic_ai.exceptions import ModelRetry
 
-from tunacode.exceptions import FileOperationError, ToolExecutionError
+from tunacode.exceptions import FileOperationError, ToolExecutionError, ToolRetryError
 
 from tunacode.tools.xml_helper import load_prompt_from_xml
 
@@ -43,6 +43,8 @@ def base_tool(
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         try:
             return await func(*args, **kwargs)
+        except ToolRetryError as e:
+            raise ModelRetry(str(e)) from e
         except ModelRetry:
             raise
         except ToolExecutionError:

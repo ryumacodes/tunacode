@@ -4,7 +4,7 @@ import difflib
 import os
 from pathlib import Path
 
-from pydantic_ai.exceptions import ModelRetry
+from tunacode.exceptions import ToolRetryError
 
 from tunacode.tools.decorators import file_tool
 from tunacode.tools.lsp.diagnostics import maybe_prepend_lsp_diagnostics
@@ -24,7 +24,7 @@ async def update_file(filepath: str, old_text: str, new_text: str) -> str:
         A message indicating success and the diff of changes.
     """
     if not os.path.exists(filepath):
-        raise ModelRetry(
+        raise ToolRetryError(
             f"File '{filepath}' not found. Cannot update. "
             "Verify the filepath or use `write_file` if it's a new file."
         )
@@ -38,12 +38,12 @@ async def update_file(filepath: str, old_text: str, new_text: str) -> str:
         lines = original.splitlines()
         preview_lines = min(20, len(lines))
         snippet = "\n".join(lines[:preview_lines])
-        raise ModelRetry(
+        raise ToolRetryError(
             f"{e}\n\nFile '{filepath}' preview ({preview_lines} lines):\n---\n{snippet}\n---"
         ) from e
 
     if original == new_content:
-        raise ModelRetry(
+        raise ToolRetryError(
             f"Update old_text found, but replacement resulted in no changes to '{filepath}'. "
             "Was the `old_text` identical to the `new_text`? Please check the file content."
         )

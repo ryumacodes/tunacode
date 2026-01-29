@@ -1,7 +1,8 @@
 """Tests for the web_fetch tool."""
 
 import pytest
-from pydantic_ai.exceptions import ModelRetry
+
+from tunacode.exceptions import ToolRetryError
 
 from tunacode.tools.web_fetch import (
     _convert_html_to_text,
@@ -16,42 +17,42 @@ class TestValidateUrl:
 
     def test_blocks_localhost(self):
         """Should block localhost URLs."""
-        with pytest.raises(ModelRetry, match="Cannot fetch from localhost"):
+        with pytest.raises(ToolRetryError, match="Cannot fetch from localhost"):
             _validate_url("http://localhost/")
 
     def test_blocks_localhost_with_port(self):
         """Should block localhost with port."""
-        with pytest.raises(ModelRetry, match="Cannot fetch from localhost"):
+        with pytest.raises(ToolRetryError, match="Cannot fetch from localhost"):
             _validate_url("http://localhost:8080/")
 
     def test_blocks_127_0_0_1(self):
         """Should block 127.0.0.1."""
-        with pytest.raises(ModelRetry, match="Cannot fetch from localhost"):
+        with pytest.raises(ToolRetryError, match="Cannot fetch from localhost"):
             _validate_url("http://127.0.0.1/")
 
     def test_blocks_private_ip_10(self):
         """Should block 10.x.x.x addresses."""
-        with pytest.raises(ModelRetry, match="private or reserved"):
+        with pytest.raises(ToolRetryError, match="private or reserved"):
             _validate_url("http://10.0.0.1/")
 
     def test_blocks_private_ip_192_168(self):
         """Should block 192.168.x.x addresses."""
-        with pytest.raises(ModelRetry, match="private or reserved"):
+        with pytest.raises(ToolRetryError, match="private or reserved"):
             _validate_url("http://192.168.1.1/")
 
     def test_blocks_private_ip_172(self):
         """Should block 172.16-31.x.x addresses."""
-        with pytest.raises(ModelRetry, match="private or reserved"):
+        with pytest.raises(ToolRetryError, match="private or reserved"):
             _validate_url("http://172.16.0.1/")
 
     def test_blocks_file_scheme(self):
         """Should block file:// URLs."""
-        with pytest.raises(ModelRetry, match="Invalid URL scheme"):
+        with pytest.raises(ToolRetryError, match="Invalid URL scheme"):
             _validate_url("file:///etc/passwd")
 
     def test_blocks_ftp_scheme(self):
         """Should block ftp:// URLs."""
-        with pytest.raises(ModelRetry, match="Invalid URL scheme"):
+        with pytest.raises(ToolRetryError, match="Invalid URL scheme"):
             _validate_url("ftp://example.com/")
 
     def test_allows_http(self):
@@ -66,12 +67,12 @@ class TestValidateUrl:
 
     def test_blocks_empty_url(self):
         """Should block empty URLs."""
-        with pytest.raises(ModelRetry, match="cannot be empty"):
+        with pytest.raises(ToolRetryError, match="cannot be empty"):
             _validate_url("")
 
     def test_blocks_missing_hostname(self):
         """Should block URLs without hostname."""
-        with pytest.raises(ModelRetry, match="missing hostname"):
+        with pytest.raises(ToolRetryError, match="missing hostname"):
             _validate_url("http:///path")
 
 

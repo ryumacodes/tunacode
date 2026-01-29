@@ -4,7 +4,7 @@ import asyncio
 import os
 from pathlib import Path
 
-from pydantic_ai.exceptions import ModelRetry
+from tunacode.exceptions import ToolRetryError
 
 from tunacode.tools.decorators import base_tool
 from tunacode.tools.ignore import (
@@ -147,10 +147,10 @@ async def list_dir(
     dir_path = Path(directory).resolve()
 
     if not dir_path.exists():
-        raise ModelRetry(f"Directory not found: {dir_path}. Check the path.")
+        raise ToolRetryError(f"Directory not found: {dir_path}. Check the path.")
 
     if not dir_path.is_dir():
-        raise ModelRetry(f"Not a directory: {dir_path}. Provide a directory path.")
+        raise ToolRetryError(f"Not a directory: {dir_path}. Provide a directory path.")
 
     ignore_manager = get_ignore_manager(dir_path)
     additional_count = len(ignore) if ignore else 0

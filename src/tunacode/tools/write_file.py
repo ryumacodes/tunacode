@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from pydantic_ai.exceptions import ModelRetry
+from tunacode.exceptions import ToolRetryError
 
 from tunacode.tools.decorators import file_tool
 from tunacode.tools.lsp.diagnostics import maybe_prepend_lsp_diagnostics
@@ -21,7 +21,7 @@ async def write_file(filepath: str, content: str) -> str:
         A message indicating success, with LSP diagnostics if enabled.
     """
     if os.path.exists(filepath):
-        raise ModelRetry(
+        raise ToolRetryError(
             f"File '{filepath}' already exists. "
             "Use the `update_file` tool to modify it, or choose a different filepath."
         )
