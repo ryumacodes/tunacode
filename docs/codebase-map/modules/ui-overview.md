@@ -26,7 +26,6 @@ Implements the terminal user interface using the Textual framework, following Ne
 - **compose()** - Declarative UI layout definition
 - **on_mount()** - Initialization (themes, config, workers)
 - **watch_theme()** - Dynamic theme switching
-- **streaming_callback()** - Real-time response streaming
 - **on_tool_result_display()** - Tool output rendering
 
 **Layout Components:**
@@ -117,6 +116,7 @@ Custom Textual widgets:
 - **ResourceBar** - Token and cost tracking
 - **StatusBar** - Mode and session status
 - **Messages** - Rich message display
+- **ChatContainer** - Scrollable chat history with insertion anchor support
 - **FileAutocomplete** - File path completion
 - **CommandAutocomplete** - Command completion
 
@@ -167,9 +167,9 @@ Editor → EditorSubmitRequested → handle_command
 
 ### AI Response Flow
 ```
-process_request() → streaming_callback() → streaming_output widget
-  → Tool calls → execute_tools_parallel()
-  → Tool results → on_tool_result_display() → tool_panel_smart() → RichLog
+process_request() → Tool calls → execute_tools_parallel()
+  → Tool results → on_tool_result_display() → tool_panel_smart() → ChatContainer
+  → Completion → _get_latest_response_text() → render_agent_response() → ChatContainer
 ```
 
 ## NeXTSTEP Design Principles
