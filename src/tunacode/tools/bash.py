@@ -6,9 +6,8 @@ import re
 import subprocess
 from asyncio.subprocess import Process
 
-from pydantic_ai.exceptions import ModelRetry
-
 from tunacode.configuration.limits import get_command_limit
+from tunacode.exceptions import ToolRetryError
 
 from tunacode.tools.decorators import base_tool
 
@@ -79,7 +78,7 @@ async def bash(
         except TimeoutError as err:
             process.kill()
             await process.wait()
-            raise ModelRetry(
+            raise ToolRetryError(
                 f"Command timed out after {timeout} seconds: {command}\n"
                 "Consider using a longer timeout or breaking the command into smaller parts."
             ) from err
@@ -95,7 +94,7 @@ async def bash(
         return _format_output(command, return_code, stdout_text, stderr_text, exec_cwd)
 
     except FileNotFoundError as err:
-        raise ModelRetry(
+        raise ToolRetryError(
             f"Shell not found. Cannot execute command: {command}\n"
             "This typically indicates a system configuration issue."
         ) from err
@@ -111,15 +110,15 @@ def _validate_command_security(command: str) -> None:
         command: The command string to validate
 
     Raises:
-        ModelRetry: If the command fails security validation
+        ToolRetryError: If the command fails security validation
     """
     if not command or not command.strip():
-        raise ModelRetry("Empty command not allowed")
+        raise ToolRetryError("Empty command not allowed")
 
     # Always check for the most dangerous patterns regardless of shell features
     for pattern in DANGEROUS_PATTERNS:
         if re.search(pattern, command, re.IGNORECASE):
-            raise ModelRetry(f"Command contains dangerous pattern and is blocked: {pattern}")
+            raise ToolRetryError(f"Command contains dangerous pattern and is blocked: {pattern}")
 
     # Check for dangerous injection patterns (more selective, before character checks)
     strict_patterns = [
@@ -132,13 +131,13 @@ def _validate_command_security(command: str) -> None:
 
     for pattern in strict_patterns:
         if re.search(pattern, command):
-            raise ModelRetry(f"Potentially unsafe pattern detected in command: {pattern}")
+            raise ToolRetryError(f"Potentially unsafe pattern detected in command: {pattern}")
 
     # Check for restricted characters (but allow safe environment variable usage)
     # Allow $ when used for legitimate environment variables or shell variables
     if re.search(r"\$[^({a-zA-Z_]", command):
         # $ followed by something that's not a valid variable start
-        raise ModelRetry("Potentially unsafe character '$' in command")
+        raise ToolRetryError("Potentially unsafe character '$' in command")
 
     # Check other restricted characters but allow { } when part of valid variable expansion
     if "{" in command or "}" in command:  # noqa: SIM102
@@ -146,30 +145,30 @@ def _validate_command_security(command: str) -> None:
         if not re.search(r"\$\{?\w+\}?", command):
             for char in ["{", "}"]:
                 if char in command:
-                    raise ModelRetry(f"Potentially unsafe character '{char}' in command")
+                    raise ToolRetryError(f"Potentially unsafe character '{char}' in command")
 
     # Check remaining restricted characters
     for char in [";", "&", "`"]:
         if char in command:
-            raise ModelRetry(f"Potentially unsafe character '{char}' in command")
+            raise ToolRetryError(f"Potentially unsafe character '{char}' in command")
 
 
 def _validate_inputs(command: str, cwd: str | None, timeout: int | None) -> None:
     """Validate command inputs."""
     if timeout and (timeout < 1 or timeout > 300):
-        raise ModelRetry(
+        raise ToolRetryError(
             "Timeout must be between 1 and 300 seconds. "
             "Use shorter timeouts for quick commands, longer for builds/tests."
         )
 
     if cwd and not os.path.isdir(cwd):
-        raise ModelRetry(
+        raise ToolRetryError(
             f"Working directory '{cwd}' does not exist. "
             "Please verify the path or create the directory first."
         )
 
     if any(pattern in command for pattern in DESTRUCTIVE_PATTERNS):
-        raise ModelRetry(
+        raise ToolRetryError(
             f"Command contains potentially destructive operations: {command}\n"
             "Please confirm this is intentional and safe for your system."
         )

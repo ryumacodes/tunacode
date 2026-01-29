@@ -16,7 +16,8 @@ from urllib.parse import urlparse
 
 import html2text
 import httpx
-from pydantic_ai.exceptions import ModelRetry
+
+from tunacode.exceptions import ToolRetryError
 
 from tunacode.tools.decorators import base_tool
 
@@ -76,37 +77,39 @@ def _validate_url(url: str) -> str:
         Validated URL
 
     Raises:
-        ModelRetry: If URL is invalid or blocked
+        ToolRetryError: If URL is invalid or blocked
     """
     if not url or not url.strip():
-        raise ModelRetry("URL cannot be empty.")
+        raise ToolRetryError("URL cannot be empty.")
 
     url = url.strip()
 
     try:
         parsed = urlparse(url)
     except Exception as err:
-        raise ModelRetry(f"Invalid URL format: {url}") from err
+        raise ToolRetryError(f"Invalid URL format: {url}") from err
 
     # Check scheme
     if parsed.scheme not in ("http", "https"):
-        raise ModelRetry(
+        raise ToolRetryError(
             f"Invalid URL scheme '{parsed.scheme}'. Only http:// and https:// are allowed."
         )
 
     # Check hostname presence
     if not parsed.hostname:
-        raise ModelRetry(f"URL missing hostname: {url}")
+        raise ToolRetryError(f"URL missing hostname: {url}")
 
     hostname = parsed.hostname.lower()
 
     # Block known localhost hostnames
     if hostname in BLOCKED_HOSTNAMES:
-        raise ModelRetry(f"Blocked URL: {url}. Cannot fetch from localhost or local addresses.")
+        raise ToolRetryError(f"Blocked URL: {url}. Cannot fetch from localhost or local addresses.")
 
     # Check if hostname is an IP address and validate
     if _is_private_ip(hostname):
-        raise ModelRetry(f"Blocked URL: {url}. Cannot fetch from private or reserved IP addresses.")
+        raise ToolRetryError(
+            f"Blocked URL: {url}. Cannot fetch from private or reserved IP addresses."
+        )
 
     return url
 
@@ -181,7 +184,7 @@ async def web_fetch(
                 head_response = await client.head(validated_url)
                 content_length = head_response.headers.get("content-length")
                 if content_length and int(content_length) > MAX_CONTENT_SIZE:
-                    raise ModelRetry(
+                    raise ToolRetryError(
                         f"Content too large ({int(content_length) // 1024 // 1024}MB). "
                         f"Maximum allowed is {MAX_CONTENT_SIZE // 1024 // 1024}MB."
                     )
@@ -201,7 +204,7 @@ async def web_fetch(
             # Check content size
             content = response.content
             if len(content) > MAX_CONTENT_SIZE:
-                raise ModelRetry(
+                raise ToolRetryError(
                     f"Content too large ({len(content) // 1024 // 1024}MB). "
                     f"Maximum allowed is {MAX_CONTENT_SIZE // 1024 // 1024}MB."
                 )
@@ -224,22 +227,22 @@ async def web_fetch(
 
     except httpx.TimeoutException as err:
         msg = f"Request timed out after {timeout} seconds. Try again or use a shorter timeout."
-        raise ModelRetry(msg) from err
+        raise ToolRetryError(msg) from err
     except httpx.TooManyRedirects as err:
         msg = f"Too many redirects while fetching {url}. The URL may be invalid."
-        raise ModelRetry(msg) from err
+        raise ToolRetryError(msg) from err
     except httpx.HTTPStatusError as err:
         status = err.response.status_code
         if status == 404:
-            raise ModelRetry(f"Page not found (404): {url}. Check the URL.") from err
+            raise ToolRetryError(f"Page not found (404): {url}. Check the URL.") from err
         if status == 403:
             msg = f"Access forbidden (403): {url}. The page may require authentication."
-            raise ModelRetry(msg) from err
+            raise ToolRetryError(msg) from err
         if status == 429:
-            raise ModelRetry(f"Rate limited (429): {url}. Try again later.") from err
+            raise ToolRetryError(f"Rate limited (429): {url}. Try again later.") from err
         if status >= 500:
             msg = f"Server error ({status}): {url}. The server may be down."
-            raise ModelRetry(msg) from err
-        raise ModelRetry(f"HTTP error {status} fetching {url}") from err
+            raise ToolRetryError(msg) from err
+        raise ToolRetryError(f"HTTP error {status} fetching {url}") from err
     except httpx.RequestError as err:
-        raise ModelRetry(f"Failed to connect to {url}: {err}") from err
+        raise ToolRetryError(f"Failed to connect to {url}: {err}") from err
