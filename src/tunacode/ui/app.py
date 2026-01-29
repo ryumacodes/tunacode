@@ -19,7 +19,6 @@ from textual.widgets import LoadingIndicator, Static
 from tunacode.core.agents.main import process_request
 from tunacode.core.constants import (
     MIN_TOOL_PANEL_LINE_WIDTH,
-    RICHLOG_CLASS_PAUSED,
     RICHLOG_CLASS_STREAMING,
     TOOL_PANEL_HORIZONTAL_INSET,
     build_nextstep_theme,
@@ -28,7 +27,6 @@ from tunacode.core.constants import (
 from tunacode.core.shared_types import ModelName
 from tunacode.core.state import StateManager
 
-from tunacode.ui.renderers.agent_response import render_agent_streaming
 from tunacode.ui.renderers.errors import render_exception
 from tunacode.ui.renderers.panels import tool_panel_smart
 from tunacode.ui.repl_support import (
@@ -52,9 +50,6 @@ from tunacode.ui.widgets import (
     ToolResultDisplay,
 )
 
-# Throttle streaming display updates to reduce visual churn
-STREAM_THROTTLE_MS: float = 100.0
-
 
 class TextualReplApp(App[None]):
     TITLE = "TunaCode"
@@ -67,8 +62,7 @@ class TextualReplApp(App[None]):
     ]
 
     BINDINGS = [
-        Binding("ctrl+p", "toggle_pause", "Pause/Resume Stream", show=False, priority=True),
-        Binding("escape", "cancel_stream", "Cancel", show=False, priority=True),
+        Binding("escape", "cancel_request", "Cancel", show=False, priority=True),
     ]
 
     def __init__(self, *, state_manager: StateManager, show_setup: bool = False) -> None:
@@ -77,13 +71,8 @@ class TextualReplApp(App[None]):
         self._show_setup: bool = show_setup
         self.request_queue: asyncio.Queue[str] = asyncio.Queue()
 
-        self._streaming_paused: bool = False
-        self._streaming_cancelled: bool = False
-        self._stream_buffer: list[str] = []
-        self.current_stream_text: str = ""
         self._current_request_task: asyncio.Task | None = None
         self._loading_indicator_shown: bool = False
-        self._last_display_update: float = 0.0
         self._request_start_time: float = 0.0
 
         self.shell_runner = ShellRunner(self)
@@ -192,16 +181,12 @@ class TextualReplApp(App[None]):
     async def _process_request(self, message: str) -> None:
         session = self.state_manager.session
 
-        self.current_stream_text = ""
-        self._last_display_update = 0.0
-        self._streaming_cancelled = False
+        self._request_start_time = time.monotonic()
         self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
         self.chat_container.clear_insertion_anchor()
 
         self._loading_indicator_shown = True
         self.loading_indicator.add_class("active")
-
-        self._request_start_time = time.monotonic()
 
         try:
             model_name = session.current_model or "openai/gpt-4o"
@@ -229,13 +214,10 @@ class TextualReplApp(App[None]):
             self._loading_indicator_shown = False
             self.loading_indicator.remove_class("active")
             self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
-            self.query_one("#viewport").remove_class(RICHLOG_CLASS_PAUSED)
             self.streaming_output.update("")
             self.streaming_output.remove_class("active")
 
-            output_text = None
-            if not self._streaming_cancelled:
-                output_text = self._get_latest_response_text()
+            output_text = self._get_latest_response_text()
 
             if output_text is not None:
                 from tunacode.ui.renderers.agent_response import render_agent_response
@@ -255,8 +237,6 @@ class TextualReplApp(App[None]):
                 response_widget = self.chat_container.write(panel, expand=True)
                 self.chat_container.set_insertion_anchor(response_widget)
 
-            self.current_stream_text = ""
-            self._streaming_cancelled = False
             self._update_resource_bar()
 
             # Auto-save session after processing
@@ -309,9 +289,7 @@ class TextualReplApp(App[None]):
             duration_ms=message.duration_ms,
             max_line_width=max_line_width,
         )
-        # Use insert_before_stream to position tool panels correctly
-        # even if they arrive after stream ends or is cancelled
-        self.chat_container.insert_before_stream(panel)
+        self.chat_container.write(panel)
 
     def tool_panel_max_width(self) -> int:
         viewport = self.query_one("#viewport")
@@ -362,64 +340,9 @@ class TextualReplApp(App[None]):
                 self.rich_log.write(Text("agent:", style="accent"))
                 self.rich_log.write(Markdown(content))
 
-    async def streaming_callback(self, chunk: str) -> None:
-        if self._streaming_paused:
-            self._stream_buffer.append(chunk)
-            return
-
-        # Always accumulate immediately
-        self.current_stream_text += chunk
-
-        # Throttle display updates to reduce visual churn
-        now = time.monotonic()
-        elapsed_ms = (now - self._last_display_update) * 1000
-
-        if elapsed_ms >= STREAM_THROTTLE_MS:
-            self._last_display_update = now
-            self._update_streaming_panel(now)
-            self.streaming_output.add_class("active")
-            self.chat_container.scroll_end()
-
-    def _update_streaming_panel(self, now: float) -> None:
-        """Update streaming output with current content and elapsed time."""
-        elapsed_ms = (now - self._request_start_time) * 1000
-        model = self.state_manager.session.current_model or ""
-        panel = render_agent_streaming(self.current_stream_text, elapsed_ms, model)
-        self.streaming_output.update(panel)
-
-    def action_toggle_pause(self) -> None:
-        if self._streaming_paused:
-            self.resume_streaming()
-        else:
-            self.pause_streaming()
-
-    def pause_streaming(self) -> None:
-        self._streaming_paused = True
-        self.query_one("#viewport").add_class(RICHLOG_CLASS_PAUSED)
-        self.notify("Streaming paused...")
-
-    def resume_streaming(self) -> None:
-        self._streaming_paused = False
-        self.query_one("#viewport").remove_class(RICHLOG_CLASS_PAUSED)
-        self.notify("Streaming resumed...")
-
-        if self._stream_buffer:
-            buffered_text = "".join(self._stream_buffer)
-            self.current_stream_text += buffered_text
-            self._stream_buffer.clear()
-
-        # Force immediate display update on resume
-        now = time.monotonic()
-        self._last_display_update = now
-        self._update_streaming_panel(now)
-
-    def action_cancel_stream(self) -> None:
+    def action_cancel_request(self) -> None:
+        """Cancel the current request, shell command, or clear editor input."""
         if self._current_request_task is not None:
-            self._streaming_cancelled = True
-            self._stream_buffer.clear()
-            self.current_stream_text = ""
-            # Cancel stream tracking to preserve insertion context for late tool panels
-            self.chat_container.cancel_stream()
             self._current_request_task.cancel()
             return
 
