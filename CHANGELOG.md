@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.52] - 2026-01-30
+
 ### Added
 
 - **Architecture:** Introduced `ToolRetryError` domain exception for framework-agnostic retry signaling (#326)
@@ -50,6 +52,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tools now explicitly call diagnostics after file writes
   - Prepends LSP errors/warnings as XML to tool results
 - **Architecture:** Dependency layer visualization with auto-generated PNG (`scripts/grimp_layers_report.py`)
+- **Core:** Preserve partial response on user abort during streaming (#323)
+  - Captures accumulated stream text from `_debug_raw_stream_accum` on Escape/Ctrl+C
+  - Persists partial response with `[INTERRUPTED]` prefix to conversation history
+  - Prevents data loss when aborting mid-stream
+
+## [0.1.50] - 2026-01-25
 
 ### Changed
 
