@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Architecture:** Introduced `ToolRetryError` domain exception for framework-agnostic retry signaling (#326)
+  - Decorator acts as adapter, converting `ToolRetryError` → `pydantic_ai.ModelRetry`
+  - All tools (`bash`, `glob`, `grep`, `list_dir`, `update_file`, `web_fetch`, `write_file`) now raise `ToolRetryError`
+
+### Changed
+
+- **UI:** Removed streaming lifecycle from TUI for cleaner architecture (#327)
+  - Streaming callback disabled; responses render as single final panel
+  - `ChatContainer` simplified: removed `start_stream/update_stream/end_stream/cancel_stream`
+  - Added explicit insertion-anchor APIs: `clear_insertion_anchor()` and `set_insertion_anchor()`
+  - Renamed `action_cancel_stream` → `action_cancel_request` for clarity
+
+### Removed
+
+- **UI:** Incremental streaming display and per-request streaming state (#327)
+  - No more `paused/cancelled/buffer/current_stream_text` fields in app.py
+  - Final response derived from conversation history via `_get_latest_response_text()`
+
+### Fixed
+
 - **UI:** ChatContainer widget with insertion anchor tracking for tool panels (#319)
   - Fixes race condition where tool panels appeared at wrong position after stream cancel/end
   - New stream lifecycle: `start_stream()`, `end_stream()`, `cancel_stream()`, `insert_before_stream()`
