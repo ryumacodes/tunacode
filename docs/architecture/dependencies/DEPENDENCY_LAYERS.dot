@@ -18,13 +18,13 @@ digraph tunacode_layers {
   core -> configuration [label="15"];
   core -> constants [label="6"];
   core -> exceptions [label="4"];
-  core -> infrastructure [label="1"];
+  core -> infrastructure [label="4"];
   core -> tools [label="12"];
-  core -> types [label="23"];
+  core -> types [label="21"];
   core -> utils [label="6"];
   exceptions -> types [label="1"];
   tools -> configuration [label="4"];
-  tools -> exceptions [label="4"];
+  tools -> exceptions [label="10"];
   ui -> core [label="50"];
   utils -> configuration [label="2"];
   utils -> types [label="1"];

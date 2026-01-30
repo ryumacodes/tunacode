@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architecture:** Introduced `ToolRetryError` domain exception for framework-agnostic retry signaling (#326)
   - Decorator acts as adapter, converting `ToolRetryError` → `pydantic_ai.ModelRetry`
   - All tools (`bash`, `glob`, `grep`, `list_dir`, `update_file`, `web_fetch`, `write_file`) now raise `ToolRetryError`
+- **Architecture:** Reorganized LLM framework types to infrastructure layer (#332)
+  - Created `tunacode/infrastructure/llm_types.py` for pydantic-ai specific types
+  - Moved `PydanticAgent`, `AgentRun`, `MessageHistory` to infrastructure layer
+  - Added protocol-based types (`ToolCallPartProtocol`, `StreamResultProtocol`) for framework-agnostic callbacks
+  - Deleted `tunacode/types/pydantic_ai.py` (moved to canonical and infrastructure)
+  - Core layers now depend on framework-agnostic protocols, not pydantic-ai directly
 
 ### Changed
 
@@ -20,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `ChatContainer` simplified: removed `start_stream/update_stream/end_stream/cancel_stream`
   - Added explicit insertion-anchor APIs: `clear_insertion_anchor()` and `set_insertion_anchor()`
   - Renamed `action_cancel_stream` → `action_cancel_request` for clarity
+- **Architecture:** Moved dependency layer artifacts to `docs/architecture/dependencies/` (#325)
+  - Centralized dependency visualization (DOT files, generated PNGs) under architecture docs
+  - Updated all scripts and tools to reference new paths
+- **Architecture:** Removed `tools.messaging` facade, core now imports directly from `utils.messaging` (#322)
+  - Deleted `src/tunacode/tools/messaging/__init__.py` (29 lines of pure re-exports)
+  - Simplified dependency graph by removing unnecessary indirection layer
 
 ### Removed
 
@@ -63,6 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **UI:** Tool panels no longer appear at bottom after stream cancellation
+- **Core:** Preserve partial response on user abort during streaming (#323)
+  - Captures accumulated stream text from `_debug_raw_stream_accum` on Escape/Ctrl+C
+  - Persists partial response with `[INTERRUPTED]` prefix to conversation history
+  - Prevents data loss when aborting mid-stream
 - **Types:** Resolved mypy errors across configuration, core, and tools modules
 - **Autocomplete:** Fixed fuzzy matching in file filter
 
