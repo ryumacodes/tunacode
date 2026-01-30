@@ -65,7 +65,7 @@ def test_escape_clears_editor_when_no_streaming_or_shell_running() -> None:
         },
     )()
 
-    TextualReplApp.action_cancel_stream(fake_app)
+    TextualReplApp.action_cancel_request(fake_app)
     assert fake_app.editor.cleared is True
     assert fake_app.editor.value == ""
 
