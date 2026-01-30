@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "tunacode-cli"
 
-version = "0.1.49"
+version = "0.1.50"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
@@ -216,6 +216,7 @@ artifacts = [
 [tool.pytest.ini_options]
 markers = [
     "hypothesis: property-based tests using hypothesis (may be slow)",
+    "integration: tests requiring real API access (skipped by default)",
 ]
 asyncio_mode = "auto"
 

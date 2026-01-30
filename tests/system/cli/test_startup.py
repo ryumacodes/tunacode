@@ -6,19 +6,52 @@ These tests verify that both execution modes initialize correctly:
 3. Mock tests for headless response handling
 """
 
+import os
 import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from typer.testing import CliRunner
 
 HEADLESS_TIMEOUT_SECONDS = 60
 STARTUP_TIMEOUT_SECONDS = 15
 
 
 class TestHeadlessModeStartup:
-    """Real integration tests for headless mode."""
+    """Tests for headless mode CLI startup."""
 
-    def test_headless_responds_to_simple_prompt(self) -> None:
-        """Verify headless mode can process a prompt and return a response."""
+    def test_headless_responds_to_simple_prompt_mocked(self) -> None:
+        """Verify headless mode CLI plumbing works with mocked agent."""
+        from tunacode.ui.main import app
+
+        runner = CliRunner()
+
+        # Create a mock agent run with a result
+        mock_agent_run = MagicMock()
+        mock_agent_run.result = "gm! Good morning to you too!"
+
+        # Patch at the source module since import happens inside the function
+        with patch(
+            "tunacode.core.agents.main.process_request",
+            new_callable=AsyncMock,
+            return_value=mock_agent_run,
+        ):
+            result = runner.invoke(
+                app,
+                ["run", "say gm", "--auto-approve", "--timeout", "30"],
+            )
+
+        assert result.exit_code == 0, f"stderr: {result.output}"
+        assert "gm" in result.output.lower() or "good morning" in result.output.lower()
+
+    @pytest.mark.integration
+    @pytest.mark.skipif(
+        not os.environ.get("TUNACODE_TEST_API_KEY"),
+        reason="Requires TUNACODE_TEST_API_KEY for real API integration tests",
+    )
+    def test_headless_responds_to_simple_prompt_real(self) -> None:
+        """Verify headless mode can process a prompt with real API (integration test)."""
         result = subprocess.run(
             [
                 "uv",
