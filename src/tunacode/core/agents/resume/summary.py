@@ -16,15 +16,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from tunacode.constants import LOCAL_SUMMARY_THRESHOLD, SUMMARY_THRESHOLD
 from tunacode.utils.messaging import estimate_tokens
 
 from tunacode.core.logging import get_logger
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
-
-# Summary generation threshold (tokens)
-SUMMARY_THRESHOLD: int = 40_000
 
 # Summary marker for detection
 SUMMARY_MARKER: str = "[CONVERSATION_SUMMARY]"
@@ -34,7 +32,7 @@ __all__ = [
     "is_summary_message",
     "should_compact",
     "generate_summary",
-    "SUMMARY_THRESHOLD",
+    "create_summary_request_message",
     "SUMMARY_MARKER",
 ]
 
@@ -84,7 +82,7 @@ def is_summary_message(message: Any) -> bool:
                     return True
         return False
 
-    # Handle pydantic-ai messages
+    # Handle pydantic-ai messages with .parts attribute
     if hasattr(message, "parts"):
         for part in message.parts:
             content = getattr(part, "content", None)
@@ -94,12 +92,35 @@ def is_summary_message(message: Any) -> bool:
     return False
 
 
-def should_compact(messages: list[Any], model_name: str) -> bool:
+def create_summary_request_message(summary: SummaryMessage) -> Any:
+    """Create a pydantic-ai ModelRequest containing the summary.
+
+    Args:
+        summary: The SummaryMessage to wrap
+
+    Returns:
+        A pydantic-ai ModelRequest with the summary as a SystemPromptPart
+    """
+    from pydantic_ai.messages import ModelRequest, SystemPromptPart
+
+    summary_content = summary.to_marker_text()
+    system_part = SystemPromptPart(content=summary_content)
+    return ModelRequest(parts=[system_part])
+
+
+def should_compact(
+    messages: list[Any],
+    model_name: str,
+    local_mode: bool = False,
+    threshold_override: int | None = None,
+) -> bool:
     """Check if conversation should trigger summary generation.
 
     Args:
         messages: Message history
         model_name: Model for token estimation
+        local_mode: Whether running in local mode (lower threshold)
+        threshold_override: Optional explicit threshold (overrides local_mode)
 
     Returns:
         True if token count exceeds threshold
@@ -107,7 +128,12 @@ def should_compact(messages: list[Any], model_name: str) -> bool:
     if not messages:
         return False
 
-    threshold = SUMMARY_THRESHOLD
+    if threshold_override is not None:
+        threshold = threshold_override
+    elif local_mode:
+        threshold = LOCAL_SUMMARY_THRESHOLD
+    else:
+        threshold = SUMMARY_THRESHOLD
 
     # Estimate total tokens in history
     total_tokens = 0
