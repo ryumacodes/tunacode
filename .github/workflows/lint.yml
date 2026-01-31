@@ -18,3 +18,16 @@ jobs:
         run: uv sync --extra dev --frozen
       - name: Run pre-commit
         run: uv run pre-commit run --all-files
+
+  pydantic-usage-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v4
+      - name: Install dependencies
+        run: uv sync --extra dev --frozen
+      - name: Pydantic usage guard
+        run: uv run python scripts/pydantic_usage_report.py --baseline scripts/pydantic_usage_baseline.json --format text
