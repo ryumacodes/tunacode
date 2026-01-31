@@ -20,6 +20,9 @@ from tunacode.constants import (
 )
 from tunacode.constants import RESOURCE_BAR_COST_FORMAT as RESOURCE_BAR_COST_FORMAT  # noqa: F401
 from tunacode.constants import RESOURCE_BAR_SEPARATOR as RESOURCE_BAR_SEPARATOR  # noqa: F401
+from tunacode.constants import (
+    RETAINED_MESSAGES_COUNT as RETAINED_MESSAGES_COUNT,  # noqa: F401
+)
 from tunacode.constants import RICHLOG_CLASS_PAUSED as RICHLOG_CLASS_PAUSED  # noqa: F401
 from tunacode.constants import RICHLOG_CLASS_STREAMING as RICHLOG_CLASS_STREAMING  # noqa: F401
 from tunacode.constants import SEPARATOR_WIDTH as SEPARATOR_WIDTH  # noqa: F401
@@ -51,6 +54,7 @@ __all__: list[str] = [
     "MIN_TOOL_PANEL_LINE_WIDTH",
     "MIN_VIEWPORT_LINES",
     "MODEL_PICKER_UNFILTERED_LIMIT",
+    "RETAINED_MESSAGES_COUNT",
     "RESOURCE_BAR_COST_FORMAT",
     "RESOURCE_BAR_SEPARATOR",
     "RICHLOG_CLASS_PAUSED",

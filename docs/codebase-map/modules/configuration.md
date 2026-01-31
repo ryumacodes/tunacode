@@ -75,6 +75,10 @@ Default configuration values:
   "theme": str,
   "max_iterations": int,
   "timeout_seconds": int,
+  # Rolling Summary Settings
+  "enable_rolling_summaries": bool,  # Enable auto-compaction (default: false)
+  "summary_threshold": int,          # Token threshold (default: 40,000)
+  "local_summary_threshold": int,    # Local mode threshold (default: 6,000)
   # ... additional settings
 }
 ```

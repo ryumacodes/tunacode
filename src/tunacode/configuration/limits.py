@@ -10,8 +10,10 @@ This allows:
 from functools import lru_cache
 
 from tunacode.constants import (
+    LOCAL_SUMMARY_THRESHOLD,
     MAX_COMMAND_OUTPUT,
     MAX_FILES_IN_DIR,
+    SUMMARY_THRESHOLD,
 )
 
 
@@ -65,3 +67,26 @@ def get_max_tokens() -> int | None:
         return settings["max_tokens"]
 
     return None
+
+
+def is_rolling_summaries_enabled() -> bool:
+    """Check if rolling summaries feature is enabled."""
+    return _load_settings().get("enable_rolling_summaries", False)
+
+
+def get_summary_threshold() -> int:
+    """Get token threshold for triggering summary generation."""
+    settings = _load_settings()
+
+    # Explicit setting takes precedence
+    if "summary_threshold" in settings:
+        return settings["summary_threshold"]
+
+    # Use local threshold if local_mode is enabled
+    if settings.get("local_mode", False):
+        # Check user's local_summary_threshold setting first
+        if "local_summary_threshold" in settings:
+            return settings["local_summary_threshold"]
+        return LOCAL_SUMMARY_THRESHOLD
+
+    return SUMMARY_THRESHOLD

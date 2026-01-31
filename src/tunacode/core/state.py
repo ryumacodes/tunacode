@@ -19,6 +19,7 @@ from tunacode.types import InputSessions, ModelName, SessionId, UserConfig
 from tunacode.types.canonical import UsageMetrics
 from tunacode.utils.messaging import MessageTokenCache
 
+from tunacode.core.agents.resume.summary import SummaryMessage
 from tunacode.core.types import ConversationState, RuntimeState, TaskState, UsageState
 
 
@@ -40,6 +41,7 @@ class SessionState:
     conversation: ConversationState = field(default_factory=ConversationState)
     # Cached per-message token lengths to avoid full rescans
     _message_token_cache: MessageTokenCache = field(default_factory=MessageTokenCache)
+    last_summary: SummaryMessage | None = None
     task: TaskState = field(default_factory=TaskState)
     runtime: RuntimeState = field(default_factory=RuntimeState)
     usage: UsageState = field(default_factory=UsageState)

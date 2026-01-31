@@ -63,6 +63,7 @@ class TextualReplApp(App[None]):
 
     BINDINGS = [
         Binding("escape", "cancel_request", "Cancel", show=False, priority=True),
+        Binding("ctrl+o", "show_summary", "Summary", show=False),
     ]
 
     def __init__(self, *, state_manager: StateManager, show_setup: bool = False) -> None:
@@ -353,6 +354,17 @@ class TextualReplApp(App[None]):
 
         if self.editor.value or self.editor.has_paste_buffer:
             self.editor.clear_input()
+
+    def action_show_summary(self) -> None:
+        """Show or hide the summary viewer modal."""
+        from tunacode.ui.screens import SummaryViewerScreen
+
+        summary = self.state_manager.session.last_summary
+        if summary is None:
+            self.notify("No summary available", severity="warning")
+            return
+
+        self.push_screen(SummaryViewerScreen(summary.content))
 
     def start_shell_command(self, raw_cmd: str) -> None:
         self.shell_runner.start(raw_cmd)

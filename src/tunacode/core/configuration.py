@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG  # noqa: F401 (re-export)
+from tunacode.configuration.limits import (
+    get_summary_threshold as get_summary_threshold,  # noqa: F401 (re-export)
+)
 from tunacode.configuration.models import (
     get_model_context_window as _get_model_context_window,
 )
@@ -39,6 +42,7 @@ __all__: list[str] = [
     "get_models_for_provider",
     "get_provider_env_var",
     "get_providers",
+    "get_summary_threshold",
     "load_models_registry",
     "validate_provider_api_key",
 ]

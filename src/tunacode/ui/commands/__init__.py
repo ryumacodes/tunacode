@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 from tunacode.core.configuration import ApplicationSettings
 
+from tunacode.ui.commands.compact import CompactCommand
 from tunacode.ui.styles import STYLE_PRIMARY
 
 # Update command constants
@@ -477,6 +478,7 @@ class UpdateCommand(Command):
 COMMANDS: dict[str, Command] = {
     "help": HelpCommand(),
     "clear": ClearCommand(),
+    "compact": CompactCommand(),
     "debug": DebugCommand(),
     "model": ModelCommand(),
     "theme": ThemeCommand(),
