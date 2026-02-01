@@ -29,6 +29,10 @@ MAX_COMMAND_OUTPUT = 5000
 MAX_FILES_IN_DIR = 50
 DEFAULT_CONTEXT_WINDOW = 200000
 
+# Summary/compaction thresholds (token counts)
+SUMMARY_THRESHOLD = 100_000  # ~50% of default context window
+LOCAL_SUMMARY_THRESHOLD = 8_000  # Lower threshold for local models
+
 MAX_CALLBACK_CONTENT = 50_000
 MAX_PANEL_LINES = 20
 MIN_TOOL_PANEL_LINE_WIDTH = 4

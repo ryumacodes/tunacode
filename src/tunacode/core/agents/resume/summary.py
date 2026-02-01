@@ -27,8 +27,15 @@ if TYPE_CHECKING:
 # Summary marker for detection
 SUMMARY_MARKER: str = "[CONVERSATION_SUMMARY]"
 
+
+class SummaryGenerationError(Exception):
+    """Raised when summary generation fails."""
+
+    pass
+
 __all__ = [
     "SummaryMessage",
+    "SummaryGenerationError",
     "is_summary_message",
     "should_compact",
     "generate_summary",
@@ -214,9 +221,7 @@ Summary:"""
         summary_text = str(result.output)
     except Exception as e:
         logger.warning(f"Summary generation failed: {e}")
-        # Fallback to truncated content
-        retained_count = min(3, len(content_parts))
-        summary_text = f"[Summary generation failed. Last {retained_count} messages retained.]"
+        raise SummaryGenerationError(f"Failed to generate summary: {e}") from e
 
     token_count = estimate_tokens(summary_text, model_name)
 

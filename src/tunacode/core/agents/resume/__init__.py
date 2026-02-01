@@ -20,6 +20,7 @@ from tunacode.core.agents.resume.sanitize import (
 )
 from tunacode.core.agents.resume.sanitize_debug import log_message_history_debug
 from tunacode.core.agents.resume.summary import (
+    SummaryGenerationError,
     SummaryMessage,
     create_summary_request_message,
     generate_summary,
@@ -38,6 +39,7 @@ __all__ = [
     "filter_compacted",
     "prepare_history",
     # Summary
+    "SummaryGenerationError",
     "SummaryMessage",
     "create_summary_request_message",
     "generate_summary",
