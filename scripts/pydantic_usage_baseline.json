@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-01-31T01:53:25.998048+00:00",
+  "generated_at": "2026-02-01T19:28:28.801982+00:00",
   "root": ".",
   "groups": {
     "pydantic_ai_imports": {
       "name": "pydantic_ai_imports",
       "description": "Imports that reference pydantic_ai.",
       "pattern": "\\bfrom\\s+pydantic_ai\\b|\\bimport\\s+pydantic_ai\\b",
-      "match_count": 47,
-      "file_count": 24,
+      "match_count": 45,
+      "file_count": 23,
       "files": [
         {
           "path": "docs/tools/architecture.md",
@@ -74,10 +74,6 @@
           "match_count": 1
         },
         {
-          "path": "src/tunacode/ui/repl_support.py",
-          "match_count": 2
-        },
-        {
           "path": "tests/integration/core/test_tool_call_lifecycle.py",
           "match_count": 1
         },
@@ -111,9 +107,13 @@
       "name": "pydantic_imports",
       "description": "Imports that reference pydantic.",
       "pattern": "\\bfrom\\s+pydantic\\b|\\bimport\\s+pydantic\\b",
-      "match_count": 6,
-      "file_count": 5,
+      "match_count": 7,
+      "file_count": 6,
       "files": [
+        {
+          "path": ".claude/debug_history/2026-02-01_openai-chat-invalid-response.md",
+          "match_count": 1
+        },
         {
           "path": "memory-bank/research/2026-01-27_alchemy-rs-migration.md",
           "match_count": 1
@@ -140,16 +140,25 @@
       "name": "base_model",
       "description": "BaseModel usage.",
       "pattern": "\\bBaseModel\\b",
-      "match_count": 0,
-      "file_count": 0,
-      "files": []
+      "match_count": 2,
+      "file_count": 2,
+      "files": [
+        {
+          "path": "scripts/pydantic_usage_baseline.json",
+          "match_count": 1
+        },
+        {
+          "path": "scripts/pydantic_usage_report.py",
+          "match_count": 1
+        }
+      ]
     },
     "field": {
       "name": "field",
       "description": "Field usage.",
       "pattern": "\\bField\\b",
-      "match_count": 6,
-      "file_count": 6,
+      "match_count": 8,
+      "file_count": 8,
       "files": [
         {
           "path": "docs/codebase-map/modules/constants.md",
@@ -168,6 +177,14 @@
           "match_count": 1
         },
         {
+          "path": "scripts/pydantic_usage_baseline.json",
+          "match_count": 1
+        },
+        {
+          "path": "scripts/pydantic_usage_report.py",
+          "match_count": 1
+        },
+        {
           "path": "src/tunacode/ui/renderers/errors.py",
           "match_count": 1
         },
@@ -181,11 +198,23 @@
       "name": "type_adapter",
       "description": "TypeAdapter usage.",
       "pattern": "\\bTypeAdapter\\b",
-      "match_count": 5,
-      "file_count": 2,
+      "match_count": 8,
+      "file_count": 5,
       "files": [
         {
           "path": ".claude/debug_history/2026-01-21_resume-hang-investigation.md",
+          "match_count": 1
+        },
+        {
+          "path": "docs/refactoring/pydantic-removal-contract.md",
+          "match_count": 1
+        },
+        {
+          "path": "scripts/pydantic_usage_baseline.json",
+          "match_count": 1
+        },
+        {
+          "path": "scripts/pydantic_usage_report.py",
           "match_count": 1
         },
         {
@@ -198,12 +227,16 @@
       "name": "validator",
       "description": "validator/model_validator usage.",
       "pattern": "\\bmodel_validator\\b|\\bvalidator\\b",
-      "match_count": 3,
-      "file_count": 2,
+      "match_count": 9,
+      "file_count": 3,
       "files": [
         {
-          "path": "src/tunacode/prompts/system_prompt.md",
-          "match_count": 1
+          "path": "scripts/pydantic_usage_baseline.json",
+          "match_count": 4
+        },
+        {
+          "path": "scripts/pydantic_usage_report.py",
+          "match_count": 3
         },
         {
           "path": "uv.lock",
@@ -215,19 +248,36 @@
       "name": "agent_tool_decorator",
       "description": "@agent.tool-style decorators.",
       "pattern": "@.*\\.tool\\b",
-      "match_count": 0,
-      "file_count": 0,
-      "files": []
+      "match_count": 4,
+      "file_count": 2,
+      "files": [
+        {
+          "path": "scripts/pydantic_usage_baseline.json",
+          "match_count": 2
+        },
+        {
+          "path": "scripts/pydantic_usage_report.py",
+          "match_count": 2
+        }
+      ]
     },
     "agent_call": {
       "name": "agent_call",
       "description": "Agent(...) constructor usage.",
       "pattern": "\\bAgent\\(",
-      "match_count": 3,
-      "file_count": 2,
+      "match_count": 5,
+      "file_count": 4,
       "files": [
         {
           "path": "docs/codebase-map/architecture/architecture.md",
+          "match_count": 1
+        },
+        {
+          "path": "scripts/pydantic_usage_baseline.json",
+          "match_count": 1
+        },
+        {
+          "path": "scripts/pydantic_usage_report.py",
           "match_count": 1
         },
         {
@@ -240,13 +290,22 @@
       "name": "run_context",
       "description": "RunContext usage.",
       "pattern": "\\bRunContext\\b",
-      "match_count": 0,
-      "file_count": 0,
-      "files": []
+      "match_count": 2,
+      "file_count": 2,
+      "files": [
+        {
+          "path": "scripts/pydantic_usage_baseline.json",
+          "match_count": 1
+        },
+        {
+          "path": "scripts/pydantic_usage_report.py",
+          "match_count": 1
+        }
+      ]
     }
   },
   "totals": {
-    "match_count": 70,
-    "file_count": 37
+    "match_count": 90,
+    "file_count": 39
   }
 }
