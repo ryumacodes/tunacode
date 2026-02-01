@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import TYPE_CHECKING, Protocol
+from typing import Protocol
 
 from rich.console import Console
 from rich.text import Text
+
+from tunacode.types import StreamResultProtocol, ToolCallPartProtocol
 
 from tunacode.core.constants import MAX_CALLBACK_CONTENT
 from tunacode.core.shared_types import (
@@ -39,10 +41,6 @@ CALLBACK_TRUNCATION_NOTICE: str = "\n... [truncated for safety]"
 CALLBACK_TRUNCATION_NOTICE_LEN: int = len(CALLBACK_TRUNCATION_NOTICE)
 
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    from pydantic_ai.messages import ToolCallPart
-    from pydantic_ai.result import StreamedRunResult
 
 
 def _format_prefixed_wrapped_lines(
@@ -110,8 +108,8 @@ class AppForCallbacks(Protocol):
 
 def build_textual_tool_callback() -> ToolCallback:
     async def _callback(
-        _part: ToolCallPart,
-        _node: StreamedRunResult[None, str],
+        _part: ToolCallPartProtocol,
+        _node: StreamResultProtocol,
     ) -> None:
         return None
 

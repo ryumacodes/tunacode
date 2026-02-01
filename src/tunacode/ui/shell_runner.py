@@ -9,16 +9,18 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Protocol
+from typing import Protocol
 
 from rich.console import RenderableType
 from rich.text import Text
+from textual.notifications import SeverityLevel
 
 from tunacode.ui.renderers.tools.bash import render_bash
 
 SHELL_COMMAND_TIMEOUT_SECONDS: float = 30.0
 SHELL_COMMAND_CANCEL_GRACE_SECONDS: float = 0.5
 SHELL_COMMAND_USAGE_TEXT = "Usage: !<command>"
+DEFAULT_NOTIFICATION_SEVERITY: SeverityLevel = "information"
 SHELL_OUTPUT_ENCODING = "utf-8"
 SHELL_CANCEL_SIGNAL = signal.SIGINT
 
@@ -66,7 +68,17 @@ class ShellRunContext:
 
 
 class ShellRunnerHost(Protocol):
-    def notify(self, message: str, **kwargs: Any) -> None: ...
+    def notify(
+        self,
+        message: str,
+        *,
+        title: str = "",
+        severity: SeverityLevel = DEFAULT_NOTIFICATION_SEVERITY,
+        timeout: float | None = None,
+        markup: bool = True,
+    ) -> None:
+        del message, title, severity, timeout, markup
+        raise NotImplementedError
 
     def write_shell_output(self, renderable: RenderableType) -> None: ...
 

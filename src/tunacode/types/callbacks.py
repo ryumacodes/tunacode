@@ -35,7 +35,7 @@ class ToolCallPartProtocol(Protocol):
 
     tool_call_id: str
     tool_name: str
-    args: dict[str, Any]
+    args: str | dict[str, Any] | None
 
 
 @runtime_checkable

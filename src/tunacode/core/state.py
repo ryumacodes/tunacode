@@ -247,6 +247,13 @@ class StateManager:
         with open(session_file) as f:
             return json.load(f)
 
+    def _coerce_str_value(self, value: Any, default: str) -> str:
+        if value is None:
+            return default
+        if isinstance(value, str):
+            return value
+        return str(value)
+
     async def save_session(self) -> bool:
         """Save current session to disk."""
         if not self._session.project_id:
@@ -294,13 +301,19 @@ class StateManager:
         try:
             data = await asyncio.to_thread(self._read_session_data, session_file)
 
-            self._session.session_id = data.get("session_id", session_id)
-            self._session.project_id = data.get("project_id", "")
-            self._session.created_at = data.get("created_at", "")
-            self._session.last_modified = data.get("last_modified", "")
-            self._session.working_directory = data.get("working_directory", "")
+            session_id_value = self._coerce_str_value(data.get("session_id"), session_id)
+            self._session.session_id = session_id_value
+            project_id_value = self._coerce_str_value(data.get("project_id"), "")
+            self._session.project_id = project_id_value
+            created_at_value = self._coerce_str_value(data.get("created_at"), "")
+            self._session.created_at = created_at_value
+            last_modified_value = self._coerce_str_value(data.get("last_modified"), "")
+            self._session.last_modified = last_modified_value
+            working_directory_value = self._coerce_str_value(data.get("working_directory"), "")
+            self._session.working_directory = working_directory_value
             default_model = DEFAULT_USER_CONFIG["default_model"]
-            self._session.current_model = data.get("current_model", default_model)
+            current_model_value = self._coerce_str_value(data.get("current_model"), default_model)
+            self._session.current_model = current_model_value
             # Update max_tokens based on loaded model's context window
             self._session.conversation.max_tokens = get_model_context_window(
                 self._session.current_model

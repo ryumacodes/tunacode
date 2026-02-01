@@ -90,6 +90,10 @@ agent.iter() -> Provider HTTP Request
   - `DEBUG_STREAM_RAW_STREAM_MAX_CHARS` (20,000) - max raw stream size
   - `DEBUG_STREAM_EVENT_LOG_LIMIT` (5) - events logged per stream
 
+#### streaming_debug.py
+- Debug helper functions for stream previews, event summaries, and raw stream capture
+- Owns `DEBUG_STREAM_*` constants and truncation limits for debug instrumentation
+
 #### tool_executor.py
 - **execute_tools_parallel()** - Concurrent read-only tool execution
 - Implements exponential backoff retry logic

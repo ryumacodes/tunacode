@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Check for files longer than 500 lines
+# Check for files longer than 600 lines
 # Exit with status 1 if any files exceed the limit
 
 MAX_LINES=600
@@ -62,6 +62,8 @@ done < <(find . -type f \
     -not -path "./.venv/*" \
     -not -path "./.deploy_venv/*" \
     -not -path "./.git/*" \
+    -not -path "./.worktree/*" \
+    -not -path "./.worktree-meta/*" \
     -not -path "./build/*" \
     -not -path "./dist/*" \
     -not -path "./__pycache__/*" \
