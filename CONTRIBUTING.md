@@ -2,11 +2,23 @@
 
 Thanks for your interest in contributing to tunacode! This document provides guidelines and instructions for contributing.
 
+## **AI-Assisted Contributions**
+
+**AI-generated PRs are welcome, but keep them small and clean.** Large, unstacked PRs are hard to review; small diffs help CodeRabbit run cleanly and let maintainers review quickly.
+
+Using AI tools to help write code or documentation is welcome. However:
+
+- **Follow all project standards** - AI output must meet the same quality bar as human-written code
+- **Review and refine** - Don't submit raw AI output without careful review
+- **No low-effort submissions** - PRs that are clearly unreviewed AI-generated content will be closed
+
+The maintainers can tell the difference. Put in the effort.
+
 ## Getting Help
 
 - **Questions & Ideas**: Use [GitHub Discussions](https://github.com/alchemiststudiosDOTai/tunacode/discussions)
 - **Bug Reports**: Open a [GitHub Issue](https://github.com/alchemiststudiosDOTai/tunacode/issues)
-- **Discord**: [Discord invite link] <!-- Replace with actual Discord URL -->
+- **Discord**: [Discord](https://discord.gg/TN7Fpynv6H)
 
 ## Development Setup
 
@@ -87,16 +99,6 @@ uv run pytest --cov=src/tunacode # Run with coverage
 - All existing tests must pass
 - New features should include tests
 - Golden/characterization tests are preferred for complex behavior
-
-## AI-Assisted Contributions
-
-Using AI tools to help write code or documentation is welcome. However:
-
-- **Follow all project standards** - AI output must meet the same quality bar as human-written code
-- **Review and refine** - Don't submit raw AI output without careful review
-- **No low-effort submissions** - PRs that are clearly unreviewed AI-generated content will be closed
-
-The maintainers can tell the difference. Put in the effort.
 
 ## Pull Request Process
 

@@ -1,5 +1,7 @@
 ## Tunacode
 
+Last Updated: 2026-01-31
+
 This project is tunacode, much like you! It's a TUI code agent that can be used to code and debug code or general agentic tasks.
 
 src/tunacode/ui is the TUI interface that is used to interact with the user.

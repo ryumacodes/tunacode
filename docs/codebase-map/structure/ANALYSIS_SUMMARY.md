@@ -10,7 +10,7 @@ agent: Structure Agent
 
 ## Mission Accomplished
 
-The **Structure Agent** has completed a comprehensive **depth 0 analysis** of the TunaCode source code directory at `/Users/tuna/Desktop/tunacode/src/`.
+The **Structure Agent** has completed a comprehensive **depth 0 analysis** of the TunaCode source code directory at `<repo_root>/src/`.
 
 ## Analysis Methodology
 
@@ -19,12 +19,12 @@ As mandated, the analysis utilized the **Gemini MCP tool** for semantic understa
 
 1. **First Call**: Directory structure analysis, organization patterns, and naming conventions
    - Model: `gemini-2.5-flash`
-   - Prompt: `@/Users/tuna/Desktop/tunacode/src analyze directory structure, organization patterns, and naming conventions`
+   - Prompt: `@<repo_root>/src analyze directory structure, organization patterns, and naming conventions`
    - Result: Comprehensive breakdown of modular architecture and Python best practices
 
 2. **Second Call**: Purpose analysis of major subdirectories
    - Model: `gemini-2.5-flash`
-   - Prompt: `@/Users/tuna/Desktop/tunacode/src what is the purpose of each major subdirectory (ui, core, tools, configuration)?`
+   - Prompt: `@<repo_root>/src what is the purpose of each major subdirectory (ui, core, tools, configuration)?`
    - Result: Clear understanding of each module's role and responsibilities
 
 ### Output Format Compliance
@@ -263,4 +263,4 @@ The **depth 0 analysis** provides a solid foundation for deeper codebase underst
 - Tool: Gemini MCP (gemini-2.5-flash)
 - Date: 2026-01-04
 - Output: 9 documentation files
-- Location: `/Users/tuna/Desktop/tunacode/docs/codebase-map/structure/`
+- Location: `<repo_root>/docs/codebase-map/structure/`

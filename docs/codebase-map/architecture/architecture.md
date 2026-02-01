@@ -4,7 +4,7 @@
 
 Tunacode is a TUI (Terminal User Interface) code agent built with a **layered, component-based architecture**. The system is designed with clear separation of concerns between the presentation layer (UI), the core agent logic, tool capabilities, and configuration management.
 
-**File**: `/Users/tuna/Desktop/tunacode/src`
+**File**: `<repo_root>/src`
 
 **Version**: 0.1.20
 
@@ -437,8 +437,8 @@ Level 3 (Application):
 - Core logic has no Textual dependencies
 
 **Files**:
-- `/Users/tuna/Desktop/tunacode/src/tunacode/ui/app.py`
-- `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/main.py`
+- `<repo_root>/src/tunacode/ui/app.py`
+- `<repo_root>/src/tunacode/core/agents/main.py`
 
 ### Decision 2: Modular System Prompts
 
@@ -450,8 +450,8 @@ Level 3 (Application):
 - Different agents use different prompt combinations
 
 **Files**:
-- `/Users/tuna/Desktop/tunacode/src/tunacode/core/prompting/`
-- `/Users/tuna/Desktop/tunacode/src/tunacode/prompts/sections/`
+- `<repo_root>/src/tunacode/core/prompting/`
+- `<repo_root>/src/tunacode/prompts/sections/`
 
 ### Decision 3: Agent as Iterator
 
@@ -463,7 +463,7 @@ Level 3 (Application):
 - Avoids callback hell
 
 **Files**:
-- `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/main.py`
+- `<repo_root>/src/tunacode/core/agents/main.py`
 
 ### Decision 4: Centralized State Management
 
@@ -475,7 +475,7 @@ Level 3 (Application):
 - State passed to key components
 
 **Files**:
-- `/Users/tuna/Desktop/tunacode/src/tunacode/core/state.py`
+- `<repo_root>/src/tunacode/core/state.py`
 
 ---
 
@@ -564,10 +564,10 @@ Level 3 (Application):
 ### Current Locations
 
 **Core → Tools**:
-- `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/agent_components/agent_config.py`
+- `<repo_root>/src/tunacode/core/agents/agent_components/agent_config.py`
 
 **Tools → Core**:
-- `/Users/tuna/Desktop/tunacode/src/tunacode/tools/todo.py`
+- `<repo_root>/src/tunacode/tools/todo.py`
 
 ---
 
@@ -575,21 +575,21 @@ Level 3 (Application):
 
 ### Adding a New Tool
 
-1. Create tool function in `/Users/tuna/Desktop/tunacode/src/tunacode/tools/`
+1. Create tool function in `<repo_root>/src/tunacode/tools/`
 2. Decorate with `@file_tool` or `@base_tool`
 3. Add to tools list in `agent_config.py`
 4. Optionally create custom renderer in `ui/renderers/tools/`
 
 ### Adding a New Agent Type
 
-1. Create prompt sections in `/Users/tuna/Desktop/tunacode/src/tunacode/prompts/sections/`
+1. Create prompt sections in `<repo_root>/src/tunacode/prompts/sections/`
 2. Compose prompt using `compose_prompt()`
 3. Configure tools for agent type
 4. Add agent factory logic
 
 ### Adding a New UI Screen
 
-1. Create screen class in `/Users/tuna/Desktop/tunacode/src/tunacode/ui/screens/`
+1. Create screen class in `<repo_root>/src/tunacode/ui/screens/`
 2. Integrate with `TextualReplApp`
 3. Add navigation logic
 
@@ -599,7 +599,7 @@ Level 3 (Application):
 
 ### Current Test Coverage
 
-Located in `/Users/tuna/Desktop/tunacode/tests/`:
+Located in `<repo_root>/tests/`:
 - Tool decorator tests
 - Tool conformance tests
 - Compaction tests

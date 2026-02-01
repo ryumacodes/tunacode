@@ -10,7 +10,7 @@ TunaCode employs a multi-layered state management strategy that combines a centr
 
 **Location:** `src/tunacode/core/state.py`
 
-The `StateManager` class is the central application state orchestrator. It holds a `SessionState` object and is instantiated as a global singleton in `/Users/tuna/Desktop/tunacode/src/tunacode/ui/main.py`.
+The `StateManager` class is the central application state orchestrator. It holds a `SessionState` object and is instantiated as a global singleton in `<repo_root>/src/tunacode/ui/main.py`.
 
 ```python
 state_manager = StateManager()
@@ -33,7 +33,7 @@ The `state_manager.session` object is the primary shared mutable state passed ac
 
 ### 1.2 Agent Orchestration State
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/main.py`
+**Location:** `<repo_root>/src/tunacode/core/agents/main.py`
 
 Several state classes manage agent behavior:
 
@@ -45,7 +45,7 @@ Several state classes manage agent behavior:
 
 ### 1.3 UI State Containers
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/ui/app.py`
+**Location:** `<repo_root>/src/tunacode/ui/app.py`
 
 - **`TextualReplApp`:** Core UI state including:
   - `request_queue`: Asynchronous event queue
@@ -53,16 +53,16 @@ Several state classes manage agent behavior:
   - Task references: `_current_request_task`
 
 **Widget-specific state:**
-- **`Editor`** (`/Users/tuna/Desktop/tunacode/src/tunacode/ui/widgets/editor.py`): Input editor state (`_placeholder_cleared`, `_was_pasted`, `_pasted_content`)
-- **`ResourceBar`** (`/Users/tuna/Desktop/tunacode/src/tunacode/ui/widgets/resource_bar.py`): Resource display state (`_tokens`, `_model`, `_cost`, `_lsp_enabled`)
-- **`StatusBar`** (`/Users/tuna/Desktop/tunacode/src/tunacode/ui/widgets/status_bar.py`): Status bar state (`_edited_files`, `_location_text`)
-- **`ShellRunner`** (`/Users/tuna/Desktop/tunacode/src/tunacode/ui/shell_runner.py`): External process state (`_task`, `_process`)
+- **`Editor`** (`<repo_root>/src/tunacode/ui/widgets/editor.py`): Input editor state (`_placeholder_cleared`, `_was_pasted`, `_pasted_content`)
+- **`ResourceBar`** (`<repo_root>/src/tunacode/ui/widgets/resource_bar.py`): Resource display state (`_tokens`, `_model`, `_cost`, `_lsp_enabled`)
+- **`StatusBar`** (`<repo_root>/src/tunacode/ui/widgets/status_bar.py`): Status bar state (`_edited_files`, `_location_text`)
+- **`ShellRunner`** (`<repo_root>/src/tunacode/ui/shell_runner.py`): External process state (`_task`, `_process`)
 
 ## 2. Caching Strategies
 
 ### 2.1 Module-Level In-Memory Caches
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/agent_components/agent_config.py`
+**Location:** `<repo_root>/src/tunacode/core/agents/agent_components/agent_config.py`
 
 Three module-level dictionaries serve as global in-memory caches:
 
@@ -80,7 +80,7 @@ _AGENT_CACHE_VERSION: dict[ModelName, int] = {}
 
 ### 2.2 Models Registry Cache
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/configuration/models.py`
+**Location:** `<repo_root>/src/tunacode/configuration/models.py`
 
 ```python
 _models_registry_cache: dict | None = None
@@ -98,7 +98,7 @@ The models registry is cached in memory to avoid repeated file reads.
 
 ### 2.3 Token Counter Heuristic
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/utils/messaging/token_counter.py`
+**Location:** `<repo_root>/src/tunacode/utils/messaging/token_counter.py`
 
 Uses a lightweight character heuristic:
 
@@ -113,14 +113,14 @@ def estimate_tokens(text: str, model_name: str | None = None) -> int:
 
 ### 2.4 Tool Buffer
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/agent_components/tool_buffer.py`
+**Location:** `<repo_root>/src/tunacode/core/agents/agent_components/tool_buffer.py`
 
 - **`ToolBuffer`:** Buffers read-only tool calls (`self.read_only_tasks`) for parallel execution
 - Acts as a transient data store for tool calls awaiting batched execution
 
 ### 2.5 Progress Tracker
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/research_agent.py`
+**Location:** `<repo_root>/src/tunacode/core/agents/research_agent.py`
 
 - **`ProgressTracker`:** Tracks `operation_count` for subagent tool execution
 
@@ -129,7 +129,7 @@ def estimate_tokens(text: str, model_name: str | None = None) -> int:
 ### 3.1 Configuration Hierarchy
 
 **Default Configuration:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/configuration/defaults.py`
+**Location:** `<repo_root>/src/tunacode/configuration/defaults.py`
 
 ```python
 DEFAULT_USER_CONFIG = {
@@ -150,21 +150,21 @@ DEFAULT_USER_CONFIG = {
 ```
 
 **User Configuration:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/utils/config/user_configuration.py`
+**Location:** `<repo_root>/src/tunacode/utils/config/user_configuration.py`
 
 - **`load_config()`:** Reads user-specific `~/.config/tunacode.json`, merging with `DEFAULT_USER_CONFIG` (user values take precedence)
 - **`save_config(state_manager)`:** Persists current configuration to disk
 - Includes caching for performance
 
 **Application Settings:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/configuration/settings.py`
+**Location:** `<repo_root>/src/tunacode/configuration/settings.py`
 
 - **`PathConfig`:** Specifies configuration file path
 - **`ApplicationSettings`:** Manages application-wide metadata and paths
-- Instantiated as global singleton `app_settings` in `/Users/tuna/Desktop/tunacode/src/tunacode/ui/main.py`
+- Instantiated as global singleton `app_settings` in `<repo_root>/src/tunacode/ui/main.py`
 
 **Model Configuration:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/configuration/models.py`
+**Location:** `<repo_root>/src/tunacode/configuration/models.py`
 
 - Loads model metadata from `models_registry.json`
 - Provides:
@@ -174,7 +174,7 @@ DEFAULT_USER_CONFIG = {
 ### 3.2 Environment Variable Handling
 
 **Configuration Resolution:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/agent_components/agent_config.py`
+**Location:** `<repo_root>/src/tunacode/core/agents/agent_components/agent_config.py`
 
 ```python
 def _create_model_with_retry(state_manager: StateManager):
@@ -193,7 +193,7 @@ def _create_model_with_retry(state_manager: StateManager):
 ```
 
 **Tool Execution:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/tools/bash.py`
+**Location:** `<repo_root>/src/tunacode/tools/bash.py`
 
 ```python
 exec_env = os.environ.copy()
@@ -213,7 +213,7 @@ The bash tool copies the current process environment and allows custom variables
 - Tracked in `SessionState` metadata fields
 
 **Session Persistence:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/core/state.py`
+**Location:** `<repo_root>/src/tunacode/core/state.py`
 
 ```python
 def save_session():
@@ -234,7 +234,7 @@ def load_session(session_id):
 - `_deserialize_messages()`: Restores messages from JSON
 
 **Auto-Save:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/ui/app.py`
+**Location:** `<repo_root>/src/tunacode/ui/app.py`
 
 - `save_session()` called automatically:
   - On application unmount
@@ -243,7 +243,7 @@ def load_session(session_id):
 
 ### 4.2 Session Storage
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/utils/system/paths.py`
+**Location:** `<repo_root>/src/tunacode/utils/system/paths.py`
 
 - `get_session_storage_dir()`: Platform-agnostic session storage location
 - `get_session_dir()`: Session-specific directory path
@@ -251,7 +251,7 @@ def load_session(session_id):
 
 ### 4.3 Session Commands
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/ui/commands/__init__.py`
+**Location:** `<repo_root>/src/tunacode/ui/commands/__init__.py`
 
 - **`ResumeCommand`:** List, load, and delete previous sessions
 - Enables users to resume work where they left off
@@ -261,7 +261,7 @@ def load_session(session_id):
 ### 5.1 Agent State Machine
 
 **AgentState Enum:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/types/dataclasses.py`
+**Location:** `<repo_root>/src/tunacode/types/dataclasses.py`
 
 ```python
 class AgentState(Enum):
@@ -272,14 +272,14 @@ class AgentState(Enum):
 ```
 
 **State Machine Implementation:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/agent_components/state_transition.py`
+**Location:** `<repo_root>/src/tunacode/core/agents/agent_components/state_transition.py`
 
 - **`AgentStateMachine`:** Thread-safe state machine managing `AgentState` transitions
 - **`StateTransitionRules`:** Defines valid transitions between states
 - **`AGENT_TRANSITION_RULES`:** Global instance defining allowed agent processing flow
 
 **ResponseState Interface:**
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/core/agents/agent_components/response_state.py`
+**Location:** `<repo_root>/src/tunacode/core/agents/agent_components/response_state.py`
 
 ```python
 @dataclass
@@ -295,7 +295,7 @@ The state machine ensures controlled, validated transitions through agent proces
 
 ### 6.1 Preference Storage
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/core/state.py`
+**Location:** `<repo_root>/src/tunacode/core/state.py`
 
 All user-customizable settings are stored in:
 ```python
@@ -306,7 +306,7 @@ This makes preferences accessible throughout the application.
 
 ### 6.2 Runtime Preference Modification
 
-**Location:** `/Users/tuna/Desktop/tunacode/src/tunacode/ui/commands/__init__.py`
+**Location:** `<repo_root>/src/tunacode/ui/commands/__init__.py`
 
 CLI commands allow runtime preference changes:
 

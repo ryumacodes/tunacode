@@ -1,253 +1,211 @@
 TunaCode Source Code Structure Tree
-====================================
+===================================
 
-Generated: 2026-01-04
-Depth: 0 (root-level analysis)
-Source: /Users/tuna/Desktop/tunacode/src/tunacode/
-
-Legend:
-  →  Dependency direction
-  *  Key integration point (seam)
-  🔧  Tool implementation
-  🎨  UI component
-  🧠  Core logic
-  ⚙️  Configuration
-  📝  Documentation/template
+Generated: 2026-01-31
+Source: <repo_root>/src/tunacode
+Output: <repo_root>/docs/codebase-map/structure/tree-structure.txt
 
 src/tunacode/
-│
-├── 📦 Root Module
-│   ├── __init__.py              # Package marker
-│   ├── constants.py             # * Global constants, themes, limits
-│   ├── exceptions.py            # * Exception hierarchy with recovery
-│   └── py.typed                 # Type hint marker
-│
-├── 🎨 ui/                       # Presentation Layer
-│   ├── app.py                   # * Main Textual application
-│   ├── main.py                  # * REPL entry point & orchestration
-│   ├── shell_runner.py          # TUI shell wrapper
-│   ├── repl_support.py          # REPL utilities
-│   ├── styles.py                # Style definitions
-│   │
-│   ├── commands/                # UI command handlers
-│   │   ├── (slash commands)
-│   │   └── (REPL commands)
-│   │
-│   ├── components/              # Reusable UI components
-│   │   └── (composite widgets)
-│   │
-│   ├── screens/                 # Full-screen modals
-│   │   ├── setup_screen.py      # Setup wizard
-│   │   ├── model_picker.py      # Model selection
-│   │   └── (other dialogs)
-│   │
-│   ├── widgets/                 # Custom Textual widgets
-│   │   └── (specialized widgets)
-│   │
-│   ├── renderers/               # Output formatting
-│   │   └── tools/               # Tool-specific renderers
-│   │       ├── bash_renderer.py
-│   │       ├── grep_renderer.py
-│   │       ├── read_file_renderer.py
-│   │       └── (other renderers)
-│   │
-│   ├── headless/                # Non-interactive execution
-│   │   └── (headless mode)
-│   │
-│   └── styles/                  # CSS & themes
-│       └── (.tcss files)
-│
-├── 🧠 core/                     # Business Logic Layer
-│   ├── agents/                  # Agent system
-│   │   ├── main.py              # * Primary agent orchestration
-│   │   ├── research_agent.py    # * Codebase research specialist
-│   │   ├── delegation_tools.py  # Agent tool delegation
-│   │   └── agent_components/    # Agent building blocks
-│   │       ├── (state modules)
-│   │       └── (tool orchestrators)
-│   │
-│   ├── state/                   # State management
-│   │   └── (application state models)
-│   │
-│   ├── prompting/               # Prompt construction
-│   │   ├── (prompt builders)
-│   │   └── (template system)
-│   │
-│   ├── setup/                   # Setup wizard logic
-│   │   └── (setup components)
-│   │
-│   ├── background/              # Async task execution
-│   │   └── (background jobs)
-│   │
-│   ├── token_usage/             # Cost tracking
-│   │   ├── (usage calculation)
-│   │   └── (pricing integration)
-│   │
-│   └── logging/                 # Structured logging
-│       └── (log system)
-│
-├── 🔧 tools/                    # Capabilities Layer
-│   ├── bash.py                  # * Shell command execution
-│   ├── grep.py                  # * Content search (regex)
-│   ├── glob.py                  # * File pattern matching
-│   ├── read_file.py             # * File reading
-│   ├── write_file.py            # * File creation
-│   ├── update_file.py           # * File editing
-│   ├── list_dir.py              # Directory listing
-│   ├── web_fetch.py             # HTTP requests
-│   ├── todo.py                  # TODO list management
-│   ├── decorators.py            # * Tool decorators (retry, logging)
-│   ├── xml_helper.py            # XML parsing
-│   │
-│   ├── grep_components/         # Search implementation
-│   │   └── (grep internals)
-│   │
-│   ├── prompts/                 # Tool descriptions
-│   │   └── (tool prompts)
-│   │
-│   └── utils/                   # Tool utilities
-│       └── (helper functions)
-│
-├── ⚙️ configuration/            # Settings Layer
+├── configuration/
 │   ├── __init__.py
-│   ├── settings.py              # * User preferences
-│   ├── models.py                # * Model definitions
-│   ├── models_registry.json     # Model database
-│   ├── pricing.py               # * Cost calculation
-│   └── defaults.py              # Factory defaults
-│
-├── 📟 cli/                      # Command-Line Interface
+│   ├── defaults.py
+│   ├── ignore_patterns.py
+│   ├── limits.py
+│   ├── models.py
+│   ├── models_registry.json
+│   ├── paths.py
+│   ├── pricing.py
+│   ├── settings.py
+│   └── user_config.py
+├── core/
+│   ├── agents/
+│   │   ├── agent_components/
+│   │   │   ├── orchestrator/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── message_recorder.py
+│   │   │   │   ├── orchestrator.py
+│   │   │   │   ├── tool_dispatcher.py
+│   │   │   │   └── usage_tracker.py
+│   │   │   ├── __init__.py
+│   │   │   ├── agent_config.py
+│   │   │   ├── agent_helpers.py
+│   │   │   ├── message_handler.py
+│   │   │   ├── openai_response_validation.py
+│   │   │   ├── response_state.py
+│   │   │   ├── result_wrapper.py
+│   │   │   ├── state_transition.py
+│   │   │   ├── streaming.py
+│   │   │   ├── tool_buffer.py
+│   │   │   ├── tool_executor.py
+│   │   │   └── truncation_checker.py
+│   │   ├── resume/
+│   │   │   ├── __init__.py
+│   │   │   ├── filter.py
+│   │   │   ├── prune.py
+│   │   │   ├── sanitize.py
+│   │   │   ├── sanitize_debug.py
+│   │   │   └── summary.py
+│   │   ├── __init__.py
+│   │   └── main.py
+│   ├── logging/
+│   │   ├── __init__.py
+│   │   ├── handlers.py
+│   │   ├── levels.py
+│   │   ├── manager.py
+│   │   └── records.py
+│   ├── prompting/
+│   │   ├── __init__.py
+│   │   └── prompting_engine.py
+│   ├── types/
+│   │   ├── __init__.py
+│   │   ├── agent_state.py
+│   │   ├── state.py
+│   │   ├── state_structures.py
+│   │   └── tool_registry.py
+│   ├── __init__.py
+│   ├── configuration.py
+│   ├── constants.py
+│   ├── file_filter.py
+│   ├── formatting.py
+│   ├── lsp_status.py
+│   ├── messaging.py
+│   ├── shared_types.py
+│   ├── state.py
+│   ├── system_paths.py
+│   └── user_configuration.py
+├── indexing/
+├── infrastructure/
+│   ├── __init__.py
+│   ├── file_filter.py
+│   └── llm_types.py
+├── lsp/
+├── prompts/
+│   └── system_prompt.md
+├── tools/
+│   ├── authorization/
+│   ├── grep_components/
+│   │   ├── __init__.py
+│   │   ├── file_filter.py
+│   │   ├── pattern_matcher.py
+│   │   ├── result_formatter.py
+│   │   └── search_result.py
+│   ├── lsp/
+│   │   ├── __init__.py
+│   │   ├── client.py
+│   │   ├── diagnostics.py
+│   │   └── servers.py
+│   ├── messaging/
+│   ├── parsing/
+│   │   ├── __init__.py
+│   │   ├── command_parser.py
+│   │   ├── json_utils.py
+│   │   ├── retry.py
+│   │   └── tool_parser.py
+│   ├── prompts/
+│   │   ├── bash_prompt.xml
+│   │   ├── glob_prompt.xml
+│   │   ├── grep_prompt.xml
+│   │   ├── list_dir_prompt.xml
+│   │   ├── read_file_prompt.xml
+│   │   ├── submit_prompt.xml
+│   │   ├── update_file_prompt.xml
+│   │   ├── web_fetch_prompt.xml
+│   │   └── write_file_prompt.xml
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── formatting.py
+│   │   ├── ripgrep.py
+│   │   └── text_match.py
+│   ├── __init__.py
+│   ├── bash.py
+│   ├── decorators.py
+│   ├── glob.py
+│   ├── grep.py
+│   ├── ignore.py
+│   ├── list_dir.py
+│   ├── read_file.py
+│   ├── submit.py
+│   ├── update_file.py
+│   ├── web_fetch.py
+│   ├── write_file.py
+│   └── xml_helper.py
+├── types/
+│   ├── __init__.py
+│   ├── base.py
+│   ├── callbacks.py
+│   ├── canonical.py
+│   └── dataclasses.py
+├── ui/
+│   ├── assets/
+│   │   └── logo.ansi
 │   ├── commands/
-│   │   ├── implementations/     # Command handlers
-│   │   │   └── (command logic)
-│   │   └── slash/               # Slash command specs
-│   │       └── (command definitions)
-│   │
-│   ├── repl_components/         # REPL building blocks
-│   │   └── (reusable parts)
-│   │
-│
-├── 📚 Supporting Modules
-│
-│   ├── indexing/                # Code search infrastructure
-│   │   └── (index building)
-│   │
-│   ├── lsp/                     # Language Server Protocol
-│   │   └── (LSP client)
-│   │
-│   ├── services/                # External integrations
-│   │   ├── (git operations)
-│   │   ├── (HTTP client)
-│   │   └── (process management)
-│   │
-│   ├── types/                   # Type definitions
-│   │   └── (common types)
-│   │
-│   ├── utils/                   # General utilities
-│   │   ├── config/              # Config parsing
-│   │   ├── messaging/           # Message formatting
-│   │   ├── parsing/             # Text parsing
-│   │   ├── system/              # System operations
-│   │   └── ui/                  # UI utilities
-│   │
-│   ├── tutorial/                # Interactive tutorials
-│   │   └── (tutorial content)
-│   │
-│   ├── prompts/                 # Prompt templates
-│   │   ├── research/            # Research prompts
-│   │   │   └── sections/        # Prompt components
-│   │   └── sections/            # General prompts
-│   │
-│   └── tools_utils/             # Shared tool utilities
-│       └── (tool helpers)
-│
-└── 🗂️ Data Files (in configuration/)
-    └── models_registry.json     # Model database
-
-====================================
-Architecture Layers (Bottom → Top)
-====================================
-
-┌─────────────────────────────────┐
-│  📟 CLI / 🎨 UI (Presentation)  │  ← User interaction
-├─────────────────────────────────┤
-│  🧠 Core (Business Logic)       │  ← Agent orchestration
-├─────────────────────────────────┤
-│  🔧 Tools (Capabilities)        │  ← Agent actions
-├─────────────────────────────────┤
-│  ⚙️ Configuration (Settings)    │  ← App configuration
-└─────────────────────────────────┘
-
-====================================
-Dependency Flow
-====================================
-
-UI → Core → Tools → Configuration
- ↓
-All modules → Types → Exceptions → Constants
-
-====================================
-Key Integration Points (Seams)
-====================================
-
-Root Module:
-  • constants.py    → Constants used everywhere
-  • exceptions.py   → Exception base for all modules
-  • types/          → Type definitions used everywhere
-
-UI Module:
-  • app.py          → Main application entry
-  • main.py         → REPL orchestration
-  • renderers/      → Tool output display
-
-Core Module:
-  • agents/main.py  → Primary agent logic
-  • state/          → Application state
-  • prompting/      → Prompt construction
-
-Tools Module:
-  • decorators.py   → Tool wrapping
-  • Individual tools → Tool implementations
-
-Configuration Module:
-  • settings.py     → User preferences
-  • models.py       → Model definitions
-  • pricing.py      → Cost tracking
-
-CLI Module:
-  • commands/       → Command implementations
-  • repl_components/ → REPL building blocks
-
-====================================
-File Counts by Module
-====================================
-
-Root Module:        3 Python files
-UI:                 ~20+ Python files + CSS
-Core:               ~15+ Python files
-Tools:              ~13 Python files
-Configuration:      5 Python files + 1 JSON
-CLI:                ~10+ Python files + CSS
-Supporting Modules: ~30+ Python files
-
-Total:              ~100+ Python files
-
-====================================
-Naming Conventions
-====================================
-
-Directories/Files:  snake_case
-Classes:             CamelCase
-Functions/Methods:   snake_case
-Constants:           UPPER_SNAKE_CASE
-Enums:               CamelCase (class), UPPER_SNAKE_CASE (values)
-
-====================================
-Analysis Complete
-====================================
-
-Depth: 0 (root-level)
-Documentation: 7 MD files generated
-Output: /Users/tuna/Desktop/tunacode/docs/codebase-map/structure/
-
-Next: Proceed to depth 1 analysis for detailed subdirectory examination
+│   │   └── __init__.py
+│   ├── headless/
+│   │   ├── __init__.py
+│   │   └── output.py
+│   ├── renderers/
+│   │   ├── tools/
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py
+│   │   │   ├── bash.py
+│   │   │   ├── diagnostics.py
+│   │   │   ├── glob.py
+│   │   │   ├── grep.py
+│   │   │   ├── list_dir.py
+│   │   │   ├── read_file.py
+│   │   │   ├── syntax_utils.py
+│   │   │   ├── update_file.py
+│   │   │   ├── web_fetch.py
+│   │   │   └── write_file.py
+│   │   ├── __init__.py
+│   │   ├── agent_response.py
+│   │   ├── errors.py
+│   │   ├── panel_widths.py
+│   │   ├── panels.py
+│   │   └── search.py
+│   ├── screens/
+│   │   ├── __init__.py
+│   │   ├── model_picker.py
+│   │   ├── session_picker.py
+│   │   ├── setup.py
+│   │   ├── theme_picker.py
+│   │   └── update_confirm.py
+│   ├── styles/
+│   │   ├── layout.tcss
+│   │   ├── modals.tcss
+│   │   ├── panels.tcss
+│   │   ├── theme-nextstep.tcss
+│   │   └── widgets.tcss
+│   ├── widgets/
+│   │   ├── __init__.py
+│   │   ├── chat.py
+│   │   ├── command_autocomplete.py
+│   │   ├── editor.py
+│   │   ├── file_autocomplete.py
+│   │   ├── messages.py
+│   │   ├── resource_bar.py
+│   │   └── status_bar.py
+│   ├── __init__.py
+│   ├── app.py
+│   ├── logo_assets.py
+│   ├── main.py
+│   ├── repl_support.py
+│   ├── shell_runner.py
+│   ├── styles.py
+│   └── welcome.py
+├── utils/
+│   ├── config/
+│   ├── messaging/
+│   │   ├── __init__.py
+│   │   ├── adapter.py
+│   │   └── token_counter.py
+│   ├── parsing/
+│   ├── system/
+│   │   ├── __init__.py
+│   │   └── gitignore.py
+│   ├── ui/
+│   └── __init__.py
+├── __init__.py
+├── constants.py
+├── exceptions.py
+└── py.typed

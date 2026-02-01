@@ -157,11 +157,11 @@ The Structure Agent completed a comprehensive **depth 0 analysis** of the TunaCo
 
 ### Entry Points
 
-**Primary Entry Point:** `/Users/tuna/Desktop/tunacode/src/tunacode/ui/main.py`
+**Primary Entry Point:** `<repo_root>/src/tunacode/ui/main.py`
 - Instantiates global StateManager singleton
 - Launches TextualReplApp
 
-**CLI Entry:** `/Users/tuna/Desktop/tunacode/src/tunacode/cli/`
+**CLI Entry:** `<repo_root>/src/tunacode/cli/`
 - Command-line interface via Typer
 - REPL mode with slash commands
 
@@ -311,7 +311,7 @@ Points where new functionality can be added:
 ## Testing Strategy
 
 ### Current Test Coverage
-Located in `/Users/tuna/Desktop/tunacode/tests/`:
+Located in `<repo_root>/tests/`:
 - Tool decorator tests
 - Tool conformance tests
 - Compaction tests
@@ -333,20 +333,20 @@ Located in `/Users/tuna/Desktop/tunacode/tests/`:
 ## Extension Guide
 
 ### Adding a New Tool
-1. Create tool function in `/Users/tuna/Desktop/tunacode/src/tunacode/tools/`
+1. Create tool function in `<repo_root>/src/tunacode/tools/`
 2. Decorate with `@file_tool` or `@base_tool`
 3. Add XML prompt file in `tools/prompts/`
 4. Add to tools list in `agent_config.py`
 5. Optionally create custom renderer in `ui/renderers/tools/`
 
 ### Adding a New Agent Type
-1. Create prompt sections in `/Users/tuna/Desktop/tunacode/src/tunacode/prompts/sections/`
+1. Create prompt sections in `<repo_root>/src/tunacode/prompts/sections/`
 2. Compose prompt using `compose_prompt()`
 3. Configure tools for agent type
 4. Add agent factory logic in `agent_config.py`
 
 ### Adding a New UI Screen
-1. Create screen class in `/Users/tuna/Desktop/tunacode/src/tunacode/ui/screens/`
+1. Create screen class in `<repo_root>/src/tunacode/ui/screens/`
 2. Integrate with `TextualReplApp`
 3. Add navigation logic
 
@@ -426,7 +426,7 @@ Located in `/Users/tuna/Desktop/tunacode/tests/`:
 
 **Analysis Date:** 2026-01-04
 
-**Output Location:** `/Users/tuna/Desktop/tunacode/docs/codebase-map/`
+**Output Location:** `<repo_root>/docs/codebase-map/`
 
 ---
 

@@ -211,7 +211,7 @@ These seams represent the primary files where:
 - **Agent**: Structure Agent
 - **Tool Used**: Gemini MCP (gemini-2.5-flash)
 - **Date**: 2026-01-04
-- **Output Directory**: `/Users/tuna/Desktop/tunacode/docs/codebase-map/structure/`
+- **Output Directory**: `<repo_root>/docs/codebase-map/structure/`
 
 ## Next Steps
 
