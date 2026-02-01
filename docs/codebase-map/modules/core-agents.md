@@ -23,6 +23,8 @@ At `agent_config.py`, the `_create_model_with_retry()` function creates provider
 | Anthropic models | `AnthropicProvider` |
 | All other models | `OpenAIProvider` |
 
+OpenAI-compatible providers attach `validate_openai_chat_completion_response` as an HTTP response hook to detect error payloads and missing required fields before pydantic-ai validation.
+
 The same HTTP client, retry logic, and provider instances are used for all requests.
 
 ## Message Flow
@@ -69,6 +71,10 @@ agent.iter() -> Provider HTTP Request
 - **_create_model_with_retry()** - Model initialization with fallback
 - **load_system_prompt()** - Loads system prompt
 - **load_tunacode_context()** - Loads guide file into system prompt (defaults to `AGENTS.md`)
+
+#### openai_response_validation.py
+
+- **validate_openai_chat_completion_response()** - HTTP response hook that detects error payloads and missing required fields before pydantic-ai validation.
 
 #### node_processor.py
 - **_process_node()** - Core response processing loop

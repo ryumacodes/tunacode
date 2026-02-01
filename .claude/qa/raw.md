@@ -5,3 +5,4 @@
 [2026-01-21] [bug] model request streaming could hang before stream open; add stream watchdog and log outgoing request parts for debug.
 [2026-01-26] [bug] ReAct removal left forced_calls/guidance access in agents/main.py, triggering AttributeError on ReActState.
 2026-01-25 [smell] tools importing core limits forced allowlist; moved limits to utils to preserve dependency direction.
+[2026-01-31] [bug] OpenAI chat completions returned error payloads with null required fields, causing validation failures; added HTTP response hook validation before pydantic-ai parsing.

@@ -5,11 +5,8 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from httpx import AsyncClient, HTTPStatusError, Request
+from httpx import AsyncClient, HTTPStatusError, Request, Response
 from pydantic_ai import Agent
-
-if TYPE_CHECKING:
-    from pydantic_ai import Tool
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
@@ -17,6 +14,9 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.retries import AsyncTenacityTransport, RetryConfig, wait_retry_after
 from pydantic_ai.settings import ModelSettings
 from tenacity import retry_if_exception_type, stop_after_attempt
+
+if TYPE_CHECKING:
+    from pydantic_ai import Tool
 
 from tunacode.configuration.limits import get_max_tokens
 from tunacode.configuration.models import load_models_registry
@@ -36,9 +36,20 @@ from tunacode.tools.write_file import write_file
 
 from tunacode.infrastructure.llm_types import PydanticAgent
 
+from tunacode.core.agents.agent_components.openai_response_validation import (
+    validate_openai_chat_completion_response,
+)
 from tunacode.core.logging import get_logger
 from tunacode.core.prompting import resolve_prompt
 from tunacode.core.types import SessionStateProtocol, StateManagerProtocol
+
+REQUEST_HOOK_KEY: str = "request"
+RESPONSE_HOOK_KEY: str = "response"
+
+EventHook = Callable[..., Awaitable[None]]
+RequestHook = Callable[[Request], Awaitable[None]]
+ResponseHook = Callable[[Response], Awaitable[None]]
+EventHooks = dict[str, list[EventHook]]
 
 # Module-level cache for AGENTS.md context
 _TUNACODE_CACHE: dict[str, tuple[str, float]] = {}
@@ -106,18 +117,35 @@ def _compute_agent_version(settings: dict[str, Any], request_delay: float) -> in
     )
 
 
-def _build_request_hooks(
-    request_delay: float,
-) -> dict[str, list[Callable[[Request], Awaitable[None]]]]:
-    """Return httpx event hooks enforcing a fixed pre-request delay."""
+def _build_request_delay_hooks(request_delay: float) -> list[RequestHook]:
+    """Return request hooks enforcing a fixed pre-request delay."""
     if request_delay <= 0:
         # Reason: avoid overhead when no throttling requested
-        return {}
+        return []
 
     async def _delay_before_request(_: Request) -> None:
         await _sleep_with_delay(request_delay)
 
-    return {"request": [_delay_before_request]}
+    return [_delay_before_request]
+
+
+def _build_response_hooks() -> list[ResponseHook]:
+    """Return response hooks for OpenAI-compatible validation."""
+
+    async def _validate_response(response: Response) -> None:
+        await validate_openai_chat_completion_response(response)
+
+    return [_validate_response]
+
+
+def _build_event_hooks(request_delay: float) -> EventHooks:
+    """Return httpx event hooks for request delay and response validation."""
+    request_hooks = _build_request_delay_hooks(request_delay)
+    response_hooks = _build_response_hooks()
+    return {
+        REQUEST_HOOK_KEY: request_hooks,
+        RESPONSE_HOOK_KEY: response_hooks,
+    }
 
 
 def clear_all_caches() -> None:
@@ -275,7 +303,7 @@ def _create_model_with_retry(
     appropriate provider and model instances with the retry-enabled HTTP client.
 
     Uses models_registry.json for provider configuration (api URL, env vars).
-    Only 'anthropic' provider uses AnthropicModel, all others use OpenAI.
+    Only 'anthropic' provider uses AnthropicModel; all others use OpenAIChatModel.
     """
     env = session.user_config.get("env", {})
     settings = session.user_config.get("settings", {})
@@ -394,7 +422,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
             validate_response=lambda r: r.raise_for_status(),
         )
 
-        event_hooks = _build_request_hooks(request_delay)
+        event_hooks = _build_event_hooks(request_delay)
 
         # Set HTTP timeout: connect=10s, read=60s, write=30s, pool=5s
         # This prevents hanging forever if provider doesn't respond
