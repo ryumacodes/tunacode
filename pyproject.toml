@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "tunacode-cli"
 
-version = "0.1.53"
+version = "0.1.54"
 description = "Your agentic CLI developer."
 keywords = ["cli", "agent", "development", "automation"]
 readme = "README.md"
@@ -208,7 +208,11 @@ score = false
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tunacode"]
-include = ["src/tunacode/ui/assets/*.ansi", "src/tunacode/configuration/*.json"]
+include = [
+    "src/tunacode/ui/assets/*.ansi",
+    "src/tunacode/configuration/*.json",
+    "src/tunacode/prompts/*.md",
+]
 
 [tool.hatch.build]
 artifacts = [
