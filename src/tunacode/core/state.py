@@ -6,6 +6,7 @@ Handles user preferences, conversation history, and runtime state.
 CLAUDE_ANCHOR[state-module]: Central state management and session tracking
 """
 
+import asyncio
 import json
 import uuid
 from dataclasses import dataclass, field
@@ -16,7 +17,7 @@ from typing import Any
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.types import InputSessions, ModelName, SessionId, UserConfig
 from tunacode.types.canonical import UsageMetrics
-from tunacode.utils.messaging import estimate_tokens, get_content
+from tunacode.utils.messaging import MessageTokenCache
 
 from tunacode.core.types import ConversationState, RuntimeState, TaskState, UsageState
 
@@ -37,6 +38,8 @@ class SessionState:
     undo_initialized: bool = False
     show_thoughts: bool = False
     conversation: ConversationState = field(default_factory=ConversationState)
+    # Cached per-message token lengths to avoid full rescans
+    _message_token_cache: MessageTokenCache = field(default_factory=MessageTokenCache)
     task: TaskState = field(default_factory=TaskState)
     runtime: RuntimeState = field(default_factory=RuntimeState)
     usage: UsageState = field(default_factory=UsageState)
@@ -60,18 +63,10 @@ class SessionState:
     _debug_raw_stream_accum: str = ""
 
     def update_token_count(self) -> None:
-        """Calculate total token count from conversation messages."""
+        """Calculate total token count from conversation messages using cached lengths."""
         messages = self.conversation.messages
-        model_name = self.current_model
-        total_tokens = 0
-
-        for msg in messages:
-            content = get_content(msg)
-            if not content:
-                continue
-            token_count = estimate_tokens(content, model_name)
-            total_tokens += token_count
-
+        token_cache = self._message_token_cache
+        total_tokens = token_cache.rebuild_total(messages)
         self.conversation.total_tokens = total_tokens
 
     def adjust_token_count(self, delta: int) -> None:
@@ -243,7 +238,16 @@ class StateManager:
 
         return thoughts, cleaned_messages
 
-    def save_session(self) -> bool:
+    def _write_session_file(self, session_file: Path, session_data: dict[str, Any]) -> None:
+        session_file.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        with open(session_file, "w") as f:
+            json.dump(session_data, f, indent=2)
+
+    def _read_session_data(self, session_file: Path) -> dict[str, Any]:
+        with open(session_file) as f:
+            return json.load(f)
+
+    async def save_session(self) -> bool:
         """Save current session to disk."""
         if not self._session.project_id:
             pass
@@ -267,14 +271,12 @@ class StateManager:
 
         try:
             session_file = self._get_session_file_path()
-            session_file.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            with open(session_file, "w") as f:
-                json.dump(session_data, f, indent=2)
+            await asyncio.to_thread(self._write_session_file, session_file, session_data)
             return True
         except (PermissionError, OSError):
             return False
 
-    def load_session(self, session_id: str) -> bool:
+    async def load_session(self, session_id: str) -> bool:
         """Load a session from disk."""
         from tunacode.configuration.models import get_model_context_window
         from tunacode.configuration.paths import get_session_storage_dir
@@ -290,8 +292,7 @@ class StateManager:
             return False
 
         try:
-            with open(session_file) as f:
-                data = json.load(f)
+            data = await asyncio.to_thread(self._read_session_data, session_file)
 
             self._session.session_id = data.get("session_id", session_id)
             self._session.project_id = data.get("project_id", "")
