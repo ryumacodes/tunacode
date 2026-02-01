@@ -35,7 +35,6 @@ class MessageTokenCache:
         """Recompute total tokens, reusing cached entries when possible."""
         total_tokens = EMPTY_TOKEN_COUNT
         active_message_ids: set[int] = set()
-
         for message in messages:
             message_id = id(message)
             active_message_ids.add(message_id)
