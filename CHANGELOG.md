@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.55] - 2026-01-31
+
+### Changed
+
+- **Performance:** Phase 1 bottleneck fixes for faster response times (#341)
+  - Added `MessageTokenCache` to cache per-message token lengths, avoiding repeated stringification
+  - Converted `save_session()` and `load_session()` to async with thread pool offloading
+  - Short-circuit debug accumulators when streaming debug not enabled
+  - Capped streaming debug accumulators to prevent unbounded memory growth
+
+### Fixed
+
+- **Config:** Consolidate pytest configuration to single location (#335) - thanks @mikhailofff
+
 ## [0.1.52] - 2026-01-30
 
 ### Added
