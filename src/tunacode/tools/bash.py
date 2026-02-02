@@ -2,7 +2,6 @@
 
 import asyncio
 import os
-import re
 import subprocess
 from asyncio.subprocess import Process
 
@@ -15,21 +14,6 @@ COMMAND_OUTPUT_THRESHOLD = 3500
 COMMAND_OUTPUT_START_INDEX = 2500
 COMMAND_OUTPUT_END_SIZE = 1000
 CMD_OUTPUT_TRUNCATED = "\n...\n[truncated]\n...\n"
-
-# Enhanced dangerous patterns from run_command.py
-DESTRUCTIVE_PATTERNS = ["rm -rf", "rm -r", "rm /", "dd if=", "mkfs", "fdisk"]
-
-# Comprehensive dangerous patterns from security module
-# not ideal at all but better than nothing
-DANGEROUS_PATTERNS = [
-    r"rm\s+-rf\s+/",
-    r"sudo\s+rm",
-    r">\s*/dev/sd[a-z]",
-    r"dd\s+.*of=/dev/",
-    r"mkfs\.",
-    r"fdisk",
-    r":\(\)\{.*\}\;",
-]
 
 
 @base_tool
@@ -53,7 +37,6 @@ async def bash(
         Formatted output with exit code, stdout, and stderr.
     """
     _validate_inputs(command, cwd, timeout)
-    _validate_command_security(command)
 
     exec_env = os.environ.copy()
     if env:
@@ -102,57 +85,6 @@ async def bash(
         await _cleanup_process(process)
 
 
-def _validate_command_security(command: str) -> None:
-    """
-    Validate command security using comprehensive validation from run_command.py.
-
-    Args:
-        command: The command string to validate
-
-    Raises:
-        ToolRetryError: If the command fails security validation
-    """
-    if not command or not command.strip():
-        raise ToolRetryError("Empty command not allowed")
-
-    # Always check for the most dangerous patterns regardless of shell features
-    for pattern in DANGEROUS_PATTERNS:
-        if re.search(pattern, command, re.IGNORECASE):
-            raise ToolRetryError(f"Command contains dangerous pattern and is blocked: {pattern}")
-
-    # Check for dangerous injection patterns (more selective, before character checks)
-    strict_patterns = [
-        r";\s*rm\s+",  # Command chaining to rm
-        r"&&\s*rm\s+",  # Command chaining to rm
-        r"`[^`]*rm[^`]*`",  # Command substitution with rm
-        r"\$\([^)]*rm[^)]*\)",  # Command substitution with rm
-        r":\(\)\{.*\}\;",  # Fork bomb
-    ]
-
-    for pattern in strict_patterns:
-        if re.search(pattern, command):
-            raise ToolRetryError(f"Potentially unsafe pattern detected in command: {pattern}")
-
-    # Check for restricted characters (but allow safe environment variable usage)
-    # Allow $ when used for legitimate environment variables or shell variables
-    if re.search(r"\$[^({a-zA-Z_]", command):
-        # $ followed by something that's not a valid variable start
-        raise ToolRetryError("Potentially unsafe character '$' in command")
-
-    # Check other restricted characters but allow { } when part of valid variable expansion
-    if "{" in command or "}" in command:  # noqa: SIM102
-        # Only block braces if they're not part of valid variable expansion
-        if not re.search(r"\$\{?\w+\}?", command):
-            for char in ["{", "}"]:
-                if char in command:
-                    raise ToolRetryError(f"Potentially unsafe character '{char}' in command")
-
-    # Check remaining restricted characters
-    for char in [";", "&", "`"]:
-        if char in command:
-            raise ToolRetryError(f"Potentially unsafe character '{char}' in command")
-
-
 def _validate_inputs(command: str, cwd: str | None, timeout: int | None) -> None:
     """Validate command inputs."""
     if timeout and (timeout < 1 or timeout > 300):
@@ -165,12 +97,6 @@ def _validate_inputs(command: str, cwd: str | None, timeout: int | None) -> None
         raise ToolRetryError(
             f"Working directory '{cwd}' does not exist. "
             "Please verify the path or create the directory first."
-        )
-
-    if any(pattern in command for pattern in DESTRUCTIVE_PATTERNS):
-        raise ToolRetryError(
-            f"Command contains potentially destructive operations: {command}\n"
-            "Please confirm this is intentional and safe for your system."
         )
 
 
