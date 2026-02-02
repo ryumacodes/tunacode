@@ -27,6 +27,15 @@ Replacer = Callable[[str, str], Generator[str, None, None]]
 SINGLE_CANDIDATE_SIMILARITY_THRESHOLD = 0.0
 MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD = 0.3
 
+ANCHOR_LINE_COUNT = 2
+MIN_ANCHOR_LINES = ANCHOR_LINE_COUNT + 1
+ANCHOR_EDGE_OFFSET = 1
+MIN_ANCHOR_DISTANCE = ANCHOR_LINE_COUNT
+FULL_SIMILARITY = 1.0
+NO_SIMILARITY = 0.0
+UNSET_SIMILARITY = -1.0
+LINE_ENDING_CHARS = "\r\n"
+
 
 def levenshtein(a: str, b: str) -> int:
     """Levenshtein edit distance between two strings."""
@@ -93,7 +102,7 @@ def line_trimmed_replacer(content: str, find: str) -> Generator[str, None, None]
         if matches:
             # Join the matched lines and strip trailing line ending
             matched_block = "".join(original_lines[i : i + len(search_lines)])
-            yield matched_block.rstrip("\r\n")
+            yield matched_block.rstrip(LINE_ENDING_CHARS)
 
 
 def indentation_flexible_replacer(content: str, find: str) -> Generator[str, None, None]:
@@ -159,6 +168,129 @@ def indentation_flexible_replacer(content: str, find: str) -> Generator[str, Non
             yield block
 
 
+def _trim_trailing_empty_line(lines: list[str]) -> list[str]:
+    """Remove trailing empty line from a list of lines."""
+    if lines and lines[-1] == "":
+        return lines[:-1]
+    return lines
+
+
+def _prepare_search_lines(find: str) -> list[str] | None:
+    """Split and normalize search lines for anchor matching."""
+    search_lines = _trim_trailing_empty_line(find.split("\n"))
+    if len(search_lines) < MIN_ANCHOR_LINES:
+        return None
+    return search_lines
+
+
+def _find_anchor_candidates(
+    original_lines: list[str],
+    first_line_search: str,
+    last_line_search: str,
+) -> list[tuple[int, int]]:
+    """Return candidate anchor start/end indices in original_lines."""
+    first_indices = [
+        i for i, line in enumerate(original_lines) if line.strip() == first_line_search
+    ]
+    last_indices = [j for j, line in enumerate(original_lines) if line.strip() == last_line_search]
+
+    if not first_indices or not last_indices:
+        return []
+
+    candidates: list[tuple[int, int]] = []
+    for start_line in first_indices:
+        for end_line in last_indices:
+            if end_line - start_line < MIN_ANCHOR_DISTANCE:
+                continue
+            candidates.append((start_line, end_line))
+            break
+
+    return candidates
+
+
+def _yield_block(original_lines: list[str], start: int, end: int) -> str:
+    """Join lines from start to end (inclusive) and strip trailing line ending."""
+    return "".join(original_lines[start : end + 1]).rstrip(LINE_ENDING_CHARS)
+
+
+def _lines_to_check(search_block_size: int, actual_block_size: int) -> int:
+    middle_search_lines = search_block_size - ANCHOR_LINE_COUNT
+    middle_actual_lines = actual_block_size - ANCHOR_LINE_COUNT
+    return min(middle_search_lines, middle_actual_lines)
+
+
+def _line_similarity(original_line: str, search_line: str) -> float | None:
+    max_len = max(len(original_line), len(search_line))
+    if max_len == 0:
+        return None
+    distance = levenshtein(original_line, search_line)
+    return FULL_SIMILARITY - distance / max_len
+
+
+def _candidate_similarity(
+    original_lines: list[str],
+    search_lines: list[str],
+    start_line: int,
+    end_line: int,
+    early_exit_threshold: float | None,
+) -> float:
+    actual_block_size = end_line - start_line + 1
+    search_block_size = len(search_lines)
+    lines_to_check = _lines_to_check(search_block_size, actual_block_size)
+
+    if lines_to_check <= 0:
+        return FULL_SIMILARITY
+
+    similarity = NO_SIMILARITY
+    end_index = min(
+        search_block_size - ANCHOR_EDGE_OFFSET,
+        actual_block_size - ANCHOR_EDGE_OFFSET,
+    )
+    for line_index in range(ANCHOR_EDGE_OFFSET, end_index):
+        original_line = original_lines[start_line + line_index].strip()
+        search_line = search_lines[line_index].strip()
+        line_similarity = _line_similarity(original_line, search_line)
+        if line_similarity is None:
+            continue
+        if early_exit_threshold is not None:
+            similarity += line_similarity / lines_to_check
+            if similarity >= early_exit_threshold:
+                break
+        else:
+            similarity += line_similarity
+
+    if early_exit_threshold is not None:
+        return similarity
+
+    return similarity / lines_to_check
+
+
+def _select_best_match(
+    original_lines: list[str],
+    search_lines: list[str],
+    candidates: list[tuple[int, int]],
+) -> tuple[int, int] | None:
+    best_match: tuple[int, int] | None = None
+    max_similarity = UNSET_SIMILARITY
+
+    for start_line, end_line in candidates:
+        similarity = _candidate_similarity(
+            original_lines,
+            search_lines,
+            start_line,
+            end_line,
+            early_exit_threshold=None,
+        )
+        if similarity > max_similarity:
+            max_similarity = similarity
+            best_match = (start_line, end_line)
+
+    if max_similarity < MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD:
+        return None
+
+    return best_match
+
+
 def block_anchor_replacer(content: str, find: str) -> Generator[str, None, None]:
     """Match using first/last lines as anchors, fuzzy-match middle.
 
@@ -169,111 +301,37 @@ def block_anchor_replacer(content: str, find: str) -> Generator[str, None, None]
     """
     # Use splitlines(keepends=True) to handle both \n and \r\n correctly
     original_lines = content.splitlines(keepends=True)
-    search_lines = find.split("\n")
+    search_lines = _prepare_search_lines(find)
 
-    # Need at least 3 lines for anchor matching to make sense
-    if len(search_lines) < 3:
-        return
-
-    # Remove trailing empty line if present
-    if search_lines[-1] == "":
-        search_lines.pop()
-
-    if len(search_lines) < 3:
+    if search_lines is None:
         return
 
     first_line_search = search_lines[0].strip()
     last_line_search = search_lines[-1].strip()
-    search_block_size = len(search_lines)
-
-    # Build indices in O(n) instead of O(n^2) nested loop
-    first_indices = [
-        i for i, line in enumerate(original_lines) if line.strip() == first_line_search
-    ]
-    last_indices = [j for j, line in enumerate(original_lines) if line.strip() == last_line_search]
-
-    if not first_indices or not last_indices:
-        return
-
-    # Find valid pairs in O(k^2) where k << n typically
-    candidates: list[tuple[int, int]] = []
-    for i in first_indices:
-        for j in last_indices:
-            if j > i + 1:  # Need at least one line between anchors
-                candidates.append((i, j))
-                break  # Only first matching last anchor after this first
+    candidates = _find_anchor_candidates(original_lines, first_line_search, last_line_search)
 
     if not candidates:
         return
 
-    def yield_block(start: int, end: int) -> str:
-        """Join lines from start to end (inclusive) and strip trailing line ending."""
-        return "".join(original_lines[start : end + 1]).rstrip("\r\n")
-
-    # Handle single candidate (use relaxed threshold)
     if len(candidates) == 1:
         start_line, end_line = candidates[0]
-        actual_block_size = end_line - start_line + 1
-
-        similarity = 0.0
-        lines_to_check = min(search_block_size - 2, actual_block_size - 2)
-
-        if lines_to_check > 0:
-            for j in range(1, min(search_block_size - 1, actual_block_size - 1)):
-                original_line = original_lines[start_line + j].strip()
-                search_line = search_lines[j].strip()
-                max_len = max(len(original_line), len(search_line))
-
-                if max_len == 0:
-                    continue
-
-                distance = levenshtein(original_line, search_line)
-                similarity += (1 - distance / max_len) / lines_to_check
-
-                if similarity >= SINGLE_CANDIDATE_SIMILARITY_THRESHOLD:
-                    break
-        else:
-            # No middle lines to compare, accept based on anchors
-            similarity = 1.0
-
+        similarity = _candidate_similarity(
+            original_lines,
+            search_lines,
+            start_line,
+            end_line,
+            early_exit_threshold=SINGLE_CANDIDATE_SIMILARITY_THRESHOLD,
+        )
         if similarity >= SINGLE_CANDIDATE_SIMILARITY_THRESHOLD:
-            yield yield_block(start_line, end_line)
+            yield _yield_block(original_lines, start_line, end_line)
         return
 
-    # Multiple candidates - find best match
-    best_match: tuple[int, int] | None = None
-    max_similarity = -1.0
+    best_match = _select_best_match(original_lines, search_lines, candidates)
+    if best_match is None:
+        return
 
-    for start_line, end_line in candidates:
-        actual_block_size = end_line - start_line + 1
-
-        similarity = 0.0
-        lines_to_check = min(search_block_size - 2, actual_block_size - 2)
-
-        if lines_to_check > 0:
-            for j in range(1, min(search_block_size - 1, actual_block_size - 1)):
-                original_line = original_lines[start_line + j].strip()
-                search_line = search_lines[j].strip()
-                max_len = max(len(original_line), len(search_line))
-
-                if max_len == 0:
-                    continue
-
-                distance = levenshtein(original_line, search_line)
-                similarity += 1 - distance / max_len
-
-            similarity /= lines_to_check  # Average similarity
-        else:
-            similarity = 1.0
-
-        if similarity > max_similarity:
-            max_similarity = similarity
-            best_match = (start_line, end_line)
-
-    # Check threshold for multiple candidates
-    if max_similarity >= MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD and best_match:
-        start_line, end_line = best_match
-        yield yield_block(start_line, end_line)
+    start_line, end_line = best_match
+    yield _yield_block(original_lines, start_line, end_line)
 
 
 # Ordered list of replacers from strict to fuzzy
