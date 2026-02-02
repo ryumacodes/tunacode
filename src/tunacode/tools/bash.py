@@ -87,6 +87,9 @@ async def bash(
 
 def _validate_inputs(command: str, cwd: str | None, timeout: int | None) -> None:
     """Validate command inputs."""
+    if not command.strip():
+        raise ToolRetryError("Empty command not allowed")
+
     if timeout and (timeout < 1 or timeout > 300):
         raise ToolRetryError(
             "Timeout must be between 1 and 300 seconds. "
