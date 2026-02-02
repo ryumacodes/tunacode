@@ -17,7 +17,6 @@ from tunacode.core.logging import get_logger
 from tunacode.core.types import AgentState, StateManagerProtocol
 
 from ..response_state import ResponseState
-from ..tool_buffer import ToolBuffer
 from ..truncation_checker import check_for_truncation
 from .message_recorder import record_thought
 from .tool_dispatcher import consume_tool_call_args, dispatch_tools, has_tool_calls
@@ -181,7 +180,6 @@ async def process_node(
     node: Any,
     tool_callback: ToolCallback | None,
     state_manager: StateManagerProtocol,
-    _tool_buffer: ToolBuffer | None = None,
     _streaming_callback: StreamingCallback | None = None,
     response_state: ResponseState | None = None,
     tool_result_callback: ToolResultCallback | None = None,
@@ -193,7 +191,6 @@ async def process_node(
         node: The agent response node to process.
         tool_callback: Callback to execute tools.
         state_manager: Session state manager.
-        _tool_buffer: Unused. Preserved for API compatibility.
         _streaming_callback: Unused. Preserved for API compatibility.
         response_state: State machine for response tracking.
         tool_result_callback: Callback for tool result display.
