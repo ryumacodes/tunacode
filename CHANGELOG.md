@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.56] - 2026-02-02
+
+### Fixed
+
+- **Tools:** Normalize whitespace in tool names before dispatch to prevent unknown-tool errors
+
 ## [0.1.55] - 2026-01-31
 
 ### Changed
