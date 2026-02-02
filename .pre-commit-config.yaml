@@ -151,7 +151,11 @@ repos:
       # Dependency layer check
       - id: dependency-layers
         name: Check dependency layers
-        entry: uv run python scripts/grimp_layers_report.py
+        entry: >-
+          bash -c 'set -euo pipefail; uv run python scripts/grimp_layers_report.py;
+          git add docs/architecture/dependencies/DEPENDENCY_LAYERS.md
+          docs/architecture/dependencies/DEPENDENCY_LAYERS.dot
+          docs/architecture/dependencies/DEPENDENCY_LAYERS.png'
         language: system
         pass_filenames: false
         always_run: true
