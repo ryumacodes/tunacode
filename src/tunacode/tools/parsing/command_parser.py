@@ -1,4 +1,4 @@
-"""Module: tunacode.cli.command_parser
+"""Module: tunacode.tools.parsing.command_parser
 
 Command parsing utilities for the Textual REPL."""
 

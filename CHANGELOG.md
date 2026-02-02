@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **CLI:** Removed `tunacode.cli` compatibility shim; use `tunacode.ui.main`
+
 ## [0.1.57] - 2026-02-02
 
 ### Changed

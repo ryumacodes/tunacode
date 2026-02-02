@@ -2,7 +2,6 @@ digraph tunacode_layers {
   rankdir=TB;
   node [shape=box, style=filled, fontname=Arial];
 
-  cli [label="cli"];
   ui [label="ui"];
   core [label="core"];
   infrastructure [label="infrastructure"];
@@ -13,7 +12,6 @@ digraph tunacode_layers {
   exceptions [label="exceptions"];
   types [label="types"];
 
-  cli -> ui [label="1"];
   configuration -> constants [label="6"];
   configuration -> exceptions [label="1"];
   configuration -> types [label="4"];

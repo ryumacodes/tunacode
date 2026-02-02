@@ -5,7 +5,6 @@ Generated: 2026-02-02
 ## Layer Order (topological)
 
 ```
-cli
 ui
 core
 infrastructure
@@ -21,7 +20,6 @@ types
 
 | From | To | Count |
 |------|----|-------|
-| cli | ui | 1 |
 | configuration | constants | 6 |
 | configuration | exceptions | 1 |
 | configuration | types | 4 |
