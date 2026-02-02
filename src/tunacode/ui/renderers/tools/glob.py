@@ -21,7 +21,7 @@ from tunacode.ui.renderers.tools.base import (
     build_hook_params_prefix,
     tool_renderer,
 )
-from tunacode.ui.renderers.tools.syntax_utils import get_lexer, get_color
+from tunacode.ui.renderers.tools.syntax_utils import get_color, get_lexer
 
 
 @dataclass

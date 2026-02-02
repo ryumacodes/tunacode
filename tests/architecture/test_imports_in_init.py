@@ -1,4 +1,4 @@
-"""Check that everything that is included as objects defining the public API of a module or package is defined."""
+"""Ensure __all__ exports only items defined in __init__ modules."""
 
 import ast
 from pathlib import Path
@@ -9,7 +9,7 @@ from .test_import_order import SOURCE_ROOT as source_root
 def get_imports(init_file: Path) -> list[str]:
     """Get all objects except __all__."""
 
-    with open(init_file, "r") as f:
+    with open(init_file) as f:
         root = ast.parse(f.read())
 
     objects = []
@@ -30,14 +30,14 @@ def get_imports(init_file: Path) -> list[str]:
                 objects.append(node.target.id)
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             objects.append(node.name)
-    
+
     return objects
 
 
 def get_public_imports(init_file: Path) -> list[str]:
     """Get all public imports."""
 
-    with open(init_file, "r") as f:
+    with open(init_file) as f:
         root = ast.parse(f.read())
 
     for node in ast.iter_child_nodes(root):
@@ -45,9 +45,12 @@ def get_public_imports(init_file: Path) -> list[str]:
             for target in node.targets:
                 if isinstance(target, ast.Name) and target.id == "__all__":
                     return [elt.value for elt in node.value.elts]
-        elif isinstance(node, ast.AnnAssign):
-            if isinstance(node.target, ast.Name) and node.target.id == "__all__":
-                return [elt.value for elt in node.value.elts]
+        elif (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == "__all__"
+        ):
+            return [elt.value for elt in node.value.elts]
 
     return []
 
@@ -60,4 +63,4 @@ def test_all_exported_imports() -> None:
         if not public_imports:
             continue
         imports = get_imports(init_file)
-        assert(set(public_imports).issubset(set(imports)))
+        assert set(public_imports).issubset(set(imports))
