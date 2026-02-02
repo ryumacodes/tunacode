@@ -130,6 +130,33 @@ repos:
         pass_filenames: true
         stages: [pre-commit]
 
+      # Run tests
+      - id: pytest
+        name: Run tests
+        entry: uv run pytest -x -q
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      # Pydantic usage report
+      - id: pydantic-usage
+        name: Check pydantic usage
+        entry: uv run python scripts/pydantic_usage_report.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      # Dependency layer check
+      - id: dependency-layers
+        name: Check dependency layers
+        entry: uv run python scripts/grimp_layers_report.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
   # Import sorting with isort - DISABLED (ruff handles this with extend-select = ["I"])
   # - repo: https://github.com/pycqa/isort
   #   rev: 5.13.2

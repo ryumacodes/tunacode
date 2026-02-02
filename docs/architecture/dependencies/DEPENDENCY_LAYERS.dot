@@ -17,7 +17,7 @@ digraph tunacode_layers {
   configuration -> types [label="4"];
   core -> configuration [label="15"];
   core -> constants [label="6"];
-  core -> exceptions [label="4"];
+  core -> exceptions [label="5"];
   core -> infrastructure [label="4"];
   core -> tools [label="12"];
   core -> types [label="21"];

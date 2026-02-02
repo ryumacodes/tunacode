@@ -277,7 +277,7 @@ class TestPruneOldToolOutputs:
 
         with patch(
             "tunacode.core.agents.resume.prune.estimate_tokens",
-            side_effect=lambda text, _: 70000 if text == "large content" else 10,
+            side_effect=lambda text: 70000 if text == "large content" else 10,
         ):
             result, reclaimed = prune_old_tool_outputs(messages, "anthropic:claude-sonnet")
 
@@ -300,7 +300,7 @@ class TestPruneOldToolOutputs:
 
         messages = user_msgs + tool_msgs
 
-        def mock_tokens(text, _):
+        def mock_tokens(text: str) -> int:
             if text == "recent content":
                 return 35000
             if text == "old content":

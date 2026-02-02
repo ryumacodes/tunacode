@@ -13,12 +13,12 @@ from typing import Protocol
 from rich.console import Console
 from rich.text import Text
 
-from tunacode.types import StreamResultProtocol, ToolCallPartProtocol
-
 from tunacode.core.constants import MAX_CALLBACK_CONTENT
 from tunacode.core.shared_types import (
+    StreamResultProtocol,
     ToolArgs,
     ToolCallback,
+    ToolCallPartProtocol,
     ToolName,
     ToolResultCallback,
     ToolStartCallback,
