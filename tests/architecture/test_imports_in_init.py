@@ -15,7 +15,7 @@ def get_imports(init_file: Path) -> list[str]:
     objects = []
 
     for node in ast.iter_child_nodes(root):
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
+        if isinstance(node, ast.Import | ast.ImportFrom):
             for alias in node.names:
                 if alias.asname:
                     objects.append(alias.asname)
@@ -28,7 +28,7 @@ def get_imports(init_file: Path) -> list[str]:
         elif isinstance(node, ast.AnnAssign):
             if isinstance(node.target, ast.Name) and node.target.id != "__all__":
                 objects.append(node.target.id)
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
             objects.append(node.name)
 
     return objects

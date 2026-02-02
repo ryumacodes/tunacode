@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.57] - 2026-02-02
+
+### Changed
+
+- **Tests:** Stabilize CLI help output and normalize formatting
+
+### Fixed
+
+- **CLI:** Restore `tunacode.cli.main` import compatibility
+- **Tools:** Reject empty bash commands
+
 ## [0.1.56] - 2026-02-02
 
 ### Fixed

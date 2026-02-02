@@ -174,7 +174,7 @@ def is_type_alias(node: ast.Assign | ast.AnnAssign) -> bool:
         if isinstance(value, ast.Subscript):
             # Generic types like: list[str], dict[str, Any]
             return True
-        if isinstance(value, (ast.Tuple, ast.List)):
+        if isinstance(value, ast.Tuple | ast.List):
             # Type tuples
             return True
 
@@ -256,7 +256,7 @@ def check_file(filepath: Path) -> list[NamingViolation]:
 
     # Check module-level assignments first
     for node in tree.body:
-        if isinstance(node, (ast.Assign, ast.AnnAssign)):
+        if isinstance(node, ast.Assign | ast.AnnAssign):
             violations.extend(check_module_level_names(node, filepath))
 
     # Walk all nodes for functions and classes

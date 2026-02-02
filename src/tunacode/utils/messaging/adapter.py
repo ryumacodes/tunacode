@@ -62,7 +62,7 @@ def _get_parts(message: Any) -> list[Any]:
     parts = _get_attr(message, "parts")
     if parts is None:
         return []
-    if isinstance(parts, (list, tuple)):
+    if isinstance(parts, list | tuple):
         return list(parts)
     return []
 
@@ -217,7 +217,7 @@ def from_canonical(message: CanonicalMessage) -> dict[str, Any]:
     parts: list[dict[str, Any]] = []
 
     for part in message.parts:
-        if isinstance(part, (TextPart, ThoughtPart)):
+        if isinstance(part, TextPart | ThoughtPart):
             parts.append(
                 {
                     "part_kind": PYDANTIC_PART_KIND_TEXT,
