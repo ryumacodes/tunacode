@@ -43,6 +43,18 @@ def _is_suspicious_tool_name(tool_name: str) -> bool:
     return any(c in INVALID_TOOL_NAME_CHARS for c in tool_name)
 
 
+def _normalize_tool_name(raw_tool_name: str | None) -> str:
+    """Normalize tool names to avoid dispatch errors from whitespace."""
+    if raw_tool_name is None:
+        return UNKNOWN_TOOL_NAME
+
+    normalized_tool_name = raw_tool_name.strip()
+    if not normalized_tool_name:
+        return UNKNOWN_TOOL_NAME
+
+    return normalized_tool_name
+
+
 def _register_tool_call(
     state_manager: StateManagerProtocol,
     tool_call_id: ToolCallId | None,
@@ -115,8 +127,11 @@ async def record_tool_call_args(part: Any, state_manager: StateManagerProtocol) 
     raw_args = getattr(part, "args", {})
     parsed_args = await normalize_tool_args(raw_args)
     tool_call_id: ToolCallId | None = getattr(part, "tool_call_id", None)
-    tool_name = getattr(part, "tool_name", UNKNOWN_TOOL_NAME)
-    _register_tool_call(state_manager, tool_call_id, tool_name, parsed_args)
+    raw_tool_name = getattr(part, "tool_name", None)
+    normalized_tool_name = _normalize_tool_name(raw_tool_name)
+    if raw_tool_name != normalized_tool_name:
+        part.tool_name = normalized_tool_name
+    _register_tool_call(state_manager, tool_call_id, normalized_tool_name, parsed_args)
     return parsed_args
 
 
@@ -204,13 +219,14 @@ async def _extract_fallback_tool_calls(
 
     results: list[tuple[Any, ToolArgs]] = []
     for parsed in parsed_calls:
+        normalized_tool_name = _normalize_tool_name(parsed.tool_name)
         part = ToolCallPart(
-            tool_name=parsed.tool_name,
+            tool_name=normalized_tool_name,
             args=parsed.args,
             tool_call_id=parsed.tool_call_id,
         )
         tool_args = await normalize_tool_args(parsed.args)
-        _register_tool_call(state_manager, parsed.tool_call_id, parsed.tool_name, tool_args)
+        _register_tool_call(state_manager, parsed.tool_call_id, normalized_tool_name, tool_args)
         results.append((part, tool_args))
 
     return results
