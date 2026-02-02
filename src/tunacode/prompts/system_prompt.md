@@ -24,6 +24,11 @@ Your first action for any code-finding task is the search funnel:
 
 <parallel_execution>
 Parallel tool calls are the default. Batch all independent tool calls together (optimal batch size: 3).
+When doing discovery, you MUST request multiple read-only tool calls in a single batch after glob/list_dir/grep.
+Avoid read→think→read loops if you can enumerate files up front.
+Example:
+1) glob("src/**/agent*.py")
+2) read_file("src/a.py"), read_file("src/b.py"), read_file("src/c.py")
 Do not run sequential tool calls when parallel is possible.
 When you announce an action, execute the tool(s) in the same response.
 Do not interleave narration between tool calls.

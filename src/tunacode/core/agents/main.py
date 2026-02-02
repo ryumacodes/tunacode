@@ -253,7 +253,6 @@ class RequestOrchestrator:
 
         message_history, debug_mode, baseline_message_count = self._prepare_message_history(logger)
 
-        tool_buffer = ac.ToolBuffer()
         response_state = ac.ResponseState()
 
         try:
@@ -261,7 +260,6 @@ class RequestOrchestrator:
                 agent=agent,
                 message_history=message_history,
                 debug_mode=debug_mode,
-                tool_buffer=tool_buffer,
                 response_state=response_state,
                 baseline_message_count=baseline_message_count,
                 request_context=ctx,
@@ -426,7 +424,6 @@ class RequestOrchestrator:
         agent: Agent,
         message_history: list[Any],
         debug_mode: bool,
-        tool_buffer: ac.ToolBuffer,
         response_state: ac.ResponseState,
         baseline_message_count: int,
         request_context: RequestContext,
@@ -448,19 +445,12 @@ class RequestOrchestrator:
                     iteration_index=iteration_index,
                     agent_run_ctx=agent_run_ctx,
                     request_id=request_context.request_id,
-                    tool_buffer=tool_buffer,
                     response_state=response_state,
                     logger=logger,
                 )
                 if should_stop:
                     break
                 iteration_index += 1
-
-            await _finalize_buffered_tasks(
-                tool_buffer,
-                self.tool_callback,
-                self.state_manager,
-            )
 
             self._persist_run_messages(run_handle, baseline_message_count)
             logger.lifecycle("Request complete")
@@ -491,7 +481,6 @@ class RequestOrchestrator:
         iteration_index: int,
         agent_run_ctx: Any,
         request_id: str,
-        tool_buffer: ac.ToolBuffer,
         response_state: ac.ResponseState,
         logger: Any,
     ) -> bool:
@@ -520,7 +509,6 @@ class RequestOrchestrator:
             node,
             self.tool_callback,
             self.state_manager,
-            tool_buffer,
             streaming_callback,
             response_state,
             self.tool_result_callback,
@@ -603,26 +591,6 @@ class RequestOrchestrator:
 
 
 # Utility functions
-
-
-async def _finalize_buffered_tasks(
-    tool_buffer: ac.ToolBuffer,
-    tool_callback: ToolCallback | None,
-    state_manager: StateManagerProtocol,
-) -> None:
-    """Finalize and execute any buffered read-only tasks."""
-    if not tool_callback or not tool_buffer.has_tasks():
-        return
-
-    buffered_tasks = tool_buffer.flush()
-    task_count = len(buffered_tasks)
-    logger = get_logger()
-    buffered_message = f"Executing buffered tools (count={task_count})"
-    request_id = state_manager.session.runtime.request_id
-    logger.lifecycle(buffered_message, request_id=request_id)
-
-    # Execute
-    await ac.execute_tools_parallel(buffered_tasks, tool_callback)
 
 
 def _message_has_tool_calls(message: Any) -> bool:
