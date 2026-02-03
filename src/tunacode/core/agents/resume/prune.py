@@ -6,6 +6,7 @@ preserving conversation structure while freeing token budget.
 Inspired by OpenCode's compaction strategy.
 """
 
+from contextlib import suppress
 from typing import Any
 
 from tunacode.utils.messaging import estimate_tokens
@@ -16,6 +17,7 @@ PRUNE_MINIMUM_THRESHOLD: int = 20_000  # Only prune if savings exceed 20k
 
 PRUNE_MIN_USER_TURNS: int = 2  # Require at least 2 user turns before pruning
 PRUNE_PLACEHOLDER: str = "[Old tool result content cleared]"
+PRUNE_PLACEHOLDER_TOKENS: int = estimate_tokens(PRUNE_PLACEHOLDER)
 
 __all__ = [
     "prune_old_tool_outputs",
@@ -97,6 +99,25 @@ def count_user_turns(messages: list[Any]) -> int:
     return count
 
 
+def get_part_content_text(part: Any) -> str | None:
+    """Get content from a part as text.
+
+    Args:
+        part: Message part with content attribute
+
+    Returns:
+        String content for token estimation or None when unavailable
+    """
+    if not hasattr(part, "content"):
+        return None
+
+    content = part.content
+    if isinstance(content, str):
+        return content
+
+    return repr(content)
+
+
 def estimate_part_tokens(part: Any, model_name: str) -> int:
     """Estimate token count for a message part's content.
 
@@ -107,18 +128,20 @@ def estimate_part_tokens(part: Any, model_name: str) -> int:
     Returns:
         Estimated token count; 0 if content not extractable
     """
-    if not hasattr(part, "content"):
+    content_text = get_part_content_text(part)
+    if content_text is None:
         return 0
 
-    content = part.content
-    if not isinstance(content, str):
-        # Non-string content, estimate based on repr
-        content = repr(content)
-
-    return estimate_tokens(content)
+    return estimate_tokens(content_text)
 
 
-def prune_part_content(part: Any, model_name: str) -> int:
+def prune_part_content(
+    part: Any,
+    model_name: str,
+    *,
+    original_tokens: int | None = None,
+    placeholder_tokens: int = PRUNE_PLACEHOLDER_TOKENS,
+) -> int:
     """Replace a tool return part's content with placeholder.
 
     Mutates the part in-place. Returns tokens reclaimed.
@@ -126,27 +149,22 @@ def prune_part_content(part: Any, model_name: str) -> int:
     Args:
         part: Tool return part to prune
         model_name: Model for token estimation
+        original_tokens: Precomputed token count for the original content
+        placeholder_tokens: Token count for the placeholder content
 
     Returns:
         Number of tokens reclaimed (original - placeholder); 0 if cannot prune
     """
-    if not hasattr(part, "content"):
+    content_text = get_part_content_text(part)
+    if content_text is None:
         return 0
-
-    content = part.content
 
     # Skip already-pruned content
-    if content == PRUNE_PLACEHOLDER:
+    if content_text == PRUNE_PLACEHOLDER:
         return 0
 
-    # Calculate original tokens
-    if isinstance(content, str):
-        original_tokens = estimate_tokens(content)
-    else:
-        original_tokens = estimate_tokens(repr(content))
-
-    # Calculate placeholder tokens
-    placeholder_tokens = estimate_tokens(PRUNE_PLACEHOLDER)
+    if original_tokens is None:
+        original_tokens = estimate_tokens(content_text)
 
     # Try to replace content
     try:
@@ -185,9 +203,17 @@ def prune_old_tool_outputs(
     if user_turns < PRUNE_MIN_USER_TURNS:
         return (messages, 0)
 
+    # Get pruning thresholds
+    protect_tokens, minimum_threshold = get_prune_thresholds()
+    stop_estimation_threshold = protect_tokens + minimum_threshold
+
     # Phase 1: Scan backwards, collect tool return parts with token counts
-    # Each entry: (message_index, part_index, part, token_count)
-    tool_parts: list[tuple[int, int, Any, int]] = []
+    # Tracks the pruning boundary and stops estimating once thresholds are satisfied.
+    # Each entry: (message_index, part_index, part, token_count | None)
+    tool_parts: list[tuple[int, int, Any, int | None]] = []
+    accumulated_tokens = 0
+    prune_start_index = -1
+    stop_estimating = False
 
     for msg_idx in range(len(messages) - 1, -1, -1):
         message = messages[msg_idx]
@@ -197,42 +223,63 @@ def prune_old_tool_outputs(
         parts = message.parts
         for part_idx in range(len(parts) - 1, -1, -1):
             part = parts[part_idx]
-            if is_tool_return_part(part):
-                tokens = estimate_part_tokens(part, model_name)
-                tool_parts.append((msg_idx, part_idx, part, tokens))
+            if not is_tool_return_part(part):
+                continue
+
+            if stop_estimating:
+                tool_parts.append((msg_idx, part_idx, part, None))
+                continue
+
+            tokens = estimate_part_tokens(part, model_name)
+            accumulated_tokens += tokens
+            tool_parts.append((msg_idx, part_idx, part, tokens))
+
+            protect_reached = accumulated_tokens > protect_tokens
+            if prune_start_index < 0 and protect_reached:
+                prune_start_index = len(tool_parts) - 1
+
+            stop_estimation_reached = accumulated_tokens > stop_estimation_threshold
+            if stop_estimation_reached:
+                stop_estimating = True
 
     if not tool_parts:
         return (messages, 0)
 
-    # Get pruning thresholds
-    protect_tokens, minimum_threshold = get_prune_thresholds()
-
-    # Phase 2: Determine pruning boundary
-    accumulated_tokens = 0
-    prune_start_index = -1
-
-    for i, (_, _, _, tokens) in enumerate(tool_parts):
-        accumulated_tokens += tokens
-        if accumulated_tokens > protect_tokens:
-            prune_start_index = i
-            break
-
+    # Phase 2: Confirm pruning boundary
     # Early exit: nothing old enough to prune
     if prune_start_index < 0:
         return (messages, 0)
 
     # Phase 3: Calculate potential savings
     parts_to_prune = tool_parts[prune_start_index:]
-    total_prunable_tokens = sum(tokens for _, _, _, tokens in parts_to_prune)
 
-    # Early exit: savings below threshold
-    if total_prunable_tokens < minimum_threshold:
-        return (messages, 0)
+    # When stop_estimating is True, we've exceeded protect_tokens + minimum_threshold,
+    # guaranteeing sufficient prunable tokens exist.
+    if not stop_estimating:
+        total_prunable_tokens = sum(
+            tokens for _, _, _, tokens in parts_to_prune if tokens is not None
+        )
+        if total_prunable_tokens < minimum_threshold:
+            return (messages, 0)
 
     # Phase 4: Apply pruning
+    placeholder_tokens = PRUNE_PLACEHOLDER_TOKENS
     total_reclaimed = 0
-    for _, _, part, _ in parts_to_prune:
-        reclaimed = prune_part_content(part, model_name)
-        total_reclaimed += reclaimed
+    for _, _, part, tokens in parts_to_prune:
+        if tokens is None:
+            # Parts beyond threshold: prune without re-estimating tokens
+            content_text = get_part_content_text(part)
+            if content_text is None or content_text == PRUNE_PLACEHOLDER:
+                continue
+            with suppress(AttributeError, TypeError):
+                part.content = PRUNE_PLACEHOLDER
+        else:
+            reclaimed = prune_part_content(
+                part,
+                model_name,
+                original_tokens=tokens,
+                placeholder_tokens=placeholder_tokens,
+            )
+            total_reclaimed += reclaimed
 
     return (messages, total_reclaimed)
