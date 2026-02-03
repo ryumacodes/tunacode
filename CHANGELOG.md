@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Developer Experience:** Fixed developer onboarding issues - updated `uv sync --dev` to `uv sync --extra dev`, removed dead `.env.example` code, added missing deps (mypy, pre-commit, grimp, unimport, autoflake, dead) to dependency-groups.dev (#353) - thanks @Tanmaygangurde20
+
 ### Removed
 
 - **CLI:** Removed `tunacode.cli` compatibility shim; use `tunacode.ui.main`
