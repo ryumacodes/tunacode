@@ -17,7 +17,6 @@ from typing import Any
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.types import InputSessions, ModelName, SessionId, UserConfig
 from tunacode.types.canonical import UsageMetrics
-from tunacode.utils.messaging import estimate_messages_tokens
 
 from tunacode.core.types import ConversationState, RuntimeState, TaskState, UsageState
 
@@ -59,17 +58,6 @@ class SessionState:
     # Streaming debug instrumentation (see core/agents/agent_components/streaming.py)
     _debug_events: list[str] = field(default_factory=list)
     _debug_raw_stream_accum: str = ""
-
-    def update_token_count(self) -> None:
-        """Calculate total token count from conversation messages using heuristics."""
-        messages = self.conversation.messages
-        total_tokens = estimate_messages_tokens(messages)
-        self.conversation.total_tokens = total_tokens
-
-    def adjust_token_count(self, delta: int) -> None:
-        """Adjust total_tokens by delta (negative for reclaimed tokens)."""
-        updated_total = self.conversation.total_tokens + delta
-        self.conversation.total_tokens = max(0, updated_total)
 
 
 class StateManager:
@@ -267,7 +255,6 @@ class StateManager:
             "last_modified": self._session.last_modified,
             "working_directory": self._session.working_directory,
             "current_model": self._session.current_model,
-            "total_tokens": self._session.conversation.total_tokens,
             "session_total_usage": self._session.usage.session_total_usage.to_dict(),
             "thoughts": self._session.conversation.thoughts,
             "messages": self._serialize_messages(),
@@ -315,8 +302,6 @@ class StateManager:
             self._session.conversation.max_tokens = get_model_context_window(
                 self._session.current_model
             )
-            default_total_tokens = self._session.conversation.total_tokens
-            self._session.conversation.total_tokens = data.get("total_tokens", default_total_tokens)
             self._session.usage.session_total_usage = UsageMetrics.from_dict(
                 data.get("session_total_usage", {})
             )
