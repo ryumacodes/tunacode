@@ -312,8 +312,9 @@ def find_dangling_tool_calls(messages: list[Any]) -> set[str]:
     return_ids: set[str] = set()
 
     for msg in messages:
-        call_ids.update(get_tool_call_ids(msg))
-        return_ids.update(get_tool_return_ids(msg))
+        canonical_message = msg if isinstance(msg, CanonicalMessage) else to_canonical(msg)
+        call_ids.update(canonical_message.get_tool_call_ids())
+        return_ids.update(canonical_message.get_tool_return_ids())
 
     return call_ids - return_ids
 

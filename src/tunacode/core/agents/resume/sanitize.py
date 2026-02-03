@@ -38,6 +38,10 @@ PART_KIND_SYSTEM_PROMPT: str = "system-prompt"
 MAX_CLEANUP_ITERATIONS: int = 10
 MIN_CONSECUTIVE_REQUEST_WINDOW: int = 2
 
+ERROR_CANONICAL_CACHE_LENGTH_MISMATCH: str = (
+    "Canonical cache length {cache_length} does not match message count {message_count}"
+)
+
 REQUEST_ROLES: set[MessageRole] = {MessageRole.USER, MessageRole.SYSTEM}
 RESPONSE_ROLES: set[MessageRole] = {MessageRole.ASSISTANT, MessageRole.TOOL}
 
@@ -61,6 +65,38 @@ __all__ = [
 def _canonicalize_messages(messages: list[Any]) -> list[CanonicalMessage]:
     """Convert message list to canonical messages."""
     return to_canonical_list(messages)
+
+
+def _validate_canonical_cache(
+    messages: list[Any],
+    canonical_cache: list[CanonicalMessage] | None,
+) -> None:
+    """Ensure canonical cache length matches messages if provided."""
+    if canonical_cache is None:
+        return
+
+    cache_length = len(canonical_cache)
+    message_count = len(messages)
+    cache_matches_message_count = cache_length == message_count
+    if cache_matches_message_count:
+        return
+
+    error_message = ERROR_CANONICAL_CACHE_LENGTH_MISMATCH.format(
+        cache_length=cache_length,
+        message_count=message_count,
+    )
+    raise ValueError(error_message)
+
+
+def _resolve_canonical_cache(
+    messages: list[Any],
+    canonical_cache: list[CanonicalMessage] | None,
+) -> list[CanonicalMessage]:
+    """Return canonical cache, recomputing when missing."""
+    _validate_canonical_cache(messages, canonical_cache)
+    if canonical_cache is None:
+        return _canonicalize_messages(messages)
+    return canonical_cache
 
 
 def _is_request_message(message: CanonicalMessage) -> bool:
@@ -245,9 +281,15 @@ def _filter_tool_calls_by_tool_call_id(
 # -----------------------------------------------------------------------------
 
 
-def find_dangling_tool_call_ids(messages: list[Any]) -> set[ToolCallId]:
+def find_dangling_tool_call_ids(
+    messages: list[Any],
+    canonical_cache: list[CanonicalMessage] | None = None,
+) -> set[ToolCallId]:
     """Return tool_call_ids that never received a tool return."""
-    return find_dangling_tool_calls(messages)
+    _validate_canonical_cache(messages, canonical_cache)
+    if canonical_cache is None:
+        return find_dangling_tool_calls(messages)
+    return find_dangling_tool_calls(canonical_cache)
 
 
 def remove_dangling_tool_calls(
@@ -323,13 +365,16 @@ def remove_dangling_tool_calls(
 # -----------------------------------------------------------------------------
 
 
-def remove_empty_responses(messages: list[Any]) -> bool:
+def remove_empty_responses(
+    messages: list[Any],
+    canonical_cache: list[CanonicalMessage] | None = None,
+) -> bool:
     """Remove response messages with zero parts."""
     has_messages = bool(messages)
     if not has_messages:
         return False
 
-    canonical_messages = _canonicalize_messages(messages)
+    canonical_messages = _resolve_canonical_cache(messages, canonical_cache)
     indices_to_remove: list[int] = []
 
     for index, canonical_message in enumerate(canonical_messages):
@@ -355,13 +400,16 @@ def remove_empty_responses(messages: list[Any]) -> bool:
     return True
 
 
-def remove_consecutive_requests(messages: list[Any]) -> bool:
+def remove_consecutive_requests(
+    messages: list[Any],
+    canonical_cache: list[CanonicalMessage] | None = None,
+) -> bool:
     """Remove consecutive request messages, keeping only the last in each run."""
     message_count = len(messages)
     if message_count < MIN_CONSECUTIVE_REQUEST_WINDOW:
         return False
 
-    canonical_messages = _canonicalize_messages(messages)
+    canonical_messages = _resolve_canonical_cache(messages, canonical_cache)
     indices_to_remove: list[int] = []
 
     last_index = message_count - 1
@@ -469,7 +517,11 @@ def run_cleanup_loop(
     for cleanup_iteration in range(MAX_CLEANUP_ITERATIONS):
         any_cleanup = False
 
-        dangling_tool_call_ids = find_dangling_tool_call_ids(messages)
+        canonical_cache = _canonicalize_messages(messages)
+        dangling_tool_call_ids = find_dangling_tool_call_ids(
+            messages,
+            canonical_cache=canonical_cache,
+        )
         removed_dangling = remove_dangling_tool_calls(
             messages,
             tool_registry,
@@ -479,13 +531,23 @@ def run_cleanup_loop(
             any_cleanup = True
             total_cleanup_applied = True
             logger.lifecycle("Cleaned up dangling tool calls")
+            canonical_cache = None
 
-        removed_empty_responses = remove_empty_responses(messages)
+        canonical_cache = _resolve_canonical_cache(messages, canonical_cache)
+        removed_empty_responses = remove_empty_responses(
+            messages,
+            canonical_cache=canonical_cache,
+        )
         if removed_empty_responses:
             any_cleanup = True
             total_cleanup_applied = True
+            canonical_cache = None
 
-        removed_consecutive_requests = remove_consecutive_requests(messages)
+        canonical_cache = _resolve_canonical_cache(messages, canonical_cache)
+        removed_consecutive_requests = remove_consecutive_requests(
+            messages,
+            canonical_cache=canonical_cache,
+        )
         if removed_consecutive_requests:
             any_cleanup = True
             total_cleanup_applied = True
