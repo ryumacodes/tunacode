@@ -19,7 +19,7 @@ digraph tunacode_layers {
   core -> constants [label="6"];
   core -> exceptions [label="5"];
   core -> infrastructure [label="4"];
-  core -> tools [label="12"];
+  core -> tools [label="11"];
   core -> types [label="21"];
   core -> utils [label="5"];
   exceptions -> types [label="1"];
