@@ -6,6 +6,7 @@ preserving conversation structure while freeing token budget.
 Inspired by OpenCode's compaction strategy.
 """
 
+from contextlib import suppress
 from typing import Any
 
 from tunacode.utils.messaging import estimate_tokens
@@ -252,6 +253,8 @@ def prune_old_tool_outputs(
     # Phase 3: Calculate potential savings
     parts_to_prune = tool_parts[prune_start_index:]
 
+    # When stop_estimating is True, we've exceeded protect_tokens + minimum_threshold,
+    # guaranteeing sufficient prunable tokens exist.
     if not stop_estimating:
         total_prunable_tokens = sum(
             tokens for _, _, _, tokens in parts_to_prune if tokens is not None
@@ -263,12 +266,20 @@ def prune_old_tool_outputs(
     placeholder_tokens = PRUNE_PLACEHOLDER_TOKENS
     total_reclaimed = 0
     for _, _, part, tokens in parts_to_prune:
-        reclaimed = prune_part_content(
-            part,
-            model_name,
-            original_tokens=tokens,
-            placeholder_tokens=placeholder_tokens,
-        )
-        total_reclaimed += reclaimed
+        if tokens is None:
+            # Parts beyond threshold: prune without re-estimating tokens
+            content_text = get_part_content_text(part)
+            if content_text is None or content_text == PRUNE_PLACEHOLDER:
+                continue
+            with suppress(AttributeError, TypeError):
+                part.content = PRUNE_PLACEHOLDER
+        else:
+            reclaimed = prune_part_content(
+                part,
+                model_name,
+                original_tokens=tokens,
+                placeholder_tokens=placeholder_tokens,
+            )
+            total_reclaimed += reclaimed
 
     return (messages, total_reclaimed)
