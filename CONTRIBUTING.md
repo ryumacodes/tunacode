@@ -114,7 +114,7 @@ git rebase origin/master
 
 If your PR is open and master moves ahead, that's fine - but the initial PR must be rebased.
 
-**All pre-commit hooks must pass.** Run `uv run pre-commit run --all-files` before opening your PR. If hooks fail, fix the issues locally. PRs with failing CI will be closed.
+**All pre-commit hooks must pass.** Run `uv run pre-commit run --all-files` before opening your PR. If hooks fail, fix the issues locally. You can open a draft PR anytime, but **when you mark it ready for review, all checks must pass or the PR will be closed.**
 
 If the dev environment setup (`uv sync --extra dev && uv run pre-commit install`) is not working for you, please open an issue or PR to fix it - don't submit PRs that skip hooks.
 

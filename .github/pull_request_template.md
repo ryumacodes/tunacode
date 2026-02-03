@@ -57,4 +57,4 @@
 
 > PRs will fail CI if formatting/linting or file length rules are violated.
 > **Rebase required:** This project changes frequently. Rebase onto master before opening your PR.
-> **All pre-commit hooks must pass.** PRs with failing hooks will be closed. If dev setup isn't working, open an issue first.
+> **All pre-commit hooks must pass.** You can open a draft PR anytime, but **when marked ready for review, all checks must pass or the PR will be closed.** If dev setup isn't working, open an issue first.
