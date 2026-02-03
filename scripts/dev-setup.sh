@@ -12,22 +12,20 @@ fi
 
 # Create venv and install deps
 echo "Installing dependencies..."
-uv sync --dev
+uv sync --extra dev
 
 # Set up pre-commit hooks
 echo "Installing pre-commit hooks..."
 uv run pre-commit install
 
-# Create .env from template if missing
-if [[ ! -f .env ]] && [[ -f .env.example ]]; then
-    echo "Creating .env from template..."
-    cp .env.example .env
-    echo "Edit .env to add your API keys"
-fi
-
 # Validate environment
 echo "Validating environment..."
-uv run python -c "import tunacode; print(f'tunacode {tunacode.__version__ if hasattr(tunacode, \"__version__\") else \"installed\"}')" 2>/dev/null || echo "Package ready"
+if uv run python -c "import tunacode; print(f'tunacode {tunacode.__version__ if hasattr(tunacode, \"__version__\") else \"installed\"}')" 2>&1; then
+    echo "✓ Package validation successful"
+else
+    echo "✗ Package validation failed"
+    exit 1
+fi
 
 echo "=== Setup complete ==="
 echo "Run: uv run tunacode"

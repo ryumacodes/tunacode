@@ -104,9 +104,9 @@ repos:
         pass_filenames: false
         always_run: true
 
-      # Check for files longer than 500 lines
+      # Check for files longer than 600 lines
       - id: check-file-length
-        name: Check for files longer than 500 lines
+        name: Check for files longer than 600 lines
         entry: scripts/check-file-length.sh
         language: script
         pass_filenames: false

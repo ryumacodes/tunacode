@@ -35,9 +35,10 @@ git clone https://github.com/alchemiststudiosDOTai/tunacode.git
 cd tunacode
 
 # Create virtual environment and install dependencies
-uv sync
+uv sync --extra dev
 
-# Note: We do not use git hooks or pre-commit in this repo.
+# Install pre-commit hooks
+uv run pre-commit install
 ```
 
 ## Code Standards
