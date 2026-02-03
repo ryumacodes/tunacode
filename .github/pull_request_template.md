@@ -1,6 +1,12 @@
 ## Description
 <!-- Provide a brief description of the changes in this PR -->
 
+## Pre-PR Checklist
+<!-- These must be done BEFORE opening the PR -->
+- [ ] **Rebased onto master** (`git fetch origin && git rebase origin/master`)
+- [ ] **All pre-commit hooks pass** (`uv run pre-commit run --all-files`)
+- [ ] No new pydantic-ai imports (use adapter layer in `utils/messaging/` instead)
+
 ## Type of Change
 <!-- Mark the relevant option with an "x" -->
 - [ ] Bug fix (non-breaking change which fixes an issue)
@@ -28,6 +34,7 @@
 - [ ] Code formatted with `ruff format`
 - [ ] Code passes `ruff check` without warnings
 - [ ] No Python file exceeds **600 lines**
+- [ ] No new pydantic-ai imports (pydantic-usage-guard will fail)
 
 ## Checklist
 - [ ] My code follows the Python coding standards (type hints, f-strings, pathlib, etc.)
@@ -49,3 +56,5 @@
 <!-- Add any additional notes, screenshots, or context about the PR here -->
 
 > PRs will fail CI if formatting/linting or file length rules are violated.
+> **Rebase required:** This project changes frequently. Rebase onto master before opening your PR.
+> **All pre-commit hooks must pass.** PRs with failing hooks will be closed. If dev setup isn't working, open an issue first.

@@ -103,13 +103,36 @@ uv run pytest --cov=src/tunacode # Run with coverage
 
 ## Pull Request Process
 
+### Before Opening a PR
+
+**Rebase onto master before opening your PR.** This project changes frequently (week to week), and stale branches cause merge conflicts and CI failures. Run:
+
+```bash
+git fetch origin
+git rebase origin/master
+```
+
+If your PR is open and master moves ahead, that's fine - but the initial PR must be rebased.
+
+**All pre-commit hooks must pass.** Run `uv run pre-commit run --all-files` before opening your PR. If hooks fail, fix the issues locally. PRs with failing CI will be closed.
+
+If the dev environment setup (`uv sync --extra dev && uv run pre-commit install`) is not working for you, please open an issue or PR to fix it - don't submit PRs that skip hooks.
+
+### PR Requirements
+
 1. **Fill out the PR template** completely
-2. Ensure all checks pass:
+2. **Rebase onto master** (see above)
+3. Ensure all checks pass:
    - Ruff lint and format checks
    - File length validation (600 lines max)
-3. Self-review your changes
-4. Update documentation if needed
-5. **Address CodeRabbit feedback** - We use [CodeRabbit AI](https://coderabbit.ai) for automated code review. Please fix any issues it identifies.
+   - pydantic-usage-guard (no new pydantic-ai imports)
+4. Self-review your changes
+5. Update documentation if needed
+6. **Address CodeRabbit feedback** - We use [CodeRabbit AI](https://coderabbit.ai) for automated code review. Please fix any issues it identifies.
+
+### Pydantic-AI Containment
+
+**Do not add new pydantic-ai imports.** The project has a CI guard (`pydantic-usage-guard`) that fails if pydantic-ai usage increases. If you need pydantic-ai types, wrap them through the adapter layer in `src/tunacode/utils/messaging/` instead of importing directly in core modules.
 
 ### PR Checklist
 
