@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-02-01T19:28:28.801982+00:00",
+  "generated_at": "2026-02-03T23:02:22.516522+00:00",
   "root": ".",
   "groups": {
     "pydantic_ai_imports": {
       "name": "pydantic_ai_imports",
       "description": "Imports that reference pydantic_ai.",
       "pattern": "\\bfrom\\s+pydantic_ai\\b|\\bimport\\s+pydantic_ai\\b",
-      "match_count": 45,
-      "file_count": 23,
+      "match_count": 44,
+      "file_count": 22,
       "files": [
         {
           "path": "docs/tools/architecture.md",
@@ -94,10 +94,6 @@
           "match_count": 1
         },
         {
-          "path": "tests/unit/tools/test_submit.py",
-          "match_count": 1
-        },
-        {
           "path": "tests/unit/tools/test_tool_decorators.py",
           "match_count": 1
         }
@@ -115,15 +111,15 @@
           "match_count": 1
         },
         {
+          "path": "docs/architecture/agent-loop.md",
+          "match_count": 1
+        },
+        {
           "path": "memory-bank/research/2026-01-27_alchemy-rs-migration.md",
           "match_count": 1
         },
         {
           "path": "memory-bank/research/2026-01-28_00-25-00_api-error-logging-gaps.md",
-          "match_count": 1
-        },
-        {
-          "path": "problem_statement_model_api_error_logging.md",
           "match_count": 1
         },
         {
@@ -157,8 +153,8 @@
       "name": "field",
       "description": "Field usage.",
       "pattern": "\\bField\\b",
-      "match_count": 8,
-      "file_count": 8,
+      "match_count": 9,
+      "file_count": 9,
       "files": [
         {
           "path": "docs/codebase-map/modules/constants.md",
@@ -174,6 +170,10 @@
         },
         {
           "path": "memory-bank/research/2026-01-27_streaming-abort-context-loss.md",
+          "match_count": 1
+        },
+        {
+          "path": "memory-bank/research/2026-02-02_20-47-34_agent_bottlenecks.md",
           "match_count": 1
         },
         {

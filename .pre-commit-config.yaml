@@ -139,10 +139,13 @@ repos:
         always_run: true
         stages: [pre-commit]
 
-      # Pydantic usage report
+      # Pydantic usage report - regenerate baseline on each commit
       - id: pydantic-usage
-        name: Check pydantic usage
-        entry: uv run python scripts/pydantic_usage_report.py
+        name: Regenerate pydantic usage baseline
+        entry: >-
+          bash -c 'set -euo pipefail;
+          uv run python scripts/pydantic_usage_report.py --format json --output scripts/pydantic_usage_baseline.json;
+          git add scripts/pydantic_usage_baseline.json'
         language: system
         pass_filenames: false
         always_run: true
