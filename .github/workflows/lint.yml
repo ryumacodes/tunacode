@@ -45,3 +45,16 @@ jobs:
             exit 1
           fi
           echo "Baseline is up-to-date"
+
+  deptry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v4
+      - name: Install dependencies
+        run: uv sync --extra dev --frozen
+      - name: Check for unused dependencies
+        run: uv run deptry src/
