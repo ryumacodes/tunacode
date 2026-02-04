@@ -19,6 +19,7 @@ coverage.xml
 *.cover
 .uv-cache/
 .hypothesis/
+.test_reports/*.json
 
 # Test environments
 test_env/
