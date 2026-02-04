@@ -262,6 +262,44 @@ artifacts = [
     "src/tunacode/configuration/models_registry.json",
 ]
 
+[tool.semantic_release]
+version_variables = [
+    "src/tunacode/constants.py:APP_VERSION",
+]
+version_toml = [
+    "pyproject.toml:project.version",
+]
+branch = "master"
+changelog_file = "CHANGELOG.md"
+build_command = "python -m build"
+dist_path = "dist/"
+upload_to_release = true
+upload_to_pypi = false  # Use existing publish workflow
+remove_dist = false
+commit_message = "chore(release): bump version to {version}"
+commit_author = "github-actions <github-actions@github.com>"
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = [
+    "build",
+    "chore",
+    "ci",
+    "docs",
+    "feat",
+    "fix",
+    "perf",
+    "refactor",
+    "revert",
+    "style",
+    "test",
+]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf", "docs", "style"]
+
+[tool.semantic_release.branches.master]
+match = "master"
+prerelease = false
+
 [dependency-groups]
 dev = [
     # Testing frameworks
