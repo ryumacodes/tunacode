@@ -32,6 +32,8 @@ A terminal-based AI coding agent with a NeXTSTEP-inspired interface.
 
 ## Installation
 
+### End Users
+
 ```bash
 uv tool install tunacode-cli
 ```
@@ -39,6 +41,34 @@ uv tool install tunacode-cli
 Or with pip:
 ```bash
 pip install tunacode-cli
+```
+
+### Developers (Fresh Clone)
+
+```bash
+git clone https://github.com/alchemiststudiosDOTai/tunacode.git
+cd tunacode
+make dev-setup
+```
+
+Or without make:
+```bash
+git clone https://github.com/alchemiststudiosDOTai/tunacode.git
+cd tunacode
+./scripts/dev-setup.sh
+```
+
+## Development
+
+Common development tasks:
+
+```bash
+make dev-setup  # Full setup for fresh clone
+make install    # Install/update dependencies
+make run        # Run the development server
+make test       # Run test suite
+make lint       # Run linters
+make clean      # Clean build artifacts
 ```
 
 ## Quick Start

@@ -27,7 +27,17 @@ The maintainers can tell the difference. Put in the effort.
 - Python 3.11+ (tested on 3.11, 3.12, 3.13)
 - [uv](https://github.com/astral-sh/uv) package manager (not pip)
 
-### Setup Steps
+### Quick Setup (Recommended)
+
+```bash
+git clone https://github.com/alchemiststudiosDOTai/tunacode.git
+cd tunacode
+make dev-setup
+```
+
+### Manual Setup
+
+If you prefer not to use make:
 
 ```bash
 # Clone the repository
@@ -80,6 +90,10 @@ uv run pre-commit install
 3. **Commit frequently** with clear messages
 4. Run checks locally before pushing:
    ```bash
+   make lint          # Lint and format
+   make test          # Run tests
+
+   # Or manually:
    uv run ruff check . && uv run ruff format .   # Lint and format
    uv run mypy src/                               # Type checking
    uv run pytest                                  # Run tests
@@ -90,6 +104,9 @@ uv run pre-commit install
 ### Running Tests
 
 ```bash
+make test                        # Run all tests (recommended)
+
+# Or manually:
 uv run pytest                    # Run all tests
 uv run pytest tests/             # Run specific directory
 uv run pytest --cov=src/tunacode # Run with coverage
@@ -143,6 +160,19 @@ If the dev environment setup (`uv sync --extra dev && uv run pre-commit install`
 - [ ] CodeRabbit feedback addressed
 
 ## Quick Command Reference
+
+### Make Commands
+
+| Command | Description |
+|---------|-------------|
+| `make dev-setup` | Full setup for fresh clone |
+| `make install` | Install/update dependencies |
+| `make run` | Run the development server |
+| `make test` | Run test suite |
+| `make lint` | Run linters and formatters |
+| `make clean` | Clean build artifacts |
+
+### Manual Commands
 
 | Command | Description |
 |---------|-------------|
