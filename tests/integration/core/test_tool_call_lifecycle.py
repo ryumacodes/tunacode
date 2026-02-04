@@ -35,7 +35,7 @@ from tunacode.core.agents.agent_components.orchestrator.tool_dispatcher import (
 from tunacode.core.agents.agent_components.response_state import ResponseState
 from tunacode.core.agents.agent_components.tool_executor import execute_tools_parallel
 from tunacode.core.agents.resume.sanitize import remove_dangling_tool_calls
-from tunacode.core.state import SessionState, StateManager
+from tunacode.core.session import SessionState, StateManager
 from tunacode.core.types import AgentState
 
 # Mark all tests in this module as hypothesis property tests

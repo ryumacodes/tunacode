@@ -10,16 +10,16 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Input, Label, Select, Static
 
-from tunacode.core.configuration import (
+from tunacode.core.ui_api.configuration import (
     DEFAULT_USER_CONFIG,
     get_models_for_provider,
     get_provider_env_var,
     get_providers,
 )
-from tunacode.core.user_configuration import save_config
+from tunacode.core.ui_api.user_configuration import save_config
 
 if TYPE_CHECKING:
-    from tunacode.core.state import StateManager
+    from tunacode.core.session import StateManager
 
 
 class SetupScreen(Screen[bool]):

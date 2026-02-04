@@ -1,5 +1,5 @@
 from tunacode.core.agents.agent_components.orchestrator import usage_tracker
-from tunacode.core.state import SessionState
+from tunacode.core.session import SessionState
 
 PROMPT_TOKENS = 12
 COMPLETION_TOKENS = 7

@@ -8,10 +8,10 @@ import sys
 import typer
 
 from tunacode.core import ConfigurationError, UserAbortError
-from tunacode.core.configuration import ApplicationSettings
-from tunacode.core.constants import ENV_OPENAI_BASE_URL
-from tunacode.core.state import StateManager
-from tunacode.core.system_paths import check_for_updates
+from tunacode.core.session import StateManager
+from tunacode.core.ui_api.configuration import ApplicationSettings
+from tunacode.core.ui_api.constants import ENV_OPENAI_BASE_URL
+from tunacode.core.ui_api.system_paths import check_for_updates
 
 from tunacode.ui.headless import resolve_output
 from tunacode.ui.repl_support import run_textual_repl
@@ -40,7 +40,7 @@ def _handle_background_task_error(task: asyncio.Task) -> None:
 
 
 def _print_version() -> None:
-    from tunacode.core.constants import APP_VERSION
+    from tunacode.core.ui_api.constants import APP_VERSION
 
     print(f"tunacode {APP_VERSION}")
 

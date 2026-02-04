@@ -13,7 +13,7 @@ from typing import Any
 from rich.console import RenderableType
 from rich.text import Text
 
-from tunacode.core.constants import (
+from tunacode.core.ui_api.constants import (
     SYNTAX_LINE_NUMBER_PADDING,
     SYNTAX_LINE_NUMBER_SEPARATOR_WIDTH,
 )
@@ -156,7 +156,7 @@ class ReadFileRenderer(BaseToolRenderer[ReadFileData]):
 
     def build_viewport(self, data: ReadFileData, max_line_width: int) -> RenderableType:
         """Zone 3: Syntax-highlighted content viewport."""
-        from tunacode.core.constants import MIN_VIEWPORT_LINES, TOOL_VIEWPORT_LINES
+        from tunacode.core.ui_api.constants import MIN_VIEWPORT_LINES, TOOL_VIEWPORT_LINES
 
         if not data.content_lines:
             return Text("(empty file)", style="dim italic")
@@ -199,7 +199,7 @@ class ReadFileRenderer(BaseToolRenderer[ReadFileData]):
         max_line_width: int,
     ) -> Text:
         """Zone 4: Status with continuation info and timing."""
-        from tunacode.core.constants import TOOL_VIEWPORT_LINES
+        from tunacode.core.ui_api.constants import TOOL_VIEWPORT_LINES
 
         status_items: list[str] = []
 

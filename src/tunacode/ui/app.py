@@ -17,15 +17,15 @@ from textual.containers import Container
 from textual.widgets import LoadingIndicator, Static
 
 from tunacode.core.agents.main import process_request
-from tunacode.core.constants import (
+from tunacode.core.session import StateManager
+from tunacode.core.ui_api.constants import (
     MIN_TOOL_PANEL_LINE_WIDTH,
     RICHLOG_CLASS_STREAMING,
     TOOL_PANEL_HORIZONTAL_INSET,
     build_nextstep_theme,
     build_tunacode_theme,
 )
-from tunacode.core.shared_types import ModelName
-from tunacode.core.state import StateManager
+from tunacode.core.ui_api.shared_types import ModelName
 
 from tunacode.ui.esc.handler import EscHandler
 from tunacode.ui.renderers.errors import render_exception
@@ -119,7 +119,7 @@ class TextualReplApp(App[None]):
         self.theme = saved_theme if saved_theme in self.available_themes else "dracula"
 
         # Initialize session persistence metadata
-        from tunacode.core.system_paths import get_project_id
+        from tunacode.core.ui_api.system_paths import get_project_id
 
         session = self.state_manager.session
         session.project_id = get_project_id()
@@ -247,7 +247,7 @@ class TextualReplApp(App[None]):
     def _get_latest_response_text(self) -> str | None:
         from pydantic_ai.messages import ModelResponse
 
-        from tunacode.core.messaging import get_content
+        from tunacode.core.ui_api.messaging import get_content
 
         messages = self.state_manager.session.conversation.messages
         for message in reversed(messages):
@@ -323,7 +323,7 @@ class TextualReplApp(App[None]):
         """Render loaded session messages to RichLog."""
         from pydantic_ai.messages import ModelRequest, ModelResponse
 
-        from tunacode.core.messaging import get_content
+        from tunacode.core.ui_api.messaging import get_content
 
         conversation = self.state_manager.session.conversation
         for msg in conversation.messages:
@@ -386,7 +386,7 @@ class TextualReplApp(App[None]):
         Args:
             filepath: Path to the file being edited
         """
-        from tunacode.core.lsp_status import get_lsp_server_info
+        from tunacode.core.ui_api.lsp_status import get_lsp_server_info
 
         info = get_lsp_server_info(filepath)
         self.resource_bar.update_lsp_status(info.server_name, info.available)

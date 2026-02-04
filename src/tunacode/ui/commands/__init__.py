@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tunacode.ui.app import TextualReplApp
 
-from tunacode.core.configuration import ApplicationSettings
+from tunacode.core.ui_api.configuration import ApplicationSettings
 
 from tunacode.ui.styles import STYLE_PRIMARY
 
@@ -98,7 +98,7 @@ class ClearCommand(Command):
         session._debug_events = []
         session._debug_raw_stream_accum = ""
 
-        from tunacode.core.shared_types import UsageMetrics
+        from tunacode.core.ui_api.shared_types import UsageMetrics
 
         session.usage.last_call_usage = UsageMetrics()
         # Keep session_total_usage - tracks lifetime session cost
@@ -147,7 +147,7 @@ def _validate_provider_api_key_with_notification(
 
     Returns True if valid (or no provider in string), False otherwise.
     """
-    from tunacode.core.configuration import validate_provider_api_key
+    from tunacode.core.ui_api.configuration import validate_provider_api_key
 
     if ":" not in model_string:
         return True
@@ -175,12 +175,12 @@ class ModelCommand(Command):
         from tunacode.core.agents.agent_components.agent_config import (
             invalidate_agent_cache,
         )
-        from tunacode.core.configuration import (
+        from tunacode.core.ui_api.configuration import (
             DEFAULT_USER_CONFIG,
             get_model_context_window,
             load_models_registry,
         )
-        from tunacode.core.user_configuration import load_config_with_defaults, save_config
+        from tunacode.core.ui_api.user_configuration import load_config_with_defaults, save_config
 
         state_manager = app.state_manager
         session = state_manager.session
@@ -254,7 +254,7 @@ class ThemeCommand(Command):
     usage = "/theme [name]"
 
     async def execute(self, app: TextualReplApp, args: str) -> None:
-        from tunacode.core.user_configuration import save_config
+        from tunacode.core.ui_api.user_configuration import save_config
 
         if args:
             theme_name = args.strip()
@@ -288,7 +288,7 @@ class ResumeCommand(Command):
     usage = "/resume [load <id>|delete <id>]"
 
     async def execute(self, app: TextualReplApp, args: str) -> None:
-        from tunacode.core.system_paths import delete_session_file
+        from tunacode.core.ui_api.system_paths import delete_session_file
 
         from tunacode.ui.screens import SessionPickerScreen
 
@@ -403,8 +403,8 @@ class UpdateCommand(Command):
         import asyncio
         import subprocess
 
-        from tunacode.core.constants import APP_VERSION
-        from tunacode.core.system_paths import check_for_updates
+        from tunacode.core.ui_api.constants import APP_VERSION
+        from tunacode.core.ui_api.system_paths import check_for_updates
 
         parts = args.split(maxsplit=1) if args else []
         subcommand = parts[0].lower() if parts else "install"

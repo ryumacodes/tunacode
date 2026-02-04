@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic_ai.messages import ModelResponse
 
-from tunacode.core.messaging import get_content
+from tunacode.core.ui_api.messaging import get_content
 
 TEXT_ATTRIBUTES: tuple[str, ...] = ("output", "text", "content", "message")
 

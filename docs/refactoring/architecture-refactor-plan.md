@@ -402,7 +402,7 @@ def test_tools_does_not_import_core():
 def test_session_state_field_count():
     """SessionState should not exceed 15 fields after decomposition."""
     import inspect
-    from tunacode.core.state import SessionState
+    from tunacode.core.session import SessionState
     fields = [f for f in inspect.get_annotations(SessionState)]
     assert len(fields) <= 15, f"SessionState has {len(fields)} fields, expected <= 15"
 ```

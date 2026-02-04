@@ -18,7 +18,7 @@ from tunacode.core.logging import (
     TUIHandler,
     get_logger,
 )
-from tunacode.core.state import StateManager
+from tunacode.core.session import StateManager
 
 
 @pytest.fixture(autouse=True)

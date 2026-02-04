@@ -5,7 +5,7 @@ from __future__ import annotations
 from rich.text import Text
 from textual.widgets import Static
 
-from tunacode.core.constants import RESOURCE_BAR_COST_FORMAT, RESOURCE_BAR_SEPARATOR
+from tunacode.core.ui_api.constants import RESOURCE_BAR_COST_FORMAT, RESOURCE_BAR_SEPARATOR
 
 from tunacode.ui.styles import (
     STYLE_ERROR,

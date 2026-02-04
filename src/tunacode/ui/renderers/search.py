@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from tunacode.core.constants import UI_COLORS
+from tunacode.core.ui_api.constants import UI_COLORS
 
 from tunacode.ui.renderers.panels import RichPanelRenderer, SearchResultData
 

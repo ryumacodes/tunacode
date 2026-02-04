@@ -12,7 +12,7 @@ from tunacode.exceptions import UserAbortError
 
 from tunacode.core.agents.agent_components.orchestrator import tool_dispatcher
 from tunacode.core.agents.agent_components.response_state import ResponseState
-from tunacode.core.state import StateManager
+from tunacode.core.session import StateManager
 from tunacode.core.types import AgentState
 
 # =============================================================================

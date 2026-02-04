@@ -99,7 +99,7 @@ class TestTUIInitialization:
 
     def test_state_manager_initializes(self) -> None:
         """Verify StateManager creates correctly."""
-        from tunacode.core.state import StateManager
+        from tunacode.core.session import StateManager
 
         state_manager = StateManager()
         assert state_manager is not None

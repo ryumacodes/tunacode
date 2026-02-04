@@ -3,7 +3,7 @@
 This module provides a core-layer interface for querying LSP server status.
 UI components can import from here without violating dependency direction.
 
-Dependency flow: ui -> core/lsp_status -> tools/lsp (valid)
+Dependency flow: ui -> core/ui_api/lsp_status -> tools/lsp (valid)
 """
 
 from dataclasses import dataclass

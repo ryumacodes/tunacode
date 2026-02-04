@@ -75,6 +75,7 @@ done < <(find . -type f \
     -not -path "$UV_CACHE_DIR_UNDERSCORE" \
     -not -path "./htmlcov/*" \
     -not -path "./reports/*" \
+    -not -path "./.test_reports/*" \
     -not -path "./node_modules/*" \
     -not -path "./llm-agent-tools/*" \
     -not -path "./.osgrep/*" \

@@ -13,8 +13,9 @@ from typing import Protocol
 from rich.console import Console
 from rich.text import Text
 
-from tunacode.core.constants import MAX_CALLBACK_CONTENT
-from tunacode.core.shared_types import (
+from tunacode.core.session import StateManager
+from tunacode.core.ui_api.constants import MAX_CALLBACK_CONTENT
+from tunacode.core.ui_api.shared_types import (
     StreamResultProtocol,
     ToolArgs,
     ToolCallback,
@@ -23,7 +24,6 @@ from tunacode.core.shared_types import (
     ToolResultCallback,
     ToolStartCallback,
 )
-from tunacode.core.state import StateManager
 
 from tunacode.ui.widgets import ToolResultDisplay
 

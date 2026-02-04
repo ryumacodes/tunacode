@@ -12,7 +12,7 @@ from typing import Any
 from rich.console import Group, RenderableType
 from rich.text import Text
 
-from tunacode.core.constants import MIN_VIEWPORT_LINES
+from tunacode.core.ui_api.constants import MIN_VIEWPORT_LINES
 
 from tunacode.ui.renderers.tools.base import (
     BaseToolRenderer,

@@ -1,4 +1,4 @@
-"""Module: tunacode.core.state
+"""Module: tunacode.core.session
 
 State management system for session data in TunaCode CLI.
 Handles user preferences, conversation history, and runtime state.
