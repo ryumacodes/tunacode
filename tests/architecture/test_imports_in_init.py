@@ -6,31 +6,33 @@ from pathlib import Path
 from .test_import_order import SOURCE_ROOT as source_root
 
 
+def _extract_names_from_node(node: ast.AST) -> list[str]:
+    """Extract defined names from a single top-level AST node."""
+    if isinstance(node, ast.Import | ast.ImportFrom):
+        return [alias.asname or alias.name for alias in node.names]
+
+    if isinstance(node, ast.Assign):
+        return [t.id for t in node.targets if isinstance(t, ast.Name) and t.id != "__all__"]
+
+    if isinstance(node, ast.AnnAssign):
+        if isinstance(node.target, ast.Name) and node.target.id != "__all__":
+            return [node.target.id]
+        return []
+
+    if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+        return [node.name]
+
+    return []
+
+
 def get_imports(init_file: Path) -> list[str]:
     """Get all objects except __all__."""
-
     with open(init_file) as f:
         root = ast.parse(f.read())
 
-    objects = []
-
+    objects: list[str] = []
     for node in ast.iter_child_nodes(root):
-        if isinstance(node, ast.Import | ast.ImportFrom):
-            for alias in node.names:
-                if alias.asname:
-                    objects.append(alias.asname)
-                else:
-                    objects.append(alias.name)
-        elif isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id != "__all__":
-                    objects.append(target.id)
-        elif isinstance(node, ast.AnnAssign):
-            if isinstance(node.target, ast.Name) and node.target.id != "__all__":
-                objects.append(node.target.id)
-        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
-            objects.append(node.name)
-
+        objects.extend(_extract_names_from_node(node))
     return objects
 
 

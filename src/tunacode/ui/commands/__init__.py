@@ -288,79 +288,96 @@ class ResumeCommand(Command):
     usage = "/resume [load <id>|delete <id>]"
 
     async def execute(self, app: TextualReplApp, args: str) -> None:
-        from tunacode.core.ui_api.system_paths import delete_session_file
-
-        from tunacode.ui.screens import SessionPickerScreen
-
         parts = args.split(maxsplit=1) if args else []
         subcommand = parts[0].lower() if parts else ""
 
-        # No args or "list" -> open picker
-        if subcommand in ("", "list"):
-            sessions = app.state_manager.list_sessions()
-            if not sessions:
-                app.notify("No saved sessions found")
-                return
+        handler = {
+            "": self._handle_list,
+            "list": self._handle_list,
+            "load": self._handle_load,
+            "delete": self._handle_delete,
+        }.get(subcommand)
 
-            current_session_id = app.state_manager.session.session_id
-
-            def on_session_selected(session_id: str | None) -> None:
-                if not session_id:
-                    return
-                asyncio.create_task(self._load_session(app, session_id, sessions))
-
-            app.push_screen(
-                SessionPickerScreen(sessions, current_session_id),
-                on_session_selected,
-            )
-
-        elif subcommand == "load":
-            if len(parts) < 2:
-                app.notify("Usage: /resume load <session-id>", severity="warning")
-                return
-
-            session_id_prefix = parts[1].strip()
-            sessions = app.state_manager.list_sessions()
-
-            matching = [s for s in sessions if s["session_id"].startswith(session_id_prefix)]
-            if not matching:
-                app.notify(f"No session found matching: {session_id_prefix}", severity="error")
-                return
-            if len(matching) > 1:
-                app.notify("Multiple sessions match, be more specific", severity="warning")
-                return
-
-            await self._load_session(app, matching[0]["session_id"], sessions)
-
-        elif subcommand == "delete":
-            if len(parts) < 2:
-                app.notify("Usage: /resume delete <session-id>", severity="warning")
-                return
-
-            session_id_prefix = parts[1].strip()
-            sessions = app.state_manager.list_sessions()
-
-            matching = [s for s in sessions if s["session_id"].startswith(session_id_prefix)]
-            if not matching:
-                app.notify(f"No session found matching: {session_id_prefix}", severity="error")
-                return
-            if len(matching) > 1:
-                app.notify("Multiple sessions match, be more specific", severity="warning")
-                return
-
-            target_session = matching[0]
-            if target_session["session_id"] == app.state_manager.session.session_id:
-                app.notify("Cannot delete current session", severity="error")
-                return
-
-            project_id = app.state_manager.session.project_id
-            if delete_session_file(project_id, target_session["session_id"]):
-                app.notify(f"Deleted session {target_session['session_id'][:8]}")
-            else:
-                app.notify("Failed to delete session", severity="error")
-
-        else:
+        if handler is None:
             app.notify(f"Unknown subcommand: {subcommand}", severity="warning")
+            return
+
+        await handler(app, parts)
+
+    async def _handle_list(self, app: TextualReplApp, parts: list[str]) -> None:
+        """Open the session picker UI."""
+        from tunacode.ui.screens import SessionPickerScreen
+
+        sessions = app.state_manager.list_sessions()
+        if not sessions:
+            app.notify("No saved sessions found")
+            return
+
+        current_session_id = app.state_manager.session.session_id
+
+        def on_session_selected(session_id: str | None) -> None:
+            if not session_id:
+                return
+            asyncio.create_task(self._load_session(app, session_id, sessions))
+
+        app.push_screen(
+            SessionPickerScreen(sessions, current_session_id),
+            on_session_selected,
+        )
+
+    def _resolve_unique_session(
+        self,
+        app: TextualReplApp,
+        parts: list[str],
+        usage_hint: str,
+    ) -> tuple[list[dict], dict] | None:
+        """Resolve a unique session from a prefix argument.
+
+        Returns (sessions, matched_session) or None if resolution failed.
+        """
+        if len(parts) < 2:
+            app.notify(f"Usage: /resume {usage_hint}", severity="warning")
+            return None
+
+        session_id_prefix = parts[1].strip()
+        sessions = app.state_manager.list_sessions()
+        matching = [s for s in sessions if s["session_id"].startswith(session_id_prefix)]
+
+        if not matching:
+            app.notify(f"No session found matching: {session_id_prefix}", severity="error")
+            return None
+        if len(matching) > 1:
+            app.notify("Multiple sessions match, be more specific", severity="warning")
+            return None
+
+        return sessions, matching[0]
+
+    async def _handle_load(self, app: TextualReplApp, parts: list[str]) -> None:
+        """Load a session by prefix."""
+        resolved = self._resolve_unique_session(app, parts, "load <session-id>")
+        if resolved is None:
+            return
+        sessions, target = resolved
+        await self._load_session(app, target["session_id"], sessions)
+
+    async def _handle_delete(self, app: TextualReplApp, parts: list[str]) -> None:
+        """Delete a session by prefix."""
+        from tunacode.core.ui_api.system_paths import delete_session_file
+
+        resolved = self._resolve_unique_session(app, parts, "delete <session-id>")
+        if resolved is None:
+            return
+        _sessions, target = resolved
+
+        if target["session_id"] == app.state_manager.session.session_id:
+            app.notify("Cannot delete current session", severity="error")
+            return
+
+        project_id = app.state_manager.session.project_id
+        if delete_session_file(project_id, target["session_id"]):
+            app.notify(f"Deleted session {target['session_id'][:8]}")
+        else:
+            app.notify("Failed to delete session", severity="error")
 
     async def _load_session(
         self,
@@ -400,78 +417,94 @@ class UpdateCommand(Command):
     usage = "/update [check]"
 
     async def execute(self, app: TextualReplApp, args: str) -> None:
+        parts = args.split(maxsplit=1) if args else []
+        subcommand = parts[0].lower() if parts else "install"
+
+        handler = {
+            "check": self._handle_check,
+            "install": self._handle_install,
+        }.get(subcommand)
+
+        if handler is None:
+            app.notify(f"Unknown subcommand: {subcommand}", severity="warning")
+            app.notify("Usage: /update [check]")
+            return
+
+        await handler(app)
+
+    async def _handle_check(self, app: TextualReplApp) -> None:
+        """Check for updates without installing."""
+        import asyncio
+
+        from tunacode.core.ui_api.constants import APP_VERSION
+        from tunacode.core.ui_api.system_paths import check_for_updates
+
+        app.notify("Checking for updates...")
+        has_update, latest_version = await asyncio.to_thread(check_for_updates)
+
+        if not has_update:
+            app.notify(f"Already on latest version ({APP_VERSION})")
+            return
+
+        app.rich_log.write(f"Current version: {APP_VERSION}")
+        app.rich_log.write(f"Latest version:  {latest_version}")
+        app.notify(f"Update available: {latest_version}")
+        app.rich_log.write("Run /update to upgrade")
+
+    async def _handle_install(self, app: TextualReplApp) -> None:
+        """Check for updates and install if available."""
         import asyncio
         import subprocess
 
         from tunacode.core.ui_api.constants import APP_VERSION
         from tunacode.core.ui_api.system_paths import check_for_updates
 
-        parts = args.split(maxsplit=1) if args else []
-        subcommand = parts[0].lower() if parts else "install"
+        from tunacode.ui.screens.update_confirm import UpdateConfirmScreen
 
-        if subcommand == "check":
-            app.notify("Checking for updates...")
-            has_update, latest_version = await asyncio.to_thread(check_for_updates)
+        app.notify("Checking for updates...")
+        has_update, latest_version = await asyncio.to_thread(check_for_updates)
 
-            if has_update:
-                app.rich_log.write(f"Current version: {APP_VERSION}")
-                app.rich_log.write(f"Latest version:  {latest_version}")
-                app.notify(f"Update available: {latest_version}")
-                app.rich_log.write("Run /update to upgrade")
-            else:
-                app.notify(f"Already on latest version ({APP_VERSION})")
+        if not has_update:
+            app.notify(f"Already on latest version ({APP_VERSION})")
+            return
 
-        elif subcommand == "install":
-            from tunacode.ui.screens.update_confirm import UpdateConfirmScreen
-
-            app.notify("Checking for updates...")
-            has_update, latest_version = await asyncio.to_thread(check_for_updates)
-
-            if not has_update:
-                app.notify(f"Already on latest version ({APP_VERSION})")
+        def on_update_confirmed(confirmed: bool | None) -> None:
+            """Handle user's response to update confirmation."""
+            if not confirmed:
+                app.notify("Update cancelled")
                 return
 
-            def on_update_confirmed(confirmed: bool | None) -> None:
-                """Handle user's response to update confirmation."""
-                if not confirmed:
-                    app.notify("Update cancelled")
-                    return
+            pkg_cmd_result = _get_package_manager_command(PACKAGE_NAME)
+            if not pkg_cmd_result:
+                app.notify("No package manager found (uv or pip)", severity="error")
+                return
 
-                pkg_cmd_result = _get_package_manager_command(PACKAGE_NAME)
-                if not pkg_cmd_result:
-                    app.notify("No package manager found (uv or pip)", severity="error")
-                    return
+            cmd, pkg_mgr = pkg_cmd_result
+            app.notify(f"Installing with {pkg_mgr}...")
 
-                cmd, pkg_mgr = pkg_cmd_result
-                app.notify(f"Installing with {pkg_mgr}...")
+            async def install_update() -> None:
+                try:
+                    result = await asyncio.to_thread(
+                        subprocess.run,
+                        cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=UPDATE_INSTALL_TIMEOUT_SECONDS,
+                    )
 
-                async def install_update() -> None:
-                    try:
-                        result = await asyncio.to_thread(
-                            subprocess.run,
-                            cmd,
-                            capture_output=True,
-                            text=True,
-                            timeout=UPDATE_INSTALL_TIMEOUT_SECONDS,
-                        )
+                    if result.returncode == 0:
+                        app.notify(f"Updated to {latest_version}!")
+                        app.rich_log.write("Restart tunacode to use the new version")
+                    else:
+                        app.notify("Update failed", severity="error")
+                        if result.stderr:
+                            app.rich_log.write(result.stderr.strip())
+                except Exception as e:
+                    app.rich_log.write(f"Error: {e}")
 
-                        if result.returncode == 0:
-                            app.notify(f"Updated to {latest_version}!")
-                            app.rich_log.write("Restart tunacode to use the new version")
-                        else:
-                            app.notify("Update failed", severity="error")
-                            if result.stderr:
-                                app.rich_log.write(result.stderr.strip())
-                    except Exception as e:
-                        app.rich_log.write(f"Error: {e}")
+            app.run_worker(install_update(), exclusive=False)
 
-                app.run_worker(install_update(), exclusive=False)
-
-            app.push_screen(UpdateConfirmScreen(APP_VERSION, latest_version), on_update_confirmed)
-
-        else:
-            app.notify(f"Unknown subcommand: {subcommand}", severity="warning")
-            app.notify("Usage: /update [check]")
+        app.push_screen(UpdateConfirmScreen(APP_VERSION, latest_version), on_update_confirmed)
 
 
 COMMANDS: dict[str, Command] = {

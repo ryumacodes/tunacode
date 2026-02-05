@@ -105,6 +105,32 @@ def line_trimmed_replacer(content: str, find: str) -> Generator[str, None, None]
             yield matched_block.rstrip(LINE_ENDING_CHARS)
 
 
+def _remove_indentation(text: str) -> str:
+    """Remove common leading indentation from all lines."""
+    lines = text.split("\n")
+    non_empty_lines = [line for line in lines if line.strip()]
+
+    if not non_empty_lines:
+        return text
+
+    min_indent = _min_indentation(non_empty_lines)
+
+    if min_indent == 0:
+        return text
+
+    return "\n".join(line[min_indent:] if line.strip() else line for line in lines)
+
+
+def _min_indentation(non_empty_lines: list[str]) -> int:
+    """Return the minimum leading whitespace count across non-empty lines."""
+    result = float("inf")
+    for line in non_empty_lines:
+        stripped = line.lstrip()
+        if stripped:
+            result = min(result, len(line) - len(stripped))
+    return 0 if result == float("inf") else int(result)
+
+
 def indentation_flexible_replacer(content: str, find: str) -> Generator[str, None, None]:
     """Match blocks after normalizing indentation.
 
@@ -112,36 +138,6 @@ def indentation_flexible_replacer(content: str, find: str) -> Generator[str, Non
     and find string, then compares. Useful when the LLM gets the
     indentation level wrong but the code structure is correct.
     """
-
-    def remove_indentation(text: str) -> str:
-        """Remove common leading indentation from all lines."""
-        lines = text.split("\n")
-        non_empty_lines = [line for line in lines if line.strip()]
-
-        if not non_empty_lines:
-            return text
-
-        # Find minimum indentation
-        min_indent = float("inf")
-        for line in non_empty_lines:
-            stripped = line.lstrip()
-            if stripped:
-                indent = len(line) - len(stripped)
-                min_indent = min(min_indent, indent)
-
-        if min_indent == float("inf") or min_indent == 0:
-            return text
-
-        # Remove the common indentation
-        result_lines = []
-        for line in lines:
-            if line.strip():
-                result_lines.append(line[int(min_indent) :])
-            else:
-                result_lines.append(line)
-
-        return "\n".join(result_lines)
-
     content_lines = content.split("\n")
     find_lines = find.split("\n")
 
@@ -153,7 +149,7 @@ def indentation_flexible_replacer(content: str, find: str) -> Generator[str, Non
         return
 
     # Normalize find AFTER trimming trailing empty line
-    normalized_find = remove_indentation("\n".join(find_lines))
+    normalized_find = _remove_indentation("\n".join(find_lines))
 
     # Pre-compute first line stripped for fail-fast check
     first_find_stripped = find_lines[0].strip()
@@ -164,7 +160,7 @@ def indentation_flexible_replacer(content: str, find: str) -> Generator[str, Non
             continue
 
         block = "\n".join(content_lines[i : i + len(find_lines)])
-        if remove_indentation(block) == normalized_find:
+        if _remove_indentation(block) == normalized_find:
             yield block
 
 
@@ -343,6 +339,40 @@ REPLACERS: list[Replacer] = [
 ]
 
 
+def _try_replace_all(content: str, search: str, new_string: str, is_exact: bool) -> str | None:
+    """Attempt replace-all for exact matches only. Returns modified content or None."""
+    if not is_exact:
+        return None
+    return content.replace(search, new_string)
+
+
+def _try_replace_unique(content: str, search: str, new_string: str) -> str | None:
+    """Replace search in content only if it appears exactly once. Returns None on duplicate."""
+    index = content.find(search)
+    if index == -1:
+        return None
+    if content.rfind(search) != index:
+        return None
+    return content[:index] + new_string + content[index + len(search) :]
+
+
+def _raise_replace_error(found_fuzzy_match_for_replace_all: bool, found_multiple: bool) -> None:
+    """Raise the appropriate ValueError for a failed replace."""
+    if found_fuzzy_match_for_replace_all:
+        raise ValueError(
+            "replace_all=True only allowed with exact matches. "
+            "Fuzzy matching found a match but replace_all is risky for non-exact matches."
+        )
+
+    if found_multiple:
+        raise ValueError(
+            "Found multiple matches for old_string. "
+            "Provide more surrounding lines in old_string to identify the correct match."
+        )
+
+    raise ValueError("old_string not found in content (tried all fuzzy matching strategies)")
+
+
 def replace(content: str, old_string: str, new_string: str, replace_all: bool = False) -> str:
     """Replace old_string with new_string using fuzzy matching.
 
@@ -376,35 +406,19 @@ def replace(content: str, old_string: str, new_string: str, replace_all: bool = 
         is_exact_match = replacer_idx == 0  # simple_replacer is exact
 
         for search in replacer(content, old_string):
-            index = content.find(search)
-            if index == -1:
+            if content.find(search) == -1:
                 continue
 
             if replace_all:
-                if not is_exact_match:
-                    # Fuzzy match with replace_all is risky - track but don't use
-                    found_fuzzy_match_for_replace_all = True
-                    continue
-                return content.replace(search, new_string)
+                result = _try_replace_all(content, search, new_string, is_exact_match)
+                if result is not None:
+                    return result
+                found_fuzzy_match_for_replace_all = True
+                continue
 
-            # Check for uniqueness - only replace if single occurrence
-            last_index = content.rfind(search)
-            if index != last_index:
-                found_multiple = True
-                continue  # Try next replacer for potentially more specific match
+            result = _try_replace_unique(content, search, new_string)
+            if result is not None:
+                return result
+            found_multiple = True
 
-            return content[:index] + new_string + content[index + len(search) :]
-
-    if found_fuzzy_match_for_replace_all:
-        raise ValueError(
-            "replace_all=True only allowed with exact matches. "
-            "Fuzzy matching found a match but replace_all is risky for non-exact matches."
-        )
-
-    if found_multiple:
-        raise ValueError(
-            "Found multiple matches for old_string. "
-            "Provide more surrounding lines in old_string to identify the correct match."
-        )
-
-    raise ValueError("old_string not found in content (tried all fuzzy matching strategies)")
+    _raise_replace_error(found_fuzzy_match_for_replace_all, found_multiple)

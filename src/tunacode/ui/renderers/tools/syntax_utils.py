@@ -198,6 +198,55 @@ def syntax_or_text(
     return Text(content)
 
 
+# Shebang keyword -> lexer mapping (checked with `in` against the shebang line)
+_SHEBANG_LEXERS: tuple[tuple[str, str], ...] = (
+    ("python", "python"),
+    ("bash", "bash"),
+    ("sh", "bash"),
+    ("node", "javascript"),
+    ("ruby", "ruby"),
+    ("perl", "perl"),
+)
+
+# Content marker -> lexer mapping (checked with `in` against full content)
+_CONTENT_MARKER_LEXERS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("def ", "class ", "import ", "from ", "if __name__"), "python"),
+    (("function ", "const ", "let ", "var ", "=>", "export ", "import "), "javascript"),
+)
+
+
+def _detect_shebang(first_line: str) -> str | None:
+    """Detect lexer from shebang line."""
+    if not first_line.startswith("#!"):
+        return None
+    for keyword, lexer in _SHEBANG_LEXERS:
+        if keyword in first_line:
+            return lexer
+    return None
+
+
+def _detect_json(content: str) -> str | None:
+    """Detect JSON content."""
+    stripped = content.strip()
+    if not (stripped.startswith("{") and stripped.endswith("}")):
+        return None
+    try:
+        import json
+
+        json.loads(stripped)
+        return "json"
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+
+def _detect_by_markers(content: str) -> str | None:
+    """Detect language by content markers."""
+    for markers, lexer in _CONTENT_MARKER_LEXERS:
+        if any(marker in content for marker in markers):
+            return lexer
+    return None
+
+
 def detect_code_lexer(content: str) -> str | None:
     """Attempt to detect programming language from content heuristics.
 
@@ -210,40 +259,8 @@ def detect_code_lexer(content: str) -> str | None:
     Returns:
         Lexer name if detected, None otherwise
     """
-    first_line = content.split("\n")[0] if content else ""
+    if not content:
+        return None
 
-    # Shebang detection
-    if first_line.startswith("#!"):
-        if "python" in first_line:
-            return "python"
-        if "bash" in first_line or "sh" in first_line:
-            return "bash"
-        if "node" in first_line:
-            return "javascript"
-        if "ruby" in first_line:
-            return "ruby"
-        if "perl" in first_line:
-            return "perl"
-
-    # JSON detection
-    stripped = content.strip()
-    if stripped.startswith("{") and stripped.endswith("}"):
-        try:
-            import json
-
-            json.loads(stripped)
-            return "json"
-        except (json.JSONDecodeError, ValueError):
-            pass
-
-    # Python detection
-    python_markers = ["def ", "class ", "import ", "from ", "if __name__"]
-    if any(marker in content for marker in python_markers):
-        return "python"
-
-    # JavaScript/TypeScript detection
-    js_markers = ["function ", "const ", "let ", "var ", "=>", "export ", "import "]
-    if any(marker in content for marker in js_markers):
-        return "javascript"
-
-    return None
+    first_line = content.split("\n")[0]
+    return _detect_shebang(first_line) or _detect_json(content) or _detect_by_markers(content)

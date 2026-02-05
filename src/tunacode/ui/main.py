@@ -151,6 +151,40 @@ def main(
     _run_textual_cli(model=model, show_setup=setup or not _config_exists())
 
 
+def _validate_cwd(cwd: str | None) -> None:
+    """Validate and change to the given working directory."""
+    if not cwd:
+        return
+    if not os.path.isdir(cwd):
+        raise SystemExit(f"Invalid working directory: {cwd} (not a directory)")
+    if not os.access(cwd, os.R_OK | os.X_OK):
+        raise SystemExit(f"Inaccessible working directory: {cwd}")
+    os.chdir(cwd)
+
+
+def _build_trajectory_json(sm: StateManager) -> str:
+    """Build JSON trajectory output from session state."""
+    conversation = sm.session.conversation
+    runtime = sm.session.runtime
+    usage = sm.session.usage
+    tool_records = runtime.tool_registry.to_legacy_records()
+    trajectory = {
+        "messages": [_serialize_message(msg) for msg in conversation.messages],
+        "tool_calls": tool_records,
+        "usage": usage.session_total_usage.to_dict(),
+        "success": True,
+    }
+    return json.dumps(trajectory, indent=2)
+
+
+def _print_headless_error(output_json: bool, error: str) -> None:
+    """Print an error in the appropriate format."""
+    if output_json:
+        print(json.dumps({"success": False, "error": error}))
+    else:
+        print(f"Error: {error}", file=sys.stderr)
+
+
 @app.command(name="run")
 def run_headless(
     prompt: str = typer.Argument(..., help="The prompt/instruction to execute"),
@@ -171,15 +205,8 @@ def run_headless(
     from tunacode.core.agents.main import process_request
 
     async def async_run() -> int:
-        # Change working directory if specified
-        if cwd:
-            if not os.path.isdir(cwd):
-                raise SystemExit(f"Invalid working directory: {cwd} (not a directory)")
-            if not os.access(cwd, os.R_OK | os.X_OK):
-                raise SystemExit(f"Inaccessible working directory: {cwd}")
-            os.chdir(cwd)
+        _validate_cwd(cwd)
 
-        # Set model if provided
         if model:
             state_manager.session.current_model = model
 
@@ -203,17 +230,7 @@ def run_headless(
             )
 
             if output_json:
-                conversation = state_manager.session.conversation
-                runtime = state_manager.session.runtime
-                usage = state_manager.session.usage
-                tool_records = runtime.tool_registry.to_legacy_records()
-                trajectory = {
-                    "messages": [_serialize_message(msg) for msg in conversation.messages],
-                    "tool_calls": tool_records,
-                    "usage": usage.session_total_usage.to_dict(),
-                    "success": True,
-                }
-                print(json.dumps(trajectory, indent=2))
+                print(_build_trajectory_json(state_manager))
                 return 0
 
             headless_output = resolve_output(agent_run, state_manager.session.conversation.messages)
@@ -222,20 +239,13 @@ def run_headless(
                 return 1
 
             print(headless_output)
-
             return 0
 
         except TimeoutError:
-            if output_json:
-                print(json.dumps({"success": False, "error": "timeout"}))
-            else:
-                print("Error: Execution timed out", file=sys.stderr)
+            _print_headless_error(output_json, "timeout" if output_json else "Execution timed out")
             return 1
         except Exception as e:
-            if output_json:
-                print(json.dumps({"success": False, "error": str(e)}))
-            else:
-                print(f"Error: {e}", file=sys.stderr)
+            _print_headless_error(output_json, str(e))
             return 1
 
     exit_code = asyncio.run(async_run())

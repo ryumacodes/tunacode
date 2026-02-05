@@ -45,6 +45,45 @@ class ReadFileData:
 class ReadFileRenderer(BaseToolRenderer[ReadFileData]):
     """Renderer for read_file tool output."""
 
+    def _parse_end_message(self, line: str) -> tuple[str, int, bool] | None:
+        """Parse an end-of-file status line. Returns (message, total_lines, has_more) or None."""
+        if line.startswith("(File has more"):
+            match = re.search(r"beyond line (\d+)", line)
+            total = int(match.group(1)) if match else 0
+            return line, total, True
+
+        if line.startswith("(End of file"):
+            match = re.search(r"total (\d+) lines", line)
+            total = int(match.group(1)) if match else 0
+            return line, total, False
+
+        return None
+
+    def _parse_content_lines(
+        self, lines: list[str]
+    ) -> tuple[list[tuple[int, str]], str, int, bool]:
+        """Parse numbered content lines and metadata from raw lines.
+
+        Returns (content_lines, end_message, total_lines, has_more).
+        """
+        content_lines: list[tuple[int, str]] = []
+        end_message = ""
+        total_lines = 0
+        has_more = False
+        line_pattern = re.compile(r"^(\d+)\|\s?(.*)")
+
+        for line in lines:
+            end_meta = self._parse_end_message(line)
+            if end_meta is not None:
+                end_message, total_lines, has_more = end_meta
+                continue
+
+            match = line_pattern.match(line)
+            if match:
+                content_lines.append((int(match.group(1)), match.group(2)))
+
+        return content_lines, end_message, total_lines, has_more
+
     def parse_result(self, args: dict[str, Any] | None, result: str) -> ReadFileData | None:
         """Extract structured data from read_file output.
 
@@ -66,48 +105,15 @@ class ReadFileRenderer(BaseToolRenderer[ReadFileData]):
         if not result or "<file>" not in result:
             return None
 
-        # Extract content between <file> tags
         file_match = re.search(r"<file>\n(.*?)\n</file>", result, re.DOTALL)
         if not file_match:
             return None
 
-        content = file_match.group(1)
-        lines = content.strip().splitlines()
-
+        lines = file_match.group(1).strip().splitlines()
         if not lines:
             return None
 
-        # Parse line-numbered content: "00001| content"
-        content_lines: list[tuple[int, str]] = []
-        end_message = ""
-        total_lines = 0
-        has_more = False
-
-        line_pattern = re.compile(r"^(\d+)\|\s?(.*)")
-
-        for line in lines:
-            # Check for end message
-            if line.startswith("(File has more"):
-                has_more = True
-                end_message = line
-                # Extract total from "Use 'offset' to read beyond line N"
-                match = re.search(r"beyond line (\d+)", line)
-                if match:
-                    total_lines = int(match.group(1))
-                continue
-            if line.startswith("(End of file"):
-                end_message = line
-                match = re.search(r"total (\d+) lines", line)
-                if match:
-                    total_lines = int(match.group(1))
-                continue
-
-            # Parse line content
-            match = line_pattern.match(line)
-            if match:
-                line_num = int(match.group(1))
-                line_content = match.group(2)
-                content_lines.append((line_num, line_content))
+        content_lines, end_message, total_lines, has_more = self._parse_content_lines(lines)
 
         if not content_lines:
             return None
@@ -115,16 +121,14 @@ class ReadFileRenderer(BaseToolRenderer[ReadFileData]):
         args = args or {}
         filepath = args.get("filepath", "unknown")
         offset = args.get("offset", 0)
-        root_path = Path.cwd()
 
-        # If total_lines not found in message, estimate from content
         if total_lines == 0:
             total_lines = content_lines[-1][0] if content_lines else 0
 
         return ReadFileData(
             filepath=filepath,
             filename=Path(filepath).name,
-            root_path=root_path,
+            root_path=Path.cwd(),
             content_lines=content_lines,
             total_lines=total_lines,
             offset=offset,

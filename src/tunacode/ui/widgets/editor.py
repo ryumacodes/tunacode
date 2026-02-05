@@ -279,26 +279,56 @@ class Editor(Input):
             wrap_width=wrap_width,
         )
 
+    def _build_empty_display(self, cursor_style: object) -> tuple[Text, int]:
+        """Build display text when input value is empty."""
+        placeholder = Text(self.placeholder, justify="left", end="", overflow="fold")
+        placeholder.stylize(self.get_component_rich_style("input--placeholder"))
+
+        if not (self.has_focus and self._cursor_visible):
+            return placeholder, 0
+
+        if len(placeholder) == 0:
+            placeholder = Text(" ", end="", overflow="fold")
+            placeholder.stylize(cursor_style, 0, 1)
+            return placeholder, 0
+
+        if self.has_paste_buffer:
+            placeholder.pad_right(1)
+            cursor_index = len(placeholder) - 1
+            placeholder.stylize(cursor_style, cursor_index, cursor_index + 1)
+            return placeholder, cursor_index
+
+        placeholder.stylize(cursor_style, 0, 1)
+        return placeholder, 0
+
+    def _apply_paste_indicator(
+        self, result: Text, cursor_index: int, show_suggestion: bool
+    ) -> tuple[Text, int]:
+        """Prepend or append paste buffer indicator to display text."""
+        paste_summary = self.paste_summary
+        if not self.has_paste_buffer or not paste_summary:
+            return result, cursor_index
+
+        indicator_style = self.get_component_rich_style("input--placeholder")
+        if self._paste_after_typed_text:
+            uses_cursor_padding = self.cursor_at_end and not show_suggestion
+            separator = "" if uses_cursor_padding else self.PASTE_INDICATOR_SEPARATOR
+            result.append(f"...{separator}{paste_summary}", style=indicator_style)
+            return result, cursor_index
+
+        prefix = Text(
+            f"{paste_summary}...{self.PASTE_INDICATOR_SEPARATOR}",
+            style=indicator_style,
+            end="",
+            overflow="fold",
+        )
+        return prefix + result, cursor_index + len(prefix.plain)
+
     def _build_wrapped_display_text(self) -> tuple[Text, int]:
         cursor_style = self.get_component_rich_style("input--cursor")
 
         if not self.value:
-            placeholder = Text(self.placeholder, justify="left", end="", overflow="fold")
-            placeholder.stylize(self.get_component_rich_style("input--placeholder"))
-            if self.has_focus and self._cursor_visible:
-                if len(placeholder) == 0:
-                    placeholder = Text(" ", end="", overflow="fold")
-                    placeholder.stylize(cursor_style, 0, 1)
-                    return placeholder, 0
-
-                if self.has_paste_buffer:
-                    placeholder.pad_right(1)
-                    cursor_index = len(placeholder) - 1
-                    placeholder.stylize(cursor_style, cursor_index, cursor_index + 1)
-                    return placeholder, cursor_index
-
-                placeholder.stylize(cursor_style, 0, 1)
-            return placeholder, 0
+            return self._build_empty_display(cursor_style)
 
         value = self.value
         value_length = len(value)
@@ -329,27 +359,7 @@ class Editor(Input):
                 cursor = self.cursor_position
                 result.stylize(cursor_style, cursor, cursor + 1)
 
-        cursor_index = self.cursor_position
-
-        if self.has_paste_buffer and (paste_summary := self.paste_summary):
-            indicator_style = self.get_component_rich_style("input--placeholder")
-            if self._paste_after_typed_text:
-                uses_cursor_padding_for_spacing = self.cursor_at_end and not show_suggestion
-                separator = (
-                    "" if uses_cursor_padding_for_spacing else self.PASTE_INDICATOR_SEPARATOR
-                )
-                result.append(f"...{separator}{paste_summary}", style=indicator_style)
-            else:
-                prefix = Text(
-                    f"{paste_summary}...{self.PASTE_INDICATOR_SEPARATOR}",
-                    style=indicator_style,
-                    end="",
-                    overflow="fold",
-                )
-                cursor_index += len(prefix.plain)
-                result = prefix + result
-
-        return result, cursor_index
+        return self._apply_paste_indicator(result, self.cursor_position, show_suggestion)
 
     def _cursor_offset_in_wrapped_lines(
         self,

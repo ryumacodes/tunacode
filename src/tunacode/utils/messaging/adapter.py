@@ -143,6 +143,50 @@ def _determine_role(message: Any) -> MessageRole:
 # =============================================================================
 
 
+def _try_legacy_dict(message: dict) -> CanonicalMessage | None:
+    """Convert legacy dict formats (thought / bare content) to canonical.
+
+    Returns None if the dict is not a legacy format.
+    """
+    if "thought" in message:
+        content = str(message.get("thought", ""))
+        return CanonicalMessage(
+            role=MessageRole.ASSISTANT,
+            parts=(ThoughtPart(content=content),),
+        )
+
+    if "content" in message and "parts" not in message and "kind" not in message:
+        content = message.get("content", "")
+        if isinstance(content, str):
+            return CanonicalMessage(
+                role=MessageRole.USER,
+                parts=(TextPart(content=content),),
+            )
+
+    return None
+
+
+def _fallback_content_parts(message: Any) -> list[CanonicalPart]:
+    """Extract text parts from a message's content field as a fallback."""
+    content = _get_attr(message, "content")
+    if not content:
+        return []
+
+    if isinstance(content, str):
+        return [TextPart(content=content)]
+
+    if isinstance(content, list):
+        parts: list[CanonicalPart] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(TextPart(content=item))
+            elif isinstance(item, dict) and "text" in item:
+                parts.append(TextPart(content=str(item["text"])))
+        return parts
+
+    return []
+
+
 def to_canonical(message: Any) -> CanonicalMessage:
     """Convert a pydantic-ai message (or dict) to canonical format.
 
@@ -154,46 +198,22 @@ def to_canonical(message: Any) -> CanonicalMessage:
     Tool calls are extracted from `parts` only. The `tool_calls` property
     on pydantic-ai objects is computed from parts, not a separate source.
     """
-    # Handle legacy dict formats first
     if isinstance(message, dict):
-        if "thought" in message:
-            content = str(message.get("thought", ""))
-            return CanonicalMessage(
-                role=MessageRole.ASSISTANT,
-                parts=(ThoughtPart(content=content),),
-            )
-
-        if "content" in message and "parts" not in message and "kind" not in message:
-            content = message.get("content", "")
-            if isinstance(content, str):
-                return CanonicalMessage(
-                    role=MessageRole.USER,
-                    parts=(TextPart(content=content),),
-                )
+        legacy = _try_legacy_dict(message)
+        if legacy is not None:
+            return legacy
 
     role = _determine_role(message)
 
-    # Extract and convert parts - the single source of truth
     raw_parts = _get_parts(message)
-    canonical_parts: list[CanonicalPart] = []
+    canonical_parts: list[CanonicalPart] = [
+        converted
+        for raw_part in raw_parts
+        if (converted := _convert_part_to_canonical(raw_part)) is not None
+    ]
 
-    for raw_part in raw_parts:
-        converted = _convert_part_to_canonical(raw_part)
-        if converted is not None:
-            canonical_parts.append(converted)
-
-    # Fallback: if no parts but has content, create a text part
     if not canonical_parts:
-        content = _get_attr(message, "content")
-        if content:
-            if isinstance(content, str):
-                canonical_parts.append(TextPart(content=content))
-            elif isinstance(content, list):
-                for item in content:
-                    if isinstance(item, str):
-                        canonical_parts.append(TextPart(content=item))
-                    elif isinstance(item, dict) and "text" in item:
-                        canonical_parts.append(TextPart(content=str(item["text"])))
+        canonical_parts = _fallback_content_parts(message)
 
     return CanonicalMessage(
         role=role,

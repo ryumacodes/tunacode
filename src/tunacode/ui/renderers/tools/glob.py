@@ -41,6 +41,29 @@ class GlobData:
 class GlobRenderer(BaseToolRenderer[GlobData]):
     """Renderer for glob tool output."""
 
+    def _extract_source_marker(self, lines: list[str]) -> tuple[str, int]:
+        """Extract source marker from first line. Returns (source, start_idx)."""
+        if lines[0].startswith("[source:"):
+            return lines[0][8:-1], 1
+        return "filesystem", 0
+
+    def _parse_file_list(self, lines: list[str]) -> tuple[list[str], bool]:
+        """Parse file paths and truncation status from output lines."""
+        files: list[str] = []
+        is_truncated = False
+
+        for raw_line in lines:
+            line = raw_line.strip()
+            if not line:
+                continue
+            if line.startswith("(truncated"):
+                is_truncated = True
+                continue
+            if line.startswith("/") or line.startswith("./") or "/" in line:
+                files.append(line)
+
+        return files, is_truncated
+
     def parse_result(self, args: dict[str, Any] | None, result: str) -> GlobData | None:
         """Extract structured data from glob output.
 
@@ -59,43 +82,18 @@ class GlobRenderer(BaseToolRenderer[GlobData]):
         if not lines:
             return None
 
-        # Extract source marker
-        source = "filesystem"
-        start_idx = 0
-        if lines[0].startswith("[source:"):
-            marker = lines[0]
-            source = marker[8:-1]  # Extract between "[source:" and "]"
-            start_idx = 1
+        source, start_idx = self._extract_source_marker(lines)
 
-        # Parse header
         if start_idx >= len(lines):
             return None
 
-        header_line = lines[start_idx]
-        header_match = re.match(r"Found (\d+) files? matching pattern: (.+)", header_line)
+        header_match = re.match(r"Found (\d+) files? matching pattern: (.+)", lines[start_idx])
         if not header_match:
-            # Check for "No files found" case
-            if "No files found" in header_line:
-                return None
             return None
 
         file_count = int(header_match.group(1))
         pattern = header_match.group(2).strip()
-
-        # Parse file list
-        files: list[str] = []
-        is_truncated = False
-
-        for line in lines[start_idx + 1 :]:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith("(truncated"):
-                is_truncated = True
-                continue
-            # File paths
-            if line.startswith("/") or line.startswith("./") or "/" in line:
-                files.append(line)
+        files, is_truncated = self._parse_file_list(lines[start_idx + 1 :])
 
         args = args or {}
         return GlobData(

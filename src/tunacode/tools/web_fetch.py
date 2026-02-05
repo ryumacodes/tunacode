@@ -152,6 +152,79 @@ def _truncate_output(content: str, max_size: int = MAX_OUTPUT_SIZE) -> str:
     return truncated + "\n\n... [Content truncated due to size] ..."
 
 
+def _raise_content_too_large(size: int) -> None:
+    """Raise ToolRetryError for oversized content."""
+    raise ToolRetryError(
+        f"Content too large ({size // 1024 // 1024}MB). "
+        f"Maximum allowed is {MAX_CONTENT_SIZE // 1024 // 1024}MB."
+    )
+
+
+async def _head_check_size(client: httpx.AsyncClient, validated_url: str) -> None:
+    """Pre-flight HEAD request to reject oversized responses early."""
+    try:
+        head_response = await client.head(validated_url)
+        content_length = head_response.headers.get("content-length")
+        if content_length and int(content_length) > MAX_CONTENT_SIZE:
+            _raise_content_too_large(int(content_length))
+    except httpx.HTTPError:
+        pass  # HEAD failed, proceed with GET
+
+
+def _decode_response(content: bytes) -> str:
+    """Decode response bytes, falling back to latin-1."""
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError:
+        return content.decode("latin-1", errors="replace")
+
+
+def _maybe_convert_html(text_content: str, content_type: str) -> str:
+    """Convert HTML to text if the response is HTML."""
+    if "text/html" in content_type or "<html" in text_content[:1000].lower():
+        return _convert_html_to_text(text_content)
+    return text_content
+
+
+async def _fetch_and_process(client: httpx.AsyncClient, validated_url: str) -> str:
+    """Fetch URL content, validate redirect, decode, and convert."""
+    await _head_check_size(client, validated_url)
+
+    response = await client.get(validated_url)
+    response.raise_for_status()
+
+    final_url = str(response.url)
+    if final_url != validated_url:
+        _validate_url(final_url)
+
+    content = response.content
+    if len(content) > MAX_CONTENT_SIZE:
+        _raise_content_too_large(len(content))
+
+    text_content = _decode_response(content)
+    content_type = response.headers.get("content-type", "").lower()
+    text_content = _maybe_convert_html(text_content, content_type)
+    return _truncate_output(text_content)
+
+
+_HTTP_STATUS_MESSAGES: dict[int, str] = {
+    404: "Page not found (404): {url}. Check the URL.",
+    403: "Access forbidden (403): {url}. The page may require authentication.",
+    429: "Rate limited (429): {url}. Try again later.",
+}
+
+
+def _handle_http_error(url: str, err: httpx.HTTPStatusError) -> None:
+    """Convert httpx.HTTPStatusError to ToolRetryError."""
+    status = err.response.status_code
+    template = _HTTP_STATUS_MESSAGES.get(status)
+    if template:
+        raise ToolRetryError(template.format(url=url)) from err
+    if status >= 500:
+        raise ToolRetryError(f"Server error ({status}): {url}. The server may be down.") from err
+    raise ToolRetryError(f"HTTP error {status} fetching {url}") from err
+
+
 @base_tool
 async def web_fetch(
     url: str,
@@ -166,10 +239,7 @@ async def web_fetch(
     Returns:
         Readable text content from the URL
     """
-    # Validate URL security
     validated_url = _validate_url(url)
-
-    # Clamp timeout to reasonable bounds
     timeout = max(5, min(timeout, 120))
 
     try:
@@ -179,51 +249,7 @@ async def web_fetch(
             max_redirects=5,
             headers={"User-Agent": USER_AGENT},
         ) as client:
-            # First, do a HEAD request to check content size
-            try:
-                head_response = await client.head(validated_url)
-                content_length = head_response.headers.get("content-length")
-                if content_length and int(content_length) > MAX_CONTENT_SIZE:
-                    raise ToolRetryError(
-                        f"Content too large ({int(content_length) // 1024 // 1024}MB). "
-                        f"Maximum allowed is {MAX_CONTENT_SIZE // 1024 // 1024}MB."
-                    )
-            except httpx.HTTPError:
-                # HEAD failed, proceed with GET and stream check
-                pass
-
-            # Fetch the actual content
-            response = await client.get(validated_url)
-            response.raise_for_status()
-
-            # Check final URL after redirects for security
-            final_url = str(response.url)
-            if final_url != validated_url:
-                _validate_url(final_url)
-
-            # Check content size
-            content = response.content
-            if len(content) > MAX_CONTENT_SIZE:
-                raise ToolRetryError(
-                    f"Content too large ({len(content) // 1024 // 1024}MB). "
-                    f"Maximum allowed is {MAX_CONTENT_SIZE // 1024 // 1024}MB."
-                )
-
-            # Decode content
-            try:
-                text_content = content.decode("utf-8")
-            except UnicodeDecodeError:
-                text_content = content.decode("latin-1", errors="replace")
-
-            # Convert HTML to text if content is HTML
-            content_type = response.headers.get("content-type", "").lower()
-            if "text/html" in content_type or "<html" in text_content[:1000].lower():
-                text_content = _convert_html_to_text(text_content)
-
-            # Truncate if too large
-            text_content = _truncate_output(text_content)
-
-            return text_content
+            return await _fetch_and_process(client, validated_url)
 
     except httpx.TimeoutException as err:
         msg = f"Request timed out after {timeout} seconds. Try again or use a shorter timeout."
@@ -232,17 +258,6 @@ async def web_fetch(
         msg = f"Too many redirects while fetching {url}. The URL may be invalid."
         raise ToolRetryError(msg) from err
     except httpx.HTTPStatusError as err:
-        status = err.response.status_code
-        if status == 404:
-            raise ToolRetryError(f"Page not found (404): {url}. Check the URL.") from err
-        if status == 403:
-            msg = f"Access forbidden (403): {url}. The page may require authentication."
-            raise ToolRetryError(msg) from err
-        if status == 429:
-            raise ToolRetryError(f"Rate limited (429): {url}. Try again later.") from err
-        if status >= 500:
-            msg = f"Server error ({status}): {url}. The server may be down."
-            raise ToolRetryError(msg) from err
-        raise ToolRetryError(f"HTTP error {status} fetching {url}") from err
+        _handle_http_error(url, err)
     except httpx.RequestError as err:
         raise ToolRetryError(f"Failed to connect to {url}: {err}") from err
