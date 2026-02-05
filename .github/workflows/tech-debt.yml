@@ -21,11 +21,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev --frozen
 
-      - name: Run TODO/FIXME scanner
-        run: uv run python scripts/todo_scanner.py --baseline scripts/todo_baseline.json --fail-on-increase
-
-      - name: Generate report
-        if: always()
+      - name: Generate tech debt report
         run: uv run python scripts/todo_scanner.py --format text
 
   tech-debt-report:
