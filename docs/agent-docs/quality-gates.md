@@ -280,3 +280,33 @@ async def process_request():
 ```
 
 **Rule:** If you can't answer "what happens to state if X raises here?" for every line that can raise, you have a bug waiting to happen.
+
+## Automated Quality Checks
+
+CI enforces additional quality standards:
+
+### Technical Debt Tracking
+
+The codebase uses a TODO/FIXME scanner to prevent silent debt accumulation.
+
+- **On PRs:** CI fails if debt increases from baseline (non-blocking check)
+- **Weekly:** Scheduled report generated with current debt status
+- **Format:** `# TODO(scope): description [TUN-XXXX]`
+
+See [tech-debt-tracking.md](./tech-debt-tracking.md) for full documentation.
+
+**Quick commands:**
+```bash
+uv run python scripts/todo_scanner.py --format text    # View current debt
+uv run python scripts/todo_scanner.py --baseline scripts/todo_baseline.json  # Update baseline
+```
+
+### CI Workflows
+
+| Check | Purpose |
+|-------|---------|
+| Ruff lint/format | Code style and formatting |
+| File length guard | No file exceeds 600 lines |
+| Pydantic usage guard | Prevent new pydantic-ai imports |
+| Tech debt scanner | Track TODO/FIXME/HACK/XXX markers |
+| Type check (non-blocking) | MyPy type checking |

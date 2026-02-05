@@ -6,6 +6,7 @@
 - [ ] **Rebased onto master** (`git fetch origin && git rebase origin/master`)
 - [ ] **All pre-commit hooks pass** (`uv run pre-commit run --all-files`)
 - [ ] No new pydantic-ai imports (use adapter layer in `utils/messaging/` instead)
+- [ ] Tech debt baseline updated (if adding TODO/FIXME markers: `uv run python scripts/todo_scanner.py --output scripts/todo_baseline.json`)
 
 ## Type of Change
 <!-- Mark the relevant option with an "x" -->

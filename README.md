@@ -71,6 +71,12 @@ make lint       # Run linters
 make clean      # Clean build artifacts
 ```
 
+View technical debt:
+
+```bash
+uv run python scripts/todo_scanner.py --format text
+```
+
 ## Quick Start
 
 ```bash

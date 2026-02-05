@@ -1,8 +1,11 @@
 # Research – Tool Dispatcher Complexity (#358)
 **Date:** 2026-02-05
 **Owner:** Claude Code
-**Phase:** Research
+**Phase:** Completed (see PR #366)
 **Git Commit:** 9ed9739dda91c3f4f463c4c8f58687f75879afc7
+**Completed:** 2026-02-05 via PR #366
+
+> **Note:** This research was completed in PR #366. The tool_dispatcher was decomposed into 6 focused submodules. See the plan document and PR for implementation details.
 
 ## Goal
 Map the current complexity issues in `tool_dispatcher.py` and identify refactoring patterns in the codebase for reducing complexity while maintaining behavior.

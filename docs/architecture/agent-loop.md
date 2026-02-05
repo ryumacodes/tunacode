@@ -19,11 +19,14 @@ ontology:
     owns: state machine, transitions
     depends: null
   tool_dispatcher:
-    owns: tool discovery, fallback parsing
+    owns: tool discovery, fallback parsing (facade over submodules)
     depends: tool_executor
   tool_executor:
     owns: parallel execution, retry logic
     depends: tool implementations
+  tool_returns:
+    owns: tool return consumption and callback emission
+    depends: tool_registry
   streaming:
     owns: token delivery, prefix seeding
     depends: pydantic-ai stream API
@@ -123,17 +126,28 @@ Merges run messages with any external additions to the conversation history.
 ## Tool Execution
 
 **File:** `src/tunacode/core/agents/agent_components/orchestrator/tool_dispatcher.py`
-**Function:** `dispatch_tools()` (lines 235-368)
+**Function:** `dispatch_tools()` (lines 73-111)
+
+The tool dispatcher is now a facade over 6 focused submodules:
+
+| Submodule | Responsibility | Lines |
+|-----------|---------------|-------|
+| `_tool_dispatcher_constants.py` | Shared constants | 20 |
+| `_tool_dispatcher_names.py` | Tool name validation/normalization | 25 |
+| `_tool_dispatcher_registry.py` | Tool call registration and arg storage | 106 |
+| `_tool_dispatcher_collection.py` | Structured and fallback tool call collection | 180 |
+| `_tool_dispatcher_execution.py` | Tool batch execution | 50 |
+| `_tool_dispatcher_logging.py` | Dispatch summary logging | 29 |
 
 ### Tool Discovery
 
-1. Inspects response parts for `part_kind == "tool-call"` (line 263)
-2. Extracts tool name, tool_call_id, and args from each part (lines 270-292)
-3. Records tool calls in the runtime tool registry
+1. Inspects response parts for `part_kind == "tool-call"`
+2. Extracts tool name, tool_call_id, and args from each part
+3. Records tool calls in the runtime tool registry via `_tool_dispatcher_registry.py`
 
 ### Fallback Parsing
 
-If no structured tool calls found, attempts fallback parsing from text (lines 294-307) using `parse_tool_calls_from_text()` to extract tool calls from markdown/text format.
+If no structured tool calls found, attempts fallback parsing from text using `parse_tool_calls_from_text()` in `_tool_dispatcher_collection.py` to extract tool calls from markdown/text format.
 
 ### Parallel Execution
 
@@ -146,7 +160,7 @@ If no structured tool calls found, attempts fallback parsing from text (lines 29
 
 ### Result Handling
 
-- Tool results consumed via `_emit_tool_returns()` in orchestrator
+- Tool results consumed via `emit_tool_returns()` in `tool_returns.py` (line 22)
 - Results sent to `tool_result_callback` for UI display
 - Tool registry marked as completed
 
@@ -256,20 +270,20 @@ The main coordination hub. Orchestrates:
 
 ### process_node()
 
-**File:** `orchestrator/orchestrator.py:179-297`
+**File:** `orchestrator/orchestrator.py:112-210`
 
 The response processor. Handles:
 1. Updates response state to ASSISTANT
-2. Emits tool returns from request part
+2. Emits tool returns from request part (via `tool_returns.py`)
 3. Records agent thoughts
 4. Updates usage metrics
 5. Processes response parts
-6. Dispatches tools
+6. Dispatches tools (via `tool_dispatcher.py` facade)
 7. Detects empty/truncated responses
 
 ### dispatch_tools()
 
-**File:** `tool_dispatcher.py:235-368`
+**File:** `orchestrator/tool_dispatcher.py:73-111` (facade over submodules)
 
 Tool orchestration. Handles:
 1. Extracts tool calls from parts
@@ -324,8 +338,11 @@ RequestOrchestrator.run()
 | `main.py` | Entry point, orchestrator, main loop |
 | `history_preparer.py` | Message history preparation and sanitization |
 | `request_logger.py` | Logging utilities for request processing |
-| `orchestrator/orchestrator.py` | Response node processing |
-| `orchestrator/tool_dispatcher.py` | Tool extraction and dispatch |
+| `orchestrator/orchestrator.py` | Response node processing (8-step coordinator) |
+| `orchestrator/tool_returns.py` | Tool return consumption and callback emission |
+| `orchestrator/debug_format.py` | Debug log formatting utilities |
+| `orchestrator/tool_dispatcher.py` | Tool extraction and dispatch (facade over submodules) |
+| `orchestrator/_tool_dispatcher_*.py` | 6 submodules: constants, names, registry, collection, execution, logging |
 | `tool_executor.py` | Parallel execution with retry |
 | `streaming.py` | Token-level streaming |
 | `response_state.py` | State machine |

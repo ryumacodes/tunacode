@@ -76,11 +76,22 @@ agent.iter() -> Provider HTTP Request
 
 - **validate_openai_chat_completion_response()** - HTTP response hook that detects error payloads and missing required fields before pydantic-ai validation.
 
-#### node_processor.py
-- **_process_node()** - Core response processing loop
-- Extracts tool calls from structured and text responses
-- Handles empty/truncated response edge cases
-- Detects submit tool calls for completion
+#### orchestrator/
+
+8-step coordinator for node processing, decomposed into focused modules:
+
+| Module | Responsibility | Key Functions |
+|--------|---------------|---------------|
+| `orchestrator.py` | 8-step node coordination | `process_node()` - main coordinator |
+| `tool_returns.py` | Tool return consumption | `emit_tool_returns()` - emit callbacks |
+| `debug_format.py` | Debug log formatting | `format_preview()`, `log_request_parts()` |
+| `tool_dispatcher.py` | Tool dispatch facade | `dispatch_tools()` - orchestrates 3-phase dispatch |
+| `_tool_dispatcher_collection.py` | Tool call collection | Structured + fallback parsing |
+| `_tool_dispatcher_registry.py` | Tool registry ops | Registration, arg storage, lifecycle |
+| `_tool_dispatcher_execution.py` | Batch execution | Execute tools in parallel |
+| `_tool_dispatcher_names.py` | Name normalization | Tool name validation |
+| `_tool_dispatcher_logging.py` | Dispatch logging | Summary logging |
+| `_tool_dispatcher_constants.py` | Shared constants | Tool/text part kinds, limits |
 
 #### streaming.py
 - **stream_model_request_node()** - Streams token deltas with debug instrumentation

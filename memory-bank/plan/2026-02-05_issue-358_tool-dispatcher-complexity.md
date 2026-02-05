@@ -1,12 +1,19 @@
 ---
 title: "Issue #358 – Tool Dispatcher Complexity Reduction Plan"
-phase: Plan
+phase: Completed
 date: "2026-02-05T00:00:00Z"
+completed_date: "2026-02-05"
+completion_pr: "#366"
 owner: "tuna"
 parent_research: "memory-bank/research/2026-02-05_tool_dispatcher_complexity_358.md"
 git_commit_at_plan: "9ed9739d"
-tags: [plan, refactor, complexity, tool-dispatcher, orchestrator, issue-358]
+git_commit_at_complete: "d5b3cc7c"
+tags: [plan, refactor, complexity, tool-dispatcher, orchestrator, issue-358, completed]
 ---
+
+**Status: COMPLETED via PR #366**
+
+The tool_dispatcher decomposition was completed on 2026-02-05. See PR #366 for implementation details.
 
 ## Objective
 

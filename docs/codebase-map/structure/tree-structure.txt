@@ -1,7 +1,7 @@
 TunaCode Source Code Structure Tree
 ===================================
 
-Generated: 2026-01-31
+Generated: 2026-02-05
 Source: <repo_root>/src/tunacode
 Output: <repo_root>/docs/codebase-map/structure/tree-structure.txt
 
@@ -22,9 +22,17 @@ src/tunacode/
 │   │   ├── agent_components/
 │   │   │   ├── orchestrator/
 │   │   │   │   ├── __init__.py
+│   │   │   │   ├── _tool_dispatcher_collection.py
+│   │   │   │   ├── _tool_dispatcher_constants.py
+│   │   │   │   ├── _tool_dispatcher_execution.py
+│   │   │   │   ├── _tool_dispatcher_logging.py
+│   │   │   │   ├── _tool_dispatcher_names.py
+│   │   │   │   ├── _tool_dispatcher_registry.py
+│   │   │   │   ├── debug_format.py
 │   │   │   │   ├── message_recorder.py
 │   │   │   │   ├── orchestrator.py
 │   │   │   │   ├── tool_dispatcher.py
+│   │   │   │   ├── tool_returns.py
 │   │   │   │   └── usage_tracker.py
 │   │   │   ├── __init__.py
 │   │   │   ├── agent_config.py

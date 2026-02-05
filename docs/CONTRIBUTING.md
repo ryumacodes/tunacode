@@ -83,6 +83,29 @@ uv run pre-commit install
 - Never silently catch and ignore exceptions
 - Fail explicitly with clear error messages
 
+### Technical Debt Markers
+
+When adding TODO, FIXME, HACK, or XXX markers to the code, follow this format:
+
+```python
+# TODO(scope): description [TUN-XXXX]
+# FIXME(core): handle edge case [TUN-1234]
+```
+
+- **Scope**: Brief identifier for the affected area (e.g., `core`, `ui`, `tools`)
+- **Description**: Clear explanation of the debt item
+- **Ticket**: Optional GitHub issue reference in `TUN-XXXX` format
+
+The CI runs a tech debt scanner on every PR. If you add new markers:
+
+1. View current debt: `uv run python scripts/todo_scanner.py --format text`
+2. Update baseline if the debt is intentional:
+   ```bash
+   uv run python scripts/todo_scanner.py --output scripts/todo_baseline.json
+   ```
+
+See [tech-debt-tracking.md](../agent-docs/tech-debt-tracking.md) for full details.
+
 ## Development Workflow
 
 1. **Fork** the repository and create a feature branch

@@ -58,14 +58,16 @@ USER INPUT
 ┌─────────────────────────────────────────────────────────────────┐
 │ 5. NODE PROCESSING                                              │
 │    File: src/tunacode/core/agents/agent_components/             │
-│          orchestrator/orchestrator.py                           │
+│          orchestrator/orchestrator.py (8-step coordinator)      │
 │                                                                 │
 │    process_node() phases:                                       │
 │    ├─ Phase 1: Transition to ASSISTANT state                    │
-│    ├─ Phase 2: Emit tool returns (tool_result_callback)         │
+│    ├─ Phase 2: Emit tool returns via tool_returns.py            │
+│    │           (tool_result_callback emission)                  │
 │    ├─ Phase 3: Record thoughts (session.conversation.thoughts)  │
-│    ├─ Phase 4: Update usage tracking (tokens)                   │
-│    ├─ Phase 5: Dispatch tools (categorize → execute)            │
+│    ├─ Phase 4: Update usage tracking via usage_tracker.py       │
+│    ├─ Phase 5: Dispatch tools via tool_dispatcher.py            │
+│    │           (collect → execute → log phases)                 │
 │    ├─ Phase 6: Detect truncation/emptiness                      │
 │    └─ Phase 7: Transition to RESPONSE state                     │
 └─────────────────────────────────────────────────────────────────┘
@@ -74,15 +76,23 @@ USER INPUT
 ┌─────────────────────────────────────────────────────────────────┐
 │ 6. TOOL DISPATCH                                                │
 │    File: src/tunacode/core/agents/agent_components/             │
-│          orchestrator/tool_dispatcher.py                        │
+│          orchestrator/tool_dispatcher.py (facade)               │
+│          + _tool_dispatcher_*.py submodules                     │
 │                                                                 │
-│    dispatch_tools():                                            │
-│    ├─ Categorize tools:                                         │
-│    │   ├─ READ_ONLY: glob, grep, read_file, list_dir, web_fetch │
-│    │   ├─ RESEARCH: research_codebase (subagent)                │
-│    │   └─ WRITE/EXECUTE: bash, write_file, update_file          │
-│    ├─ Register: tool_registry.register(tool_call_id, name, args)│
-│    └─ Execute via tool_callback                                 │
+│    dispatch_tools() 3-phase pipeline:                           │
+│    ├─ COLLECT: Extract structured tool calls from parts         │
+│    │   └── _tool_dispatcher_collection.py                       │
+│    ├─ FALLBACK: Text parsing if no structured calls found       │
+│    │   └── _tool_dispatcher_collection.py (fallback parser)     │
+│    ├─ EXECUTE: Parallel tool execution                          │
+│    │   └── _tool_dispatcher_execution.py                        │
+│    └─ LOG: Dispatch summary logging                             │
+│        └── _tool_dispatcher_logging.py                          │
+│                                                                 │
+│    Registry operations:                                         │
+│    ├─ Register: _tool_dispatcher_registry.py                    │
+│    │   tool_registry.register(tool_call_id, name, args)         │
+│    └─ Name validation: _tool_dispatcher_names.py                │
 └─────────────────────────────────────────────────────────────────┘
     │
     ▼
@@ -342,8 +352,11 @@ After each request:
 | UI | `ui/repl_support.py` | Callback builders, confirmation state |
 | UI | `ui/renderers/agent_response.py` | Final response panel rendering |
 | Core | `core/agents/main.py` | RequestOrchestrator - main loop |
-| Core | `core/agents/agent_components/orchestrator/orchestrator.py` | process_node() |
-| Core | `core/agents/agent_components/orchestrator/tool_dispatcher.py` | Tool dispatch |
+| Core | `core/agents/agent_components/orchestrator/orchestrator.py` | process_node() 8-step coordinator |
+| Core | `core/agents/agent_components/orchestrator/tool_returns.py` | Tool return emission |
+| Core | `core/agents/agent_components/orchestrator/debug_format.py` | Debug log formatting |
+| Core | `core/agents/agent_components/orchestrator/tool_dispatcher.py` | Tool dispatch facade |
+| Core | `core/agents/agent_components/orchestrator/_tool_dispatcher_*.py` | 6 focused submodules |
 | Core | `core/agents/agent_components/tool_executor.py` | Parallel execution, retries |
 | Core | `core/agents/agent_components/streaming.py` | Token streaming |
 | Core | `core/agents/agent_components/response_state.py` | State machine |

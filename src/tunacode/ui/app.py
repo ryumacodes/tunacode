@@ -16,8 +16,6 @@ from textual.binding import Binding
 from textual.containers import Container
 from textual.widgets import LoadingIndicator, Static
 
-from tunacode.utils.messaging import estimate_messages_tokens
-
 from tunacode.core.agents.main import process_request
 from tunacode.core.session import StateManager
 from tunacode.core.ui_api.constants import (
@@ -27,6 +25,7 @@ from tunacode.core.ui_api.constants import (
     build_nextstep_theme,
     build_tunacode_theme,
 )
+from tunacode.core.ui_api.messaging import estimate_messages_tokens
 from tunacode.core.ui_api.shared_types import ModelName
 
 from tunacode.ui.esc.handler import EscHandler
