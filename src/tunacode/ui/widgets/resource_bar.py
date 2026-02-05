@@ -7,9 +7,11 @@ from textual.widgets import Static
 
 from tunacode.core.ui_api.constants import RESOURCE_BAR_COST_FORMAT, RESOURCE_BAR_SEPARATOR
 
+from tunacode.ui.model_display import format_model_for_display
 from tunacode.ui.styles import (
     STYLE_ERROR,
     STYLE_MUTED,
+    STYLE_PRIMARY,
     STYLE_SUCCESS,
     STYLE_WARNING,
 )
@@ -95,9 +97,13 @@ class ResourceBar(Static):
         circle_char = self._get_circle_char(remaining_pct)
         circle_color = self._get_circle_color(remaining_pct)
 
+        model_display = format_model_for_display(self._model) if self._model else "---"
+
         parts: list[tuple[str, str]] = [
             (circle_char, circle_color),
             (f" {remaining_pct:.0f}%", circle_color),
+            (sep, STYLE_MUTED),
+            (model_display, STYLE_PRIMARY),
             (sep, STYLE_MUTED),
             (session_cost_str, STYLE_SUCCESS),
         ]
