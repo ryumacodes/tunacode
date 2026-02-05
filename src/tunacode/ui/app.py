@@ -16,6 +16,8 @@ from textual.binding import Binding
 from textual.containers import Container
 from textual.widgets import LoadingIndicator, Static
 
+from tunacode.utils.messaging import estimate_messages_tokens
+
 from tunacode.core.agents.main import process_request
 from tunacode.core.session import StateManager
 from tunacode.core.ui_api.constants import (
@@ -227,13 +229,11 @@ class TextualReplApp(App[None]):
                 duration_ms = (time.monotonic() - self._request_start_time) * 1000
                 session = self.state_manager.session
                 tokens = session.usage.last_call_usage.completion_tokens
-                model = session.current_model or ""
 
                 panel = render_agent_response(
                     content=output_text,
                     tokens=tokens,
                     duration_ms=duration_ms,
-                    model=model,
                 )
                 self.chat_container.write("")
                 response_widget = self.chat_container.write(panel, expand=True)
@@ -371,12 +371,12 @@ class TextualReplApp(App[None]):
         session = self.state_manager.session
         conversation = session.conversation
 
-        # Use accumulated API usage totals for token display
-        usage_total_tokens = session.usage.session_total_usage.total_tokens
+        # Use simplified token counter to estimate actual context window usage
+        estimated_tokens = estimate_messages_tokens(conversation.messages)
 
         self.resource_bar.update_stats(
             model=session.current_model or "No model selected",
-            tokens=usage_total_tokens,
+            tokens=estimated_tokens,
             max_tokens=conversation.max_tokens or 200000,
         )
 
