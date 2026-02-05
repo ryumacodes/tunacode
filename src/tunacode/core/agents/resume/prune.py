@@ -176,40 +176,17 @@ def prune_part_content(
     return max(0, original_tokens - placeholder_tokens)
 
 
-def prune_old_tool_outputs(
+def _scan_tool_parts(
     messages: list[Any],
     model_name: str,
-) -> tuple[list[Any], int]:
-    """Prune old tool output content from message history.
-
-    Scans message history backwards, protecting the most recent tool outputs
-    up to PRUNE_PROTECT_TOKENS, then replaces older tool output content
-    with PRUNE_PLACEHOLDER.
-
-    Args:
-        messages: List of pydantic-ai message objects (ModelRequest, ModelResponse, dict)
-        model_name: Model identifier for token estimation (e.g., "anthropic:claude-sonnet")
+    protect_tokens: int,
+    stop_estimation_threshold: int,
+) -> tuple[list[tuple[int, int, Any, int | None]], int, bool]:
+    """Scan messages backwards, collecting tool return parts with token counts.
 
     Returns:
-        Tuple of:
-            - Modified message list (same list, mutated in-place)
-            - Number of tokens reclaimed by pruning
+        Tuple of (tool_parts, prune_start_index, stop_estimating)
     """
-    if not messages:
-        return (messages, 0)
-
-    # Early exit: insufficient history
-    user_turns = count_user_turns(messages)
-    if user_turns < PRUNE_MIN_USER_TURNS:
-        return (messages, 0)
-
-    # Get pruning thresholds
-    protect_tokens, minimum_threshold = get_prune_thresholds()
-    stop_estimation_threshold = protect_tokens + minimum_threshold
-
-    # Phase 1: Scan backwards, collect tool return parts with token counts
-    # Tracks the pruning boundary and stops estimating once thresholds are satisfied.
-    # Each entry: (message_index, part_index, part, token_count | None)
     tool_parts: list[tuple[int, int, Any, int | None]] = []
     accumulated_tokens = 0
     prune_start_index = -1
@@ -234,40 +211,36 @@ def prune_old_tool_outputs(
             accumulated_tokens += tokens
             tool_parts.append((msg_idx, part_idx, part, tokens))
 
-            protect_reached = accumulated_tokens > protect_tokens
-            if prune_start_index < 0 and protect_reached:
+            if prune_start_index < 0 and accumulated_tokens > protect_tokens:
                 prune_start_index = len(tool_parts) - 1
 
-            stop_estimation_reached = accumulated_tokens > stop_estimation_threshold
-            if stop_estimation_reached:
+            if accumulated_tokens > stop_estimation_threshold:
                 stop_estimating = True
 
-    if not tool_parts:
-        return (messages, 0)
+    return tool_parts, prune_start_index, stop_estimating
 
-    # Phase 2: Confirm pruning boundary
-    # Early exit: nothing old enough to prune
-    if prune_start_index < 0:
-        return (messages, 0)
 
-    # Phase 3: Calculate potential savings
-    parts_to_prune = tool_parts[prune_start_index:]
+def _has_sufficient_savings(
+    parts_to_prune: list[tuple[int, int, Any, int | None]],
+    minimum_threshold: int,
+    stop_estimating: bool,
+) -> bool:
+    """Check if pruning would reclaim enough tokens to be worthwhile."""
+    if stop_estimating:
+        return True
+    total_prunable = sum(tokens for _, _, _, tokens in parts_to_prune if tokens is not None)
+    return total_prunable >= minimum_threshold
 
-    # When stop_estimating is True, we've exceeded protect_tokens + minimum_threshold,
-    # guaranteeing sufficient prunable tokens exist.
-    if not stop_estimating:
-        total_prunable_tokens = sum(
-            tokens for _, _, _, tokens in parts_to_prune if tokens is not None
-        )
-        if total_prunable_tokens < minimum_threshold:
-            return (messages, 0)
 
-    # Phase 4: Apply pruning
+def _apply_pruning(
+    parts_to_prune: list[tuple[int, int, Any, int | None]],
+    model_name: str,
+) -> int:
+    """Apply pruning to tool parts, returning total tokens reclaimed."""
     placeholder_tokens = PRUNE_PLACEHOLDER_TOKENS
     total_reclaimed = 0
     for _, _, part, tokens in parts_to_prune:
         if tokens is None:
-            # Parts beyond threshold: prune without re-estimating tokens
             content_text = get_part_content_text(part)
             if content_text is None or content_text == PRUNE_PLACEHOLDER:
                 continue
@@ -282,4 +255,51 @@ def prune_old_tool_outputs(
             )
             total_reclaimed += reclaimed
 
+    return total_reclaimed
+
+
+def prune_old_tool_outputs(
+    messages: list[Any],
+    model_name: str,
+) -> tuple[list[Any], int]:
+    """Prune old tool output content from message history.
+
+    Scans message history backwards, protecting the most recent tool outputs
+    up to PRUNE_PROTECT_TOKENS, then replaces older tool output content
+    with PRUNE_PLACEHOLDER.
+
+    Args:
+        messages: List of pydantic-ai message objects (ModelRequest, ModelResponse, dict)
+        model_name: Model identifier for token estimation (e.g., "anthropic:claude-sonnet")
+
+    Returns:
+        Tuple of:
+            - Modified message list (same list, mutated in-place)
+            - Number of tokens reclaimed by pruning
+    """
+    if not messages:
+        return (messages, 0)
+
+    if count_user_turns(messages) < PRUNE_MIN_USER_TURNS:
+        return (messages, 0)
+
+    protect_tokens, minimum_threshold = get_prune_thresholds()
+    stop_threshold = protect_tokens + minimum_threshold
+
+    tool_parts, prune_start_index, stop_estimating = _scan_tool_parts(
+        messages, model_name, protect_tokens, stop_threshold
+    )
+
+    if not tool_parts:
+        return (messages, 0)
+
+    if prune_start_index < 0:
+        return (messages, 0)
+
+    parts_to_prune = tool_parts[prune_start_index:]
+
+    if not _has_sufficient_savings(parts_to_prune, minimum_threshold, stop_estimating):
+        return (messages, 0)
+
+    total_reclaimed = _apply_pruning(parts_to_prune, model_name)
     return (messages, total_reclaimed)

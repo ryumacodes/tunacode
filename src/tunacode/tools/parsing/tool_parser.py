@@ -261,6 +261,37 @@ TOOL_CALL_INDICATORS = [
 ]
 
 
+def _populate_diagnostics_metadata(diagnostics: ParseDiagnostics, text: str) -> None:
+    """Populate diagnostics with text metadata and detected indicators."""
+    diagnostics.text_length = len(text)
+    diagnostics.text_preview = text[:200]
+    text_lower = text.lower()
+    for ind in TOOL_CALL_INDICATORS:
+        if ind.lower() in text_lower:
+            diagnostics.detected_indicators.append(ind)
+
+
+def _try_strategies(text: str, diagnostics: ParseDiagnostics | None) -> list[ParsedToolCall] | None:
+    """Try each parsing strategy in order, returning the first successful result."""
+    for strategy_name, strategy_func in PARSING_STRATEGIES:
+        try:
+            result = strategy_func(text)
+        except Exception as e:
+            if diagnostics:
+                diagnostics.strategies_tried.append((strategy_name, f"error: {e}"))
+            continue
+        if not result:
+            if diagnostics:
+                diagnostics.strategies_tried.append((strategy_name, "no_match"))
+            continue
+        if diagnostics:
+            diagnostics.strategies_tried.append((strategy_name, f"matched {len(result)} calls"))
+            diagnostics.success = True
+            diagnostics.success_strategy = strategy_name
+        return result
+    return None
+
+
 def parse_tool_calls_from_text(
     text: str, *, collect_diagnostics: bool = False
 ) -> list[ParsedToolCall] | tuple[list[ParsedToolCall], ParseDiagnostics]:
@@ -292,31 +323,13 @@ def parse_tool_calls_from_text(
         return []
 
     if diagnostics:
-        diagnostics.text_length = len(text)
-        diagnostics.text_preview = text[:200]
-        # Check which indicators are present
-        text_lower = text.lower()
-        for ind in TOOL_CALL_INDICATORS:
-            if ind.lower() in text_lower:
-                diagnostics.detected_indicators.append(ind)
+        _populate_diagnostics_metadata(diagnostics, text)
 
-    for strategy_name, strategy_func in PARSING_STRATEGIES:
-        try:
-            result = strategy_func(text)
-            if result:
-                if diagnostics:
-                    diagnostics.strategies_tried.append(
-                        (strategy_name, f"matched {len(result)} calls")
-                    )
-                    diagnostics.success = True
-                    diagnostics.success_strategy = strategy_name
-                    return result, diagnostics
-                return result
-            if diagnostics:
-                diagnostics.strategies_tried.append((strategy_name, "no_match"))
-        except Exception as e:
-            if diagnostics:
-                diagnostics.strategies_tried.append((strategy_name, f"error: {e}"))
+    result = _try_strategies(text, diagnostics)
+    if result:
+        if diagnostics:
+            return result, diagnostics
+        return result
 
     if diagnostics:
         return [], diagnostics

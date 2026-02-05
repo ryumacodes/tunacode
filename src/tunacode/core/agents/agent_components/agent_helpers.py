@@ -1,10 +1,55 @@
 """Helper functions for agent operations to reduce code duplication."""
 
+from collections.abc import Callable
 from typing import Any
 
 from tunacode.types import CanonicalToolCall
 
 RECENT_TOOL_LIMIT = 3
+QUERY_DISPLAY_LIMIT = 60
+
+
+def _describe_read_file(tool_args: dict[str, Any]) -> str:
+    path = tool_args.get("file_path", tool_args.get("filepath", ""))
+    return f"Reading `{path}`" if path else "Reading file"
+
+
+def _describe_list_dir(tool_args: dict[str, Any]) -> str:
+    directory = tool_args.get("directory", "")
+    return f"Listing directory `{directory}`" if directory else "Listing directory"
+
+
+def _describe_grep(tool_args: dict[str, Any]) -> str:
+    pattern = tool_args.get("pattern", "")
+    include_files = tool_args.get("include_files", "")
+    if pattern and include_files:
+        return f"Searching for `{pattern}` in `{include_files}`"
+    if pattern:
+        return f"Searching for `{pattern}`"
+    return "Searching files"
+
+
+def _describe_glob(tool_args: dict[str, Any]) -> str:
+    pattern = tool_args.get("pattern", "")
+    return f"Finding files matching `{pattern}`" if pattern else "Finding files"
+
+
+def _describe_research(tool_args: dict[str, Any]) -> str:
+    query = tool_args.get("query", "")
+    if not query:
+        return "Researching codebase"
+    truncated = len(query) > QUERY_DISPLAY_LIMIT
+    query_display = query[:QUERY_DISPLAY_LIMIT] + "..." if truncated else query
+    return f"Researching: {query_display}"
+
+
+_TOOL_DESCRIBERS: dict[str, Callable[[dict[str, Any]], str]] = {
+    "read_file": _describe_read_file,
+    "list_dir": _describe_list_dir,
+    "grep": _describe_grep,
+    "glob": _describe_glob,
+    "research_codebase": _describe_research,
+}
 
 
 def get_tool_description(tool_name: str, tool_args: dict[str, Any]) -> str:
@@ -24,42 +69,9 @@ def get_readable_tool_description(tool_name: str, tool_args: dict[str, Any]) -> 
     if not isinstance(tool_args, dict):
         return f"Executing `{tool_name}`"
 
-    if tool_name == "read_file":
-        file_path = tool_args.get("file_path", tool_args.get("filepath", ""))
-        if file_path:
-            return f"Reading `{file_path}`"
-        return "Reading file"
-
-    if tool_name == "list_dir":
-        directory = tool_args.get("directory", "")
-        if directory:
-            return f"Listing directory `{directory}`"
-        return "Listing directory"
-
-    if tool_name == "grep":
-        pattern = tool_args.get("pattern", "")
-        include_files = tool_args.get("include_files", "")
-        if pattern and include_files:
-            return f"Searching for `{pattern}` in `{include_files}`"
-        if pattern:
-            return f"Searching for `{pattern}`"
-        return "Searching files"
-
-    if tool_name == "glob":
-        pattern = tool_args.get("pattern", "")
-        if pattern:
-            return f"Finding files matching `{pattern}`"
-        return "Finding files"
-
-    if tool_name == "research_codebase":
-        query = tool_args.get("query", "")
-        if query:
-            # Truncate long queries for display
-            query_display = query[:60] + "..." if len(query) > 60 else query
-            return f"Researching: {query_display}"
-        return "Researching codebase"
-
-    # Fallback for unknown tools
+    describer = _TOOL_DESCRIBERS.get(tool_name)
+    if describer:
+        return describer(tool_args)
     return f"Executing `{tool_name}`"
 
 

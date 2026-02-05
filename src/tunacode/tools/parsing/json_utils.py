@@ -18,6 +18,37 @@ class ConcatenatedJSONError(Exception):
         super().__init__(message)
 
 
+def _advance_json_state(char: str, escape_next: bool, in_string: bool) -> tuple[bool, bool, bool]:
+    """Advance JSON character-level state machine.
+
+    Returns:
+        (new_escape_next, new_in_string, skip) where skip=True means
+        the character should not be processed for brace tracking.
+    """
+    if escape_next:
+        return False, in_string, True
+    if char == "\\":
+        return True, in_string, True
+    if char == '"':
+        return False, not in_string, True
+    if in_string:
+        return False, in_string, True
+    return False, in_string, False
+
+
+def _try_collect_object(
+    json_string: str, start: int, end: int, objects: list[dict[str, Any]]
+) -> None:
+    """Try to parse a JSON substring and append it if it's a dict."""
+    potential_json = json_string[start : end + 1].strip()
+    try:
+        parsed = json.loads(potential_json)
+    except json.JSONDecodeError:
+        return
+    if isinstance(parsed, dict):
+        objects.append(parsed)
+
+
 def split_concatenated_json(json_string: str) -> list[dict[str, Any]]:
     """
     Split concatenated JSON objects like {"a": 1}{"b": 2} into separate objects.
@@ -31,26 +62,15 @@ def split_concatenated_json(json_string: str) -> list[dict[str, Any]]:
     Raises:
         json.JSONDecodeError: If no valid JSON objects can be extracted
     """
-    objects = []
+    objects: list[dict[str, Any]] = []
     brace_count = 0
     start_pos = 0
     in_string = False
     escape_next = False
 
     for i, char in enumerate(json_string):
-        if escape_next:
-            escape_next = False
-            continue
-
-        if char == "\\":
-            escape_next = True
-            continue
-
-        if char == '"' and not escape_next:
-            in_string = not in_string
-            continue
-
-        if in_string:
+        escape_next, in_string, skip = _advance_json_state(char, escape_next, in_string)
+        if skip:
             continue
 
         if char == "{":
@@ -60,14 +80,7 @@ def split_concatenated_json(json_string: str) -> list[dict[str, Any]]:
         elif char == "}":
             brace_count -= 1
             if brace_count == 0:
-                potential_json = json_string[start_pos : i + 1].strip()
-                try:
-                    parsed = json.loads(potential_json)
-                except json.JSONDecodeError:
-                    continue
-
-                if isinstance(parsed, dict):
-                    objects.append(parsed)
+                _try_collect_object(json_string, start_pos, i, objects)
 
     if not objects:
         raise json.JSONDecodeError("No valid JSON objects found", json_string, 0)

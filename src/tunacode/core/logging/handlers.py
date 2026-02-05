@@ -4,15 +4,13 @@ import os
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+
+from rich.console import RenderableType
 
 from tunacode.core.logging.levels import LogLevel
 from tunacode.core.logging.records import LogRecord
 
-if TYPE_CHECKING:
-    from rich.console import RenderableType
-
-TuiWriteCallback = Callable[["RenderableType"], None]
+TuiWriteCallback = Callable[[RenderableType], None]
 
 # Lifecycle log prefixes for semantic coloring
 # These must match the prefixes used in lifecycle log calls throughout the codebase
@@ -27,6 +25,25 @@ LIFECYCLE_PREFIX_TASK_COMPLETED = "Task completed"
 LIFECYCLE_PREFIX_ERROR = "Error:"
 LIFECYCLE_PREFIX_RETRY = "Retry:"
 LIFECYCLE_PREFIX_FALLBACK = "Fallback"
+
+# Table-driven lifecycle formatting: (prefix, prefix_style, body_style)
+_LIFECYCLE_SPLIT_STYLES: list[tuple[str, str, str]] = [
+    (LIFECYCLE_PREFIX_TOKENS, "cyan bold", "cyan"),
+    (LIFECYCLE_PREFIX_TOOLS, "green bold", "green"),
+    (LIFECYCLE_PREFIX_STREAM, "blue bold", "blue"),
+    (LIFECYCLE_PREFIX_RESPONSE, "yellow bold", "yellow"),
+    (LIFECYCLE_PREFIX_THOUGHT, "magenta bold", "magenta italic"),
+    (LIFECYCLE_PREFIX_ERROR, "red bold", "red"),
+    (LIFECYCLE_PREFIX_RETRY, "yellow bold", "yellow"),
+]
+
+# Full-style lifecycle entries: (prefix, style)
+_LIFECYCLE_FULL_STYLES: list[tuple[str, str]] = [
+    (LIFECYCLE_PREFIX_ITERATION, "bold white"),
+    (LIFECYCLE_PREFIX_NO_TOOLS, "dim"),
+    (LIFECYCLE_PREFIX_TASK_COMPLETED, "green bold"),
+    (LIFECYCLE_PREFIX_FALLBACK, "yellow dim"),
+]
 
 
 class Handler(ABC):
@@ -157,7 +174,7 @@ class TUIHandler(Handler):
         text = self._format_record(record)
         self._write_callback(text)
 
-    def _format_record(self, record: LogRecord) -> "RenderableType":
+    def _format_record(self, record: LogRecord) -> RenderableType:
         """Format record as Rich Text with styling based on content type."""
         from rich.text import Text
 
@@ -192,85 +209,28 @@ class TUIHandler(Handler):
 
         return text
 
-    def _format_lifecycle_record(self, msg: str) -> "RenderableType":
+    def _format_lifecycle_record(self, msg: str) -> RenderableType:
         """Format lifecycle logs with semantic colors."""
         from rich.text import Text
 
         text = Text()
 
-        # Iteration header - bold white
-        if msg.startswith(LIFECYCLE_PREFIX_ITERATION):
-            text.append(msg, style="bold white")
-            return text
+        for prefix, prefix_style, body_style in _LIFECYCLE_SPLIT_STYLES:
+            if msg.startswith(prefix):
+                text.append(prefix + " ", style=prefix_style)
+                text.append(msg[len(prefix) :], style=body_style)
+                return text
 
-        # Tokens - cyan for metrics
-        if msg.startswith(LIFECYCLE_PREFIX_TOKENS):
-            prefix_len = len(LIFECYCLE_PREFIX_TOKENS)
-            text.append(LIFECYCLE_PREFIX_TOKENS + " ", style="cyan bold")
-            text.append(msg[prefix_len:], style="cyan")
-            return text
-
-        # Tools - green for tool activity
-        if msg.startswith(LIFECYCLE_PREFIX_TOOLS):
-            prefix_len = len(LIFECYCLE_PREFIX_TOOLS)
-            text.append(LIFECYCLE_PREFIX_TOOLS + " ", style="green bold")
-            text.append(msg[prefix_len:], style="green")
-            return text
-
-        if msg.startswith(LIFECYCLE_PREFIX_NO_TOOLS):
-            text.append(msg, style="dim")
-            return text
-
-        # Stream - blue for streaming info
-        if msg.startswith(LIFECYCLE_PREFIX_STREAM):
-            prefix_len = len(LIFECYCLE_PREFIX_STREAM)
-            text.append(LIFECYCLE_PREFIX_STREAM + " ", style="blue bold")
-            text.append(msg[prefix_len:], style="blue")
-            return text
-
-        # Response - yellow for model output
-        if msg.startswith(LIFECYCLE_PREFIX_RESPONSE):
-            prefix_len = len(LIFECYCLE_PREFIX_RESPONSE)
-            text.append(LIFECYCLE_PREFIX_RESPONSE + " ", style="yellow bold")
-            text.append(msg[prefix_len:], style="yellow")
-            return text
-
-        # Thought - magenta/italic for thinking
-        if msg.startswith(LIFECYCLE_PREFIX_THOUGHT):
-            prefix_len = len(LIFECYCLE_PREFIX_THOUGHT)
-            text.append(LIFECYCLE_PREFIX_THOUGHT + " ", style="magenta bold")
-            text.append(msg[prefix_len:], style="magenta italic")
-            return text
+        for prefix, style in _LIFECYCLE_FULL_STYLES:
+            if msg.startswith(prefix):
+                text.append(msg, style=style)
+                return text
 
         # Iteration complete - dim
         if msg.startswith("Iteration") and "complete" in msg:
             text.append(msg, style="dim")
             return text
 
-        # Task completed - bright green
-        if msg.startswith(LIFECYCLE_PREFIX_TASK_COMPLETED):
-            text.append(msg, style="green bold")
-            return text
-
-        # Errors - red bold
-        if msg.startswith(LIFECYCLE_PREFIX_ERROR):
-            prefix_len = len(LIFECYCLE_PREFIX_ERROR)
-            text.append(LIFECYCLE_PREFIX_ERROR + " ", style="red bold")
-            text.append(msg[prefix_len:], style="red")
-            return text
-
-        # Retries - yellow/orange warning
-        if msg.startswith(LIFECYCLE_PREFIX_RETRY):
-            prefix_len = len(LIFECYCLE_PREFIX_RETRY)
-            text.append(LIFECYCLE_PREFIX_RETRY + " ", style="yellow bold")
-            text.append(msg[prefix_len:], style="yellow")
-            return text
-
-        # Fallback parsing - dim yellow (indicates potential issue)
-        if msg.startswith(LIFECYCLE_PREFIX_FALLBACK):
-            text.append(msg, style="yellow dim")
-            return text
-
-        # Fallback - dim for other lifecycle logs
+        # Default - dim for other lifecycle logs
         text.append(msg, style="dim")
         return text

@@ -140,6 +140,35 @@ class RipgrepExecutor:
         self.binary_path = binary_path or get_ripgrep_binary_path()
         self._use_python_fallback = self.binary_path is None
 
+    def _build_command(
+        self,
+        pattern: str,
+        path: str,
+        *,
+        case_insensitive: bool = False,
+        multiline: bool = False,
+        context_before: int = 0,
+        context_after: int = 0,
+        max_matches: int | None = None,
+        file_pattern: str | None = None,
+    ) -> list[str]:
+        """Build ripgrep command with flags."""
+        cmd = [str(self.binary_path)]
+        if case_insensitive:
+            cmd.append("-i")
+        if multiline:
+            cmd.extend(["-U", "--multiline-dotall"])
+        if context_before > 0:
+            cmd.extend(["-B", str(context_before)])
+        if context_after > 0:
+            cmd.extend(["-A", str(context_after)])
+        if max_matches:
+            cmd.extend(["-m", str(max_matches)])
+        if file_pattern:
+            cmd.extend(["-g", file_pattern])
+        cmd.extend([pattern, path])
+        return cmd
+
     async def search(
         self,
         pattern: str,
@@ -177,24 +206,16 @@ class RipgrepExecutor:
             )
 
         try:
-            cmd = [str(self.binary_path)]
-
-            # Add flags
-            if case_insensitive:
-                cmd.append("-i")
-            if multiline:
-                cmd.extend(["-U", "--multiline-dotall"])
-            if context_before > 0:
-                cmd.extend(["-B", str(context_before)])
-            if context_after > 0:
-                cmd.extend(["-A", str(context_after)])
-            if max_matches:
-                cmd.extend(["-m", str(max_matches)])
-            if file_pattern:
-                cmd.extend(["-g", file_pattern])
-
-            # Add pattern and path
-            cmd.extend([pattern, path])
+            cmd = self._build_command(
+                pattern,
+                path,
+                case_insensitive=case_insensitive,
+                multiline=multiline,
+                context_before=context_before,
+                context_after=context_after,
+                max_matches=max_matches,
+                file_pattern=file_pattern,
+            )
 
             returncode, stdout_text = await self._run_ripgrep_command(cmd, timeout)
 

@@ -32,6 +32,80 @@ from tunacode.tools.grep_components.result_formatter import ResultFormatter
 from tunacode.tools.utils.ripgrep import RipgrepExecutor
 from tunacode.tools.utils.ripgrep import metrics as ripgrep_metrics
 
+SMART_PYTHON_THRESHOLD = 50
+SMART_RIPGREP_THRESHOLD = 1000
+
+
+def _select_search_strategy(search_type: str, candidate_count: int) -> str:
+    """Select concrete search strategy based on candidate count."""
+    if search_type != "smart":
+        return search_type
+    if candidate_count <= SMART_PYTHON_THRESHOLD:
+        return "python"
+    if candidate_count <= SMART_RIPGREP_THRESHOLD:
+        return "ripgrep"
+    return "hybrid"
+
+
+def _format_search_output(
+    results: list[SearchResult],
+    pattern: str,
+    config: SearchConfig,
+    output_mode: str,
+    search_type: str,
+    original_search_type: str,
+    candidate_count: int,
+    return_format: str,
+    formatter: ResultFormatter,
+) -> str | list[str]:
+    """Format search results for output."""
+    formatted = formatter.format_results(results, pattern, config, output_mode=output_mode)
+
+    if return_format == "list":
+        return list({r.file_path for r in results})
+
+    if formatted.startswith("Found"):
+        lines = formatted.split("\n")
+        lines[1] = f"Strategy: {search_type} | Candidates: {candidate_count} files | " + lines[1]
+        return "\n".join(lines)
+
+    strategy_info = (
+        f"Strategy: {search_type} (was {original_search_type}), "
+        f"Files: {candidate_count}/{MAX_CANDIDATE_FILES}"
+    )
+    return f"{formatted}\n\n{strategy_info}"
+
+
+MAX_CANDIDATE_FILES = 5000
+
+
+async def _check_deadline(
+    deadline: float,
+    first_match_event: asyncio.Event,
+    search_tasks: list[asyncio.Task[list[SearchResult]]],
+    pattern: str,
+) -> None:
+    """Monitor for first match deadline, cancelling tasks if exceeded."""
+    await asyncio.sleep(deadline)
+    if not first_match_event.is_set():
+        for task in search_tasks:
+            if not task.done():
+                task.cancel()
+        raise TooBroadPatternError(pattern, deadline)
+
+
+def _flatten_search_results(
+    all_results: list[list[SearchResult] | BaseException],
+    max_results: int,
+) -> list[SearchResult]:
+    """Flatten gathered search results, filtering out exceptions."""
+    results: list[SearchResult] = []
+    for file_results in all_results:
+        if isinstance(file_results, list):
+            results.extend(file_results)
+    results.sort(key=lambda r: r.relevance_score, reverse=True)
+    return results[:max_results]
+
 
 class ParallelGrep:
     """Advanced parallel grep tool with multiple search strategies."""
@@ -47,6 +121,25 @@ class ParallelGrep:
     def _load_ripgrep_config(self) -> dict[str, Any]:
         """Load ripgrep configuration from defaults."""
         return DEFAULT_USER_CONFIG["settings"]["ripgrep"]
+
+    async def _run_search_strategy(
+        self,
+        search_type: str,
+        pattern: str,
+        candidates: list[Path],
+        config: SearchConfig,
+    ) -> list[SearchResult]:
+        """Execute the selected search strategy."""
+        if search_type == "ripgrep":
+            results = await self._ripgrep_search_filtered(pattern, candidates, config)
+            if not results:
+                results = await self._python_search_filtered(pattern, candidates, config)
+            return results
+        if search_type == "python":
+            return await self._python_search_filtered(pattern, candidates, config)
+        if search_type == "hybrid":
+            return await self._hybrid_search_filtered(pattern, candidates, config)
+        raise ToolExecutionError(tool_name="grep", message=f"Unknown search type: {search_type}")
 
     async def execute(
         self,
@@ -80,23 +173,19 @@ class ParallelGrep:
             Formatted search results
         """
         try:
-            # 0️⃣ Validate directory path before any file operations
             dir_path = Path(directory).resolve()
             if not dir_path.exists():
                 raise ToolRetryError(f"Directory not found: {directory}. Check the path.")
             if not dir_path.is_dir():
                 raise ToolRetryError(f"Not a directory: {directory}. Provide a directory path.")
 
-            # 1️⃣ Fast-glob prefilter to find candidate files
             include_pattern = include_files or "*"
-            exclude_pattern = exclude_files
-
             candidates = await asyncio.get_running_loop().run_in_executor(
                 self._executor,
                 self._file_filter.fast_glob,
                 Path(directory),
                 include_pattern,
-                exclude_pattern,
+                exclude_files,
             )
 
             if not candidates:
@@ -104,21 +193,9 @@ class ParallelGrep:
                     return []
                 return f"No files found matching pattern: {include_pattern}"
 
-            # 2️⃣ Smart strategy selection based on candidate count
             original_search_type = search_type
-            if search_type == "smart":
-                if len(candidates) <= 50:
-                    # Small set - Python strategy more efficient (low startup cost)
-                    search_type = "python"
-                elif len(candidates) <= 1000:
-                    # Medium set - Ripgrep optimal for this range
-                    search_type = "ripgrep"
-                else:
-                    # Large set - Hybrid for best coverage and redundancy
-                    search_type = "hybrid"
+            resolved_strategy = _select_search_strategy(search_type, len(candidates))
 
-            # 3️⃣ Create search configuration
-            # Note: include_patterns/exclude_patterns now only used for legacy compatibility
             include_patterns = (
                 self._file_filter.parse_patterns(include_files) if include_files else ["*"]
             )
@@ -134,57 +211,26 @@ class ParallelGrep:
                 exclude_patterns=exclude_patterns,
             )
 
-            # 4️⃣ Execute chosen strategy with pre-filtered candidates
-            # Execute search with pre-filtered candidates
-            if search_type == "ripgrep":
-                # Try ripgrep first for performance. If ripgrep is unavailable or
-                # returns no results (e.g., binary missing), gracefully fallback to
-                # the Python implementation so the tool still returns matches.
-                results = await self._ripgrep_search_filtered(pattern, candidates, config)
-                if not results:
-                    # Fallback to python search when ripgrep produced no output
-                    results = await self._python_search_filtered(pattern, candidates, config)
-            elif search_type == "python":
-                results = await self._python_search_filtered(pattern, candidates, config)
-            elif search_type == "hybrid":
-                results = await self._hybrid_search_filtered(pattern, candidates, config)
-            else:
-                raise ToolExecutionError(
-                    tool_name="grep", message=f"Unknown search type: {search_type}"
-                )
-
-            # 5️⃣ Format and return results with strategy info
-            strategy_info = (
-                f"Strategy: {search_type} (was {original_search_type}), "
-                f"Files: {len(candidates)}/{5000}"
-            )
-            formatted_results = self._result_formatter.format_results(
-                results, pattern, config, output_mode=output_mode
+            results = await self._run_search_strategy(
+                resolved_strategy,
+                pattern,
+                candidates,
+                config,
             )
 
-            if return_format == "list":
-                # Legacy: return list of file paths with at least one match
-                file_set = set()
-                for r in results:
-                    file_set.add(r.file_path)
-                return list(file_set)
-            else:
-                # Add strategy info to results
-                if formatted_results.startswith("Found"):
-                    lines = formatted_results.split("\n")
-                    lines[1] = (
-                        f"Strategy: {search_type} | Candidates: {len(candidates)} files | "
-                        + lines[1]
-                    )
-                    return "\n".join(lines)
-                else:
-                    return f"{formatted_results}\n\n{strategy_info}"
+            return _format_search_output(
+                results,
+                pattern,
+                config,
+                output_mode,
+                resolved_strategy,
+                original_search_type,
+                len(candidates),
+                return_format,
+                self._result_formatter,
+            )
 
-        except TooBroadPatternError:
-            # Re-raise TooBroadPatternError without wrapping it
-            raise
-        except ToolRetryError:
-            # Re-raise ToolRetryError for LLM self-correction
+        except (TooBroadPatternError, ToolRetryError):
             raise
         except Exception as err:
             raise ToolExecutionError(
@@ -277,69 +323,50 @@ class ParallelGrep:
         """
         Run Python parallel search on pre-filtered candidates with first match deadline.
         """
-        # Prepare search pattern
         if config.use_regex:
             flags = 0 if config.case_sensitive else re.IGNORECASE
-            regex_pattern = re.compile(pattern, flags)
+            regex_pattern: re.Pattern[str] | None = re.compile(pattern, flags)
         else:
             regex_pattern = None
 
-        # Track search progress
         first_match_event = asyncio.Event()
-
-        async def search_with_monitoring(file_path: Path) -> list[SearchResult]:
-            """Search a file and signal when first match is found."""
-            try:
-                file_results = await self._search_file(file_path, pattern, regex_pattern, config)
-                if file_results and not first_match_event.is_set():
-                    first_match_event.set()
-                return file_results
-            except Exception:
-                return []
-
-        # Create search tasks for candidates only
-        search_tasks: list[asyncio.Task[list[SearchResult]]] = []
-        for file_path in candidates:
-            task = asyncio.create_task(search_with_monitoring(file_path))
-            search_tasks.append(task)
-
-        # Create a deadline task
-        async def check_deadline() -> None:
-            """Monitor for first match deadline."""
-            await asyncio.sleep(config.first_match_deadline)
-            if not first_match_event.is_set():
-                # Cancel all pending tasks
-                for task in search_tasks:
-                    if not task.done():
-                        task.cancel()
-                raise TooBroadPatternError(pattern, config.first_match_deadline)
-
-        deadline_task = asyncio.create_task(check_deadline())
+        search_tasks = [
+            asyncio.create_task(
+                self._monitored_file_search(fp, pattern, regex_pattern, config, first_match_event)
+            )
+            for fp in candidates
+        ]
+        deadline_task = asyncio.create_task(
+            _check_deadline(config.first_match_deadline, first_match_event, search_tasks, pattern)
+        )
 
         try:
-            # Execute searches in parallel with deadline monitoring
             all_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-
-            # Cancel deadline task if we got results
             deadline_task.cancel()
-
-            # Flatten results and filter out exceptions
-            results = []
-            for file_results in all_results:
-                if isinstance(file_results, list):
-                    results.extend(file_results)
-
-            # Sort by relevance and limit results
-            results.sort(key=lambda r: r.relevance_score, reverse=True)
-            return results[: config.max_results]
-
+            return _flatten_search_results(all_results, config.max_results)
         except asyncio.CancelledError:
-            # Re-raise TooBroadPatternError if that's what caused the cancellation
             if deadline_task.done():
                 try:
                     await deadline_task
                 except TooBroadPatternError:
                     raise
+            return []
+
+    async def _monitored_file_search(
+        self,
+        file_path: Path,
+        pattern: str,
+        regex_pattern: re.Pattern[str] | None,
+        config: SearchConfig,
+        first_match_event: asyncio.Event,
+    ) -> list[SearchResult]:
+        """Search a file and signal when first match is found."""
+        try:
+            file_results = await self._search_file(file_path, pattern, regex_pattern, config)
+            if file_results and not first_match_event.is_set():
+                first_match_event.set()
+            return file_results
+        except Exception:
             return []
 
     async def _hybrid_search_filtered(

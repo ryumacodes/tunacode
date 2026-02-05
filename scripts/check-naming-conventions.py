@@ -181,6 +181,37 @@ def is_type_alias(node: ast.Assign | ast.AnnAssign) -> bool:
     return False
 
 
+# Patterns accepted for annotated assignments (type aliases, typed constants, typed variables)
+_ANNOTATED_VALID_PATTERNS = (PASCAL_CASE, SNAKE_CASE, UPPER_CASE)
+
+
+def _is_valid_annotated_name(name: str, node: ast.Assign | ast.AnnAssign) -> bool:
+    """Check if name is valid for an annotated assignment."""
+    if not isinstance(node, ast.AnnAssign) or not node.annotation:
+        return False
+    return any(pat.match(name) for pat in _ANNOTATED_VALID_PATTERNS)
+
+
+def _is_valid_type_alias_name(name: str, node: ast.Assign | ast.AnnAssign) -> bool:
+    """Check if name is valid as a simple type alias (PascalCase)."""
+    return isinstance(node, ast.Assign) and is_type_alias(node) and bool(PASCAL_CASE.match(name))
+
+
+def _is_valid_module_level_name(name: str, node: ast.Assign | ast.AnnAssign) -> bool:
+    """Check if a module-level name follows naming conventions."""
+    if should_ignore(name):
+        return True
+    if _is_valid_annotated_name(name, node):
+        return True
+    if _is_valid_type_alias_name(name, node):
+        return True
+    if UPPER_CASE.match(name):
+        return True
+    if name.startswith("_") and PRIVATE_PREFIX.match(name):
+        return True
+    return SNAKE_CASE.match(name) is not None
+
+
 def check_module_level_names(
     node: ast.Assign | ast.AnnAssign, filepath: Path
 ) -> Iterator[NamingViolation]:
@@ -188,45 +219,18 @@ def check_module_level_names(
     targets = node.targets if isinstance(node, ast.Assign) else [node.target]
 
     for target in targets:
-        if isinstance(target, ast.Name):
-            name = target.id
-
-            if should_ignore(name):
-                continue
-
-            # Type aliases are PascalCase (both annotated and simple assignments)
-            if isinstance(node, ast.AnnAssign) and node.annotation:
-                # Annotated type aliases or typed constants
-                if PASCAL_CASE.match(name):
-                    continue
-                # Allow snake_case for annotated variables
-                if SNAKE_CASE.match(name):
-                    continue
-                # Allow UPPER_CASE for typed constants
-                if UPPER_CASE.match(name):
-                    continue
-            elif isinstance(node, ast.Assign) and is_type_alias(node):
-                # Simple type aliases: ModelName = str
-                if PASCAL_CASE.match(name):
-                    continue
-
-            # Constants should be UPPER_CASE
-            if UPPER_CASE.match(name):
-                continue
-
-            # Private module variables with underscore are OK
-            if name.startswith("_") and PRIVATE_PREFIX.match(name):
-                continue
-
-            # Otherwise should be snake_case
-            if not SNAKE_CASE.match(name):
-                yield NamingViolation(
-                    filepath,
-                    node.lineno,
-                    name,
-                    "UPPER_CASE (constants) or snake_case (variables)",
-                    "invalid module-level name",
-                )
+        if not isinstance(target, ast.Name):
+            continue
+        name = target.id
+        if _is_valid_module_level_name(name, node):
+            continue
+        yield NamingViolation(
+            filepath,
+            node.lineno,
+            name,
+            "UPPER_CASE (constants) or snake_case (variables)",
+            "invalid module-level name",
+        )
 
 
 def check_file(filepath: Path) -> list[NamingViolation]:

@@ -5,7 +5,7 @@ import os
 import random
 import time
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic_ai import ModelRetry
 
@@ -51,6 +51,86 @@ def _calculate_backoff(attempt: int) -> float:
     return float(delay + jitter)
 
 
+def _report_tool_failure(
+    logger: Any,
+    tool_name: str,
+    start: float,
+    error: BaseException,
+    failure_cb: ToolFailureCallback | None,
+    part: "ToolCallPart",
+    status: str,
+    detail: str,
+) -> None:
+    """Log a tool failure and invoke the optional failure callback."""
+    duration_ms = (time.perf_counter() - start) * 1000
+    logger.tool(tool_name, status, duration_ms=duration_ms)
+    logger.lifecycle(detail)
+    if failure_cb:
+        failure_cb(part, error)
+
+
+def _gather_results(gathered: list[None | BaseException]) -> list[None]:
+    """Extract results from gather output, raising the first exception if any."""
+    results: list[None] = []
+    for result in gathered:
+        if isinstance(result, BaseException):
+            raise result
+        results.append(result)
+    return results
+
+
+async def _execute_with_retry(
+    part: "ToolCallPart",
+    node: "StreamedRunResult[None, str]",
+    callback: ToolCallback,
+    failure_cb: ToolFailureCallback | None,
+) -> None:
+    """Execute a single tool call with retry logic."""
+    logger = get_logger()
+    tool_name = getattr(part, "tool_name", "unknown")
+    start = time.perf_counter()
+    logger.lifecycle(f"Tool start (tool={tool_name})")
+
+    for attempt in range(1, TOOL_MAX_RETRIES + 1):
+        try:
+            await callback(part, node)
+            duration_ms = (time.perf_counter() - start) * 1000
+            logger.tool(tool_name, "completed", duration_ms=duration_ms)
+            return
+        except NON_RETRYABLE_ERRORS as e:
+            err_type = type(e).__name__
+            _report_tool_failure(
+                logger,
+                tool_name,
+                start,
+                e,
+                failure_cb,
+                part,
+                "failed (non-retryable)",
+                f"Error: {tool_name} failed - {err_type}: {e}",
+            )
+            raise
+        except Exception as e:
+            if attempt == TOOL_MAX_RETRIES:
+                err_type = type(e).__name__
+                _report_tool_failure(
+                    logger,
+                    tool_name,
+                    start,
+                    e,
+                    failure_cb,
+                    part,
+                    f"failed ({attempt} attempts)",
+                    f"Error: {tool_name} failed after {attempt} retries - {err_type}: {e}",
+                )
+                raise
+            backoff = _calculate_backoff(attempt)
+            logger.lifecycle(
+                f"Retry: {tool_name} attempt {attempt}/{TOOL_MAX_RETRIES} ({type(e).__name__})"
+            )
+            await asyncio.sleep(backoff)
+
+
 async def execute_tools_parallel(
     tool_calls: list[tuple["ToolCallPart", "StreamedRunResult[None, str]"]],
     callback: ToolCallback,
@@ -78,64 +158,24 @@ async def execute_tools_parallel(
     tool_count = len(tool_calls)
     logger.lifecycle(f"Tool execution start (count={tool_count}, max_parallel={max_parallel})")
 
-    async def execute_with_retry(
-        part: "ToolCallPart", node: "StreamedRunResult[None, str]"
-    ) -> None:
-        tool_name = getattr(part, "tool_name", "unknown")
-        start = time.perf_counter()
-        logger.lifecycle(f"Tool start (tool={tool_name})")
-
-        for attempt in range(1, TOOL_MAX_RETRIES + 1):
-            try:
-                await callback(part, node)
-                duration_ms = (time.perf_counter() - start) * 1000
-                logger.tool(tool_name, "completed", duration_ms=duration_ms)
-                return
-            except NON_RETRYABLE_ERRORS as e:
-                duration_ms = (time.perf_counter() - start) * 1000
-                err_type = type(e).__name__
-                logger.tool(tool_name, "failed (non-retryable)", duration_ms=duration_ms)
-                logger.lifecycle(f"Error: {tool_name} failed - {err_type}: {e}")
-                if tool_failure_callback:
-                    tool_failure_callback(part, e)
-                raise
-            except Exception as e:
-                if attempt == TOOL_MAX_RETRIES:
-                    ms = (time.perf_counter() - start) * 1000
-                    err_type = type(e).__name__
-                    logger.tool(tool_name, f"failed ({attempt} attempts)", duration_ms=ms)
-                    logger.lifecycle(
-                        f"Error: {tool_name} failed after {attempt} retries - {err_type}: {e}"
-                    )
-                    if tool_failure_callback:
-                        tool_failure_callback(part, e)
-                    raise
-                backoff = _calculate_backoff(attempt)
-                logger.lifecycle(
-                    f"Retry: {tool_name} attempt {attempt}/{TOOL_MAX_RETRIES} ({type(e).__name__})"
-                )
-                await asyncio.sleep(backoff)
-
     # Execute in batches if we have more tools than max_parallel
+    results: list[None] = []
     if len(tool_calls) > max_parallel:
-        results: list[None] = []
         for i in range(0, len(tool_calls), max_parallel):
             batch = tool_calls[i : i + max_parallel]
-            batch_tasks = [execute_with_retry(part, node) for part, node in batch]
-            batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
-            # Check for errors after each batch
-            for result in batch_results:
-                if isinstance(result, BaseException):
-                    raise result
-                results.append(result)
+            batch_tasks = [
+                _execute_with_retry(part, node, callback, tool_failure_callback)
+                for part, node in batch
+            ]
+            batch_gathered = await asyncio.gather(*batch_tasks, return_exceptions=True)
+            results.extend(_gather_results(batch_gathered))
     else:
-        tasks = [execute_with_retry(part, node) for part, node in tool_calls]
-        gathered_results = await asyncio.gather(*tasks, return_exceptions=True)
-        # Check for errors - raise the first one
-        results = []
-        for result in gathered_results:
-            if isinstance(result, BaseException):
-                raise result
-            results.append(result)
+        tasks = [
+            _execute_with_retry(part, node, callback, tool_failure_callback)
+            for part, node in tool_calls
+        ]
+        gathered = await asyncio.gather(*tasks, return_exceptions=True)
+        results = _gather_results(gathered)
+
     logger.lifecycle(f"Tool execution complete (count={tool_count})")
     return results

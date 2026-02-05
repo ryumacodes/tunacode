@@ -147,6 +147,125 @@ def _expand_brace_pattern(pattern: str) -> list[str]:
     return expanded
 
 
+def _compile_patterns(patterns: list[str], flags: int) -> list[tuple[str, re.Pattern[str]]]:
+    """Compile glob patterns into regex patterns for matching."""
+    compiled: list[tuple[str, re.Pattern[str]]] = []
+    for pat in patterns:
+        if "**" in pat:
+            regex_pat = pat.replace("**", "__STARSTAR__")
+            regex_pat = fnmatch.translate(regex_pat)
+            regex_pat = regex_pat.replace("__STARSTAR__", ".*")
+            compiled.append((pat, re.compile(regex_pat, flags)))
+        else:
+            compiled.append((pat, re.compile(fnmatch.translate(pat), flags)))
+    return compiled
+
+
+def _single_pattern_matches(
+    entry_name: str,
+    rel_path: str,
+    orig: str,
+    comp: re.Pattern[str],
+    recursive: bool,
+) -> bool:
+    """Check if a single compiled pattern matches the entry."""
+    if "**" not in orig:
+        return bool(comp.match(entry_name))
+    if orig.startswith("**/") and not recursive:
+        return fnmatch.fnmatch(entry_name, orig[3:])
+    if comp.match(rel_path):
+        return True
+    if orig.startswith("**/"):
+        return fnmatch.fnmatch(entry_name, orig[3:])
+    return False
+
+
+def _entry_matches_any_pattern(
+    entry_name: str,
+    rel_path: str,
+    compiled: list[tuple[str, re.Pattern[str]]],
+    recursive: bool,
+) -> bool:
+    """Check if an entry matches any of the compiled patterns."""
+    for orig, comp in compiled:
+        if _single_pattern_matches(entry_name, rel_path, orig, comp, recursive):
+            return True
+    return False
+
+
+def _should_skip_entry(
+    entry: os.DirEntry[str],
+    include_hidden: bool,
+    ignore_manager: IgnoreManager,
+    recursive: bool,
+    stack: list[Path],
+) -> bool:
+    """Check if a directory entry should be skipped."""
+    if entry.name.startswith(".") and not include_hidden:
+        return True
+    return traverse_gitignore(entry, ignore_manager, recursive, stack)
+
+
+def _scan_directory(
+    current: Path,
+    root: Path,
+    compiled: list[tuple[str, re.Pattern[str]]],
+    recursive: bool,
+    include_hidden: bool,
+    ignore_manager: IgnoreManager,
+    stack: list[Path],
+    matches: list[str],
+    max_results: int,
+) -> None:
+    """Scan a single directory for matching entries."""
+    try:
+        with os.scandir(current) as entries:
+            for entry in entries:
+                if _should_skip_entry(entry, include_hidden, ignore_manager, recursive, stack):
+                    continue
+                rel_path = os.path.relpath(entry.path, root)
+                if _entry_matches_any_pattern(entry.name, rel_path, compiled, recursive):
+                    matches.append(entry.path)
+                if len(matches) >= max_results:
+                    break
+    except (PermissionError, OSError):
+        pass
+
+
+def _search_sync(
+    root: Path,
+    patterns: list[str],
+    recursive: bool,
+    include_hidden: bool,
+    ignore_manager: IgnoreManager,
+    max_results: int,
+    case_sensitive: bool,
+) -> list[str]:
+    """Synchronous glob search using os.scandir."""
+    matches: list[str] = []
+    stack = [root]
+    flags = 0 if case_sensitive else re.IGNORECASE
+    compiled = _compile_patterns(patterns, flags)
+
+    while stack:
+        if len(matches) >= max_results:
+            break
+        current = stack.pop()
+        _scan_directory(
+            current,
+            root,
+            compiled,
+            recursive,
+            include_hidden,
+            ignore_manager,
+            stack,
+            matches,
+            max_results,
+        )
+
+    return matches[:max_results]
+
+
 async def _glob_filesystem(
     root: Path,
     patterns: list[str],
@@ -157,68 +276,16 @@ async def _glob_filesystem(
     case_sensitive: bool,
 ) -> list[str]:
     """Perform glob search using os.scandir."""
-
-    def search_sync() -> list[str]:
-        matches: list[str] = []
-        stack = [root]
-        flags = 0 if case_sensitive else re.IGNORECASE
-
-        compiled = []
-        for pat in patterns:
-            if "**" in pat:
-                regex_pat = pat.replace("**", "__STARSTAR__")
-                regex_pat = fnmatch.translate(regex_pat)
-                regex_pat = regex_pat.replace("__STARSTAR__", ".*")
-                compiled.append((pat, re.compile(regex_pat, flags)))
-            else:
-                compiled.append((pat, re.compile(fnmatch.translate(pat), flags)))
-
-        while stack and len(matches) < max_results:
-            current = stack.pop()
-
-            try:
-                with os.scandir(current) as entries:
-                    for entry in entries:
-                        is_hidden_entry = entry.name.startswith(".")
-                        should_skip_hidden = is_hidden_entry and not include_hidden
-                        if should_skip_hidden:
-                            continue
-
-                        should_ignore = traverse_gitignore(entry, ignore_manager, recursive, stack)
-                        if should_ignore:
-                            continue
-
-                        rel_path = os.path.relpath(entry.path, root)
-
-                        for orig, comp in compiled:
-                            if "**" in orig:
-                                if orig.startswith("**/") and not recursive:
-                                    suffix = orig[3:]
-                                    if fnmatch.fnmatch(entry.name, suffix):
-                                        matches.append(entry.path)
-                                        break
-                                elif comp.match(rel_path):
-                                    matches.append(entry.path)
-                                    break
-                                elif orig.startswith("**/"):
-                                    suffix = orig[3:]
-                                    if fnmatch.fnmatch(entry.name, suffix):
-                                        matches.append(entry.path)
-                                        break
-                            else:
-                                if comp.match(entry.name):
-                                    matches.append(entry.path)
-                                    break
-
-                        if len(matches) >= max_results:
-                            break
-
-            except (PermissionError, OSError):
-                continue
-
-        return matches[:max_results]
-
-    return await asyncio.to_thread(search_sync)
+    return await asyncio.to_thread(
+        _search_sync,
+        root,
+        patterns,
+        recursive,
+        include_hidden,
+        ignore_manager,
+        max_results,
+        case_sensitive,
+    )
 
 
 async def _sort_matches(matches: list[str], sort_by: SortOrder) -> list[str]:
