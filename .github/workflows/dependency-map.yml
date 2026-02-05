@@ -1,0 +1,47 @@
+name: Dependency Map
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'src/tunacode/**/*.py'
+      - 'scripts/grimp_layers_report.py'
+  workflow_dispatch:
+
+jobs:
+  generate-map:
+    name: Generate Dependency Map
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Install graphviz
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Generate dependency map
+        run: uv run python scripts/grimp_layers_report.py
+
+      - name: Commit and push if changed
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/architecture/dependencies/DEPENDENCY_LAYERS.*
+          if git diff --staged --quiet; then
+            echo "No changes to dependency map"
+          else
+            git commit -m "chore: update dependency map [skip ci]"
+            git push
+          fi
