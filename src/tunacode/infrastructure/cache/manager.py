@@ -32,7 +32,7 @@ class Cache:
                 return None
 
             metadata = self._metadata.get(key)
-            is_valid = self._strategy.is_valid(key=key, value=entry.value, metadata=metadata)
+            is_valid = self._strategy.is_valid(key=key, _value=entry.value, metadata=metadata)
             if is_valid:
                 return entry.value
 
@@ -51,6 +51,13 @@ class Cache:
     def get_metadata(self, key: object) -> object | None:
         with self._lock:
             return self._metadata.get(key)
+
+    def delete(self, key: object) -> bool:
+        with self._lock:
+            had_entry = key in self._values or key in self._metadata
+            self._values.pop(key, None)
+            self._metadata.pop(key, None)
+            return had_entry
 
     def clear(self) -> None:
         with self._lock:

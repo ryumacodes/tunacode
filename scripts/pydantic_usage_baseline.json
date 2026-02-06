@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-02-06T18:49:37.109855+00:00",
+  "generated_at": "2026-02-06T19:04:20.729226+00:00",
   "root": ".",
   "groups": {
     "pydantic_ai_imports": {
       "name": "pydantic_ai_imports",
       "description": "Imports that reference pydantic_ai.",
       "pattern": "\\bfrom\\s+pydantic_ai\\b|\\bimport\\s+pydantic_ai\\b",
-      "match_count": 45,
-      "file_count": 22,
+      "match_count": 46,
+      "file_count": 23,
       "files": [
         {
           "path": "docs/tools/architecture.md",
@@ -91,6 +91,10 @@
         },
         {
           "path": "tests/unit/core/test_text_match.py",
+          "match_count": 1
+        },
+        {
+          "path": "tests/unit/infrastructure/test_typed_cache_accessors.py",
           "match_count": 1
         },
         {
@@ -269,8 +273,8 @@
       "name": "agent_call",
       "description": "Agent(...) constructor usage.",
       "pattern": "\\bAgent\\(",
-      "match_count": 5,
-      "file_count": 4,
+      "match_count": 6,
+      "file_count": 5,
       "files": [
         {
           "path": "docs/codebase-map/architecture/architecture.md",
@@ -287,6 +291,10 @@
         {
           "path": "src/tunacode/core/agents/agent_components/agent_config.py",
           "match_count": 2
+        },
+        {
+          "path": "tests/unit/infrastructure/test_typed_cache_accessors.py",
+          "match_count": 1
         }
       ]
     },
@@ -309,7 +317,7 @@
     }
   },
   "totals": {
-    "match_count": 92,
-    "file_count": 40
+    "match_count": 94,
+    "file_count": 41
   }
 }
