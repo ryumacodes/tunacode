@@ -1,7 +1,6 @@
 """Ripgrep binary management and execution utilities."""
 
 import asyncio
-import functools
 import locale
 import os
 import platform
@@ -9,6 +8,8 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
+
+from tunacode.tools.cache_accessors import ripgrep_cache
 
 PROCESS_OUTPUT_ENCODING = locale.getpreferredencoding(False)
 RIPGREP_MATCH_FOUND_EXIT_CODE = 0
@@ -22,34 +23,42 @@ RIPGREP_SUCCESS_EXIT_CODES = {
 }
 
 
-@functools.lru_cache(maxsize=1)
 def get_platform_identifier() -> tuple[str, str]:
     """Get the current platform identifier.
 
     Returns:
         Tuple of (platform_key, system_name)
     """
+
+    cached = ripgrep_cache.get_platform_identifier()
+    if cached is not None:
+        return cached
+
     system = platform.system().lower()
     machine = platform.machine().lower()
 
     if system == "linux":
         if machine in ["x86_64", "amd64"]:
+            ripgrep_cache.set_platform_identifier("x64-linux", system)
             return "x64-linux", system
         elif machine in ["aarch64", "arm64"]:
+            ripgrep_cache.set_platform_identifier("arm64-linux", system)
             return "arm64-linux", system
     elif system == "darwin":  # noqa: SIM102
         if machine in ["x86_64", "amd64"]:
+            ripgrep_cache.set_platform_identifier("x64-darwin", system)
             return "x64-darwin", system
         elif machine in ["arm64", "aarch64"]:
+            ripgrep_cache.set_platform_identifier("arm64-darwin", system)
             return "arm64-darwin", system
     elif system == "windows":  # noqa: SIM102
         if machine in ["x86_64", "amd64"]:
+            ripgrep_cache.set_platform_identifier("x64-win32", system)
             return "x64-win32", system
 
     raise ValueError(f"Unsupported platform: {system} {machine}")
 
 
-@functools.lru_cache(maxsize=1)
 def get_ripgrep_binary_path() -> Path | None:
     """Resolve the path to the ripgrep binary.
 
@@ -62,11 +71,17 @@ def get_ripgrep_binary_path() -> Path | None:
     Returns:
         Path to ripgrep binary or None if not available
     """
+
+    cache_hit, cached = ripgrep_cache.try_get_binary_path()
+    if cache_hit:
+        return cached
+
     # Check for environment variable override
     env_path = os.environ.get("TUNACODE_RIPGREP_PATH")
     if env_path:
         path = Path(env_path)
         if path.exists() and path.is_file():
+            ripgrep_cache.set_binary_path(path)
             return path
 
     # Check for system ripgrep
@@ -74,6 +89,7 @@ def get_ripgrep_binary_path() -> Path | None:
     if system_rg:
         system_rg_path = Path(system_rg)
         if _check_ripgrep_version(system_rg_path):
+            ripgrep_cache.set_binary_path(system_rg_path)
             return system_rg_path
 
     # Check for bundled ripgrep
@@ -88,23 +104,19 @@ def get_ripgrep_binary_path() -> Path | None:
         bundled_path = vendor_dir / binary_name
 
         if bundled_path.exists():
+            ripgrep_cache.set_binary_path(bundled_path)
             return bundled_path
-    except Exception:
+    except (OSError, ValueError):
+        # Unsupported platform or filesystem issue; fall back to Python search.
         pass
 
+    ripgrep_cache.set_binary_path(None)
     return None
 
 
 def _check_ripgrep_version(rg_path: Path, min_version: str = "13.0.0") -> bool:
-    """Check if ripgrep version meets minimum requirement.
+    """Check if ripgrep version meets minimum requirement."""
 
-    Args:
-        rg_path: Path to ripgrep binary
-        min_version: Minimum required version
-
-    Returns:
-        True if version is sufficient, False otherwise
-    """
     try:
         result = subprocess.run(
             [str(rg_path), "--version"],
@@ -112,20 +124,25 @@ def _check_ripgrep_version(rg_path: Path, min_version: str = "13.0.0") -> bool:
             text=True,
             timeout=RIPGREP_VERSION_TIMEOUT_SECONDS,
         )
-        if result.returncode == 0:
-            # Parse version from output like "ripgrep 14.1.1"
-            version_line = result.stdout.split("\n")[0]
-            version = version_line.split()[-1]
+    except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired):
+        return False
 
-            # Simple version comparison (works for x.y.z format)
-            current = tuple(map(int, version.split(".")))
-            required = tuple(map(int, min_version.split(".")))
+    if result.returncode != 0:
+        return False
 
-            return current >= required
-    except Exception:
-        pass
+    version_line = result.stdout.splitlines()[0] if result.stdout else ""
+    parts = version_line.split()
+    if not parts:
+        return False
 
-    return False
+    version = parts[-1]
+    try:
+        current = tuple(int(part) for part in version.split("."))
+        required = tuple(int(part) for part in min_version.split("."))
+    except ValueError:
+        return False
+
+    return current >= required
 
 
 class RipgrepExecutor:
@@ -225,7 +242,7 @@ class RipgrepExecutor:
 
         except TimeoutError:
             return []
-        except Exception:
+        except (OSError, asyncio.SubprocessError, UnicodeDecodeError):
             return self._python_fallback_search(pattern, path, file_pattern=file_pattern)
 
     async def _run_ripgrep_command(self, cmd: list[str], timeout: int) -> tuple[int, str]:
@@ -271,7 +288,7 @@ class RipgrepExecutor:
                 timeout=RIPGREP_LIST_FILES_TIMEOUT_SECONDS,
             )
             return [line.strip() for line in result.stdout.splitlines() if line.strip()]
-        except Exception:
+        except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired):
             return self._python_fallback_list_files(pattern, directory)
 
     def _python_fallback_search(
@@ -311,7 +328,7 @@ class RipgrepExecutor:
                     for line_num, line in enumerate(f, 1):
                         if regex.search(line):
                             results.append(f"{file_path}:{line_num}:{line.strip()}")
-            except Exception:  # nosec B112 - continue on file read errors is appropriate
+            except OSError:  # nosec B112 - continue on file read errors is appropriate
                 continue
 
         return results
@@ -323,11 +340,10 @@ class RipgrepExecutor:
         try:
             base_path = Path(directory)
             return [str(p) for p in base_path.glob(pattern) if p.is_file()]
-        except Exception:
+        except OSError:
             return []
 
 
-# Performance metrics collection
 class RipgrepMetrics:
     """Collect performance metrics for ripgrep operations."""
 
@@ -358,5 +374,4 @@ class RipgrepMetrics:
         return self.fallback_count / self.search_count
 
 
-# Global metrics instance
 metrics = RipgrepMetrics()

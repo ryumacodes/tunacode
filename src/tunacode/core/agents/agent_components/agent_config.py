@@ -33,6 +33,8 @@ from tunacode.tools.update_file import update_file
 from tunacode.tools.web_fetch import web_fetch
 from tunacode.tools.write_file import write_file
 
+from tunacode.infrastructure.cache.caches import agents as agents_cache
+from tunacode.infrastructure.cache.caches import tunacode_context as context_cache
 from tunacode.infrastructure.llm_types import PydanticAgent
 
 from tunacode.core.agents.agent_components.openai_response_validation import (
@@ -48,13 +50,6 @@ EventHook = Callable[..., Awaitable[None]]
 RequestHook = Callable[[Request], Awaitable[None]]
 ResponseHook = Callable[[Response], Awaitable[None]]
 EventHooks = dict[str, list[EventHook]]
-
-# Module-level cache for AGENTS.md context
-_TUNACODE_CACHE: dict[str, tuple[str, float]] = {}
-
-# Module-level cache for agents to persist across requests
-_AGENT_CACHE: dict[ModelName, PydanticAgent] = {}
-_AGENT_CACHE_VERSION: dict[ModelName, int] = {}
 
 
 async def _sleep_with_delay(total_delay: float) -> None:
@@ -146,13 +141,6 @@ def _build_event_hooks(request_delay: float) -> EventHooks:
     }
 
 
-def clear_all_caches() -> None:
-    """Clear all module-level caches. Useful for testing."""
-    _TUNACODE_CACHE.clear()
-    _AGENT_CACHE.clear()
-    _AGENT_CACHE_VERSION.clear()
-
-
 def invalidate_agent_cache(model: str, state_manager: StateManagerProtocol) -> bool:
     """Invalidate cached agent for a specific model.
 
@@ -167,14 +155,8 @@ def invalidate_agent_cache(model: str, state_manager: StateManagerProtocol) -> b
         True if an agent was invalidated, False if not cached.
     """
     logger = get_logger()
-    cleared_module = False
+    cleared_module = agents_cache.invalidate_agent(model)
     cleared_session = False
-
-    # Clear module-level cache
-    if model in _AGENT_CACHE:
-        del _AGENT_CACHE[model]
-        cleared_module = True
-    _AGENT_CACHE_VERSION.pop(model, None)
 
     # Clear session-level cache
     if model in state_manager.session.agents:
@@ -238,30 +220,8 @@ def load_tunacode_context() -> str:
             guide_file = config["settings"].get("guide_file", "AGENTS.md")
         tunacode_path = Path.cwd() / guide_file
 
-        cache_key = str(tunacode_path)
+        return context_cache.get_context(tunacode_path)
 
-        if not tunacode_path.exists():
-            return ""
-
-        # Check cache with file modification time
-        if cache_key in _TUNACODE_CACHE:
-            cached_content, cached_mtime = _TUNACODE_CACHE[cache_key]
-            current_mtime = tunacode_path.stat().st_mtime
-            if current_mtime == cached_mtime:
-                return cached_content
-
-        # Load from file and cache
-        tunacode_content = tunacode_path.read_text(encoding="utf-8")
-        if tunacode_content.strip():
-            result = f"\n\n# Project Context from {guide_file}\n" + tunacode_content
-            _TUNACODE_CACHE[cache_key] = (result, tunacode_path.stat().st_mtime)
-            return result
-        else:
-            _TUNACODE_CACHE[cache_key] = ("", tunacode_path.stat().st_mtime)
-            return ""
-
-    except FileNotFoundError:
-        return ""
     except Exception as e:
         logger.error(f"Unexpected error loading guide file: {e}")
         raise
@@ -349,7 +309,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     settings = state_manager.session.user_config.get("settings", {})
     agent_version = _compute_agent_version(settings, request_delay)
 
-    # Check session-level cache first (for backward compatibility with tests)
+    # Check session-level cache first.
     session_agent = state_manager.session.agents.get(model)
     session_version = state_manager.session.agent_versions.get(model)
     if session_agent and session_version == agent_version:
@@ -360,98 +320,86 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
         del state_manager.session.agents[model]
         state_manager.session.agent_versions.pop(model, None)
 
-    # Check module-level cache
-    if model in _AGENT_CACHE:
-        # Verify cache is still valid (check for config changes)
-        cached_version = _AGENT_CACHE_VERSION.get(model)
-        if cached_version == agent_version:
-            logger.debug(f"Agent cache hit (module): {model}")
-            state_manager.session.agents[model] = _AGENT_CACHE[model]
-            state_manager.session.agent_versions[model] = agent_version
-            return _AGENT_CACHE[model]
-        else:
-            logger.debug(f"Agent cache invalidated (config changed): {model}")
-            del _AGENT_CACHE[model]
-            del _AGENT_CACHE_VERSION[model]
-
-    if model not in _AGENT_CACHE:
-        max_retries = settings.get("max_retries", 3)
-
-        # Lazy import Agent and Tool
-        Agent, Tool = get_agent_tool()
-
-        # Load system prompt (with optional model-specific template override)
-        base_path = Path(__file__).parent.parent.parent.parent
-        system_prompt = load_system_prompt(base_path, model=model)
-
-        # Load AGENTS.md context
-        system_prompt += load_tunacode_context()
-
-        # Get tool strict validation setting from config (default to False for backward
-        # compatibility)
-        tool_strict_validation = settings.get("tool_strict_validation", False)
-
-        # Full tool set with detailed descriptions
-        tools_list = [
-            Tool(bash, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(glob, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(grep, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(list_dir, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(read_file, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(update_file, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(web_fetch, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(write_file, max_retries=max_retries, strict=tool_strict_validation),
-        ]
-
-        # Configure HTTP client with retry logic at transport layer
-        # This handles retries BEFORE node creation, avoiding pydantic-ai's
-        # single-stream-per-node constraint violations
-        # https://ai.pydantic.dev/api/retries/#pydantic_ai.retries.wait_retry_after
-        transport = AsyncTenacityTransport(
-            config=RetryConfig(
-                retry=retry_if_exception_type(HTTPStatusError),
-                wait=wait_retry_after(max_wait=60),
-                stop=stop_after_attempt(max_retries),
-                reraise=True,
-            ),
-            validate_response=lambda r: r.raise_for_status(),
-        )
-
-        event_hooks = _build_event_hooks(request_delay)
-
-        # Set HTTP timeout: connect=10s, read=60s, write=30s, pool=5s
-        # This prevents hanging forever if provider doesn't respond
-        from httpx import Timeout
-
-        http_timeout = Timeout(10.0, read=60.0, write=30.0, pool=5.0)
-        http_client = AsyncClient(
-            transport=transport, event_hooks=event_hooks, timeout=http_timeout
-        )
-
-        # Create model instance with retry-enabled HTTP client
-        model_instance = _create_model_with_retry(model, http_client, state_manager.session)
-
-        # Apply max_tokens if configured
-        max_tokens = get_max_tokens()
-        if max_tokens is not None:
-            agent = Agent(
-                model=model_instance,
-                system_prompt=system_prompt,
-                tools=tools_list,
-                model_settings=ModelSettings(max_tokens=max_tokens),
-            )
-        else:
-            agent = Agent(
-                model=model_instance,
-                system_prompt=system_prompt,
-                tools=tools_list,
-            )
-
-        # Store in both caches
-        _AGENT_CACHE[model] = agent
-        _AGENT_CACHE_VERSION[model] = agent_version
+    cached_agent = agents_cache.get_agent(model, expected_version=agent_version)
+    if cached_agent is not None:
+        logger.debug(f"Agent cache hit (module): {model}")
+        state_manager.session.agents[model] = cached_agent
         state_manager.session.agent_versions[model] = agent_version
-        state_manager.session.agents[model] = agent
-        logger.info(f"Agent created: {model}")
+        return cached_agent
 
-    return _AGENT_CACHE[model]
+    max_retries = settings.get("max_retries", 3)
+
+    # Lazy import Agent and Tool
+    Agent, Tool = get_agent_tool()
+
+    # Load system prompt (with optional model-specific template override)
+    base_path = Path(__file__).parent.parent.parent.parent
+    system_prompt = load_system_prompt(base_path, model=model)
+
+    # Load AGENTS.md context
+    system_prompt += load_tunacode_context()
+
+    # Get tool strict validation setting from config (default to False for backward
+    # compatibility)
+    tool_strict_validation = settings.get("tool_strict_validation", False)
+
+    # Full tool set with detailed descriptions
+    tools_list = [
+        Tool(bash, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(glob, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(grep, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(list_dir, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(read_file, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(update_file, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(web_fetch, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(write_file, max_retries=max_retries, strict=tool_strict_validation),
+    ]
+
+    # Configure HTTP client with retry logic at transport layer
+    # This handles retries BEFORE node creation, avoiding pydantic-ai's
+    # single-stream-per-node constraint violations
+    # https://ai.pydantic.dev/api/retries/#pydantic_ai.retries.wait_retry_after
+    transport = AsyncTenacityTransport(
+        config=RetryConfig(
+            retry=retry_if_exception_type(HTTPStatusError),
+            wait=wait_retry_after(max_wait=60),
+            stop=stop_after_attempt(max_retries),
+            reraise=True,
+        ),
+        validate_response=lambda r: r.raise_for_status(),
+    )
+
+    event_hooks = _build_event_hooks(request_delay)
+
+    # Set HTTP timeout: connect=10s, read=60s, write=30s, pool=5s
+    # This prevents hanging forever if provider doesn't respond
+    from httpx import Timeout
+
+    http_timeout = Timeout(10.0, read=60.0, write=30.0, pool=5.0)
+    http_client = AsyncClient(transport=transport, event_hooks=event_hooks, timeout=http_timeout)
+
+    # Create model instance with retry-enabled HTTP client
+    model_instance = _create_model_with_retry(model, http_client, state_manager.session)
+
+    # Apply max_tokens if configured
+    max_tokens = get_max_tokens()
+    if max_tokens is not None:
+        agent = Agent(
+            model=model_instance,
+            system_prompt=system_prompt,
+            tools=tools_list,
+            model_settings=ModelSettings(max_tokens=max_tokens),
+        )
+    else:
+        agent = Agent(
+            model=model_instance,
+            system_prompt=system_prompt,
+            tools=tools_list,
+        )
+
+    agents_cache.set_agent(model, agent=agent, version=agent_version)
+    state_manager.session.agent_versions[model] = agent_version
+    state_manager.session.agents[model] = agent
+    logger.info(f"Agent created: {model}")
+
+    return cast(PydanticAgent, agent)

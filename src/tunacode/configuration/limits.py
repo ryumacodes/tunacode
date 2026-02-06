@@ -7,39 +7,49 @@ This allows:
 - Big model users to set custom limits
 """
 
-from functools import lru_cache
+from __future__ import annotations
 
-from tunacode.constants import (
-    MAX_COMMAND_OUTPUT,
-    MAX_FILES_IN_DIR,
-)
+from typing import Any
+
+from tunacode.constants import MAX_COMMAND_OUTPUT, MAX_FILES_IN_DIR
+
+from tunacode.infrastructure.cache.caches import limits_settings as limits_settings_cache
 
 
-@lru_cache(maxsize=1)
-def _load_settings() -> dict:
+def _load_settings() -> dict[str, Any]:
     """Load and cache settings from user config."""
-    # Import here to avoid circular imports
+
+    cached = limits_settings_cache.get_settings()
+    if cached is not None:
+        return cached
+
+    # Import here to avoid circular imports.
     from tunacode.configuration.user_config import load_config
 
     config = load_config()
-    if config and "settings" in config:
-        return config["settings"]
-    return {}
+    settings = config.get("settings", {}) if config else {}
+
+    if not isinstance(settings, dict):
+        raise TypeError(f"Expected settings to be a dict, got {type(settings).__name__}")
+
+    limits_settings_cache.set_settings(settings)
+    return settings
 
 
 def clear_cache() -> None:
     """Clear the settings cache. Call when config changes."""
-    _load_settings.cache_clear()
+
+    limits_settings_cache.clear_settings_cache()
 
 
 def _get_limit(key: str, default: int) -> int:
     """Get a limit value with proper precedence.
 
-    Precedence: explicit setting > standard default
+    Precedence: explicit setting > standard default.
     """
+
     settings = _load_settings()
 
-    # If explicitly set, use that value
     if key in settings:
         return settings[key]
 
@@ -48,19 +58,21 @@ def _get_limit(key: str, default: int) -> int:
 
 def get_command_limit() -> int:
     """Get max command output length for bash tool."""
+
     return _get_limit("max_command_output", MAX_COMMAND_OUTPUT)
 
 
 def get_max_files_in_dir() -> int:
     """Get max files to list in list_dir tool."""
+
     return _get_limit("max_files_in_dir", MAX_FILES_IN_DIR)
 
 
 def get_max_tokens() -> int | None:
     """Get max response tokens. Returns None if not set (no limit)."""
+
     settings = _load_settings()
 
-    # Explicit setting takes precedence
     if "max_tokens" in settings:
         return settings["max_tokens"]
 
