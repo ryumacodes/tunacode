@@ -75,5 +75,5 @@ jobs:
           -n auto
           --cov=tunacode
           --cov-report=term-missing
-          --cov-fail-under=46
+          --cov-fail-under=70
           --override-ini="addopts=-v --strict-markers --tb=short"
