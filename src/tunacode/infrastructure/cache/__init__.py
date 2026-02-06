@@ -12,7 +12,7 @@ Design goals:
 from __future__ import annotations
 
 from tunacode.infrastructure.cache.manager import Cache, CacheManager
-from tunacode.infrastructure.cache.metadata import MtimeMetadata
+from tunacode.infrastructure.cache.metadata import MtimeMetadata, stat_mtime_ns
 from tunacode.infrastructure.cache.strategies import CacheStrategy, ManualStrategy, MtimeStrategy
 
 
@@ -52,6 +52,7 @@ __all__ = [
     "MtimeStrategy",
     "MtimeMetadata",
     "clear_all",
+    "stat_mtime_ns",
     "clear_cache",
     "get_cache",
     "get_cache_manager",

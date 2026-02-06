@@ -222,8 +222,6 @@ def load_tunacode_context() -> str:
 
         return context_cache.get_context(tunacode_path)
 
-    except FileNotFoundError:
-        return ""
     except Exception as e:
         logger.error(f"Unexpected error loading guide file: {e}")
         raise
@@ -329,82 +327,79 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
         state_manager.session.agent_versions[model] = agent_version
         return cached_agent
 
-    if cached_agent is None:
-        max_retries = settings.get("max_retries", 3)
+    max_retries = settings.get("max_retries", 3)
 
-        # Lazy import Agent and Tool
-        Agent, Tool = get_agent_tool()
+    # Lazy import Agent and Tool
+    Agent, Tool = get_agent_tool()
 
-        # Load system prompt (with optional model-specific template override)
-        base_path = Path(__file__).parent.parent.parent.parent
-        system_prompt = load_system_prompt(base_path, model=model)
+    # Load system prompt (with optional model-specific template override)
+    base_path = Path(__file__).parent.parent.parent.parent
+    system_prompt = load_system_prompt(base_path, model=model)
 
-        # Load AGENTS.md context
-        system_prompt += load_tunacode_context()
+    # Load AGENTS.md context
+    system_prompt += load_tunacode_context()
 
-        # Get tool strict validation setting from config (default to False for backward
-        # compatibility)
-        tool_strict_validation = settings.get("tool_strict_validation", False)
+    # Get tool strict validation setting from config (default to False for backward
+    # compatibility)
+    tool_strict_validation = settings.get("tool_strict_validation", False)
 
-        # Full tool set with detailed descriptions
-        tools_list = [
-            Tool(bash, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(glob, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(grep, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(list_dir, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(read_file, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(update_file, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(web_fetch, max_retries=max_retries, strict=tool_strict_validation),
-            Tool(write_file, max_retries=max_retries, strict=tool_strict_validation),
-        ]
+    # Full tool set with detailed descriptions
+    tools_list = [
+        Tool(bash, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(glob, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(grep, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(list_dir, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(read_file, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(update_file, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(web_fetch, max_retries=max_retries, strict=tool_strict_validation),
+        Tool(write_file, max_retries=max_retries, strict=tool_strict_validation),
+    ]
 
-        # Configure HTTP client with retry logic at transport layer
-        # This handles retries BEFORE node creation, avoiding pydantic-ai's
-        # single-stream-per-node constraint violations
-        # https://ai.pydantic.dev/api/retries/#pydantic_ai.retries.wait_retry_after
-        transport = AsyncTenacityTransport(
-            config=RetryConfig(
-                retry=retry_if_exception_type(HTTPStatusError),
-                wait=wait_retry_after(max_wait=60),
-                stop=stop_after_attempt(max_retries),
-                reraise=True,
-            ),
-            validate_response=lambda r: r.raise_for_status(),
+    # Configure HTTP client with retry logic at transport layer
+    # This handles retries BEFORE node creation, avoiding pydantic-ai's
+    # single-stream-per-node constraint violations
+    # https://ai.pydantic.dev/api/retries/#pydantic_ai.retries.wait_retry_after
+    transport = AsyncTenacityTransport(
+        config=RetryConfig(
+            retry=retry_if_exception_type(HTTPStatusError),
+            wait=wait_retry_after(max_wait=60),
+            stop=stop_after_attempt(max_retries),
+            reraise=True,
+        ),
+        validate_response=lambda r: r.raise_for_status(),
+    )
+
+    event_hooks = _build_event_hooks(request_delay)
+
+    # Set HTTP timeout: connect=10s, read=60s, write=30s, pool=5s
+    # This prevents hanging forever if provider doesn't respond
+    from httpx import Timeout
+
+    http_timeout = Timeout(10.0, read=60.0, write=30.0, pool=5.0)
+    http_client = AsyncClient(transport=transport, event_hooks=event_hooks, timeout=http_timeout)
+
+    # Create model instance with retry-enabled HTTP client
+    model_instance = _create_model_with_retry(model, http_client, state_manager.session)
+
+    # Apply max_tokens if configured
+    max_tokens = get_max_tokens()
+    if max_tokens is not None:
+        agent = Agent(
+            model=model_instance,
+            system_prompt=system_prompt,
+            tools=tools_list,
+            model_settings=ModelSettings(max_tokens=max_tokens),
+        )
+    else:
+        agent = Agent(
+            model=model_instance,
+            system_prompt=system_prompt,
+            tools=tools_list,
         )
 
-        event_hooks = _build_event_hooks(request_delay)
+    agents_cache.set_agent(model, agent=agent, version=agent_version)
+    state_manager.session.agent_versions[model] = agent_version
+    state_manager.session.agents[model] = agent
+    logger.info(f"Agent created: {model}")
 
-        # Set HTTP timeout: connect=10s, read=60s, write=30s, pool=5s
-        # This prevents hanging forever if provider doesn't respond
-        from httpx import Timeout
-
-        http_timeout = Timeout(10.0, read=60.0, write=30.0, pool=5.0)
-        http_client = AsyncClient(
-            transport=transport, event_hooks=event_hooks, timeout=http_timeout
-        )
-
-        # Create model instance with retry-enabled HTTP client
-        model_instance = _create_model_with_retry(model, http_client, state_manager.session)
-
-        # Apply max_tokens if configured
-        max_tokens = get_max_tokens()
-        if max_tokens is not None:
-            agent = Agent(
-                model=model_instance,
-                system_prompt=system_prompt,
-                tools=tools_list,
-                model_settings=ModelSettings(max_tokens=max_tokens),
-            )
-        else:
-            agent = Agent(
-                model=model_instance,
-                system_prompt=system_prompt,
-                tools=tools_list,
-            )
-
-        agents_cache.set_agent(model, agent=agent, version=agent_version)
-        state_manager.session.agent_versions[model] = agent_version
-        state_manager.session.agents[model] = agent
-        logger.info(f"Agent created: {model}")
-
-    return cast(PydanticAgent, state_manager.session.agents[model])
+    return cast(PydanticAgent, agent)

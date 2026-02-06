@@ -82,11 +82,10 @@ class CacheManager:
 
     @classmethod
     def get_instance(cls) -> CacheManager:
-        if cls._instance is None:
-            with cls._instance_lock:
-                if cls._instance is None:
-                    cls._instance = cls()
-        return cls._instance
+        with cls._instance_lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
 
     def register_cache(self, *, name: str, strategy: CacheStrategy) -> None:
         with self._lock:

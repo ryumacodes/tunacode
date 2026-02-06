@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
 from typing import Protocol
 
-from tunacode.infrastructure.cache.metadata import MtimeMetadata
+from tunacode.infrastructure.cache.metadata import MtimeMetadata, stat_mtime_ns
 
 
 class CacheStrategy(Protocol):
@@ -33,16 +31,5 @@ class MtimeStrategy:
                 f"got {type(metadata).__name__} for key={key!r}"
             )
 
-        path = metadata.path
-        current_mtime_ns = _stat_mtime_ns(path)
+        current_mtime_ns = stat_mtime_ns(metadata.path)
         return current_mtime_ns == metadata.mtime_ns
-
-
-MISSING_MTIME_NS = 0
-
-
-def _stat_mtime_ns(path: Path) -> int:
-    try:
-        return os.stat(path).st_mtime_ns
-    except FileNotFoundError:
-        return MISSING_MTIME_NS

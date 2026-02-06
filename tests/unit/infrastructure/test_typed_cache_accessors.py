@@ -6,11 +6,12 @@ from pathlib import Path
 
 from pydantic_ai import Agent
 
-from tunacode.infrastructure.cache.caches.agents import clear_agents, get_agent, set_agent
-from tunacode.infrastructure.cache.caches.ignore_manager import (
+from tunacode.tools.cache_accessors.ignore_manager_cache import (
     clear_ignore_manager_cache,
     get_ignore_manager,
 )
+
+from tunacode.infrastructure.cache.caches.agents import clear_agents, get_agent, set_agent
 from tunacode.infrastructure.cache.caches.tunacode_context import (
     clear_context_cache,
     get_context,

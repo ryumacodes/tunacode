@@ -8,11 +8,11 @@ import pytest
 from tunacode.configuration import limits
 from tunacode.configuration.models import get_cached_models_registry, load_models_registry
 
+from tunacode.tools.cache_accessors import xml_prompts_cache
 from tunacode.tools.utils.ripgrep import get_ripgrep_binary_path
 from tunacode.tools.xml_helper import load_prompt_from_xml
 
 from tunacode.infrastructure.cache import clear_all
-from tunacode.infrastructure.cache.caches import xml_prompts as xml_prompts_cache
 
 
 @pytest.fixture

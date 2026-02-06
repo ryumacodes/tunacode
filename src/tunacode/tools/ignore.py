@@ -10,11 +10,10 @@ from tunacode.configuration.ignore_patterns import (
     DEFAULT_IGNORE_PATTERNS,
 )
 
-from tunacode.tools.ignore_manager import IgnoreManager
-
-from tunacode.infrastructure.cache.caches.ignore_manager import (
+from tunacode.tools.cache_accessors.ignore_manager_cache import (
     get_ignore_manager as _get_cached_ignore_manager,
 )
+from tunacode.tools.ignore_manager import IgnoreManager
 
 
 def get_ignore_manager(root: Path) -> IgnoreManager:

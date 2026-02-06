@@ -25,11 +25,10 @@ def get_ignore_manager(root: Path) -> IgnoreManager:
     """
 
     resolved_root = resolve_root(root)
-    cache_key = resolved_root
 
     cache = get_cache(IGNORE_MANAGER_CACHE_NAME)
 
-    cached = cache.get(cache_key)
+    cached = cache.get(resolved_root)
     if cached is not None:
         if not isinstance(cached, IgnoreManager):
             raise TypeError(
@@ -43,9 +42,9 @@ def get_ignore_manager(root: Path) -> IgnoreManager:
 
     ignore_manager = create_ignore_manager(root=resolved_root, gitignore_lines=gitignore_lines)
 
-    cache.set(cache_key, ignore_manager)
+    cache.set(resolved_root, ignore_manager)
     cache.set_metadata(
-        cache_key,
+        resolved_root,
         MtimeMetadata(path=gitignore_path, mtime_ns=gitignore_mtime_ns),
     )
 

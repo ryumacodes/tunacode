@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
-from tunacode.infrastructure.cache import MtimeMetadata, MtimeStrategy, get_cache, register_cache
+from tunacode.infrastructure.cache import (
+    MtimeMetadata,
+    MtimeStrategy,
+    get_cache,
+    register_cache,
+    stat_mtime_ns,
+)
 
 TUNACODE_CONTEXT_CACHE_NAME = "tunacode.context"
 
 CONTEXT_HEADER_PREFIX = "\n\n# Project Context from {file_name}\n"
 TEXT_ENCODING = "utf-8"
-MISSING_MTIME_NS = 0
 
 register_cache(TUNACODE_CONTEXT_CACHE_NAME, MtimeStrategy())
 
@@ -21,21 +25,22 @@ def get_context(path: Path) -> str:
     """
 
     resolved_path = path.resolve()
-    cache_key = resolved_path
 
     cache = get_cache(TUNACODE_CONTEXT_CACHE_NAME)
 
-    cached = cache.get(cache_key)
+    cached = cache.get(resolved_path)
     if cached is not None:
         if not isinstance(cached, str):
             raise TypeError(f"Context cache value must be str, got {type(cached).__name__}")
         return cached
 
     context = _load_context(resolved_path)
-    cache.set(cache_key, context)
+    cache.set(resolved_path, context)
 
-    mtime_ns = _get_mtime_ns(resolved_path)
-    cache.set_metadata(cache_key, MtimeMetadata(path=resolved_path, mtime_ns=mtime_ns))
+    cache.set_metadata(
+        resolved_path,
+        MtimeMetadata(path=resolved_path, mtime_ns=stat_mtime_ns(resolved_path)),
+    )
 
     return context
 
@@ -47,13 +52,6 @@ def invalidate_context(path: Path) -> bool:
 
 def clear_context_cache() -> None:
     get_cache(TUNACODE_CONTEXT_CACHE_NAME).clear()
-
-
-def _get_mtime_ns(path: Path) -> int:
-    try:
-        return os.stat(path).st_mtime_ns
-    except FileNotFoundError:
-        return MISSING_MTIME_NS
 
 
 def _load_context(path: Path) -> str:

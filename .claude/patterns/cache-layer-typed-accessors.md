@@ -42,7 +42,11 @@ Implemented as part of epic `tun-gqgx` (cache unification). The initial migratio
 - Added typed accessor modules under `tunacode.infrastructure.cache.caches/`:
   - `agents.py`: version-aware get/set/invalidate/clear
   - `tunacode_context.py`: mtime-aware `get_context(path: Path) -> str`
-  - `ignore_manager.py`: mtime-aware `get_ignore_manager(root: Path) -> IgnoreManager`
+
+- Added typed accessor modules under `tunacode.tools.cache_accessors/`:
+  - `ignore_manager_cache.py`: mtime-aware `get_ignore_manager(root: Path) -> IgnoreManager`
+  - `ripgrep_cache.py`: manual cache for platform identifier + binary path
+  - `xml_prompts_cache.py`: mtime-aware XML prompt caching (including cached None)
 
 ## Behavioral Impact
 

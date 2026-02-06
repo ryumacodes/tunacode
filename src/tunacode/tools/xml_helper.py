@@ -7,7 +7,7 @@ from pathlib import Path
 from defusedxml.ElementTree import ParseError
 from defusedxml.ElementTree import parse as xml_parse
 
-from tunacode.infrastructure.cache.caches import xml_prompts as xml_prompts_cache
+from tunacode.tools.cache_accessors import xml_prompts_cache
 
 
 def load_prompt_from_xml(tool_name: str) -> str | None:
