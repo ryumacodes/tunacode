@@ -99,6 +99,7 @@ select = [
     "B",   # flake8-bugbear
     "SIM", # flake8-simplify
     "I",   # isort
+    "C90", # mccabe complexity
     "FIX", # fixme/todo detection
     "TD",  # todo formatting
 ]
@@ -133,6 +134,9 @@ exclude = [
     "*.lance",
     "*.egg-info",
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [tool.ruff.lint.isort]
 section-order = [
