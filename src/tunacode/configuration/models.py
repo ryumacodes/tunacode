@@ -4,13 +4,15 @@ Module: tunacode.configuration.models
 Configuration for loading model data from models_registry.json.
 """
 
+from typing import Any
+
 from tunacode.constants import DEFAULT_CONTEXT_WINDOW
+
+from tunacode.infrastructure.cache.caches import models_registry as models_registry_cache
 
 # --- Models.dev Registry Functions ---
 
 MODELS_REGISTRY_FILE_NAME = "models_registry.json"
-
-_models_registry_cache: dict | None = None
 
 
 def parse_model_string(model_string: str) -> tuple[str, str]:
@@ -31,27 +33,34 @@ def parse_model_string(model_string: str) -> tuple[str, str]:
     return (parts[0], parts[1])
 
 
-def load_models_registry() -> dict:
+def load_models_registry() -> dict[str, Any]:
     """Load bundled models.dev registry from JSON file.
 
     Returns cached data on subsequent calls for performance.
     """
-    global _models_registry_cache
-    if _models_registry_cache is not None:
-        return _models_registry_cache
+
+    cached = models_registry_cache.get_registry()
+    if cached is not None:
+        return cached
 
     import json
     from pathlib import Path
 
     registry_path = Path(__file__).parent / MODELS_REGISTRY_FILE_NAME
-    with open(registry_path) as f:
-        _models_registry_cache = json.load(f)
-    return _models_registry_cache
+    with open(registry_path, encoding="utf-8") as f:
+        registry = json.load(f)
+
+    if not isinstance(registry, dict):
+        raise TypeError(f"models registry must be a dict, got {type(registry).__name__}")
+
+    models_registry_cache.set_registry(registry)
+    return registry
 
 
-def get_cached_models_registry() -> dict | None:
+def get_cached_models_registry() -> dict[str, Any] | None:
     """Return cached registry data if already loaded."""
-    return _models_registry_cache
+
+    return models_registry_cache.get_registry()
 
 
 def get_providers() -> list[tuple[str, str]]:

@@ -1,7 +1,6 @@
 """Ripgrep binary management and execution utilities."""
 
 import asyncio
-import functools
 import locale
 import os
 import platform
@@ -9,6 +8,8 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
+
+from tunacode.infrastructure.cache.caches import ripgrep as ripgrep_cache
 
 PROCESS_OUTPUT_ENCODING = locale.getpreferredencoding(False)
 RIPGREP_MATCH_FOUND_EXIT_CODE = 0
@@ -22,34 +23,42 @@ RIPGREP_SUCCESS_EXIT_CODES = {
 }
 
 
-@functools.lru_cache(maxsize=1)
 def get_platform_identifier() -> tuple[str, str]:
     """Get the current platform identifier.
 
     Returns:
         Tuple of (platform_key, system_name)
     """
+
+    cached = ripgrep_cache.get_platform_identifier()
+    if cached is not None:
+        return cached
+
     system = platform.system().lower()
     machine = platform.machine().lower()
 
     if system == "linux":
         if machine in ["x86_64", "amd64"]:
+            ripgrep_cache.set_platform_identifier("x64-linux", system)
             return "x64-linux", system
         elif machine in ["aarch64", "arm64"]:
+            ripgrep_cache.set_platform_identifier("arm64-linux", system)
             return "arm64-linux", system
     elif system == "darwin":  # noqa: SIM102
         if machine in ["x86_64", "amd64"]:
+            ripgrep_cache.set_platform_identifier("x64-darwin", system)
             return "x64-darwin", system
         elif machine in ["arm64", "aarch64"]:
+            ripgrep_cache.set_platform_identifier("arm64-darwin", system)
             return "arm64-darwin", system
     elif system == "windows":  # noqa: SIM102
         if machine in ["x86_64", "amd64"]:
+            ripgrep_cache.set_platform_identifier("x64-win32", system)
             return "x64-win32", system
 
     raise ValueError(f"Unsupported platform: {system} {machine}")
 
 
-@functools.lru_cache(maxsize=1)
 def get_ripgrep_binary_path() -> Path | None:
     """Resolve the path to the ripgrep binary.
 
@@ -62,11 +71,17 @@ def get_ripgrep_binary_path() -> Path | None:
     Returns:
         Path to ripgrep binary or None if not available
     """
+
+    cache_hit, cached = ripgrep_cache.try_get_binary_path()
+    if cache_hit:
+        return cached
+
     # Check for environment variable override
     env_path = os.environ.get("TUNACODE_RIPGREP_PATH")
     if env_path:
         path = Path(env_path)
         if path.exists() and path.is_file():
+            ripgrep_cache.set_binary_path(path)
             return path
 
     # Check for system ripgrep
@@ -74,6 +89,7 @@ def get_ripgrep_binary_path() -> Path | None:
     if system_rg:
         system_rg_path = Path(system_rg)
         if _check_ripgrep_version(system_rg_path):
+            ripgrep_cache.set_binary_path(system_rg_path)
             return system_rg_path
 
     # Check for bundled ripgrep
@@ -88,10 +104,12 @@ def get_ripgrep_binary_path() -> Path | None:
         bundled_path = vendor_dir / binary_name
 
         if bundled_path.exists():
+            ripgrep_cache.set_binary_path(bundled_path)
             return bundled_path
     except Exception:
         pass
 
+    ripgrep_cache.set_binary_path(None)
     return None
 
 
