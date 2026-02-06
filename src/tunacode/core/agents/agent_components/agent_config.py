@@ -33,6 +33,8 @@ from tunacode.tools.update_file import update_file
 from tunacode.tools.web_fetch import web_fetch
 from tunacode.tools.write_file import write_file
 
+from tunacode.infrastructure.cache.caches import agents as agents_cache
+from tunacode.infrastructure.cache.caches import tunacode_context as context_cache
 from tunacode.infrastructure.llm_types import PydanticAgent
 
 from tunacode.core.agents.agent_components.openai_response_validation import (
@@ -48,13 +50,6 @@ EventHook = Callable[..., Awaitable[None]]
 RequestHook = Callable[[Request], Awaitable[None]]
 ResponseHook = Callable[[Response], Awaitable[None]]
 EventHooks = dict[str, list[EventHook]]
-
-# Module-level cache for AGENTS.md context
-_TUNACODE_CACHE: dict[str, tuple[str, float]] = {}
-
-# Module-level cache for agents to persist across requests
-_AGENT_CACHE: dict[ModelName, PydanticAgent] = {}
-_AGENT_CACHE_VERSION: dict[ModelName, int] = {}
 
 
 async def _sleep_with_delay(total_delay: float) -> None:
@@ -146,13 +141,6 @@ def _build_event_hooks(request_delay: float) -> EventHooks:
     }
 
 
-def clear_all_caches() -> None:
-    """Clear all module-level caches. Useful for testing."""
-    _TUNACODE_CACHE.clear()
-    _AGENT_CACHE.clear()
-    _AGENT_CACHE_VERSION.clear()
-
-
 def invalidate_agent_cache(model: str, state_manager: StateManagerProtocol) -> bool:
     """Invalidate cached agent for a specific model.
 
@@ -167,14 +155,8 @@ def invalidate_agent_cache(model: str, state_manager: StateManagerProtocol) -> b
         True if an agent was invalidated, False if not cached.
     """
     logger = get_logger()
-    cleared_module = False
+    cleared_module = agents_cache.invalidate_agent(model)
     cleared_session = False
-
-    # Clear module-level cache
-    if model in _AGENT_CACHE:
-        del _AGENT_CACHE[model]
-        cleared_module = True
-    _AGENT_CACHE_VERSION.pop(model, None)
 
     # Clear session-level cache
     if model in state_manager.session.agents:
@@ -238,27 +220,7 @@ def load_tunacode_context() -> str:
             guide_file = config["settings"].get("guide_file", "AGENTS.md")
         tunacode_path = Path.cwd() / guide_file
 
-        cache_key = str(tunacode_path)
-
-        if not tunacode_path.exists():
-            return ""
-
-        # Check cache with file modification time
-        if cache_key in _TUNACODE_CACHE:
-            cached_content, cached_mtime = _TUNACODE_CACHE[cache_key]
-            current_mtime = tunacode_path.stat().st_mtime
-            if current_mtime == cached_mtime:
-                return cached_content
-
-        # Load from file and cache
-        tunacode_content = tunacode_path.read_text(encoding="utf-8")
-        if tunacode_content.strip():
-            result = f"\n\n# Project Context from {guide_file}\n" + tunacode_content
-            _TUNACODE_CACHE[cache_key] = (result, tunacode_path.stat().st_mtime)
-            return result
-        else:
-            _TUNACODE_CACHE[cache_key] = ("", tunacode_path.stat().st_mtime)
-            return ""
+        return context_cache.get_context(tunacode_path)
 
     except FileNotFoundError:
         return ""
@@ -349,7 +311,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     settings = state_manager.session.user_config.get("settings", {})
     agent_version = _compute_agent_version(settings, request_delay)
 
-    # Check session-level cache first (for backward compatibility with tests)
+    # Check session-level cache first.
     session_agent = state_manager.session.agents.get(model)
     session_version = state_manager.session.agent_versions.get(model)
     if session_agent and session_version == agent_version:
@@ -360,21 +322,14 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
         del state_manager.session.agents[model]
         state_manager.session.agent_versions.pop(model, None)
 
-    # Check module-level cache
-    if model in _AGENT_CACHE:
-        # Verify cache is still valid (check for config changes)
-        cached_version = _AGENT_CACHE_VERSION.get(model)
-        if cached_version == agent_version:
-            logger.debug(f"Agent cache hit (module): {model}")
-            state_manager.session.agents[model] = _AGENT_CACHE[model]
-            state_manager.session.agent_versions[model] = agent_version
-            return _AGENT_CACHE[model]
-        else:
-            logger.debug(f"Agent cache invalidated (config changed): {model}")
-            del _AGENT_CACHE[model]
-            del _AGENT_CACHE_VERSION[model]
+    cached_agent = agents_cache.get_agent(model, expected_version=agent_version)
+    if cached_agent is not None:
+        logger.debug(f"Agent cache hit (module): {model}")
+        state_manager.session.agents[model] = cached_agent
+        state_manager.session.agent_versions[model] = agent_version
+        return cached_agent
 
-    if model not in _AGENT_CACHE:
+    if cached_agent is None:
         max_retries = settings.get("max_retries", 3)
 
         # Lazy import Agent and Tool
@@ -447,11 +402,9 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
                 tools=tools_list,
             )
 
-        # Store in both caches
-        _AGENT_CACHE[model] = agent
-        _AGENT_CACHE_VERSION[model] = agent_version
+        agents_cache.set_agent(model, agent=agent, version=agent_version)
         state_manager.session.agent_versions[model] = agent_version
         state_manager.session.agents[model] = agent
         logger.info(f"Agent created: {model}")
 
-    return _AGENT_CACHE[model]
+    return cast(PydanticAgent, state_manager.session.agents[model])
