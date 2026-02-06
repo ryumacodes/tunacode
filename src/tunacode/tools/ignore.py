@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from os import DirEntry
 from pathlib import Path
 
@@ -11,47 +10,17 @@ from tunacode.configuration.ignore_patterns import (
     DEFAULT_IGNORE_PATTERNS,
 )
 
-from tunacode.tools.ignore_manager import (
-    IgnoreManager,
-    build_gitignore_path,
-    create_ignore_manager,
-    get_gitignore_mtime_ns,
-    read_gitignore_lines,
-    resolve_root,
+from tunacode.tools.ignore_manager import IgnoreManager
+
+from tunacode.infrastructure.cache.caches.ignore_manager import (
+    get_ignore_manager as _get_cached_ignore_manager,
 )
 
 
-@dataclass(frozen=True)
-class IgnoreCacheEntry:
-    """Cached ignore manager with gitignore mtime tracking."""
-
-    gitignore_mtime_ns: int
-    manager: IgnoreManager
-
-
-IGNORE_MANAGER_CACHE: dict[Path, IgnoreCacheEntry] = {}
-
-
 def get_ignore_manager(root: Path) -> IgnoreManager:
-    """Get a cached IgnoreManager for the provided root."""
+    """Return a cached IgnoreManager for the provided root."""
 
-    resolved_root = resolve_root(root)
-    gitignore_path = build_gitignore_path(resolved_root)
-    gitignore_mtime_ns = get_gitignore_mtime_ns(gitignore_path)
-
-    cache_entry = IGNORE_MANAGER_CACHE.get(resolved_root)
-    if cache_entry is not None and cache_entry.gitignore_mtime_ns == gitignore_mtime_ns:
-        return cache_entry.manager
-
-    gitignore_lines = read_gitignore_lines(gitignore_path)
-    ignore_manager = create_ignore_manager(root=resolved_root, gitignore_lines=gitignore_lines)
-
-    IGNORE_MANAGER_CACHE[resolved_root] = IgnoreCacheEntry(
-        gitignore_mtime_ns=gitignore_mtime_ns,
-        manager=ignore_manager,
-    )
-
-    return ignore_manager
+    return _get_cached_ignore_manager(root)
 
 
 def traverse_gitignore(
