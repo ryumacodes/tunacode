@@ -94,12 +94,11 @@ def is_summary_message(message: Any) -> bool:
     return False
 
 
-def should_compact(messages: list[Any], model_name: str) -> bool:
+def should_compact(messages: list[Any]) -> bool:
     """Check if conversation should trigger summary generation.
 
     Args:
         messages: Message history
-        model_name: Model for token estimation
 
     Returns:
         True if token count exceeds threshold
@@ -128,7 +127,6 @@ def should_compact(messages: list[Any], model_name: str) -> bool:
 async def generate_summary(
     agent: Agent[str],
     messages: list[Any],
-    model_name: str,
     start_index: int = 0,
     end_index: int | None = None,
 ) -> SummaryMessage:
@@ -139,7 +137,6 @@ async def generate_summary(
     Args:
         agent: The pydantic-ai agent to use for summarization
         messages: Full message history
-        model_name: Model for token estimation
         start_index: First message index to summarize
         end_index: Last message index to summarize (None = last message)
 
