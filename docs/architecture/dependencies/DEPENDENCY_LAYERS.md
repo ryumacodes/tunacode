@@ -1,6 +1,6 @@
 # Dependency Layers
 
-Generated: 2026-02-04
+Generated: 2026-02-06
 
 ## Layer Order (topological)
 
@@ -24,11 +24,11 @@ types
 | configuration | exceptions | 1 |
 | configuration | types | 4 |
 | core | configuration | 15 |
-| core | constants | 6 |
+| core | constants | 5 |
 | core | exceptions | 5 |
-| core | infrastructure | 4 |
+| core | infrastructure | 5 |
 | core | tools | 11 |
-| core | types | 21 |
+| core | types | 27 |
 | core | utils | 5 |
 | exceptions | types | 1 |
 | tools | configuration | 4 |
