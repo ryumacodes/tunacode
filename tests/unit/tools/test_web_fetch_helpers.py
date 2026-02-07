@@ -105,7 +105,7 @@ class TestValidateUrl:
 
     def test_none_raises(self):
         with pytest.raises(ToolRetryError, match="URL cannot be empty"):
-            _validate_url(None)
+            _validate_url(None)  # type: ignore[arg-type]
 
     def test_ftp_scheme_blocked(self):
         with pytest.raises(ToolRetryError, match="Invalid URL scheme"):

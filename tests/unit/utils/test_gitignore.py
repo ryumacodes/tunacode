@@ -9,7 +9,7 @@ import pytest
 from tunacode.utils.system.gitignore import _load_gitignore_patterns, list_cwd
 
 
-@pytest.fixture()
+@pytest.fixture
 def in_tmp_dir(tmp_path: Path):
     """Switch cwd to tmp_path for the duration of the test."""
     original_cwd = os.getcwd()
@@ -65,6 +65,7 @@ class TestListCwd:
         assert result == sorted(result)
         assert "file1.py" in result
         assert "file2.txt" in result
+        assert "sub/file3.py" in result
 
     def test_max_depth_zero_only_top_level(self, in_tmp_dir):
         (in_tmp_dir / "top.py").write_text("a")
@@ -90,5 +91,6 @@ class TestListCwd:
         (sub / "nested.txt").write_text("")
 
         result = list_cwd(max_depth=-1)
+        assert "file.txt" in result
         for f in result:
             assert "/" not in f

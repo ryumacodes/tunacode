@@ -133,3 +133,26 @@ class TestFormatSearchOutput:
         lines = output.split("\n")
         assert output.startswith("Found")
         assert "Strategy:" in lines[1]
+
+    def test_string_format_non_found_branch(self):
+        config = SearchConfig(
+            case_sensitive=False,
+            use_regex=False,
+            max_results=50,
+            context_lines=2,
+        )
+        formatter = ResultFormatter()
+        output = _format_search_output(
+            results=[],
+            pattern="nonexistent",
+            config=config,
+            output_mode="content",
+            search_type="python",
+            original_search_type="smart",
+            candidate_count=100,
+            return_format="string",
+            formatter=formatter,
+        )
+        assert isinstance(output, str)
+        assert "Strategy:" in output
+        assert "Files:" in output

@@ -209,10 +209,12 @@ class ReadFileRenderer(BaseToolRenderer[ReadFileData]):
             status_items.append(f"[{shown}/{len(data.content_lines)} displayed]")
 
         if data.has_more:
-            status_items.append(f"total: {data.total_lines} lines")
+            line_label = "line" if data.total_lines == 1 else "lines"
+            status_items.append(f"total: {data.total_lines} {line_label}")
             status_items.append("(more available)")
         elif data.total_lines > 0:
-            status_items.append(f"total: {data.total_lines} lines")
+            line_label = "line" if data.total_lines == 1 else "lines"
+            status_items.append(f"total: {data.total_lines} {line_label}")
 
         if duration_ms is not None:
             status_items.append(f"{duration_ms:.0f}ms")

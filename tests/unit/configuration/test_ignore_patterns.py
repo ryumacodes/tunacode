@@ -42,24 +42,28 @@ class TestExtractExcludeDirs:
 
 class TestMatchesRootedPattern:
     def test_matches_exact(self):
-        assert _matches_rooted_pattern("build", "build", False) is True
+        assert _matches_rooted_pattern("build", "build", is_dir_pattern=False) is True
 
     def test_matches_child(self):
-        assert _matches_rooted_pattern("build/output", "build", False) is True
+        assert _matches_rooted_pattern("build/output", "build", is_dir_pattern=False) is True
 
     def test_dir_pattern_checks_prefix(self):
-        assert _matches_rooted_pattern("build", "build", True) is True
-        assert _matches_rooted_pattern("build/out", "build", True) is True
+        assert _matches_rooted_pattern("build", "build", is_dir_pattern=True) is True
+        assert _matches_rooted_pattern("build/out", "build", is_dir_pattern=True) is True
 
     def test_no_match(self):
-        assert _matches_rooted_pattern("src", "build", False) is False
+        assert _matches_rooted_pattern("src", "build", is_dir_pattern=False) is False
 
 
 class TestMatchesComponentPattern:
     def test_matches_component(self):
         assert (
             _matches_component_pattern(
-                ["src", "node_modules", "pkg"], "pkg", "node_modules", True, "node_modules/"
+                ["src", "node_modules", "pkg"],
+                "pkg",
+                "node_modules",
+                is_dir_pattern=True,
+                pattern="node_modules/",
             )
             is True
         )
@@ -67,13 +71,22 @@ class TestMatchesComponentPattern:
     def test_file_pattern_with_slash_returns_false(self):
         assert (
             _matches_component_pattern(
-                ["src", "file.py"], "file.py", "src/file.py", False, "src/file.py"
+                ["src", "file.py"],
+                "file.py",
+                "src/file.py",
+                is_dir_pattern=False,
+                pattern="src/file.py",
             )
             is False
         )
 
     def test_name_match_at_end(self):
-        assert _matches_component_pattern(["file.pyc"], "file.pyc", "*.pyc", False, "*.pyc") is True
+        assert (
+            _matches_component_pattern(
+                ["file.pyc"], "file.pyc", "*.pyc", is_dir_pattern=False, pattern="*.pyc"
+            )
+            is True
+        )
 
 
 class TestMatchesSinglePattern:

@@ -65,6 +65,11 @@ class TestParseJsonArgs:
         with pytest.raises(ValidationError, match="Invalid JSON"):
             _parse_json_args(bad_json)
 
+    def test_concatenated_invalid_with_long_preview(self):
+        raw = '{"a": 1}{"b": "' + "x" * 300 + '"}'
+        with pytest.raises(ValidationError):
+            _parse_json_args(raw)
+
     def test_nested_dict(self):
         result = _parse_json_args('{"a": {"b": {"c": 1}}}')
         assert result == {"a": {"b": {"c": 1}}}

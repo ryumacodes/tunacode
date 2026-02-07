@@ -3,6 +3,8 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
+from tunacode.utils.messaging.token_counter import CHARS_PER_TOKEN
+
 from tunacode.core.agents.resume.summary import (
     SUMMARY_MARKER,
     SUMMARY_THRESHOLD,
@@ -96,15 +98,13 @@ class TestShouldCompact:
         assert should_compact(messages) is False
 
     def test_many_large_messages_returns_true(self):
-        # estimate_tokens divides len by 4, so to exceed SUMMARY_THRESHOLD
-        # we need total chars > SUMMARY_THRESHOLD * 4
-        chars_needed = (SUMMARY_THRESHOLD * 4) + 100
+        chars_needed = (SUMMARY_THRESHOLD * CHARS_PER_TOKEN) + 100
         large_content = "x" * chars_needed
         messages = [{"content": large_content}]
         assert should_compact(messages) is True
 
     def test_object_messages_with_parts(self):
-        chars_needed = (SUMMARY_THRESHOLD * 4) + 100
+        chars_needed = (SUMMARY_THRESHOLD * CHARS_PER_TOKEN) + 100
         part = SimpleNamespace(content="y" * chars_needed)
         message = SimpleNamespace(parts=[part])
         assert should_compact([message]) is True
@@ -116,7 +116,7 @@ class TestShouldCompact:
 
     def test_mixed_messages_accumulate(self):
         # Split across multiple messages to still exceed threshold
-        per_message_chars = (SUMMARY_THRESHOLD * 4) // 3 + 100
+        per_message_chars = (SUMMARY_THRESHOLD * CHARS_PER_TOKEN) // 3 + 100
         messages = [
             {"content": "a" * per_message_chars},
             {"content": "b" * per_message_chars},

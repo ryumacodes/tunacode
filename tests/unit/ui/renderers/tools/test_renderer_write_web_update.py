@@ -5,9 +5,11 @@ Source: src/tunacode/ui/renderers/tools/{write_file,web_fetch,update_file}.py
 
 from __future__ import annotations
 
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
+from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.text import Text
@@ -451,6 +453,12 @@ class TestUpdateFileRendererZones:
             DEFAULT_MAX_WIDTH,
         )
         assert isinstance(panel, Panel)
+        buf = StringIO()
+        console = Console(file=buf, width=120, force_terminal=False)
+        console.print(panel)
+        rendered = buf.getvalue()
+        assert "type mismatch" in rendered
+        assert "unused import" in rendered
 
     def test_render_returns_none_for_empty(self) -> None:
         assert (

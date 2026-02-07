@@ -53,7 +53,7 @@ class TestNormalizeExcludeDirPatterns:
 
     def test_multiple_patterns(self):
         result = _normalize_exclude_dir_patterns(["node_modules", ".venv/", "dist"])
-        assert len(result) == 3
+        assert result == ("node_modules/", ".venv/", "dist/")
 
 
 class TestExpandBracePattern:
@@ -126,6 +126,14 @@ class TestSinglePatternMatches:
         compiled = _compile_patterns(["**/*.py"], 0)
         _, comp = compiled[0]
         result = _single_pattern_matches("test.py", "test.py", "**/*.py", comp, recursive=False)
+        assert result is True
+
+    def test_double_star_fnmatch_fallback(self):
+        compiled = _compile_patterns(["**/test_*.py"], 0)
+        _, comp = compiled[0]
+        result = _single_pattern_matches(
+            "test_foo.py", "unmatched_dir", "**/test_*.py", comp, recursive=True
+        )
         assert result is True
 
 

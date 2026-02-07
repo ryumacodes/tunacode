@@ -209,6 +209,10 @@ class TestRipgrepExecutor:
 
 
 class TestRipgrepExecutorSearch:
+    @pytest.fixture(autouse=True)
+    def _force_no_binary(self, monkeypatch):
+        monkeypatch.setattr(f"{_RG}.get_ripgrep_binary_path", lambda: None)
+
     @pytest.mark.asyncio
     async def test_python_fallback_search(self, tmp_path):
         (tmp_path / "test.py").write_text("hello world\nfoo bar\n")

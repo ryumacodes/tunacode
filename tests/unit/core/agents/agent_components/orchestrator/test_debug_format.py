@@ -33,7 +33,7 @@ class TestFormatPreview:
     def test_exact_boundary_no_suffix(self):
         text = "b" * PART_PREVIEW_LENGTH
         preview, length = format_preview(text)
-        assert "..." not in preview
+        assert DEBUG_PREVIEW_SUFFIX not in preview
         assert length == PART_PREVIEW_LENGTH
 
     def test_int_value_converted(self):

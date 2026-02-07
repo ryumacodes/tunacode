@@ -126,7 +126,7 @@ class TestRenderCodeResults:
             ),
         ]
         panel = SearchDisplayRenderer.render_code_results("process", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
 
     def test_class_result(self) -> None:
         results = [
@@ -139,7 +139,7 @@ class TestRenderCodeResults:
             ),
         ]
         panel = SearchDisplayRenderer.render_code_results("User", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
 
     def test_variable_result(self) -> None:
         results = [
@@ -152,7 +152,7 @@ class TestRenderCodeResults:
             ),
         ]
         panel = SearchDisplayRenderer.render_code_results("MAX_SIZE", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
 
     def test_method_result(self) -> None:
         results = [
@@ -165,7 +165,7 @@ class TestRenderCodeResults:
             ),
         ]
         panel = SearchDisplayRenderer.render_code_results("run", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
 
     def test_constant_result(self) -> None:
         results = [
@@ -178,7 +178,7 @@ class TestRenderCodeResults:
             ),
         ]
         panel = SearchDisplayRenderer.render_code_results("PI", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
 
     def test_unknown_symbol_type_uses_prefix(self) -> None:
         results = [
@@ -191,7 +191,7 @@ class TestRenderCodeResults:
             ),
         ]
         panel = SearchDisplayRenderer.render_code_results("thing", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
 
     def test_with_relevance(self) -> None:
         results = [
@@ -205,7 +205,7 @@ class TestRenderCodeResults:
             ),
         ]
         panel = SearchDisplayRenderer.render_code_results("foo", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
 
     def test_pagination(self) -> None:
         results = [
@@ -219,7 +219,7 @@ class TestRenderCodeResults:
             for i in range(20)
         ]
         panel = SearchDisplayRenderer.render_code_results("func", results, page=2, page_size=5)
-        assert panel is not None
+        assert isinstance(panel, Panel)
 
     def test_with_search_time(self) -> None:
         results = [
@@ -232,7 +232,7 @@ class TestRenderCodeResults:
             ),
         ]
         panel = SearchDisplayRenderer.render_code_results("bar", results, search_time_ms=15.3)
-        assert panel is not None
+        assert isinstance(panel, Panel)
 
 
 # ===================================================================
@@ -309,14 +309,14 @@ class TestFileSearchPanel:
             FileSearchResult(file_path="a.py", line_number=1, content="x"),
         ]
         result = file_search_panel("x", results)
-        assert result is not None
+        assert isinstance(result, Panel)
 
     def test_with_page_and_time(self) -> None:
         results = [
             FileSearchResult(file_path="a.py", line_number=1, content="x"),
         ]
         result = file_search_panel("x", results, page=1, search_time_ms=10.0)
-        assert result is not None
+        assert isinstance(result, Panel)
 
 
 class TestCodeSearchPanel:
@@ -337,7 +337,7 @@ class TestCodeSearchPanel:
             ),
         ]
         result = code_search_panel("func", results)
-        assert result is not None
+        assert isinstance(result, Panel)
 
     def test_with_page_and_time(self) -> None:
         results = [
@@ -350,7 +350,7 @@ class TestCodeSearchPanel:
             ),
         ]
         result = code_search_panel("func", results, page=1, search_time_ms=5.0)
-        assert result is not None
+        assert isinstance(result, Panel)
 
 
 class TestQuickResults:
@@ -362,9 +362,9 @@ class TestQuickResults:
 
     def test_with_items(self) -> None:
         result = quick_results([{"title": "a"}, {"title": "b"}])
-        assert result is not None
+        assert isinstance(result, Text)
 
     def test_custom_max_display(self) -> None:
         results = [{"title": f"item{i}"} for i in range(10)]
         result = quick_results(results, max_display=2)
-        assert result is not None
+        assert isinstance(result, Text)

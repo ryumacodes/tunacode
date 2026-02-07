@@ -327,6 +327,24 @@ class TestExtractDiagnosticsFromResult:
 
     # -- Roundtrip: extract then parse -------------------------------------
 
+    def test_multiple_diagnostics_blocks(self) -> None:
+        """When two diagnostics blocks exist, only the first is extracted."""
+        block1 = (
+            "<file_diagnostics>\n"
+            "Error (line 1): first block error\n"
+            "</file_diagnostics>"
+        )
+        block2 = (
+            "<file_diagnostics>\n"
+            "Warning (line 2): second block warning\n"
+            "</file_diagnostics>"
+        )
+        original = f"Prefix.\n{block1}\nMiddle.\n{block2}\nSuffix."
+        result_text, block = extract_diagnostics_from_result(original)
+        assert block is not None
+        assert "first block error" in block
+        assert "<file_diagnostics>" not in result_text or "second block warning" in result_text
+
     def test_roundtrip_extract_then_parse(self) -> None:
         """The block returned by extract can be fed into parse."""
         diag_block = (

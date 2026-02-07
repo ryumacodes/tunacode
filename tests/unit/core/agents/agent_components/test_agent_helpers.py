@@ -4,11 +4,6 @@ from tunacode.types.canonical import CanonicalToolCall
 
 from tunacode.core.agents.agent_components.agent_helpers import (
     QUERY_DISPLAY_LIMIT,
-    _describe_glob,
-    _describe_grep,
-    _describe_list_dir,
-    _describe_read_file,
-    _describe_research,
     create_empty_response_message,
     get_readable_tool_description,
     get_recent_tools_context,
@@ -16,58 +11,67 @@ from tunacode.core.agents.agent_components.agent_helpers import (
 )
 
 
-class TestDescribeReadFile:
+class TestReadableToolDescriptionReadFile:
     def test_with_file_path(self):
-        assert "main.py" in _describe_read_file({"file_path": "main.py"})
+        result = get_readable_tool_description("read_file", {"file_path": "main.py"})
+        assert "main.py" in result
 
     def test_with_filepath_key(self):
-        assert "main.py" in _describe_read_file({"filepath": "main.py"})
+        result = get_readable_tool_description("read_file", {"filepath": "main.py"})
+        assert "main.py" in result
 
     def test_empty(self):
-        assert _describe_read_file({}) == "Reading file"
+        result = get_readable_tool_description("read_file", {})
+        assert "Reading" in result
 
 
-class TestDescribeListDir:
+class TestReadableToolDescriptionListDir:
     def test_with_directory(self):
-        assert "src/" in _describe_list_dir({"directory": "src/"})
+        result = get_readable_tool_description("list_dir", {"directory": "src/"})
+        assert "src/" in result
 
     def test_empty(self):
-        assert _describe_list_dir({}) == "Listing directory"
+        result = get_readable_tool_description("list_dir", {})
+        assert "Listing" in result
 
 
-class TestDescribeGrep:
+class TestReadableToolDescriptionGrep:
     def test_pattern_and_include(self):
-        result = _describe_grep({"pattern": "TODO", "include_files": "*.py"})
+        result = get_readable_tool_description("grep", {"pattern": "TODO", "include_files": "*.py"})
         assert "TODO" in result
         assert "*.py" in result
 
     def test_pattern_only(self):
-        result = _describe_grep({"pattern": "TODO"})
+        result = get_readable_tool_description("grep", {"pattern": "TODO"})
         assert "TODO" in result
 
     def test_empty(self):
-        assert _describe_grep({}) == "Searching files"
+        result = get_readable_tool_description("grep", {})
+        assert "Searching" in result
 
 
-class TestDescribeGlob:
+class TestReadableToolDescriptionGlob:
     def test_with_pattern(self):
-        assert "*.py" in _describe_glob({"pattern": "*.py"})
+        result = get_readable_tool_description("glob", {"pattern": "*.py"})
+        assert "*.py" in result
 
     def test_empty(self):
-        assert _describe_glob({}) == "Finding files"
+        result = get_readable_tool_description("glob", {})
+        assert "Finding" in result
 
 
-class TestDescribeResearch:
+class TestReadableToolDescriptionResearch:
     def test_with_query(self):
-        result = _describe_research({"query": "how does auth work"})
+        result = get_readable_tool_description("research_codebase", {"query": "how does auth work"})
         assert "how does auth work" in result
 
     def test_empty_query(self):
-        assert _describe_research({}) == "Researching codebase"
+        result = get_readable_tool_description("research_codebase", {})
+        assert "Researching" in result
 
     def test_long_query_truncated(self):
         long_query = "a" * (QUERY_DISPLAY_LIMIT + 20)
-        result = _describe_research({"query": long_query})
+        result = get_readable_tool_description("research_codebase", {"query": long_query})
         expected_truncated = "a" * QUERY_DISPLAY_LIMIT + "..."
         assert expected_truncated in result
 

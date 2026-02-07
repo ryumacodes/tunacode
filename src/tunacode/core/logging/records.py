@@ -32,12 +32,10 @@ class LogRecord:
             result["source"] = self.source
         if self.request_id:
             result["request_id"] = self.request_id
-        if self.iteration:
-            result["iteration"] = self.iteration
+        result["iteration"] = self.iteration
         if self.tool_name:
             result["tool_name"] = self.tool_name
-        if self.duration_ms:
-            result["duration_ms"] = self.duration_ms
+        result["duration_ms"] = self.duration_ms
         if self.extra:
             if "extra" in self.extra:
                 raise ValueError(

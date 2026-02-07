@@ -8,6 +8,7 @@ import pytest
 from tunacode.tools.update_file import update_file
 from tunacode.tools.utils.text_match import (
     MIN_ANCHOR_DISTANCE,
+    MIN_ANCHOR_LINES,
     _find_anchor_candidates,
     _line_similarity,
     _min_indentation,
@@ -266,11 +267,13 @@ class TestHelperFunctions:
         assert _trim_trailing_empty_line([]) == []
 
     def test_prepare_search_lines_too_short(self):
-        assert _prepare_search_lines("one\ntwo") is None
+        too_short = "\n".join(f"line{i}" for i in range(MIN_ANCHOR_LINES - 1))
+        assert _prepare_search_lines(too_short) is None
 
     def test_prepare_search_lines_valid(self):
-        result = _prepare_search_lines("one\ntwo\nthree")
-        assert result == ["one", "two", "three"]
+        valid = "\n".join(f"line{i}" for i in range(MIN_ANCHOR_LINES))
+        result = _prepare_search_lines(valid)
+        assert result == [f"line{i}" for i in range(MIN_ANCHOR_LINES)]
 
     def test_line_similarity_identical(self):
         assert _line_similarity("hello", "hello") == 1.0

@@ -71,6 +71,15 @@ class TestAgentStateMachine:
         sm.set_completion_detected(True)
         assert sm.is_completed()
 
+    def test_unset_completion_detected(self):
+        sm = AgentStateMachine(AgentState.USER_INPUT, AGENT_TRANSITION_RULES)
+        sm.transition_to(AgentState.ASSISTANT)
+        sm.transition_to(AgentState.RESPONSE)
+        sm.set_completion_detected(True)
+        assert sm.is_completed()
+        sm.set_completion_detected(False)
+        assert not sm.is_completed()
+
     def test_completion_only_in_response(self):
         sm = AgentStateMachine(AgentState.USER_INPUT, AGENT_TRANSITION_RULES)
         sm.set_completion_detected(True)

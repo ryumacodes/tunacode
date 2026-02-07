@@ -3,6 +3,7 @@
 import pytest
 
 from tunacode.exceptions import (
+    JSON_TRUNCATION_LIMIT,
     AgentError,
     AggregateToolError,
     ConfigurationError,
@@ -198,7 +199,7 @@ class TestToolBatchingJSONError:
         assert '{"a": 1}' in str(err)
 
     def test_truncates_long_content(self):
-        long_json = "x" * 200
+        long_json = "x" * (JSON_TRUNCATION_LIMIT + 1)
         err = ToolBatchingJSONError(long_json, 2)
         assert "..." in str(err)
 

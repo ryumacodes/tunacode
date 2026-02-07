@@ -319,7 +319,7 @@ class TestReadFileRendererZones:
             DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
-        assert "total: 1 lines" in status.plain
+        assert "total: 1 line" in status.plain
         assert "(more available)" not in status.plain
 
     def test_status_empty(self) -> None:

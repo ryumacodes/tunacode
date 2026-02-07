@@ -307,10 +307,8 @@ class TestGrepRendererZones:
         plain = params.plain
         assert "strategy:" in plain
         assert "smart" in plain
-        assert "case:" in plain
-        assert "yes" in plain
-        assert "regex:" in plain
-        assert "no" in plain
+        assert "case: yes" in plain
+        assert "regex: no" in plain
         assert "context:" in plain
 
     def test_params_case_insensitive_regex_on(self) -> None:
@@ -487,10 +485,8 @@ class TestGlobRendererZones:
         params = self.renderer.build_params(self.data, DEFAULT_MAX_WIDTH)
         assert isinstance(params, Text)
         plain = params.plain
-        assert "recursive:" in plain
-        assert "on" in plain
-        assert "hidden:" in plain
-        assert "off" in plain
+        assert "recursive: on" in plain
+        assert "hidden: off" in plain
         assert "sort:" in plain
         assert "modified" in plain
 
@@ -507,8 +503,8 @@ class TestGlobRendererZones:
         )
         params = self.renderer.build_params(data, DEFAULT_MAX_WIDTH)
         plain = params.plain
-        assert "off" in plain  # recursive
-        assert "on" in plain  # hidden
+        assert "recursive: off" in plain
+        assert "hidden: on" in plain
 
     def test_viewport_with_files(self) -> None:
         result = self.renderer.build_viewport(self.data, DEFAULT_MAX_WIDTH)

@@ -12,6 +12,8 @@ SENTRY_DSN_ENV = "SENTRY_DSN"
 SENTRY_ENVIRONMENT_ENV = "SENTRY_ENVIRONMENT"
 DEFAULT_ENVIRONMENT = "production"
 
+TRACES_SAMPLE_RATE_DISABLED: float = 0.0
+
 _sentry_initialized: bool = False
 
 
@@ -43,7 +45,7 @@ def init_sentry() -> bool:
             dsn=dsn,
             release=APP_VERSION,
             environment=environment,
-            traces_sample_rate=0.0,
+            traces_sample_rate=TRACES_SAMPLE_RATE_DISABLED,
             attach_stacktrace=True,
         )
     except Exception:
