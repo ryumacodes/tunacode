@@ -127,11 +127,14 @@ class TestStateManager:
         assert sm._coerce_str_value(123, "default") == "123"
 
     def test_loads_user_config(self):
-        with patch(
-            "tunacode.configuration.user_config.load_config_with_defaults",
-        ) as mock_load, patch(
-            "tunacode.configuration.models.get_model_context_window",
-            return_value=200000,
+        with (
+            patch(
+                "tunacode.configuration.user_config.load_config_with_defaults",
+            ) as mock_load,
+            patch(
+                "tunacode.configuration.models.get_model_context_window",
+                return_value=200000,
+            ),
         ):
             mock_load.return_value = {
                 "default_model": "anthropic:claude-3",

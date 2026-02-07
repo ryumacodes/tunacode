@@ -171,10 +171,7 @@ class TestLogHistoryState:
     def test_multiple_messages_logs_sample(self):
         calls = []
         logger = SimpleNamespace(debug=lambda msg: calls.append(msg))
-        msgs = [
-            SimpleNamespace(kind=f"msg-{i}", parts=[], tool_calls=[])
-            for i in range(5)
-        ]
+        msgs = [SimpleNamespace(kind=f"msg-{i}", parts=[], tool_calls=[]) for i in range(5)]
         log_history_state(msgs, 5, logger)
         # Should log state line + sample lines
         assert len(calls) >= 1 + min(DEBUG_HISTORY_SAMPLE_SIZE, 5)

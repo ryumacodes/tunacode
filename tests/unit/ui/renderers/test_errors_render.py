@@ -126,9 +126,7 @@ class TestRenderCatastrophicErrorDeep:
         assert isinstance(result, Panel)
 
     def test_with_context_param(self) -> None:
-        result = render_catastrophic_error(
-            ValueError("bad"), context="during processing"
-        )
+        result = render_catastrophic_error(ValueError("bad"), context="during processing")
         assert isinstance(result, Panel)
 
     def test_exception_type_name_used_when_empty(self) -> None:
@@ -147,15 +145,11 @@ class TestRenderConnectionError:
     """render_connection_error builds connection error panels."""
 
     def test_with_retry_available(self) -> None:
-        result = render_connection_error(
-            "OpenAI", "Connection timed out", retry_available=True
-        )
+        result = render_connection_error("OpenAI", "Connection timed out", retry_available=True)
         assert isinstance(result, Panel)
 
     def test_without_retry(self) -> None:
-        result = render_connection_error(
-            "Anthropic", "Service unavailable", retry_available=False
-        )
+        result = render_connection_error("Anthropic", "Service unavailable", retry_available=False)
         assert isinstance(result, Panel)
 
     def test_title_contains_service_name(self) -> None:

@@ -32,6 +32,7 @@ class TestGetTunaCodeHome:
             assert result == home_dir
             assert home_dir.exists()
 
+
 class TestGetSessionDir:
     def test_creates_session_directory(self, tmp_path):
         state_manager = MagicMock()
@@ -43,9 +44,11 @@ class TestGetSessionDir:
             assert result == expected
             assert result.exists()
 
+
 class TestGetCwd:
     def test_returns_current_directory(self):
         assert get_cwd() == os.getcwd()
+
 
 class TestGetProjectId:
     def test_returns_16_char_hex(self):
@@ -58,6 +61,7 @@ class TestGetProjectId:
             result = get_project_id()
             expected = hashlib.sha256(os.getcwd().encode()).hexdigest()[:16]
             assert result == expected
+
 
 class TestGetSessionStorageDir:
     def test_default_path(self):
@@ -74,11 +78,10 @@ class TestGetSessionStorageDir:
             assert result == expected
             assert result.exists()
 
+
 class TestDeleteSessionFile:
     def test_deletes_existing_file(self, tmp_path):
-        with patch(
-            "tunacode.configuration.paths.get_session_storage_dir", return_value=tmp_path
-        ):
+        with patch("tunacode.configuration.paths.get_session_storage_dir", return_value=tmp_path):
             session_file = tmp_path / "proj123_sess456.json"
             session_file.write_text("{}")
             assert session_file.exists()
@@ -88,9 +91,7 @@ class TestDeleteSessionFile:
             assert not session_file.exists()
 
     def test_returns_true_when_file_missing(self, tmp_path):
-        with patch(
-            "tunacode.configuration.paths.get_session_storage_dir", return_value=tmp_path
-        ):
+        with patch("tunacode.configuration.paths.get_session_storage_dir", return_value=tmp_path):
             result = delete_session_file("proj123", "sess456")
             assert result is True
 
@@ -101,6 +102,7 @@ class TestDeleteSessionFile:
         ):
             result = delete_session_file("proj123", "sess456")
             assert result is False
+
 
 class TestCheckForUpdates:
     def test_returns_false_on_subprocess_failure(self):

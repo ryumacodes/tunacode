@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tunacode.tools.cache_accessors.ripgrep_cache import clear_ripgrep_cache
 from tunacode.tools.utils.ripgrep import (
     RIPGREP_MATCH_FOUND_EXIT_CODE,
     RIPGREP_NO_MATCH_EXIT_CODE,
@@ -22,9 +23,9 @@ _RG = "tunacode.tools.utils.ripgrep"
 class TestGetPlatformIdentifier:
     @pytest.fixture(autouse=True)
     def _clear_cache(self):
-        get_platform_identifier.cache_clear()
+        clear_ripgrep_cache()
         yield
-        get_platform_identifier.cache_clear()
+        clear_ripgrep_cache()
 
     def test_darwin_arm64(self):
         with (
@@ -98,7 +99,7 @@ class TestCheckRipgrepVersion:
 
     def test_returns_false_on_exception(self, tmp_path):
         rg = tmp_path / "rg"
-        with patch(f"{_RG}.subprocess.run", side_effect=Exception("boom")):
+        with patch(f"{_RG}.subprocess.run", side_effect=OSError("boom")):
             assert _check_ripgrep_version(rg) is False
 
     def test_returns_false_on_nonzero_exit(self, tmp_path):
@@ -111,9 +112,9 @@ class TestCheckRipgrepVersion:
 class TestGetRipgrepBinaryPath:
     @pytest.fixture(autouse=True)
     def _clear_cache(self):
-        get_ripgrep_binary_path.cache_clear()
+        clear_ripgrep_cache()
         yield
-        get_ripgrep_binary_path.cache_clear()
+        clear_ripgrep_cache()
 
     def test_env_override(self, tmp_path):
         rg = tmp_path / "rg"
@@ -183,7 +184,10 @@ class TestRipgrepExecutor:
         rg = tmp_path / "rg"
         executor = RipgrepExecutor(binary_path=rg)
         cmd = executor._build_command(
-            "pattern", "/path", context_before=3, context_after=5,
+            "pattern",
+            "/path",
+            context_before=3,
+            context_after=5,
         )
         assert "-B" in cmd and "3" in cmd
         assert "-A" in cmd and "5" in cmd
@@ -214,7 +218,9 @@ class TestRipgrepExecutorSearch:
         (tmp_path / "test.py").write_text("Hello World\n")
         executor = RipgrepExecutor(binary_path=None)
         results = await executor.search(
-            "hello", str(tmp_path), case_insensitive=True,
+            "hello",
+            str(tmp_path),
+            case_insensitive=True,
         )
         assert len(results) > 0
 

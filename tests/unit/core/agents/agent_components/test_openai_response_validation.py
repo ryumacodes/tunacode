@@ -138,9 +138,7 @@ class TestFormatErrorDetails:
         assert "param=model" in result
 
     def test_all_details(self):
-        result = _format_error_details(
-            {"type": "t", "code": "c", "param": "p"}
-        )
+        result = _format_error_details({"type": "t", "code": "c", "param": "p"})
         assert "type=t" in result
         assert "code=c" in result
         assert "param=p" in result
@@ -254,14 +252,17 @@ class TestValidateOpenAIChatCompletionResponse:
     async def test_skips_non_chat_completion(self):
         resp = _make_response(url_path="/v1/embeddings")
         await validate_openai_chat_completion_response(resp)
+
     @pytest.mark.asyncio
     async def test_skips_streaming(self):
         resp = _make_response(content_type="text/event-stream")
         await validate_openai_chat_completion_response(resp)
+
     @pytest.mark.asyncio
     async def test_skips_empty_body(self):
         resp = _make_response(body=b"")
         await validate_openai_chat_completion_response(resp)
+
     @pytest.mark.asyncio
     async def test_raises_on_error_payload(self):
         body = json.dumps({"error": {"message": "bad request"}}).encode()
@@ -278,11 +279,13 @@ class TestValidateOpenAIChatCompletionResponse:
 
     @pytest.mark.asyncio
     async def test_passes_valid_response(self):
-        body = json.dumps({
-            "id": "chatcmpl-123",
-            "choices": [{"message": {"content": "hello"}}],
-            "model": "gpt-4",
-            "object": "chat.completion",
-        }).encode()
+        body = json.dumps(
+            {
+                "id": "chatcmpl-123",
+                "choices": [{"message": {"content": "hello"}}],
+                "model": "gpt-4",
+                "object": "chat.completion",
+            }
+        ).encode()
         resp = _make_response(body=body)
         await validate_openai_chat_completion_response(resp)

@@ -58,7 +58,9 @@ class TestBashRendererZones:
 
     def test_header_success(self) -> None:
         header = self.renderer.build_header(
-            self.data_ok, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data_ok,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
         assert "ls -la" in header.plain
@@ -66,7 +68,9 @@ class TestBashRendererZones:
 
     def test_header_failure(self) -> None:
         header = self.renderer.build_header(
-            self.data_err, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data_err,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert "exit 1" in header.plain
 
@@ -135,20 +139,26 @@ class TestBashRendererZones:
 
     def test_status_with_duration(self) -> None:
         status = self.renderer.build_status(
-            self.data_ok, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data_ok,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
         assert "123ms" in status.plain
 
     def test_status_truncated(self) -> None:
         status = self.renderer.build_status(
-            self.data_err, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data_err,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert "(truncated)" in status.plain
 
     def test_status_no_duration(self) -> None:
         status = self.renderer.build_status(
-            self.data_ok, None, DEFAULT_MAX_WIDTH,
+            self.data_ok,
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
         assert "ms" not in status.plain
@@ -230,16 +240,25 @@ class TestGrepRendererZones:
             candidates=42,
             matches=[
                 {
-                    "file": "src/main.py", "line": 10,
-                    "before": "# ", "match": "TODO", "after": ": fix",
+                    "file": "src/main.py",
+                    "line": 10,
+                    "before": "# ",
+                    "match": "TODO",
+                    "after": ": fix",
                 },
                 {
-                    "file": "src/main.py", "line": 25,
-                    "before": "# ", "match": "TODO", "after": ": refactor",
+                    "file": "src/main.py",
+                    "line": 25,
+                    "before": "# ",
+                    "match": "TODO",
+                    "after": ": refactor",
                 },
                 {
-                    "file": "src/utils.py", "line": 5,
-                    "before": "# ", "match": "TODO", "after": "",
+                    "file": "src/utils.py",
+                    "line": 5,
+                    "before": "# ",
+                    "match": "TODO",
+                    "after": "",
                 },
             ],
             is_truncated=False,
@@ -250,7 +269,9 @@ class TestGrepRendererZones:
 
     def test_header_pattern_and_count(self) -> None:
         header = self.renderer.build_header(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
         assert '"TODO"' in header.plain
@@ -262,10 +283,15 @@ class TestGrepRendererZones:
             total_matches=1,
             strategy="smart",
             candidates=10,
-            matches=[{
-                "file": "a.py", "line": 1,
-                "before": "", "match": "FIXME", "after": "",
-            }],
+            matches=[
+                {
+                    "file": "a.py",
+                    "line": 1,
+                    "before": "",
+                    "match": "FIXME",
+                    "after": "",
+                }
+            ],
             is_truncated=False,
             case_sensitive=False,
             use_regex=False,
@@ -289,9 +315,15 @@ class TestGrepRendererZones:
 
     def test_params_case_insensitive_regex_on(self) -> None:
         data = GrepData(
-            pattern="x", total_matches=0, strategy="regex",
-            candidates=0, matches=[], is_truncated=False,
-            case_sensitive=False, use_regex=True, context_lines=5,
+            pattern="x",
+            total_matches=0,
+            strategy="regex",
+            candidates=0,
+            matches=[],
+            is_truncated=False,
+            case_sensitive=False,
+            use_regex=True,
+            context_lines=5,
         )
         params = self.renderer.build_params(data, DEFAULT_MAX_WIDTH)
         plain = params.plain
@@ -305,9 +337,15 @@ class TestGrepRendererZones:
 
     def test_viewport_no_matches(self) -> None:
         empty = GrepData(
-            pattern="nonexistent", total_matches=0, strategy="smart",
-            candidates=0, matches=[], is_truncated=False,
-            case_sensitive=False, use_regex=False, context_lines=2,
+            pattern="nonexistent",
+            total_matches=0,
+            strategy="smart",
+            candidates=0,
+            matches=[],
+            is_truncated=False,
+            case_sensitive=False,
+            use_regex=False,
+            context_lines=2,
         )
         result = self.renderer.build_viewport(empty, DEFAULT_MAX_WIDTH)
         assert isinstance(result, Text)
@@ -315,7 +353,9 @@ class TestGrepRendererZones:
 
     def test_status_with_candidates_and_duration(self) -> None:
         status = self.renderer.build_status(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
         assert "42 files searched" in status.plain
@@ -323,28 +363,46 @@ class TestGrepRendererZones:
 
     def test_status_truncated(self) -> None:
         data = GrepData(
-            pattern="x", total_matches=100, strategy="smart",
+            pattern="x",
+            total_matches=100,
+            strategy="smart",
             candidates=50,
-            matches=[{
-                "file": "a.py", "line": 1,
-                "before": "", "match": "x", "after": "",
-            }],
+            matches=[
+                {
+                    "file": "a.py",
+                    "line": 1,
+                    "before": "",
+                    "match": "x",
+                    "after": "",
+                }
+            ],
             is_truncated=True,
-            case_sensitive=False, use_regex=False, context_lines=2,
+            case_sensitive=False,
+            use_regex=False,
+            context_lines=2,
         )
         status = self.renderer.build_status(data, None, DEFAULT_MAX_WIDTH)
         assert "[1/100 shown]" in status.plain
 
     def test_status_no_items(self) -> None:
         data = GrepData(
-            pattern="x", total_matches=1, strategy="smart",
+            pattern="x",
+            total_matches=1,
+            strategy="smart",
             candidates=0,
-            matches=[{
-                "file": "a.py", "line": 1,
-                "before": "", "match": "x", "after": "",
-            }],
+            matches=[
+                {
+                    "file": "a.py",
+                    "line": 1,
+                    "before": "",
+                    "match": "x",
+                    "after": "",
+                }
+            ],
             is_truncated=False,
-            case_sensitive=False, use_regex=False, context_lines=2,
+            case_sensitive=False,
+            use_regex=False,
+            context_lines=2,
         )
         status = self.renderer.build_status(data, None, DEFAULT_MAX_WIDTH)
         assert isinstance(status, Text)
@@ -359,7 +417,10 @@ class TestGrepRendererZones:
             "\u25b6  10\u2502# \u27e8TODO\u27e9: fix this"
         )
         panel = self.renderer.render(
-            None, raw, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            None,
+            raw,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(panel, Panel)
 
@@ -396,7 +457,9 @@ class TestGlobRendererZones:
 
     def test_header_pattern_and_count(self) -> None:
         header = self.renderer.build_header(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
         assert '"**/*.py"' in header.plain
@@ -404,12 +467,19 @@ class TestGlobRendererZones:
 
     def test_header_single_file(self) -> None:
         single = GlobData(
-            pattern="*.txt", file_count=1, files=["readme.txt"],
-            source="filesystem", is_truncated=False,
-            recursive=False, include_hidden=False, sort_by="name",
+            pattern="*.txt",
+            file_count=1,
+            files=["readme.txt"],
+            source="filesystem",
+            is_truncated=False,
+            recursive=False,
+            include_hidden=False,
+            sort_by="name",
         )
         header = self.renderer.build_header(
-            single, None, DEFAULT_MAX_WIDTH,
+            single,
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert "1 file" in header.plain
         assert "1 files" not in header.plain
@@ -427,14 +497,19 @@ class TestGlobRendererZones:
 
     def test_params_hidden_on(self) -> None:
         data = GlobData(
-            pattern="*", file_count=0, files=[],
-            source="filesystem", is_truncated=False,
-            recursive=False, include_hidden=True, sort_by="name",
+            pattern="*",
+            file_count=0,
+            files=[],
+            source="filesystem",
+            is_truncated=False,
+            recursive=False,
+            include_hidden=True,
+            sort_by="name",
         )
         params = self.renderer.build_params(data, DEFAULT_MAX_WIDTH)
         plain = params.plain
         assert "off" in plain  # recursive
-        assert "on" in plain   # hidden
+        assert "on" in plain  # hidden
 
     def test_viewport_with_files(self) -> None:
         result = self.renderer.build_viewport(self.data, DEFAULT_MAX_WIDTH)
@@ -442,9 +517,14 @@ class TestGlobRendererZones:
 
     def test_viewport_no_files(self) -> None:
         empty = GlobData(
-            pattern="*.xyz", file_count=0, files=[],
-            source="filesystem", is_truncated=False,
-            recursive=True, include_hidden=False, sort_by="name",
+            pattern="*.xyz",
+            file_count=0,
+            files=[],
+            source="filesystem",
+            is_truncated=False,
+            recursive=True,
+            include_hidden=False,
+            sort_by="name",
         )
         result = self.renderer.build_viewport(empty, DEFAULT_MAX_WIDTH)
         assert isinstance(result, Text)
@@ -452,17 +532,23 @@ class TestGlobRendererZones:
 
     def test_viewport_varied_file_types(self) -> None:
         data = GlobData(
-            pattern="*", file_count=3,
+            pattern="*",
+            file_count=3,
             files=["src/main.py", "README.md", "data.json"],
-            source="filesystem", is_truncated=False,
-            recursive=True, include_hidden=False, sort_by="name",
+            source="filesystem",
+            is_truncated=False,
+            recursive=True,
+            include_hidden=False,
+            sort_by="name",
         )
         result = self.renderer.build_viewport(data, DEFAULT_MAX_WIDTH)
         assert result is not None
 
     def test_status_indexed(self) -> None:
         status = self.renderer.build_status(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
         assert "indexed" in status.plain
@@ -470,18 +556,28 @@ class TestGlobRendererZones:
 
     def test_status_scanned(self) -> None:
         data = GlobData(
-            pattern="*", file_count=2, files=["a.txt", "b.txt"],
-            source="filesystem", is_truncated=False,
-            recursive=True, include_hidden=False, sort_by="name",
+            pattern="*",
+            file_count=2,
+            files=["a.txt", "b.txt"],
+            source="filesystem",
+            is_truncated=False,
+            recursive=True,
+            include_hidden=False,
+            sort_by="name",
         )
         status = self.renderer.build_status(data, None, DEFAULT_MAX_WIDTH)
         assert "scanned" in status.plain
 
     def test_status_truncated(self) -> None:
         data = GlobData(
-            pattern="*", file_count=100, files=["a.txt"],
-            source="index", is_truncated=True,
-            recursive=True, include_hidden=False, sort_by="name",
+            pattern="*",
+            file_count=100,
+            files=["a.txt"],
+            source="index",
+            is_truncated=True,
+            recursive=True,
+            include_hidden=False,
+            sort_by="name",
         )
         status = self.renderer.build_status(data, None, DEFAULT_MAX_WIDTH)
         assert "shown" in status.plain
@@ -489,14 +585,12 @@ class TestGlobRendererZones:
     # -- full render --
 
     def test_render_valid_result(self) -> None:
-        raw = (
-            "[source:index]\n"
-            "Found 2 files matching pattern: *.py\n\n"
-            "src/main.py\n"
-            "src/utils.py"
-        )
+        raw = "[source:index]\nFound 2 files matching pattern: *.py\n\nsrc/main.py\nsrc/utils.py"
         panel = self.renderer.render(
-            None, raw, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            None,
+            raw,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(panel, Panel)
 

@@ -45,7 +45,7 @@ class TestIsPrivateIp:
         assert _is_private_ip("169.254.1.1") is True
 
     def test_zero_prefix(self):
-        assert _is_private_ip("0.0.0.0") is True
+        assert _is_private_ip("0.0.0.0") is True  # nosec B104
 
     def test_ipv6_localhost(self):
         assert _is_private_ip("::1") is True

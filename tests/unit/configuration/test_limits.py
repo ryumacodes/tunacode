@@ -18,10 +18,10 @@ LOAD_CONFIG_PATH = "tunacode.configuration.user_config.load_config"
 
 @pytest.fixture(autouse=True)
 def _clear_limits_cache():
-    """Clear the LRU cache before and after each test."""
     clear_cache()
     yield
     clear_cache()
+
 
 class TestGetLimit:
     def test_returns_default_when_no_config(self):
@@ -45,6 +45,7 @@ class TestGetLimit:
             clear_cache()
             assert _get_limit("max_command_output", 5000) == 5000
 
+
 class TestGetCommandLimit:
     def test_returns_default(self):
         with patch(LOAD_CONFIG_PATH, return_value=None):
@@ -59,6 +60,7 @@ class TestGetCommandLimit:
             clear_cache()
             assert get_command_limit() == 10000
 
+
 class TestGetMaxFilesInDir:
     def test_returns_default(self):
         with patch(LOAD_CONFIG_PATH, return_value=None):
@@ -72,6 +74,7 @@ class TestGetMaxFilesInDir:
         ):
             clear_cache()
             assert get_max_files_in_dir() == 200
+
 
 class TestGetMaxTokens:
     def test_returns_none_by_default(self):
@@ -94,6 +97,7 @@ class TestGetMaxTokens:
         ):
             clear_cache()
             assert get_max_tokens() is None
+
 
 class TestClearCache:
     def test_clear_allows_fresh_load(self):

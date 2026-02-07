@@ -1,6 +1,5 @@
 """Tests for grep helper functions in tunacode.tools.grep."""
 
-
 from tunacode.tools.grep import (
     SMART_PYTHON_THRESHOLD,
     SMART_RIPGREP_THRESHOLD,
@@ -32,6 +31,7 @@ class TestSelectSearchStrategy:
 
     def test_smart_zero_returns_python(self):
         assert _select_search_strategy("smart", 0) == "python"
+
 
 def _make_result(file_path: str, score: float) -> SearchResult:
     return SearchResult(
@@ -73,10 +73,9 @@ class TestFlattenSearchResults:
         assert _flatten_search_results([], max_results=10) == []
 
     def test_all_exceptions(self):
-        result = _flatten_search_results(
-            [ValueError("a"), RuntimeError("b")], max_results=10
-        )
+        result = _flatten_search_results([ValueError("a"), RuntimeError("b")], max_results=10)
         assert result == []
+
 
 class TestFormatSearchOutput:
     def test_list_format_returns_unique_paths(self):

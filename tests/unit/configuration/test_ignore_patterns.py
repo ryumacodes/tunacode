@@ -1,6 +1,5 @@
 """Tests for tunacode.configuration.ignore_patterns."""
 
-
 from tunacode.configuration.ignore_patterns import (
     DEFAULT_EXCLUDE_DIRS,
     DEFAULT_IGNORE_PATTERNS,
@@ -58,19 +57,23 @@ class TestMatchesRootedPattern:
 
 class TestMatchesComponentPattern:
     def test_matches_component(self):
-        assert _matches_component_pattern(
-            ["src", "node_modules", "pkg"], "pkg", "node_modules", True, "node_modules/"
-        ) is True
+        assert (
+            _matches_component_pattern(
+                ["src", "node_modules", "pkg"], "pkg", "node_modules", True, "node_modules/"
+            )
+            is True
+        )
 
     def test_file_pattern_with_slash_returns_false(self):
-        assert _matches_component_pattern(
-            ["src", "file.py"], "file.py", "src/file.py", False, "src/file.py"
-        ) is False
+        assert (
+            _matches_component_pattern(
+                ["src", "file.py"], "file.py", "src/file.py", False, "src/file.py"
+            )
+            is False
+        )
 
     def test_name_match_at_end(self):
-        assert _matches_component_pattern(
-            ["file.pyc"], "file.pyc", "*.pyc", False, "*.pyc"
-        ) is True
+        assert _matches_component_pattern(["file.pyc"], "file.pyc", "*.pyc", False, "*.pyc") is True
 
 
 class TestMatchesSinglePattern:
@@ -82,14 +85,20 @@ class TestMatchesSinglePattern:
 
     def test_path_match(self):
         result = _matches_single_pattern(
-            "src/file.pyc", "file.pyc", ["src", "file.pyc"], "*.pyc",
+            "src/file.pyc",
+            "file.pyc",
+            ["src", "file.pyc"],
+            "*.pyc",
         )
         assert result is True
 
     def test_dir_pattern(self):
-        assert _matches_single_pattern(
-            "node_modules", "node_modules", ["node_modules"], "node_modules/"
-        ) is True
+        assert (
+            _matches_single_pattern(
+                "node_modules", "node_modules", ["node_modules"], "node_modules/"
+            )
+            is True
+        )
 
 
 class TestIsIgnored:

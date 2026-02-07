@@ -209,11 +209,7 @@ class TestGlobParseResult:
         assert self.renderer.parse_result(None, "") is None
 
     def test_valid_result(self) -> None:
-        result = (
-            "Found 2 files matching pattern: *.py\n"
-            "./src/a.py\n"
-            "./src/b.py"
-        )
+        result = "Found 2 files matching pattern: *.py\n./src/a.py\n./src/b.py"
         data = self.renderer.parse_result(None, result)
         assert isinstance(data, GlobData)
         assert data.pattern == "*.py"
@@ -223,11 +219,7 @@ class TestGlobParseResult:
         assert "./src/b.py" in data.files
 
     def test_with_source_marker(self) -> None:
-        result = (
-            "[source:index]\n"
-            "Found 1 file matching pattern: *.rs\n"
-            "./lib.rs"
-        )
+        result = "[source:index]\nFound 1 file matching pattern: *.rs\n./lib.rs"
         data = self.renderer.parse_result(None, result)
         assert isinstance(data, GlobData)
         assert data.source == "index"
@@ -240,12 +232,7 @@ class TestGlobParseResult:
         assert data.source == "filesystem"
 
     def test_truncated_result(self) -> None:
-        result = (
-            "Found 100 files matching pattern: *.py\n"
-            "./a.py\n"
-            "./b.py\n"
-            "(truncated at 2)"
-        )
+        result = "Found 100 files matching pattern: *.py\n./a.py\n./b.py\n(truncated at 2)"
         data = self.renderer.parse_result(None, result)
         assert isinstance(data, GlobData)
         assert data.is_truncated is True
@@ -296,11 +283,7 @@ class TestReadFileParseResult:
 
     def test_valid_result_with_numbered_lines(self) -> None:
         result = (
-            "<file>\n"
-            "1| def hello():\n"
-            "2|     print('hi')\n"
-            "(End of file - total 2 lines)\n"
-            "</file>"
+            "<file>\n1| def hello():\n2|     print('hi')\n(End of file - total 2 lines)\n</file>"
         )
         args = {"filepath": "/tmp/test.py", "offset": 0}
         data = self.renderer.parse_result(args, result)
@@ -332,12 +315,7 @@ class TestReadFileParseResult:
         assert self.renderer.parse_result(None, result) is None
 
     def test_default_filepath_when_no_args(self) -> None:
-        result = (
-            "<file>\n"
-            "1| content\n"
-            "(End of file - total 1 lines)\n"
-            "</file>"
-        )
+        result = "<file>\n1| content\n(End of file - total 1 lines)\n</file>"
         data = self.renderer.parse_result(None, result)
         assert isinstance(data, ReadFileData)
         assert data.filepath == "unknown"
@@ -487,11 +465,7 @@ class TestListDirParseResult:
         assert data.is_truncated is False
 
     def test_truncated_result(self) -> None:
-        result = (
-            "100 files  20 dirs  10 ignored (truncated)\n"
-            "project/\n"
-            "\u251c\u2500\u2500 file.py"
-        )
+        result = "100 files  20 dirs  10 ignored (truncated)\nproject/\n\u251c\u2500\u2500 file.py"
         data = self.renderer.parse_result(None, result)
         assert isinstance(data, ListDirData)
         assert data.is_truncated is True
@@ -505,11 +479,7 @@ class TestListDirParseResult:
         assert self.renderer.parse_result(None, result) is None
 
     def test_args_propagated(self) -> None:
-        result = (
-            "10 files  3 dirs  0 ignored\n"
-            "mydir/\n"
-            "\u2514\u2500\u2500 a.py"
-        )
+        result = "10 files  3 dirs  0 ignored\nmydir/\n\u2514\u2500\u2500 a.py"
         args = {"max_files": 50, "show_hidden": True}
         data = self.renderer.parse_result(args, result)
         assert isinstance(data, ListDirData)
@@ -517,11 +487,7 @@ class TestListDirParseResult:
         assert data.show_hidden is True
 
     def test_default_args(self) -> None:
-        result = (
-            "5 files  1 dirs  0 ignored\n"
-            "dir/\n"
-            "\u2514\u2500\u2500 f.py"
-        )
+        result = "5 files  1 dirs  0 ignored\ndir/\n\u2514\u2500\u2500 f.py"
         data = self.renderer.parse_result(None, result)
         assert isinstance(data, ListDirData)
         assert data.max_files == 100

@@ -66,7 +66,10 @@ class TestCollectFiles:
         mgr = _make_ignore_manager()
 
         files = _collect_files(
-            tmp_path, max_files=100, show_hidden=False, ignore_manager=mgr,
+            tmp_path,
+            max_files=100,
+            show_hidden=False,
+            ignore_manager=mgr,
         )
         assert len(files) == 2
         assert "file1.py" in files
@@ -78,7 +81,10 @@ class TestCollectFiles:
         mgr = _make_ignore_manager()
 
         files = _collect_files(
-            tmp_path, max_files=5, show_hidden=False, ignore_manager=mgr,
+            tmp_path,
+            max_files=5,
+            show_hidden=False,
+            ignore_manager=mgr,
         )
         assert len(files) == 5
 
@@ -88,7 +94,10 @@ class TestCollectFiles:
         mgr = _make_ignore_manager()
 
         files = _collect_files(
-            tmp_path, max_files=100, show_hidden=False, ignore_manager=mgr,
+            tmp_path,
+            max_files=100,
+            show_hidden=False,
+            ignore_manager=mgr,
         )
         assert "visible.py" in files
         assert ".hidden.py" not in files
@@ -98,7 +107,10 @@ class TestCollectFiles:
         mgr = _make_ignore_manager()
 
         files = _collect_files(
-            tmp_path, max_files=100, show_hidden=True, ignore_manager=mgr,
+            tmp_path,
+            max_files=100,
+            show_hidden=True,
+            ignore_manager=mgr,
         )
         assert ".hidden.py" in files
 
@@ -110,7 +122,10 @@ class TestCollectFiles:
         mgr.should_ignore.side_effect = lambda p: p.suffix == ".pyc"
 
         files = _collect_files(
-            tmp_path, max_files=100, show_hidden=False, ignore_manager=mgr,
+            tmp_path,
+            max_files=100,
+            show_hidden=False,
+            ignore_manager=mgr,
         )
         assert "keep.py" in files
         assert "skip.pyc" not in files
@@ -125,7 +140,10 @@ class TestCollectFiles:
         mgr.should_ignore.return_value = False
 
         files = _collect_files(
-            tmp_path, max_files=100, show_hidden=False, ignore_manager=mgr,
+            tmp_path,
+            max_files=100,
+            show_hidden=False,
+            ignore_manager=mgr,
         )
         assert "app.py" in files
         assert all("node_modules" not in f for f in files)
@@ -137,6 +155,9 @@ class TestCollectFiles:
         mgr = _make_ignore_manager()
 
         files = _collect_files(
-            tmp_path, max_files=100, show_hidden=False, ignore_manager=mgr,
+            tmp_path,
+            max_files=100,
+            show_hidden=False,
+            ignore_manager=mgr,
         )
         assert "src/main.py" in files

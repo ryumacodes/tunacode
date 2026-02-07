@@ -54,18 +54,24 @@ class TestBaseToolRendererCommon:
     def test_default_get_border_color(self) -> None:
         renderer = WriteFileRenderer(_cfg("write_file"))
         data = WriteFileData(
-            filepath="x.py", filename="x.py",
+            filepath="x.py",
+            filename="x.py",
             root_path=Path("/"),
-            content="", line_count=0, is_success=True,
+            content="",
+            line_count=0,
+            is_success=True,
         )
         assert renderer.get_border_color(data) == renderer.config.success_color
 
     def test_default_get_status_text(self) -> None:
         renderer = WriteFileRenderer(_cfg("write_file"))
         data = WriteFileData(
-            filepath="x.py", filename="x.py",
+            filepath="x.py",
+            filename="x.py",
             root_path=Path("/"),
-            content="", line_count=0, is_success=True,
+            content="",
+            line_count=0,
+            is_success=True,
         )
         assert renderer.get_status_text(data) == "done"
 
@@ -83,25 +89,29 @@ class TestBashDetectOutputType:
 
     def test_json_command(self) -> None:
         result = self.renderer._detect_output_type(
-            "curl -s http://api.com", '{"key": "val"}',
+            "curl -s http://api.com",
+            '{"key": "val"}',
         )
         assert result == "json"
 
     def test_git_diff_command(self) -> None:
         result = self.renderer._detect_output_type(
-            "git diff HEAD", "--- a/file\n+++ b/file",
+            "git diff HEAD",
+            "--- a/file\n+++ b/file",
         )
         assert result == "diff"
 
     def test_git_log_command(self) -> None:
         result = self.renderer._detect_output_type(
-            "git log", "commit abc123\nAuthor: test",
+            "git log",
+            "commit abc123\nAuthor: test",
         )
         assert result is None
 
     def test_python_command(self) -> None:
         result = self.renderer._detect_output_type(
-            "python script.py", "output text",
+            "python script.py",
+            "output text",
         )
         assert result is None
 
@@ -127,25 +137,29 @@ class TestWebFetchDetectContentType:
 
     def test_json_url(self) -> None:
         result = self.renderer._detect_content_type(
-            "https://api.com/data.json", '{"k":"v"}',
+            "https://api.com/data.json",
+            '{"k":"v"}',
         )
         assert result == "json"
 
     def test_xml_url(self) -> None:
         result = self.renderer._detect_content_type(
-            "https://site.com/feed.xml", "<rss>data</rss>",
+            "https://site.com/feed.xml",
+            "<rss>data</rss>",
         )
         assert result == "xml"
 
     def test_yaml_url(self) -> None:
         result = self.renderer._detect_content_type(
-            "https://site.com/config.yaml", "key: value",
+            "https://site.com/config.yaml",
+            "key: value",
         )
         assert result == "yaml"
 
     def test_yml_url(self) -> None:
         result = self.renderer._detect_content_type(
-            "https://site.com/config.yml", "key: value",
+            "https://site.com/config.yml",
+            "key: value",
         )
         assert result == "yaml"
 
@@ -176,25 +190,29 @@ class TestWebFetchDetectContentType:
 
     def test_api_url_json(self) -> None:
         result = self.renderer._detect_content_type(
-            "https://example.com/api/users", '[{"name":"alice"}]',
+            "https://example.com/api/users",
+            '[{"name":"alice"}]',
         )
         assert result == "json"
 
     def test_rss_url(self) -> None:
         result = self.renderer._detect_content_type(
-            "https://blog.example.com/rss", "<feed>x</feed>",
+            "https://blog.example.com/rss",
+            "<feed>x</feed>",
         )
         assert result == "xml"
 
     def test_atom_url(self) -> None:
         result = self.renderer._detect_content_type(
-            "https://blog.example.com/atom", "<feed>x</feed>",
+            "https://blog.example.com/atom",
+            "<feed>x</feed>",
         )
         assert result == "xml"
 
     def test_plain_content(self) -> None:
         result = self.renderer._detect_content_type(
-            "https://example.com/page", "Just some text.",
+            "https://example.com/page",
+            "Just some text.",
         )
         assert result is None
 

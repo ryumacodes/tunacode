@@ -48,8 +48,6 @@ class TestAgentStateMachine:
             sm.transition_to(AgentState.RESPONSE)
 
     def test_self_transition_is_noop(self):
-        # USER_INPUT -> ASSISTANT is valid, then ASSISTANT -> ASSISTANT
-        # would need to be allowed; let's test with a custom rules
         rules = StateTransitionRules(
             valid_transitions={AgentState.ASSISTANT: {AgentState.ASSISTANT, AgentState.RESPONSE}}
         )
@@ -103,7 +101,5 @@ class TestInvalidStateTransitionError:
         assert err.to_state == AgentState.RESPONSE
 
     def test_custom_message(self):
-        err = InvalidStateTransitionError(
-            AgentState.USER_INPUT, AgentState.RESPONSE, "custom msg"
-        )
+        err = InvalidStateTransitionError(AgentState.USER_INPUT, AgentState.RESPONSE, "custom msg")
         assert str(err) == "custom msg"

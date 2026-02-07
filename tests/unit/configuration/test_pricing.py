@@ -1,9 +1,7 @@
 """Tests for tunacode.configuration.pricing."""
 
-
 import pytest
 
-from tunacode.configuration import models
 from tunacode.configuration.pricing import (
     TOKENS_PER_MILLION,
     calculate_cost,
@@ -11,6 +9,11 @@ from tunacode.configuration.pricing import (
     get_model_pricing,
 )
 from tunacode.types import ModelPricing
+
+from tunacode.infrastructure.cache.caches.models_registry import (
+    clear_registry_cache,
+    set_registry,
+)
 
 SAMPLE_REGISTRY = {
     "openai": {
@@ -35,13 +38,14 @@ SAMPLE_REGISTRY = {
 
 @pytest.fixture(autouse=True)
 def _clear_cache():
-    models._models_registry_cache = None
+    clear_registry_cache()
     yield
-    models._models_registry_cache = None
+    clear_registry_cache()
+
 
 class TestGetModelPricing:
     def test_returns_pricing_for_known_model(self):
-        models._models_registry_cache = SAMPLE_REGISTRY
+        set_registry(SAMPLE_REGISTRY)
         pricing = get_model_pricing("openai:gpt-4")
         assert pricing is not None
         assert pricing.input == 30.0
@@ -52,23 +56,23 @@ class TestGetModelPricing:
         assert get_model_pricing("openai:gpt-4") is None
 
     def test_returns_none_for_invalid_model_string(self):
-        models._models_registry_cache = SAMPLE_REGISTRY
+        set_registry(SAMPLE_REGISTRY)
         assert get_model_pricing("no-colon") is None
 
     def test_returns_none_for_unknown_provider(self):
-        models._models_registry_cache = SAMPLE_REGISTRY
+        set_registry(SAMPLE_REGISTRY)
         assert get_model_pricing("unknown:model") is None
 
     def test_returns_none_for_unknown_model(self):
-        models._models_registry_cache = SAMPLE_REGISTRY
+        set_registry(SAMPLE_REGISTRY)
         assert get_model_pricing("openai:unknown") is None
 
     def test_returns_none_for_empty_cost(self):
-        models._models_registry_cache = SAMPLE_REGISTRY
+        set_registry(SAMPLE_REGISTRY)
         assert get_model_pricing("openai:gpt-3.5") is None
 
     def test_returns_none_for_model_without_cost_key(self):
-        models._models_registry_cache = SAMPLE_REGISTRY
+        set_registry(SAMPLE_REGISTRY)
         assert get_model_pricing("openai:no-cost") is None
 
     def test_defaults_missing_cost_fields_to_zero(self):
@@ -82,18 +86,22 @@ class TestGetModelPricing:
                 },
             },
         }
-        models._models_registry_cache = registry
+        set_registry(registry)
         pricing = get_model_pricing("prov:m1")
         assert pricing is not None
         assert pricing.input == 5.0
         assert pricing.output == 0.0
         assert pricing.cached_input == 0.0
 
+
 class TestCalculateCost:
     def test_basic_cost_calculation(self):
         pricing = ModelPricing(input=30.0, output=60.0, cached_input=15.0)
         cost = calculate_cost(
-            pricing, input_tokens=1_000_000, cached_tokens=0, output_tokens=1_000_000,
+            pricing,
+            input_tokens=1_000_000,
+            cached_tokens=0,
+            output_tokens=1_000_000,
         )
         assert cost == pytest.approx(90.0)
 
@@ -119,6 +127,7 @@ class TestCalculateCost:
         output_cost = (100_000 * 20.0) / TOKENS_PER_MILLION
         expected = input_cost + cached_cost + output_cost
         assert cost == pytest.approx(expected)
+
 
 class TestFormatPricingDisplay:
     def test_formats_pricing(self):

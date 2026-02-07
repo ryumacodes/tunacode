@@ -1,6 +1,5 @@
 """Tests for tunacode.core.agents.agent_components.response_state."""
 
-
 from tunacode.core.agents.agent_components.response_state import ResponseState
 from tunacode.core.types import AgentState
 

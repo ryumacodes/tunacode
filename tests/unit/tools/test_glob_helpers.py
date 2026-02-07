@@ -27,6 +27,7 @@ class TestParseSortOrder:
         assert _parse_sort_order("invalid") == SortOrder.MODIFIED
         assert _parse_sort_order("") == SortOrder.MODIFIED
 
+
 class TestNormalizeExcludeDirPatterns:
     def test_none_returns_empty(self):
         assert _normalize_exclude_dir_patterns(None) == EMPTY_EXCLUDE_DIR_PATTERNS
@@ -53,6 +54,7 @@ class TestNormalizeExcludeDirPatterns:
     def test_multiple_patterns(self):
         result = _normalize_exclude_dir_patterns(["node_modules", ".venv/", "dist"])
         assert len(result) == 3
+
 
 class TestExpandBracePattern:
     def test_no_braces(self):
@@ -82,6 +84,7 @@ class TestExpandBracePattern:
     def test_empty_string(self):
         assert _expand_brace_pattern("") == [""]
 
+
 class TestCompilePatterns:
     def test_simple_pattern(self):
         compiled = _compile_patterns(["*.py"], 0)
@@ -101,6 +104,7 @@ class TestCompilePatterns:
         compiled = _compile_patterns(["*.py"], re.IGNORECASE)
         _, regex = compiled[0]
         assert regex.match("test.PY")
+
 
 class TestSinglePatternMatches:
     def test_simple_match(self):
@@ -124,6 +128,7 @@ class TestSinglePatternMatches:
         result = _single_pattern_matches("test.py", "test.py", "**/*.py", comp, False)
         assert result is True
 
+
 class TestEntryMatchesAnyPattern:
     def test_matches_one_pattern(self):
         compiled = _compile_patterns(["*.py", "*.js"], 0)
@@ -133,6 +138,7 @@ class TestEntryMatchesAnyPattern:
     def test_matches_none(self):
         compiled = _compile_patterns(["*.py"], 0)
         assert not _entry_matches_any_pattern("test.js", "test.js", compiled, True)
+
 
 class TestFormatOutput:
     def test_single_file(self):
@@ -156,6 +162,7 @@ class TestFormatOutput:
     def test_includes_pattern(self):
         output = _format_output("**/*.tsx", ["/a.tsx"], MAX_RESULTS)
         assert "**/*.tsx" in output
+
 
 class TestSortOrder:
     def test_enum_values(self):

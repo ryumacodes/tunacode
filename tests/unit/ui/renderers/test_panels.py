@@ -63,9 +63,9 @@ class TestPanelStyles:
         required_keys = {"border", "title", "subtitle"}
         for pt in PanelType:
             style = PANEL_STYLES[pt]
-            assert required_keys.issubset(
-                style.keys()
-            ), f"{pt} style missing keys: {required_keys - style.keys()}"
+            assert required_keys.issubset(style.keys()), (
+                f"{pt} style missing keys: {required_keys - style.keys()}"
+            )
 
 
 # ---------------------------------------------------------------------------

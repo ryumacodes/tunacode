@@ -76,9 +76,7 @@ class TestRenderFileResults:
         results = [
             FileSearchResult(file_path="a.py", line_number=1, content="x"),
         ]
-        panel = SearchDisplayRenderer.render_file_results(
-            "x", results, search_time_ms=42.5
-        )
+        panel = SearchDisplayRenderer.render_file_results("x", results, search_time_ms=42.5)
         assert panel is not None
 
     def test_empty_results_list(self) -> None:
@@ -197,9 +195,7 @@ class TestRenderCodeResults:
             )
             for i in range(20)
         ]
-        panel = SearchDisplayRenderer.render_code_results(
-            "func", results, page=2, page_size=5
-        )
+        panel = SearchDisplayRenderer.render_code_results("func", results, page=2, page_size=5)
         assert panel is not None
 
     def test_with_search_time(self) -> None:
@@ -212,9 +208,7 @@ class TestRenderCodeResults:
                 context="def bar():",
             ),
         ]
-        panel = SearchDisplayRenderer.render_code_results(
-            "bar", results, search_time_ms=15.3
-        )
+        panel = SearchDisplayRenderer.render_code_results("bar", results, search_time_ms=15.3)
         assert panel is not None
 
 

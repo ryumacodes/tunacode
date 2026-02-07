@@ -54,11 +54,10 @@ class TestMergeUserConfig:
         assert result["settings"]["b"] == 2
         assert result["settings"]["a"] == 1
 
+
 class TestLoadConfig:
     def test_missing_file_returns_none(self, tmp_path):
-        with patch(
-            "tunacode.configuration.user_config.ApplicationSettings"
-        ) as mock_settings:
+        with patch("tunacode.configuration.user_config.ApplicationSettings") as mock_settings:
             mock_settings.return_value.paths.config_file = tmp_path / "nonexistent.json"
             result = load_config()
             assert result is None
@@ -68,9 +67,7 @@ class TestLoadConfig:
         config_data = {"default_model": "openai:gpt-4", "env": {}}
         config_file.write_text(json.dumps(config_data))
 
-        with patch(
-            "tunacode.configuration.user_config.ApplicationSettings"
-        ) as mock_settings:
+        with patch("tunacode.configuration.user_config.ApplicationSettings") as mock_settings:
             mock_settings.return_value.paths.config_file = config_file
             result = load_config()
             assert result == config_data
@@ -79,17 +76,13 @@ class TestLoadConfig:
         config_file = tmp_path / "tunacode.json"
         config_file.write_text("{invalid json")
 
-        with patch(
-            "tunacode.configuration.user_config.ApplicationSettings"
-        ) as mock_settings:
+        with patch("tunacode.configuration.user_config.ApplicationSettings") as mock_settings:
             mock_settings.return_value.paths.config_file = config_file
             with pytest.raises(ConfigurationError, match="Invalid JSON"):
                 load_config()
 
     def test_permission_error_raises_configuration_error(self, tmp_path):
-        with patch(
-            "tunacode.configuration.user_config.ApplicationSettings"
-        ) as mock_settings:
+        with patch("tunacode.configuration.user_config.ApplicationSettings") as mock_settings:
             mock_settings.return_value.paths.config_file = tmp_path / "tunacode.json"
             with (
                 patch("builtins.open", side_effect=PermissionError("denied")),

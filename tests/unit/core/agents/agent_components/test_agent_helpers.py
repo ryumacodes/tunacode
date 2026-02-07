@@ -1,6 +1,5 @@
 """Tests for tunacode.core.agents.agent_components.agent_helpers."""
 
-
 from tunacode.types.canonical import CanonicalToolCall
 
 from tunacode.core.agents.agent_components.agent_helpers import (
@@ -117,8 +116,7 @@ class TestGetRecentToolsContext:
 
     def test_respects_limit(self):
         calls = [
-            CanonicalToolCall(tool_call_id=str(i), tool_name=f"tool{i}", args={})
-            for i in range(10)
+            CanonicalToolCall(tool_call_id=str(i), tool_name=f"tool{i}", args={}) for i in range(10)
         ]
         result = get_recent_tools_context(calls, limit=2)
         assert "tool8" in result

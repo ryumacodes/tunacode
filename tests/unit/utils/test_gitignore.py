@@ -16,7 +16,6 @@ class TestLoadGitignorePatterns:
         assert "*.pyc" in patterns
         assert "node_modules/" in patterns
         assert "__pycache__/" in patterns
-        # Comments and blank lines should be excluded
         assert "# comment" not in patterns
         assert "" not in patterns
 
@@ -37,6 +36,7 @@ class TestLoadGitignorePatterns:
         with patch("builtins.open", side_effect=OSError("read error")):
             result = _load_gitignore_patterns(str(gitignore))
             assert result is None
+
 
 class TestListCwd:
     def test_lists_files_in_directory(self, tmp_path):

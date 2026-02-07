@@ -1,6 +1,5 @@
 """Tests for tunacode.utils.messaging.adapter."""
 
-
 from tunacode.types.canonical import (
     CanonicalMessage,
     MessageRole,
@@ -56,6 +55,7 @@ class TestGetAttr:
     def test_object_missing_attr(self):
         assert _get_attr(object(), "key") is None
 
+
 class TestGetParts:
     def test_dict_with_parts_list(self):
         msg = {"parts": [1, 2, 3]}
@@ -70,6 +70,7 @@ class TestGetParts:
 
     def test_none_parts(self):
         assert _get_parts({"parts": None}) == []
+
 
 class TestConvertPartToCanonical:
     def test_text_part(self):
@@ -129,6 +130,7 @@ class TestConvertPartToCanonical:
         part = {"part_kind": "unknown-kind", "content": "x"}
         assert _convert_part_to_canonical(part) is None
 
+
 class TestDetermineRole:
     def test_request_kind(self):
         msg = {"kind": PYDANTIC_MESSAGE_KIND_REQUEST}
@@ -156,6 +158,7 @@ class TestDetermineRole:
 
     def test_default_is_user(self):
         assert _determine_role({}) == MessageRole.USER
+
 
 class TestTryLegacyDict:
     def test_thought_dict(self):
@@ -185,6 +188,7 @@ class TestTryLegacyDict:
         msg = {"content": ["list", "content"]}
         assert _try_legacy_dict(msg) is None
 
+
 class TestFallbackContentParts:
     def test_string_content(self):
         result = _fallback_content_parts({"content": "hello"})
@@ -208,6 +212,7 @@ class TestFallbackContentParts:
 
     def test_no_content_key(self):
         assert _fallback_content_parts({}) == []
+
 
 class TestToCanonical:
     def test_request_with_text_parts(self):
@@ -268,6 +273,7 @@ class TestToCanonicalList:
 
     def test_empty_list(self):
         assert to_canonical_list([]) == []
+
 
 class TestFromCanonical:
     def test_text_part_roundtrip(self):
@@ -348,6 +354,7 @@ class TestFromCanonicalList:
     def test_empty_list(self):
         assert from_canonical_list([]) == []
 
+
 class TestGetContent:
     def test_from_canonical_message(self):
         msg = CanonicalMessage(
@@ -362,6 +369,7 @@ class TestGetContent:
             "parts": [{"part_kind": "text", "content": "hello"}],
         }
         assert get_content(msg) == "hello"
+
 
 class TestGetToolCallIds:
     def test_extracts_ids_from_canonical(self):
@@ -391,6 +399,7 @@ class TestGetToolReturnIds:
             parts=(ToolReturnPart(tool_call_id="tc1", content="output"),),
         )
         assert get_tool_return_ids(msg) == {"tc1"}
+
 
 class TestFindDanglingToolCalls:
     def test_no_dangling(self):

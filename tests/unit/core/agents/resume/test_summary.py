@@ -80,14 +80,14 @@ class TestIsSummaryMessage:
 
 class TestShouldCompact:
     def test_empty_list_returns_false(self):
-        assert should_compact([], "test-model") is False
+        assert should_compact([]) is False
 
     def test_few_small_messages_returns_false(self):
         messages = [
             {"content": "Hello"},
             {"content": "How are you?"},
         ]
-        assert should_compact(messages, "test-model") is False
+        assert should_compact(messages) is False
 
     def test_many_large_messages_returns_true(self):
         # estimate_tokens divides len by 4, so to exceed SUMMARY_THRESHOLD
@@ -95,18 +95,18 @@ class TestShouldCompact:
         chars_needed = (SUMMARY_THRESHOLD * 4) + 100
         large_content = "x" * chars_needed
         messages = [{"content": large_content}]
-        assert should_compact(messages, "test-model") is True
+        assert should_compact(messages) is True
 
     def test_object_messages_with_parts(self):
         chars_needed = (SUMMARY_THRESHOLD * 4) + 100
         part = SimpleNamespace(content="y" * chars_needed)
         message = SimpleNamespace(parts=[part])
-        assert should_compact([message], "test-model") is True
+        assert should_compact([message]) is True
 
     def test_object_messages_below_threshold(self):
         part = SimpleNamespace(content="short")
         message = SimpleNamespace(parts=[part])
-        assert should_compact([message], "test-model") is False
+        assert should_compact([message]) is False
 
     def test_mixed_messages_accumulate(self):
         # Split across multiple messages to still exceed threshold
@@ -116,4 +116,4 @@ class TestShouldCompact:
             {"content": "b" * per_message_chars},
             {"content": "c" * per_message_chars},
         ]
-        assert should_compact(messages, "test-model") is True
+        assert should_compact(messages) is True

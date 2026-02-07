@@ -46,7 +46,9 @@ class TestWriteFileRendererZones:
 
     def test_header_filename_and_new(self) -> None:
         header = self.renderer.build_header(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
         plain = header.plain
@@ -61,15 +63,19 @@ class TestWriteFileRendererZones:
 
     def test_viewport_with_content(self) -> None:
         result = self.renderer.build_viewport(
-            self.data, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_MAX_WIDTH,
         )
         assert result is not None
 
     def test_viewport_empty_content(self) -> None:
         empty = WriteFileData(
-            filepath="empty.py", filename="empty.py",
+            filepath="empty.py",
+            filename="empty.py",
             root_path=Path("/"),
-            content="", line_count=0, is_success=True,
+            content="",
+            line_count=0,
+            is_success=True,
         )
         result = self.renderer.build_viewport(empty, DEFAULT_MAX_WIDTH)
         assert isinstance(result, Text)
@@ -77,30 +83,38 @@ class TestWriteFileRendererZones:
 
     def test_viewport_python_gets_syntax(self) -> None:
         data = WriteFileData(
-            filepath="script.py", filename="script.py",
+            filepath="script.py",
+            filename="script.py",
             root_path=Path("/"),
             content="def foo():\n    return 42\n",
-            line_count=2, is_success=True,
+            line_count=2,
+            is_success=True,
         )
         result = self.renderer.build_viewport(data, DEFAULT_MAX_WIDTH)
         assert isinstance(result, Syntax)
 
     def test_status_with_duration(self) -> None:
         status = self.renderer.build_status(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
         assert "123ms" in status.plain
 
     def test_status_truncated_file(self) -> None:
         big = WriteFileData(
-            filepath="big.py", filename="big.py",
+            filepath="big.py",
+            filename="big.py",
             root_path=Path("/"),
             content="\n".join(f"line {i}" for i in range(100)),
-            line_count=100, is_success=True,
+            line_count=100,
+            is_success=True,
         )
         status = self.renderer.build_status(
-            big, None, DEFAULT_MAX_WIDTH,
+            big,
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert "lines" in status.plain
 
@@ -112,11 +126,15 @@ class TestWriteFileRendererZones:
 
     def test_render_valid_result(self) -> None:
         args: dict[str, Any] = {
-            "filepath": "/tmp/new.py", "content": "x = 1\n",
+            "filepath": "/tmp/new.py",
+            "content": "x = 1\n",
         }
         raw = "Successfully wrote to new file: /tmp/new.py"
         panel = self.renderer.render(
-            args, raw, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            args,
+            raw,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(panel, Panel)
 
@@ -145,7 +163,9 @@ class TestWebFetchRendererZones:
 
     def test_header_domain_and_line_count(self) -> None:
         header = self.renderer.build_header(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
         assert "example.com" in header.plain
@@ -153,11 +173,17 @@ class TestWebFetchRendererZones:
 
     def test_header_no_domain(self) -> None:
         data = WebFetchData(
-            url="", domain="", content="x",
-            content_lines=1, is_truncated=False, timeout=30,
+            url="",
+            domain="",
+            content="x",
+            content_lines=1,
+            is_truncated=False,
+            timeout=30,
         )
         header = self.renderer.build_header(
-            data, None, DEFAULT_MAX_WIDTH,
+            data,
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
         assert "web" in header.plain
@@ -174,24 +200,31 @@ class TestWebFetchRendererZones:
     def test_params_long_url_truncated(self) -> None:
         long_url = "https://x.com/" + "a" * 80
         data = WebFetchData(
-            url=long_url, domain="x.com",
-            content="x", content_lines=1,
-            is_truncated=False, timeout=30,
+            url=long_url,
+            domain="x.com",
+            content="x",
+            content_lines=1,
+            is_truncated=False,
+            timeout=30,
         )
         params = self.renderer.build_params(data, DEFAULT_MAX_WIDTH)
         assert "..." in params.plain
 
     def test_viewport_with_content(self) -> None:
         result = self.renderer.build_viewport(
-            self.data, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_MAX_WIDTH,
         )
         assert result is not None
 
     def test_viewport_no_content(self) -> None:
         empty = WebFetchData(
-            url="https://example.com", domain="example.com",
-            content="", content_lines=0,
-            is_truncated=False, timeout=30,
+            url="https://example.com",
+            domain="example.com",
+            content="",
+            content_lines=0,
+            is_truncated=False,
+            timeout=30,
         )
         result = self.renderer.build_viewport(empty, DEFAULT_MAX_WIDTH)
         assert isinstance(result, Text)
@@ -202,7 +235,9 @@ class TestWebFetchRendererZones:
             url="https://api.example.com/data.json",
             domain="api.example.com",
             content='{"key": "value"}',
-            content_lines=1, is_truncated=False, timeout=30,
+            content_lines=1,
+            is_truncated=False,
+            timeout=30,
         )
         result = self.renderer.build_viewport(data, DEFAULT_MAX_WIDTH)
         assert isinstance(result, Syntax)
@@ -212,37 +247,51 @@ class TestWebFetchRendererZones:
             url="https://example.com/page",
             domain="example.com",
             content="Just some text.\nMore text.",
-            content_lines=2, is_truncated=False, timeout=30,
+            content_lines=2,
+            is_truncated=False,
+            timeout=30,
         )
         result = self.renderer.build_viewport(data, DEFAULT_MAX_WIDTH)
         assert isinstance(result, Text)
 
     def test_status_with_duration(self) -> None:
         status = self.renderer.build_status(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
         assert "123ms" in status.plain
 
     def test_status_truncated(self) -> None:
         data = WebFetchData(
-            url="https://example.com", domain="example.com",
+            url="https://example.com",
+            domain="example.com",
             content="[Content truncated due to size]\ndata",
-            content_lines=2, is_truncated=True, timeout=30,
+            content_lines=2,
+            is_truncated=True,
+            timeout=30,
         )
         status = self.renderer.build_status(
-            data, None, DEFAULT_MAX_WIDTH,
+            data,
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert "(content truncated)" in status.plain
 
     def test_status_empty(self) -> None:
         data = WebFetchData(
-            url="https://example.com", domain="example.com",
-            content="short", content_lines=1,
-            is_truncated=False, timeout=30,
+            url="https://example.com",
+            domain="example.com",
+            content="short",
+            content_lines=1,
+            is_truncated=False,
+            timeout=30,
         )
         status = self.renderer.build_status(
-            data, None, DEFAULT_MAX_WIDTH,
+            data,
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
 
@@ -250,17 +299,27 @@ class TestWebFetchRendererZones:
 
     def test_render_valid_result(self) -> None:
         args: dict[str, Any] = {
-            "url": "https://example.com", "timeout": 60,
+            "url": "https://example.com",
+            "timeout": 60,
         }
         panel = self.renderer.render(
-            args, "Hello World", DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            args,
+            "Hello World",
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(panel, Panel)
 
     def test_render_returns_none_for_empty(self) -> None:
-        assert self.renderer.render(
-            None, "", None, DEFAULT_MAX_WIDTH,
-        ) is None
+        assert (
+            self.renderer.render(
+                None,
+                "",
+                None,
+                DEFAULT_MAX_WIDTH,
+            )
+            is None
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +355,9 @@ class TestUpdateFileRendererZones:
 
     def test_header_filename_and_stats(self) -> None:
         header = self.renderer.build_header(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
         plain = header.plain
@@ -306,20 +367,24 @@ class TestUpdateFileRendererZones:
 
     def test_params_contains_filepath(self) -> None:
         params = self.renderer.build_params(
-            self.data, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(params, Text)
         assert "src/main.py" in params.plain
 
     def test_viewport_renders_diff(self) -> None:
         result = self.renderer.build_viewport(
-            self.data, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(result, Syntax)
 
     def test_status_contains_hunks(self) -> None:
         status = self.renderer.build_status(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
         assert "1 hunk" in status.plain
@@ -327,17 +392,19 @@ class TestUpdateFileRendererZones:
 
     def test_status_plural_hunks(self) -> None:
         data = UpdateFileData(
-            filepath="x.py", filename="x.py",
-            root_path=Path.cwd(), message="ok",
-            diff_content=(
-                "--- a/x.py\n+++ b/x.py\n"
-                "@@ -1 +1 @@\n-a\n+b\n"
-                "@@ -10 +10 @@\n-c\n+d\n"
-            ),
-            additions=2, deletions=2, hunks=2,
+            filepath="x.py",
+            filename="x.py",
+            root_path=Path.cwd(),
+            message="ok",
+            diff_content=("--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@\n-a\n+b\n@@ -10 +10 @@\n-c\n+d\n"),
+            additions=2,
+            deletions=2,
+            hunks=2,
         )
         status = self.renderer.build_status(
-            data, None, DEFAULT_MAX_WIDTH,
+            data,
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert "2 hunks" in status.plain
 
@@ -355,7 +422,10 @@ class TestUpdateFileRendererZones:
             " print('hello')\n"
         )
         panel = self.renderer.render(
-            None, raw, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            None,
+            raw,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(panel, Panel)
 
@@ -375,18 +445,29 @@ class TestUpdateFileRendererZones:
             "</file_diagnostics>"
         )
         panel = self.renderer.render(
-            None, raw, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            None,
+            raw,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(panel, Panel)
 
     def test_render_returns_none_for_empty(self) -> None:
-        assert self.renderer.render(
-            None, "", None, DEFAULT_MAX_WIDTH,
-        ) is None
+        assert (
+            self.renderer.render(
+                None,
+                "",
+                None,
+                DEFAULT_MAX_WIDTH,
+            )
+            is None
+        )
 
     def test_render_returns_none_for_no_diff(self) -> None:
         result = self.renderer.render(
-            None, "Some message without diff",
-            None, DEFAULT_MAX_WIDTH,
+            None,
+            "Some message without diff",
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert result is None

@@ -160,7 +160,7 @@ class TestDetectJson:
 
     def test_array_content_returns_none(self) -> None:
         """Arrays do not match -- must start with { and end with }."""
-        assert _detect_json('[1, 2, 3]') is None
+        assert _detect_json("[1, 2, 3]") is None
 
     def test_nested_json_object(self) -> None:
         assert _detect_json('{"a": {"b": 1}}') == "json"

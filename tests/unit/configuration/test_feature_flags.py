@@ -50,6 +50,7 @@ class TestIsEnabled:
         with patch.dict(_DEFAULTS, {flag: False}):
             assert is_enabled(flag) is False
 
+
 class TestGetAllFlags:
     def test_returns_dict_of_bools(self):
         result = get_all_flags()

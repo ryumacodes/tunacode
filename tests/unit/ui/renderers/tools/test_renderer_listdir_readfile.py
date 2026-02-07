@@ -53,7 +53,9 @@ class TestListDirRendererZones:
 
     def test_header_dir_and_counts(self) -> None:
         header = self.renderer.build_header(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
         plain = header.plain
@@ -76,8 +78,12 @@ class TestListDirRendererZones:
         data = ListDirData(
             directory="/tmp",
             tree_content="/tmp\n\u2514\u2500\u2500 .hidden",
-            file_count=1, dir_count=0, is_truncated=False,
-            max_files=50, show_hidden=True, ignore_count=0,
+            file_count=1,
+            dir_count=0,
+            is_truncated=False,
+            max_files=50,
+            show_hidden=True,
+            ignore_count=0,
         )
         params = self.renderer.build_params(data, DEFAULT_MAX_WIDTH)
         assert "on" in params.plain
@@ -90,8 +96,12 @@ class TestListDirRendererZones:
         empty = ListDirData(
             directory="empty_dir",
             tree_content="empty_dir",
-            file_count=0, dir_count=0, is_truncated=False,
-            max_files=100, show_hidden=False, ignore_count=0,
+            file_count=0,
+            dir_count=0,
+            is_truncated=False,
+            max_files=100,
+            show_hidden=False,
+            ignore_count=0,
         )
         result = self.renderer.build_viewport(empty, DEFAULT_MAX_WIDTH)
         assert isinstance(result, Text)
@@ -112,20 +122,24 @@ class TestListDirRendererZones:
     def test_status_with_duration(self) -> None:
         self.renderer.build_viewport(self.data, DEFAULT_MAX_WIDTH)
         status = self.renderer.build_status(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
         assert "123ms" in status.plain
 
     def test_status_truncated(self) -> None:
-        lines = "\n".join(
-            f"\u251c\u2500\u2500 file{i}.py" for i in range(20)
-        )
+        lines = "\n".join(f"\u251c\u2500\u2500 file{i}.py" for i in range(20))
         data = ListDirData(
             directory="/big",
             tree_content="/big\n" + lines,
-            file_count=500, dir_count=10, is_truncated=True,
-            max_files=100, show_hidden=False, ignore_count=50,
+            file_count=500,
+            dir_count=10,
+            is_truncated=True,
+            max_files=100,
+            show_hidden=False,
+            ignore_count=50,
         )
         self.renderer.build_viewport(data, DEFAULT_MAX_WIDTH)
         status = self.renderer.build_status(data, None, DEFAULT_MAX_WIDTH)
@@ -135,9 +149,14 @@ class TestListDirRendererZones:
         data = ListDirData(
             directory="x",
             tree_content="x\n\u2514\u2500\u2500 a.txt",
-            file_count=1, dir_count=0, is_truncated=False,
-            max_files=100, show_hidden=False, ignore_count=0,
-            shown_lines=1, total_lines=1,
+            file_count=1,
+            dir_count=0,
+            is_truncated=False,
+            max_files=100,
+            show_hidden=False,
+            ignore_count=0,
+            shown_lines=1,
+            total_lines=1,
         )
         status = self.renderer.build_status(data, None, DEFAULT_MAX_WIDTH)
         assert isinstance(status, Text)
@@ -152,7 +171,10 @@ class TestListDirRendererZones:
             "\u2514\u2500\u2500 utils.py"
         )
         panel = self.renderer.render(
-            None, raw, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            None,
+            raw,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(panel, Panel)
 
@@ -188,7 +210,9 @@ class TestReadFileRendererZones:
 
     def test_header_filename_and_range(self) -> None:
         header = self.renderer.build_header(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
         assert "main.py" in header.plain
@@ -196,13 +220,19 @@ class TestReadFileRendererZones:
 
     def test_header_no_content_lines(self) -> None:
         data = ReadFileData(
-            filepath="empty.py", filename="empty.py",
+            filepath="empty.py",
+            filename="empty.py",
             root_path=Path("/"),
-            content_lines=[], total_lines=0, offset=0,
-            has_more=False, end_message="",
+            content_lines=[],
+            total_lines=0,
+            offset=0,
+            has_more=False,
+            end_message="",
         )
         header = self.renderer.build_header(
-            data, None, DEFAULT_MAX_WIDTH,
+            data,
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
         assert "empty.py" in header.plain
@@ -214,16 +244,21 @@ class TestReadFileRendererZones:
 
     def test_viewport_with_content(self) -> None:
         result = self.renderer.build_viewport(
-            self.data, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_MAX_WIDTH,
         )
         assert result is not None
 
     def test_viewport_empty_file(self) -> None:
         empty = ReadFileData(
-            filepath="empty.py", filename="empty.py",
+            filepath="empty.py",
+            filename="empty.py",
             root_path=Path("/"),
-            content_lines=[], total_lines=0, offset=0,
-            has_more=False, end_message="",
+            content_lines=[],
+            total_lines=0,
+            offset=0,
+            has_more=False,
+            end_message="",
         )
         result = self.renderer.build_viewport(empty, DEFAULT_MAX_WIDTH)
         assert isinstance(result, Text)
@@ -231,24 +266,30 @@ class TestReadFileRendererZones:
 
     def test_viewport_python_gets_syntax(self) -> None:
         result = self.renderer.build_viewport(
-            self.data, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(result, Syntax)
 
     def test_viewport_text_file_plain(self) -> None:
         data = ReadFileData(
-            filepath="notes.txt", filename="notes.txt",
+            filepath="notes.txt",
+            filename="notes.txt",
             root_path=Path("/"),
             content_lines=[(1, "Some notes"), (2, "More notes")],
-            total_lines=2, offset=0,
-            has_more=False, end_message="",
+            total_lines=2,
+            offset=0,
+            has_more=False,
+            end_message="",
         )
         result = self.renderer.build_viewport(data, DEFAULT_MAX_WIDTH)
         assert isinstance(result, Text)
 
     def test_status_has_more(self) -> None:
         status = self.renderer.build_status(
-            self.data, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            self.data,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
         plain = status.plain
@@ -258,15 +299,19 @@ class TestReadFileRendererZones:
 
     def test_status_complete_file(self) -> None:
         data = ReadFileData(
-            filepath="small.py", filename="small.py",
+            filepath="small.py",
+            filename="small.py",
             root_path=Path("/"),
             content_lines=[(1, "pass")],
-            total_lines=1, offset=0,
+            total_lines=1,
+            offset=0,
             has_more=False,
             end_message="(End of file - total 1 lines)",
         )
         status = self.renderer.build_status(
-            data, None, DEFAULT_MAX_WIDTH,
+            data,
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
         assert "total: 1 lines" in status.plain
@@ -274,29 +319,32 @@ class TestReadFileRendererZones:
 
     def test_status_empty(self) -> None:
         data = ReadFileData(
-            filepath="x.py", filename="x.py",
+            filepath="x.py",
+            filename="x.py",
             root_path=Path("/"),
-            content_lines=[], total_lines=0, offset=0,
-            has_more=False, end_message="",
+            content_lines=[],
+            total_lines=0,
+            offset=0,
+            has_more=False,
+            end_message="",
         )
         status = self.renderer.build_status(
-            data, None, DEFAULT_MAX_WIDTH,
+            data,
+            None,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(status, Text)
 
     # -- full render --
 
     def test_render_valid_result(self) -> None:
-        raw = (
-            "<file>\n"
-            "00001| import os\n"
-            "00002| import sys\n"
-            "(End of file - total 2 lines)\n"
-            "</file>"
-        )
+        raw = "<file>\n00001| import os\n00002| import sys\n(End of file - total 2 lines)\n</file>"
         args: dict[str, Any] = {"filepath": "src/main.py"}
         panel = self.renderer.render(
-            args, raw, DEFAULT_DURATION, DEFAULT_MAX_WIDTH,
+            args,
+            raw,
+            DEFAULT_DURATION,
+            DEFAULT_MAX_WIDTH,
         )
         assert isinstance(panel, Panel)
 
