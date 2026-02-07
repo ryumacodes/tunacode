@@ -102,7 +102,7 @@ class TestFormatPartDebug:
         result = _format_part_debug(part, 120)
         assert "kind=tool-call" in result
         assert "args=" in result
-        assert "content=" not in result or "content=" not in result.split("args=")[0]
+        assert "content=" not in result
 
     def test_part_with_unknown_kind(self):
         part = SimpleNamespace(

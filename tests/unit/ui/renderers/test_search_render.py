@@ -5,6 +5,9 @@ Source: src/tunacode/ui/renderers/search.py
 
 from __future__ import annotations
 
+from io import StringIO
+
+from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
@@ -16,6 +19,15 @@ from tunacode.ui.renderers.search import (
     file_search_panel,
     quick_results,
 )
+
+
+def _render_to_text(panel: Panel) -> str:
+    """Render a Panel to plain text for assertion checks."""
+    buf = StringIO()
+    console = Console(file=buf, width=120, force_terminal=False)
+    console.print(panel)
+    return buf.getvalue()
+
 
 # ===================================================================
 # SearchDisplayRenderer.render_file_results
@@ -30,7 +42,9 @@ class TestRenderFileResults:
             FileSearchResult(file_path="src/main.py", line_number=10, content="hello world"),
         ]
         panel = SearchDisplayRenderer.render_file_results("hello", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
+        rendered = _render_to_text(panel)
+        assert "src/main.py" in rendered
 
     def test_single_result_with_match_positions(self) -> None:
         results = [
@@ -43,14 +57,16 @@ class TestRenderFileResults:
             ),
         ]
         panel = SearchDisplayRenderer.render_file_results("hello", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
+        assert "src/main.py" in _render_to_text(panel)
 
     def test_result_without_line_number(self) -> None:
         results = [
             FileSearchResult(file_path="README.md", content="some content"),
         ]
         panel = SearchDisplayRenderer.render_file_results("content", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
+        assert "README.md" in _render_to_text(panel)
 
     def test_result_with_relevance_score(self) -> None:
         results = [
@@ -62,7 +78,8 @@ class TestRenderFileResults:
             ),
         ]
         panel = SearchDisplayRenderer.render_file_results("match", results)
-        assert panel is not None
+        assert isinstance(panel, Panel)
+        assert "lib.py" in _render_to_text(panel)
 
     def test_multiple_results_with_pagination(self) -> None:
         results = [
@@ -70,18 +87,24 @@ class TestRenderFileResults:
             for i in range(25)
         ]
         panel = SearchDisplayRenderer.render_file_results("line", results, page=2, page_size=5)
-        assert panel is not None
+        assert isinstance(panel, Panel)
+        rendered = _render_to_text(panel)
+        assert "file" in rendered
 
     def test_with_search_time(self) -> None:
         results = [
             FileSearchResult(file_path="a.py", line_number=1, content="x"),
         ]
         panel = SearchDisplayRenderer.render_file_results("x", results, search_time_ms=42.5)
-        assert panel is not None
+        assert isinstance(panel, Panel)
+        rendered = _render_to_text(panel)
+        assert "a.py" in rendered
 
     def test_empty_results_list(self) -> None:
         panel = SearchDisplayRenderer.render_file_results("missing", [])
-        assert panel is not None
+        assert isinstance(panel, Panel)
+        rendered = _render_to_text(panel)
+        assert "missing" in rendered or "No" in rendered
 
 
 # ===================================================================
@@ -227,27 +250,27 @@ class TestRenderInlineResults:
     def test_single_result(self) -> None:
         results = [{"title": "src/main.py"}]
         result = SearchDisplayRenderer.render_inline_results(results)
-        assert result is not None
+        assert isinstance(result, Text)
 
     def test_results_with_file_key_fallback(self) -> None:
         results = [{"file": "src/main.py"}]
         result = SearchDisplayRenderer.render_inline_results(results)
-        assert result is not None
+        assert isinstance(result, Text)
 
     def test_results_with_neither_title_nor_file(self) -> None:
         results = [{"name": "something"}]
         result = SearchDisplayRenderer.render_inline_results(results)
-        assert result is not None
+        assert isinstance(result, Text)
 
     def test_more_than_max_display_shows_remaining(self) -> None:
         results = [{"title": f"file{i}.py"} for i in range(10)]
         result = SearchDisplayRenderer.render_inline_results(results, max_display=3)
-        assert result is not None
+        assert isinstance(result, Text)
 
     def test_exact_max_display_no_remaining(self) -> None:
         results = [{"title": f"file{i}.py"} for i in range(5)]
         result = SearchDisplayRenderer.render_inline_results(results, max_display=5)
-        assert result is not None
+        assert isinstance(result, Text)
 
 
 # ===================================================================

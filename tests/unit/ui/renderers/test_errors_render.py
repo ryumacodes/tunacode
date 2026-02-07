@@ -5,6 +5,9 @@ Source: src/tunacode/ui/renderers/errors.py
 
 from __future__ import annotations
 
+from io import StringIO
+
+from rich.console import Console
 from rich.panel import Panel
 
 from tunacode.ui.renderers.errors import (
@@ -15,6 +18,15 @@ from tunacode.ui.renderers.errors import (
     render_user_abort,
     render_validation_error,
 )
+
+
+def _render_to_text(panel: Panel) -> str:
+    """Render a Panel to plain text for assertion checks."""
+    buf = StringIO()
+    console = Console(file=buf, width=120, force_terminal=False)
+    console.print(panel)
+    return buf.getvalue()
+
 
 # ===================================================================
 # render_tool_error
@@ -31,10 +43,14 @@ class TestRenderToolErrorDeep:
             file_path="/tmp/missing.py",
         )
         assert isinstance(result, Panel)
+        rendered = _render_to_text(result)
+        assert "read_file" in rendered
+        assert "/tmp/missing.py" in rendered
 
     def test_without_file_path_generic_recovery(self) -> None:
         result = render_tool_error("grep", "bad pattern")
         assert isinstance(result, Panel)
+        assert "grep" in _render_to_text(result)
 
     def test_with_all_params(self) -> None:
         result = render_tool_error(
@@ -44,10 +60,14 @@ class TestRenderToolErrorDeep:
             file_path="/etc/hosts",
         )
         assert isinstance(result, Panel)
+        rendered = _render_to_text(result)
+        assert "write_file" in rendered
+        assert "Check directory permissions" in rendered
 
     def test_empty_message(self) -> None:
         result = render_tool_error("bash", "")
         assert isinstance(result, Panel)
+        assert "bash" in _render_to_text(result)
 
 
 # ===================================================================
@@ -183,18 +203,21 @@ class TestRenderException:
         exc.tool_name = "bash"  # type: ignore[attr-defined]
         result = render_exception(exc)
         assert isinstance(result, Panel)
+        assert "bash" in _render_to_text(result)
 
     def test_exception_with_suggested_fix_attr(self) -> None:
         exc = Exception("config error")
         exc.suggested_fix = "Reconfigure the settings"  # type: ignore[attr-defined]
         result = render_exception(exc)
         assert isinstance(result, Panel)
+        assert "Reconfigure the settings" in _render_to_text(result)
 
     def test_exception_with_recovery_commands_attr(self) -> None:
         exc = Exception("recoverable error")
         exc.recovery_commands = ["cmd1", "cmd2"]  # type: ignore[attr-defined]
         result = render_exception(exc)
         assert isinstance(result, Panel)
+        assert "cmd1" in _render_to_text(result)
 
     def test_exception_message_with_fix_prefix_stripped(self) -> None:
         exc = Exception("Something failed Fix: do this instead")

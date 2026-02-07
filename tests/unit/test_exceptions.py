@@ -49,7 +49,7 @@ class TestBuildErrorMessage:
     def test_with_help_url(self):
         result = _build_error_message("base", help_url="https://example.com")
         assert "More help:" in result
-        assert "https://example.com" in result
+        assert "https://example.com" in result.split()
 
     def test_with_valid_examples(self):
         result = _build_error_message("base", valid_examples=["ex1", "ex2"])

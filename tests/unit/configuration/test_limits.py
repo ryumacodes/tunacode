@@ -17,7 +17,7 @@ LOAD_CONFIG_PATH = "tunacode.configuration.user_config.load_config"
 
 
 @pytest.fixture(autouse=True)
-def _clear_limits_cache():
+def _clear_limits_cache() -> None:
     clear_cache()
     yield
     clear_cache()

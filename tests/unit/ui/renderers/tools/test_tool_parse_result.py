@@ -314,6 +314,13 @@ class TestReadFileParseResult:
         result = "<file>\n</file>"
         assert self.renderer.parse_result(None, result) is None
 
+    def test_empty_file_with_end_message(self) -> None:
+        result = "<file>\n(End of file - total 0 lines)\n</file>"
+        data = self.renderer.parse_result(None, result)
+        assert isinstance(data, ReadFileData)
+        assert data.content_lines == []
+        assert data.total_lines == 0
+
     def test_default_filepath_when_no_args(self) -> None:
         result = "<file>\n1| content\n(End of file - total 1 lines)\n</file>"
         data = self.renderer.parse_result(None, result)

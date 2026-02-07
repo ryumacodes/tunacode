@@ -54,10 +54,6 @@ class TestParseDiagnosticsBlock:
     def test_empty_string_returns_none(self) -> None:
         assert parse_diagnostics_block("") is None
 
-    def test_none_like_empty_returns_none(self) -> None:
-        """Falsy empty string should return None."""
-        assert parse_diagnostics_block("") is None
-
     def test_no_tags_returns_none(self) -> None:
         assert parse_diagnostics_block("just plain text") is None
 

@@ -10,7 +10,6 @@ from rich.panel import Panel
 from tunacode.ui.renderers.errors import (
     _extract_exception_context,
     render_catastrophic_error,
-    render_tool_error,
     render_user_abort,
     render_validation_error,
 )
@@ -104,48 +103,6 @@ class TestExtractExceptionContext:
         exc = MultiAttrException("fail", tool_name="grep", path="/src/main.py")
         context = _extract_exception_context(exc)
         assert context == {"Tool": "grep", "Path": "/src/main.py"}
-
-
-# ---------------------------------------------------------------------------
-# render_tool_error
-# ---------------------------------------------------------------------------
-
-
-class TestRenderToolError:
-    """render_tool_error returns a Panel with structured error info."""
-
-    def test_returns_panel(self) -> None:
-        result = render_tool_error("bash", "command failed")
-        assert isinstance(result, Panel)
-
-    def test_with_suggested_fix(self) -> None:
-        result = render_tool_error(
-            "bash",
-            "command failed",
-            suggested_fix="Try a different command",
-        )
-        assert isinstance(result, Panel)
-
-    def test_with_file_path_includes_path_context(self) -> None:
-        result = render_tool_error(
-            "read_file",
-            "file not found",
-            file_path="/tmp/missing.py",
-        )
-        assert isinstance(result, Panel)
-
-    def test_without_file_path(self) -> None:
-        result = render_tool_error("grep", "pattern error")
-        assert isinstance(result, Panel)
-
-    def test_with_all_parameters(self) -> None:
-        result = render_tool_error(
-            "write_file",
-            "permission denied",
-            suggested_fix="Check directory permissions",
-            file_path="/etc/config.json",
-        )
-        assert isinstance(result, Panel)
 
 
 # ---------------------------------------------------------------------------

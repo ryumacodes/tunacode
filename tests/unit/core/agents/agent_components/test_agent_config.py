@@ -1,5 +1,6 @@
 """Tests for pure helper functions in tunacode.core.agents.agent_components.agent_config."""
 
+from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -28,7 +29,7 @@ from tunacode.core.agents.agent_components.agent_config import (
 
 
 @pytest.fixture(autouse=True)
-def _clear_caches():
+def _clear_caches() -> Generator[None, None, None]:
     clear_all()
     yield
     clear_all()
@@ -49,11 +50,11 @@ class TestCoerceRequestDelay:
         assert _coerce_request_delay(_make_session({"request_delay": 1.5})) == 1.5
 
     def test_negative_raises(self):
-        with pytest.raises(ValueError, match="between 0.0 and 60.0"):
+        with pytest.raises(ValueError, match=r"between 0\.0 and 60\.0"):
             _coerce_request_delay(_make_session({"request_delay": -1.0}))
 
     def test_too_high_raises(self):
-        with pytest.raises(ValueError, match="between 0.0 and 60.0"):
+        with pytest.raises(ValueError, match=r"between 0\.0 and 60\.0"):
             _coerce_request_delay(_make_session({"request_delay": 100.0}))
 
     def test_boundary_values(self):
@@ -75,7 +76,7 @@ class TestCoerceGlobalRequestTimeout:
         assert result is None
 
     def test_negative_raises(self):
-        with pytest.raises(ValueError, match=">= 0.0"):
+        with pytest.raises(ValueError, match=r">= 0\.0"):
             _coerce_global_request_timeout(_make_session({"global_request_timeout": -1.0}))
 
 

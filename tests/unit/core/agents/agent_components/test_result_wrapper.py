@@ -70,3 +70,11 @@ class TestAgentRunWithState:
 
         wrapper = AgentRunWithState(FakeRun())
         assert wrapper.response_state is None
+
+    def test_missing_attr_raises(self):
+        class FakeRun:
+            pass
+
+        wrapper = AgentRunWithState(FakeRun())
+        with pytest.raises(AttributeError):
+            _ = wrapper.nonexistent_attr

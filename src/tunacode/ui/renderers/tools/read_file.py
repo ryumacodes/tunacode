@@ -110,13 +110,10 @@ class ReadFileRenderer(BaseToolRenderer[ReadFileData]):
             return None
 
         lines = file_match.group(1).strip().splitlines()
-        if not lines:
-            return None
 
-        content_lines, end_message, total_lines, has_more = self._parse_content_lines(lines)
-
-        if not content_lines:
-            return None
+        content_lines, end_message, total_lines, has_more = (
+            self._parse_content_lines(lines) if lines else ([], "", 0, False)
+        )
 
         args = args or {}
         filepath = args.get("filepath", "unknown")

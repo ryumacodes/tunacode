@@ -8,6 +8,7 @@ from tunacode.core.agents.agent_components.orchestrator.debug_format import (
     format_preview,
     format_tool_return,
 )
+from tunacode.core.agents.resume.sanitize_debug import DEBUG_PREVIEW_SUFFIX
 
 
 class TestFormatPreview:
@@ -22,11 +23,12 @@ class TestFormatPreview:
         assert length == 5
 
     def test_long_string_truncated_with_suffix(self):
-        text = "a" * 150
+        overflow = 50
+        text = "a" * (PART_PREVIEW_LENGTH + overflow)
         preview, length = format_preview(text)
         assert preview.startswith("a" * PART_PREVIEW_LENGTH)
-        assert preview.endswith("...")
-        assert length == 150
+        assert preview.endswith(DEBUG_PREVIEW_SUFFIX)
+        assert length == PART_PREVIEW_LENGTH + overflow
 
     def test_exact_boundary_no_suffix(self):
         text = "b" * PART_PREVIEW_LENGTH
@@ -103,15 +105,16 @@ class TestFormatToolReturn:
         assert "id=" not in result
 
     def test_long_args_truncated(self):
-        long_args = "z" * 200
+        args_length = PART_PREVIEW_LENGTH * 2
+        long_args = "z" * args_length
         result = format_tool_return(
             tool_name="edit",
             tool_call_id="c1",
             tool_args=long_args,
             content="ok",
         )
-        assert "..." in result
-        assert "200" in result
+        assert DEBUG_PREVIEW_SUFFIX in result
+        assert str(args_length) in result
 
     def test_none_content(self):
         result = format_tool_return(

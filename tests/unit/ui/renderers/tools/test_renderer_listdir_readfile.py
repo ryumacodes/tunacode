@@ -120,7 +120,8 @@ class TestListDirRendererZones:
         assert isinstance(styled, Text)
 
     def test_status_with_duration(self) -> None:
-        self.renderer.build_viewport(self.data, DEFAULT_MAX_WIDTH)
+        viewport = self.renderer.build_viewport(self.data, DEFAULT_MAX_WIDTH)
+        assert viewport is not None  # viewport must succeed before status
         status = self.renderer.build_status(
             self.data,
             DEFAULT_DURATION,
@@ -128,6 +129,9 @@ class TestListDirRendererZones:
         )
         assert isinstance(status, Text)
         assert "123ms" in status.plain
+        # Viewport sets shown/total lines that status reads
+        if hasattr(self.data, "shown_lines") and self.data.shown_lines is not None:
+            assert self.data.shown_lines > 0
 
     def test_status_truncated(self) -> None:
         lines = "\n".join(f"\u251c\u2500\u2500 file{i}.py" for i in range(20))
@@ -141,7 +145,8 @@ class TestListDirRendererZones:
             show_hidden=False,
             ignore_count=50,
         )
-        self.renderer.build_viewport(data, DEFAULT_MAX_WIDTH)
+        viewport = self.renderer.build_viewport(data, DEFAULT_MAX_WIDTH)
+        assert viewport is not None  # viewport must run before status
         status = self.renderer.build_status(data, None, DEFAULT_MAX_WIDTH)
         assert "(truncated)" in status.plain
 

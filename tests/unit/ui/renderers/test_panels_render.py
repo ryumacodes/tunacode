@@ -5,7 +5,7 @@ Source: src/tunacode/ui/renderers/panels.py
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from rich.panel import Panel
 from rich.text import Text
@@ -89,7 +89,7 @@ class TestRichPanelRendererTool:
             tool_name="bash",
             status="completed",
             arguments={},
-            timestamp=datetime(2025, 1, 15, 10, 30, 45),
+            timestamp=datetime(2025, 1, 15, 10, 30, 45, tzinfo=UTC),
         )
         result = RichPanelRenderer.render_tool(data, max_line_width=DEFAULT_MAX_LINE_WIDTH)
         assert isinstance(result, Panel)
@@ -169,7 +169,7 @@ class TestRichPanelRendererDiffTool:
             tool_name="edit",
             message="Edited",
             diff=diff,
-            timestamp=datetime(2025, 6, 1, 12, 0, 0),
+            timestamp=datetime(2025, 6, 1, 12, 0, 0, tzinfo=UTC),
         )
         assert isinstance(result, Panel)
         assert result.subtitle is not None

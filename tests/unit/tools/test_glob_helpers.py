@@ -69,9 +69,9 @@ class TestExpandBracePattern:
         assert sorted(result) == sorted(["*.py", "*.js", "*.ts"])
 
     def test_nested_braces(self):
-        # {py,js} inside braces gets re-expanded from the stack.
-        result = _expand_brace_pattern("*.{py,js}")
-        assert sorted(result) == sorted(["*.py", "*.js"])
+        # Multiple brace groups require the stack to re-expand intermediate results.
+        result = _expand_brace_pattern("{src,lib}.{py,js}")
+        assert sorted(result) == sorted(["src.py", "src.js", "lib.py", "lib.js"])
 
     def test_prefix_and_suffix(self):
         result = _expand_brace_pattern("src/*.{py,js}.bak")
@@ -110,34 +110,34 @@ class TestSinglePatternMatches:
     def test_simple_match(self):
         compiled = _compile_patterns(["*.py"], 0)
         _, comp = compiled[0]
-        assert _single_pattern_matches("test.py", "test.py", "*.py", comp, True)
+        assert _single_pattern_matches("test.py", "test.py", "*.py", comp, recursive=True)
 
     def test_simple_no_match(self):
         compiled = _compile_patterns(["*.py"], 0)
         _, comp = compiled[0]
-        assert not _single_pattern_matches("test.js", "test.js", "*.py", comp, True)
+        assert not _single_pattern_matches("test.js", "test.js", "*.py", comp, recursive=True)
 
     def test_double_star_recursive(self):
         compiled = _compile_patterns(["**/*.py"], 0)
         _, comp = compiled[0]
-        assert _single_pattern_matches("test.py", "src/test.py", "**/*.py", comp, True)
+        assert _single_pattern_matches("test.py", "src/test.py", "**/*.py", comp, recursive=True)
 
     def test_double_star_non_recursive_fallback(self):
         compiled = _compile_patterns(["**/*.py"], 0)
         _, comp = compiled[0]
-        result = _single_pattern_matches("test.py", "test.py", "**/*.py", comp, False)
+        result = _single_pattern_matches("test.py", "test.py", "**/*.py", comp, recursive=False)
         assert result is True
 
 
 class TestEntryMatchesAnyPattern:
     def test_matches_one_pattern(self):
         compiled = _compile_patterns(["*.py", "*.js"], 0)
-        assert _entry_matches_any_pattern("test.py", "test.py", compiled, True)
-        assert _entry_matches_any_pattern("test.js", "test.js", compiled, True)
+        assert _entry_matches_any_pattern("test.py", "test.py", compiled, recursive=True)
+        assert _entry_matches_any_pattern("test.js", "test.js", compiled, recursive=True)
 
     def test_matches_none(self):
         compiled = _compile_patterns(["*.py"], 0)
-        assert not _entry_matches_any_pattern("test.js", "test.js", compiled, True)
+        assert not _entry_matches_any_pattern("test.js", "test.js", compiled, recursive=True)
 
 
 class TestFormatOutput:

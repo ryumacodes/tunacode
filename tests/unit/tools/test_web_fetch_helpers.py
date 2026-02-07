@@ -129,7 +129,7 @@ class TestValidateUrl:
 
     def test_zero_ip_blocked(self):
         with pytest.raises(ToolRetryError, match="Blocked URL"):
-            _validate_url("http://0.0.0.0/")
+            _validate_url("http://0.0.0.0/")  # nosec B104
 
     def test_ipv6_localhost_blocked(self):
         with pytest.raises(ToolRetryError, match="Blocked URL"):
@@ -192,7 +192,7 @@ class TestConvertHtmlToText:
         result = _convert_html_to_text(html)
         assert "Click here" in result
         # ignore_links is False, so the URL should appear
-        assert "https://example.com" in result
+        assert any("https://example.com" in tok for tok in result.split())
 
     def test_empty_html(self):
         result = _convert_html_to_text("")
@@ -371,7 +371,7 @@ class TestHandleHttpError:
     def test_url_appears_in_message(self):
         url = "https://specific-site.example.org/page"
         err = self._make_status_error(404, url=url)
-        with pytest.raises(ToolRetryError, match="specific-site.example.org"):
+        with pytest.raises(ToolRetryError, match=r"specific-site\.example\.org"):
             _handle_http_error(url, err)
 
     def test_original_error_chained(self):

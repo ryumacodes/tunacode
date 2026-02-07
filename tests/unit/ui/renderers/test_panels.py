@@ -153,7 +153,7 @@ class TestTruncateContent:
         assert len(result) == 3
 
     def test_empty_content(self) -> None:
-        content, shown, total = _truncate_content(
+        _content, shown, total = _truncate_content(
             "",
             max_lines=10,
             max_line_width=DEFAULT_MAX_LINE_WIDTH,
@@ -227,6 +227,6 @@ class TestTruncateSearchResults:
     def test_default_max_display(self) -> None:
         """Default max_display uses MAX_SEARCH_RESULTS_DISPLAY (20)."""
         results = [{"file": f"f{i}.py"} for i in range(25)]
-        truncated, shown, total = _truncate_search_results(results)
+        _truncated, shown, total = _truncate_search_results(results)
         assert shown == 20
         assert total == 25

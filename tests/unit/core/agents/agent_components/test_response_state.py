@@ -54,8 +54,7 @@ class TestResponseState:
         rs.transition_to(AgentState.RESPONSE)
         rs.task_completed = True
         rs.task_completed = False
-        # _task_completed is False but state machine may still report completed
-        assert not rs._state_machine._completion_detected
+        assert not rs.is_completed()
 
     def test_set_completion_detected(self):
         rs = ResponseState()
@@ -69,9 +68,13 @@ class TestResponseState:
         rs.has_user_response = True
         rs.awaiting_user_guidance = True
         rs.has_final_synthesis = True
+        rs.transition_to(AgentState.ASSISTANT)
+        rs.transition_to(AgentState.RESPONSE)
+        rs.task_completed = True
         rs.reset_state()
         assert rs.current_state == AgentState.USER_INPUT
         assert rs.has_user_response is False
+        assert rs.task_completed is False
         assert rs.awaiting_user_guidance is False
         assert rs.has_final_synthesis is False
 

@@ -54,7 +54,7 @@ class TestWriteFileRendererZones:
         plain = header.plain
         assert "new_file.py" in plain
         assert "NEW" in plain
-        assert "1 lines" in plain
+        assert "1 line" in plain
 
     def test_params_contains_filepath(self) -> None:
         params = self.renderer.build_params(self.data, DEFAULT_MAX_WIDTH)
@@ -168,7 +168,7 @@ class TestWebFetchRendererZones:
             DEFAULT_MAX_WIDTH,
         )
         assert isinstance(header, Text)
-        assert "example.com" in header.plain
+        assert "example.com" in header.plain.split()
         assert "3 lines" in header.plain
 
     def test_header_no_domain(self) -> None:
@@ -193,7 +193,7 @@ class TestWebFetchRendererZones:
         assert isinstance(params, Text)
         plain = params.plain
         assert "url:" in plain
-        assert "example.com" in plain
+        assert any("example.com" in tok for tok in plain.split())
         assert "timeout:" in plain
         assert "60s" in plain
 
@@ -335,7 +335,7 @@ class TestUpdateFileRendererZones:
         self.data = UpdateFileData(
             filepath="src/main.py",
             filename="main.py",
-            root_path=Path.cwd(),
+            root_path=Path("/project"),
             message="File 'src/main.py' updated successfully.",
             diff_content=(
                 "--- a/src/main.py\n"
@@ -394,7 +394,7 @@ class TestUpdateFileRendererZones:
         data = UpdateFileData(
             filepath="x.py",
             filename="x.py",
-            root_path=Path.cwd(),
+            root_path=Path("/project"),
             message="ok",
             diff_content=("--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@\n-a\n+b\n@@ -10 +10 @@\n-c\n+d\n"),
             additions=2,

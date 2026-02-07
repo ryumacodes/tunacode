@@ -68,6 +68,9 @@ class TestFlattenSearchResults:
         batch = [_make_result(f"f{i}.py", float(i)) for i in range(20)]
         result = _flatten_search_results([batch], max_results=5)
         assert len(result) == 5
+        # Top-scored items should be retained (descending order)
+        top_files = [r.file_path for r in result]
+        assert top_files == [f"f{i}.py" for i in range(19, 14, -1)]
 
     def test_empty_input(self):
         assert _flatten_search_results([], max_results=10) == []
@@ -126,3 +129,7 @@ class TestFormatSearchOutput:
             formatter=formatter,
         )
         assert isinstance(output, str)
+        # When output starts with "Found", the second line has injected strategy metadata
+        lines = output.split("\n")
+        assert output.startswith("Found")
+        assert "Strategy:" in lines[1]

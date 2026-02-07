@@ -39,5 +39,9 @@ class LogRecord:
         if self.duration_ms:
             result["duration_ms"] = self.duration_ms
         if self.extra:
-            result.update(self.extra)
+            if "extra" in self.extra:
+                raise ValueError(
+                    "LogRecord.extra must not contain an 'extra' key to avoid ambiguous nesting"
+                )
+            result["extra"] = self.extra
         return result

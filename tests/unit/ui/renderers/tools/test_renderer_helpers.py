@@ -9,6 +9,10 @@ from pathlib import Path
 
 from rich.text import Text
 
+from tunacode.constants import UI_COLORS
+
+from tunacode.core.ui_api.constants import MIN_VIEWPORT_LINES
+
 from tunacode.ui.renderers.tools.base import RendererConfig
 from tunacode.ui.renderers.tools.bash import BashRenderer
 from tunacode.ui.renderers.tools.glob import GlobRenderer
@@ -41,11 +45,11 @@ class TestBaseToolRendererCommon:
 
     def test_pad_viewport_lines_below_minimum(self) -> None:
         padded = self.renderer.pad_viewport_lines(["one"])
-        assert len(padded) >= 3  # MIN_VIEWPORT_LINES
+        assert len(padded) >= MIN_VIEWPORT_LINES
 
     def test_pad_viewport_lines_at_minimum(self) -> None:
         padded = self.renderer.pad_viewport_lines(["a", "b", "c"])
-        assert len(padded) == 3
+        assert len(padded) == MIN_VIEWPORT_LINES
 
     def test_pad_viewport_lines_above_minimum(self) -> None:
         padded = self.renderer.pad_viewport_lines(["a", "b", "c", "d", "e"])
@@ -304,9 +308,9 @@ class TestRendererConfig:
     def test_defaults(self) -> None:
         config = RendererConfig(tool_name="test")
         assert config.tool_name == "test"
-        assert config.success_color is not None
-        assert config.warning_color is not None
-        assert config.muted_color is not None
+        assert config.success_color == UI_COLORS["success"]
+        assert config.warning_color == UI_COLORS["warning"]
+        assert config.muted_color == UI_COLORS["muted"]
 
     def test_custom_colors(self) -> None:
         config = RendererConfig(

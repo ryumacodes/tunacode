@@ -36,12 +36,11 @@ class TestParseModelString:
             models.parse_model_string("")
 
     def test_colon_only(self):
-        provider, model_id = models.parse_model_string(":")
-        assert provider == ""
-        assert model_id == ""
+        with pytest.raises(ValueError, match="Invalid model string format"):
+            models.parse_model_string(":")
 
     def test_whitespace_no_colon_raises(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid model string format"):
             models.parse_model_string("   ")
 
 

@@ -18,10 +18,11 @@ from tunacode.constants import SESSIONS_SUBDIR, TUNACODE_HOME_DIR
 
 
 class TestGetTunaCodeHome:
-    def test_returns_path_under_home(self):
-        result = get_tunacode_home()
-        assert result == Path.home() / TUNACODE_HOME_DIR
-        assert result.exists()
+    def test_returns_path_under_home(self, tmp_path):
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = get_tunacode_home()
+            assert result == tmp_path / TUNACODE_HOME_DIR
+            assert result.exists()
 
     def test_creates_directory(self, tmp_path):
         home_dir = tmp_path / TUNACODE_HOME_DIR
@@ -64,11 +65,14 @@ class TestGetProjectId:
 
 
 class TestGetSessionStorageDir:
-    def test_default_path(self):
-        with patch.dict(os.environ, {}, clear=False):
+    def test_default_path(self, tmp_path):
+        with (
+            patch.dict(os.environ, {}, clear=False),
+            patch.object(Path, "home", return_value=tmp_path),
+        ):
             os.environ.pop("XDG_DATA_HOME", None)
             result = get_session_storage_dir()
-            expected = Path.home() / ".local" / "share" / "tunacode" / "sessions"
+            expected = tmp_path / ".local" / "share" / "tunacode" / "sessions"
             assert result == expected
 
     def test_xdg_override(self, tmp_path):
@@ -110,7 +114,7 @@ class TestCheckForUpdates:
             "tunacode.configuration.paths.subprocess.run",
             side_effect=Exception("pip not found"),
         ):
-            has_update, version = check_for_updates()
+            has_update, _version = check_for_updates()
             assert has_update is False
 
     def test_returns_false_when_no_newer_version(self):

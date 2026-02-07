@@ -251,35 +251,37 @@ class TestTruncatePrefix:
 class TestCapturePreFirstDeltaText:
     def test_first_delta_seen_returns_existing(self):
         event = SimpleNamespace(part=SimpleNamespace(content="new"))
-        result = _capture_pre_first_delta_text(event, True, "existing")
+        result = _capture_pre_first_delta_text(
+            event, first_delta_seen=True, existing_text="existing"
+        )
         assert result == "existing"
 
     def test_event_with_text_part_content(self):
         event = SimpleNamespace(part=SimpleNamespace(content="captured"))
-        result = _capture_pre_first_delta_text(event, False, None)
+        result = _capture_pre_first_delta_text(event, first_delta_seen=False, existing_text=None)
         assert result == "captured"
 
     def test_no_part_returns_existing(self):
         event = SimpleNamespace(part=None)
-        result = _capture_pre_first_delta_text(event, False, "keep")
+        result = _capture_pre_first_delta_text(event, first_delta_seen=False, existing_text="keep")
         assert result == "keep"
 
     def test_empty_content_returns_existing(self):
         event = SimpleNamespace(part=SimpleNamespace(content=""))
-        result = _capture_pre_first_delta_text(event, False, "old")
+        result = _capture_pre_first_delta_text(event, first_delta_seen=False, existing_text="old")
         assert result == "old"
 
     def test_content_with_leading_newline_captured(self):
         # "\nstuff".lstrip() == "stuff", which does not startswith("\n"),
         # so the function returns the truncated content (not existing_text).
         event = SimpleNamespace(part=SimpleNamespace(content="\nstuff"))
-        result = _capture_pre_first_delta_text(event, False, "old")
+        result = _capture_pre_first_delta_text(event, first_delta_seen=False, existing_text="old")
         assert result == "\nstuff"
 
     def test_long_content_truncated(self):
         long_text = "a" * (DEBUG_STREAM_PREFIX_MAX_LEN + 50)
         event = SimpleNamespace(part=SimpleNamespace(content=long_text))
-        result = _capture_pre_first_delta_text(event, False, None)
+        result = _capture_pre_first_delta_text(event, first_delta_seen=False, existing_text=None)
         assert result is not None
         assert len(result) == DEBUG_STREAM_PREFIX_MAX_LEN
 
@@ -351,7 +353,7 @@ class TestGetDeltaDebugData:
 
     def test_delta_with_non_string_content(self):
         event = SimpleNamespace(delta=SimpleNamespace(content_delta=42))
-        delta_type, content_len, content_preview = _get_delta_debug_data(event)
+        delta_type, content_len, _content_preview = _get_delta_debug_data(event)
         assert delta_type == "SimpleNamespace"
         assert content_len is None
 
@@ -405,7 +407,7 @@ class TestGetPartDebugData:
         assert length is None
 
 
-def _make_state_manager():
+def _make_state_manager() -> SimpleNamespace:
     """Create a mock state manager with session._debug_events and _debug_raw_stream_accum."""
     session = SimpleNamespace(
         _debug_events=[],

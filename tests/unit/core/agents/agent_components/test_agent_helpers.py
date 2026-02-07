@@ -68,7 +68,8 @@ class TestDescribeResearch:
     def test_long_query_truncated(self):
         long_query = "a" * (QUERY_DISPLAY_LIMIT + 20)
         result = _describe_research({"query": long_query})
-        assert "..." in result
+        expected_truncated = "a" * QUERY_DISPLAY_LIMIT + "..."
+        assert expected_truncated in result
 
 
 class TestGetToolDescription:
@@ -88,7 +89,7 @@ class TestGetToolDescription:
         assert get_tool_description("bash", {"cmd": "ls"}) == "bash"
 
     def test_non_dict_args(self):
-        assert get_tool_description("bash", "not a dict") == "bash"
+        assert get_tool_description("grep", "not a dict") == "grep"
 
 
 class TestGetReadableToolDescription:
@@ -135,3 +136,14 @@ class TestCreateEmptyResponseMessage:
     def test_with_no_tool_calls(self):
         result = create_empty_response_message("task", "empty", [], 2)
         assert "No tools used yet" in result
+
+    def test_custom_empty_reason(self):
+        calls = [CanonicalToolCall(tool_call_id="1", tool_name="bash", args={})]
+        result = create_empty_response_message("task", "no_results", calls, 1)
+        assert "no_results" in result
+
+    def test_long_message_truncated(self):
+        long_message = "x" * 300
+        result = create_empty_response_message(long_message, "empty", [], 1)
+        assert "x" * 200 in result
+        assert "x" * 201 not in result

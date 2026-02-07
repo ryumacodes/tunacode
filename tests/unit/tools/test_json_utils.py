@@ -22,24 +22,24 @@ class TestAdvanceJsonState:
         assert skip is True
 
     def test_backslash_sets_escape(self):
-        escape, in_str, skip = _advance_json_state("\\", False, False)
+        escape, _in_str, skip = _advance_json_state("\\", False, False)
         assert escape is True
         assert skip is True
 
     def test_quote_toggles_string(self):
-        escape, in_str, skip = _advance_json_state('"', False, False)
+        _escape, in_str, skip = _advance_json_state('"', False, False)
         assert in_str is True
         assert skip is True
 
-        escape, in_str, skip = _advance_json_state('"', False, True)
+        _escape, in_str, skip = _advance_json_state('"', False, True)
         assert in_str is False
 
     def test_in_string_skips(self):
-        escape, in_str, skip = _advance_json_state("{", False, True)
+        _escape, _in_str, skip = _advance_json_state("{", False, True)
         assert skip is True
 
     def test_brace_outside_string(self):
-        escape, in_str, skip = _advance_json_state("{", False, False)
+        _escape, _in_str, skip = _advance_json_state("{", False, False)
         assert skip is False
 
 
@@ -134,6 +134,10 @@ class TestSafeJsonParse:
     def test_concatenated_raises_for_multiple(self):
         with pytest.raises(ConcatenatedJSONError):
             safe_json_parse('{"a": 1}{"b": 2}', allow_concatenated=True)
+
+    def test_extra_data_recovery_single_object(self):
+        result = safe_json_parse('{"a": 1}  not json', allow_concatenated=True)
+        assert result == {"a": 1}
 
 
 class TestConcatenatedJSONError:

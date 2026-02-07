@@ -50,12 +50,10 @@ class TestRenderTree:
         assert "root/" in tree
 
 
-def _make_ignore_manager(**overrides):
+def _make_ignore_manager():
     mgr = MagicMock()
     mgr.should_ignore_dir.return_value = False
     mgr.should_ignore.return_value = False
-    for attr, val in overrides.items():
-        setattr(getattr(mgr, attr), "side_effect" if callable(val) else "return_value", val)
     return mgr
 
 

@@ -20,7 +20,10 @@ def init_sentry() -> bool:
 
     Returns True if Sentry was successfully initialized, False otherwise.
     """
-    global _sentry_initialized  # noqa: PLW0603
+    global _sentry_initialized
+
+    if _sentry_initialized:
+        return True
 
     dsn = os.environ.get(SENTRY_DSN_ENV)
     if not dsn:
@@ -35,16 +38,25 @@ def init_sentry() -> bool:
 
     environment = os.environ.get(SENTRY_ENVIRONMENT_ENV, DEFAULT_ENVIRONMENT)
 
-    sentry_sdk.init(
-        dsn=dsn,
-        release=APP_VERSION,
-        environment=environment,
-        traces_sample_rate=0.0,
-        attach_stacktrace=True,
-    )
+    try:
+        sentry_sdk.init(
+            dsn=dsn,
+            release=APP_VERSION,
+            environment=environment,
+            traces_sample_rate=0.0,
+            attach_stacktrace=True,
+        )
+    except Exception:
+        return False
 
     _sentry_initialized = True
     return True
+
+
+def _reset_sentry() -> None:
+    """Reset Sentry initialization state (for test teardown)."""
+    global _sentry_initialized
+    _sentry_initialized = False
 
 
 def capture_exception(error: BaseException) -> None:

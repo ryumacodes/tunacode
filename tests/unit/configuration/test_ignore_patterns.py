@@ -125,6 +125,11 @@ class TestIsIgnored:
     def test_nested_git_dir(self):
         assert is_ignored("subdir/.git/config", "config", [GIT_DIR_PATTERN]) is True
 
+    def test_git_dir_caught_with_non_git_patterns(self):
+        """When patterns is non-empty, .git is caught unconditionally."""
+        assert is_ignored(".git", ".git", ["*.pyc"]) is True
+        assert is_ignored(".git/config", "config", ["*.pyc"]) is True
+
 
 class TestDefaultIgnorePatterns:
     def test_includes_common_dirs(self):

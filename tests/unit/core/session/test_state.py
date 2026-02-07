@@ -40,7 +40,7 @@ class TestStateManager:
                 "settings": {},
             }
             with patch("tunacode.configuration.models.get_model_context_window", return_value=8192):
-                return StateManager()
+                yield StateManager()
 
     def test_session_property(self, sm):
         assert isinstance(sm.session, SessionState)

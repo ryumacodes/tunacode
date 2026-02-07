@@ -42,13 +42,14 @@ class TestIsEnabled:
     def test_uses_default_when_env_not_set(self):
         flag = "default_test"
         env_key = f"{_ENV_PREFIX}{flag.upper()}"
-        os.environ.pop(env_key, None)
 
-        with patch.dict(_DEFAULTS, {flag: True}):
-            assert is_enabled(flag) is True
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop(env_key, None)
+            with patch.dict(_DEFAULTS, {flag: True}):
+                assert is_enabled(flag) is True
 
-        with patch.dict(_DEFAULTS, {flag: False}):
-            assert is_enabled(flag) is False
+            with patch.dict(_DEFAULTS, {flag: False}):
+                assert is_enabled(flag) is False
 
 
 class TestGetAllFlags:

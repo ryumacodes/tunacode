@@ -41,13 +41,13 @@ class TestPaginate:
 
     def test_page_beyond_range_returns_empty(self) -> None:
         items = list(range(5))
-        page_items, start_idx, total_pages = _paginate(items, page=10, page_size=5)
+        page_items, _start_idx, total_pages = _paginate(items, page=10, page_size=5)
         assert page_items == []
         assert total_pages == 1
 
     def test_page_size_larger_than_list(self) -> None:
         items = [1, 2, 3]
-        page_items, start_idx, total_pages = _paginate(items, page=1, page_size=100)
+        page_items, _start_idx, total_pages = _paginate(items, page=1, page_size=100)
         assert page_items == [1, 2, 3]
         assert total_pages == 1
 

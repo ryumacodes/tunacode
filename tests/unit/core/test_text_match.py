@@ -7,6 +7,7 @@ import pytest
 
 from tunacode.tools.update_file import update_file
 from tunacode.tools.utils.text_match import (
+    MIN_ANCHOR_DISTANCE,
     _find_anchor_candidates,
     _line_similarity,
     _min_indentation,
@@ -162,6 +163,7 @@ class TestSimpleReplacer:
         assert results == []
 
     def test_empty_find_always_matches(self):
+        # Python substring semantics: "" in "hello" == True
         results = list(simple_replacer("hello", ""))
         assert results == [""]
 
@@ -282,10 +284,13 @@ class TestHelperFunctions:
         assert _line_similarity("", "") is None
 
     def test_find_anchor_candidates_basic(self):
-        lines = ["first\n", "middle\n", "last\n"]
+        # Build lines so end - start >= MIN_ANCHOR_DISTANCE
+        middle_lines = [f"middle{i}\n" for i in range(MIN_ANCHOR_DISTANCE - 1)]
+        lines = ["first\n", *middle_lines, "last\n"]
+        last_index = len(lines) - 1
         result = _find_anchor_candidates(lines, "first", "last")
         assert len(result) == 1
-        assert result[0] == (0, 2)
+        assert result[0] == (0, last_index)
 
     def test_find_anchor_candidates_no_match(self):
         lines = ["a\n", "b\n", "c\n"]
@@ -310,6 +315,16 @@ class TestHelperFunctions:
         assert _try_replace_unique("abc", "X", "Y") is None
 
 
+class TestReplaceSuccess:
+    def test_replace_all_exact(self):
+        result = replace("aXbXc", "X", "Y", replace_all=True)
+        assert result == "aYbYc"
+
+    def test_replace_unique_match(self):
+        result = replace("hello X world", "X", "Y")
+        assert result == "hello Y world"
+
+
 class TestReplaceErrors:
     def test_empty_old_string_raises(self):
         with pytest.raises(ValueError, match="cannot be empty"):
@@ -322,11 +337,3 @@ class TestReplaceErrors:
     def test_not_found_raises(self):
         with pytest.raises(ValueError, match="not found"):
             replace("hello world", "goodbye universe", "something")
-
-    def test_replace_all_exact(self):
-        result = replace("aXbXc", "X", "Y", replace_all=True)
-        assert result == "aYbYc"
-
-    def test_replace_unique_match(self):
-        result = replace("hello X world", "X", "Y")
-        assert result == "hello Y world"

@@ -327,9 +327,8 @@ class TestGrepRendererZones:
         )
         params = self.renderer.build_params(data, DEFAULT_MAX_WIDTH)
         plain = params.plain
-        # case: no, regex: yes
-        assert "no" in plain
-        assert "yes" in plain
+        assert "case: no" in plain
+        assert "regex: yes" in plain
 
     def test_viewport_with_matches(self) -> None:
         result = self.renderer.build_viewport(self.data, DEFAULT_MAX_WIDTH)

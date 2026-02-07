@@ -1,6 +1,5 @@
 """Tests for tunacode.tools.utils.ripgrep."""
 
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -130,18 +129,18 @@ class TestGetRipgrepBinaryPath:
         ):
             assert get_ripgrep_binary_path() is None
 
-    def test_system_rg_used_when_version_ok(self, tmp_path):
+    def test_system_rg_used_when_version_ok(self, tmp_path, monkeypatch):
         rg_path = tmp_path / "rg"
         rg_path.write_text("fake")
-        os.environ.pop("TUNACODE_RIPGREP_PATH", None)
+        monkeypatch.delenv("TUNACODE_RIPGREP_PATH", raising=False)
         with (
             patch(f"{_RG}.shutil.which", return_value=str(rg_path)),
             patch(f"{_RG}._check_ripgrep_version", return_value=True),
         ):
             assert get_ripgrep_binary_path() == rg_path
 
-    def test_returns_none_when_nothing_found(self):
-        os.environ.pop("TUNACODE_RIPGREP_PATH", None)
+    def test_returns_none_when_nothing_found(self, monkeypatch):
+        monkeypatch.delenv("TUNACODE_RIPGREP_PATH", raising=False)
         with (
             patch(f"{_RG}.shutil.which", return_value=None),
             patch(f"{_RG}.get_platform_identifier", side_effect=ValueError),
@@ -189,20 +188,24 @@ class TestRipgrepExecutor:
             context_before=3,
             context_after=5,
         )
-        assert "-B" in cmd and "3" in cmd
-        assert "-A" in cmd and "5" in cmd
+        assert "-B" in cmd
+        assert "3" in cmd
+        assert "-A" in cmd
+        assert "5" in cmd
 
     def test_build_command_max_matches(self, tmp_path):
         rg = tmp_path / "rg"
         executor = RipgrepExecutor(binary_path=rg)
         cmd = executor._build_command("pattern", "/path", max_matches=10)
-        assert "-m" in cmd and "10" in cmd
+        assert "-m" in cmd
+        assert "10" in cmd
 
     def test_build_command_file_pattern(self, tmp_path):
         rg = tmp_path / "rg"
         executor = RipgrepExecutor(binary_path=rg)
         cmd = executor._build_command("pattern", "/path", file_pattern="*.py")
-        assert "-g" in cmd and "*.py" in cmd
+        assert "-g" in cmd
+        assert "*.py" in cmd
 
 
 class TestRipgrepExecutorSearch:
@@ -232,11 +235,13 @@ class TestRipgrepExecutorSearch:
         assert results == []
 
     @pytest.mark.asyncio
-    async def test_python_fallback_invalid_regex(self, tmp_path):
+    async def test_python_fallback_invalid_regex_raises(self, tmp_path):
+        import re
+
         (tmp_path / "test.py").write_text("hello\n")
         executor = RipgrepExecutor(binary_path=None)
-        results = await executor.search("[invalid", str(tmp_path))
-        assert results == []
+        with pytest.raises(re.error):
+            await executor.search("[invalid", str(tmp_path))
 
 
 class TestRipgrepExecutorListFiles:

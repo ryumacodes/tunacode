@@ -77,6 +77,12 @@ class TestIsSummaryMessage:
         message = {"content": 42}
         assert is_summary_message(message) is False
 
+    def test_object_with_non_string_part_content(self):
+        """Object part with non-string content returns False."""
+        part = SimpleNamespace(content=42)
+        message = SimpleNamespace(parts=[part])
+        assert is_summary_message(message) is False
+
 
 class TestShouldCompact:
     def test_empty_list_returns_false(self):

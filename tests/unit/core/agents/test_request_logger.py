@@ -152,11 +152,8 @@ class TestMessageHasToolCalls:
 
 
 class TestLogHistoryState:
-    def _make_logger(self):
-        return SimpleNamespace(debug=lambda msg: None)
-
     def test_empty_messages_returns_early(self):
-        logger = self._make_logger()
+        logger = SimpleNamespace(debug=lambda msg: None)
         log_history_state([], 0, logger)
 
     def test_single_message_logs_state(self):
@@ -192,13 +189,13 @@ class TestLogSanitizedHistoryState:
     def test_debug_mode_false_returns_early(self):
         calls = []
         logger = SimpleNamespace(debug=lambda msg: calls.append(msg))
-        log_sanitized_history_state([SimpleNamespace()], False, logger)
+        log_sanitized_history_state([SimpleNamespace()], debug_mode=False, logger=logger)
         assert len(calls) == 0
 
     def test_empty_history_logs_count(self):
         calls = []
         logger = SimpleNamespace(debug=lambda msg: calls.append(msg))
-        log_sanitized_history_state([], True, logger)
+        log_sanitized_history_state([], debug_mode=True, logger=logger)
         assert len(calls) >= 1
         assert "count=0" in calls[0]
 
@@ -206,14 +203,14 @@ class TestLogSanitizedHistoryState:
         calls = []
         logger = SimpleNamespace(debug=lambda msg: calls.append(msg))
         msg = SimpleNamespace(kind="request")
-        log_sanitized_history_state([msg], True, logger)
+        log_sanitized_history_state([msg], debug_mode=True, logger=logger)
         assert any("message_history[0]" in c for c in calls)
 
     def test_two_messages_logs_first_and_last(self):
         calls = []
         logger = SimpleNamespace(debug=lambda msg: calls.append(msg))
         msgs = [SimpleNamespace(kind="request"), SimpleNamespace(kind="response")]
-        log_sanitized_history_state(msgs, True, logger)
+        log_sanitized_history_state(msgs, debug_mode=True, logger=logger)
         assert any("message_history[0]" in c for c in calls)
         assert any("message_history[-1]" in c for c in calls)
 

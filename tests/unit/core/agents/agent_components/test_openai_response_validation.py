@@ -200,7 +200,7 @@ class TestExtractProviderName:
     def test_empty_host_uses_url(self):
         resp = _make_response(host="")
         result = _extract_provider_name(resp)
-        assert result  # Should be the URL string
+        assert result == str(resp.request.url)
 
 
 class TestExtractModelName:

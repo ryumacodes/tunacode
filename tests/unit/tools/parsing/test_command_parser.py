@@ -69,6 +69,16 @@ class TestParseJsonArgs:
         result = _parse_json_args('{"a": {"b": {"c": 1}}}')
         assert result == {"a": {"b": {"c": 1}}}
 
+    def test_concatenated_json_single_valid_recovered(self):
+        # Second object is invalid JSON, so only the first is recovered
+        result = _parse_json_args('{"a": 1}{not json}')
+        assert result == {"a": 1}
+
+    def test_concatenated_json_multiple_valid_raises(self):
+        # Two valid objects triggers ConcatenatedJSONError -> ValidationError
+        with pytest.raises(ValidationError):
+            _parse_json_args('{"a": 1}{"b": 2}')
+
 
 class TestParseArgs:
     @pytest.mark.asyncio

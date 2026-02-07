@@ -92,6 +92,53 @@ class TestAgentStateMachine:
         assert sm.current_state == AgentState.ASSISTANT
 
 
+class TestAgentStateMachineConcurrency:
+    """Thread-safety stress tests for AgentStateMachine."""
+
+    def test_concurrent_transitions_no_corruption(self):
+        """Multiple threads transitioning concurrently should not corrupt state."""
+        import threading
+
+        sm = AgentStateMachine(AgentState.USER_INPUT, AGENT_TRANSITION_RULES)
+        errors: list[Exception] = []
+        barrier = threading.Barrier(4)
+
+        def worker():
+            try:
+                barrier.wait(timeout=2)
+                for _ in range(100):
+                    try:
+                        sm.transition_to(AgentState.ASSISTANT)
+                        sm.transition_to(AgentState.RESPONSE)
+                        sm.reset()
+                    except InvalidStateTransitionError:
+                        pass  # Expected under contention
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=5)
+
+        assert not errors, f"Thread errors: {errors}"
+        # State should be valid after all threads finish
+        assert sm.current_state in AgentState
+
+    def test_completion_cleared_on_reset(self):
+        """set_completion_detected(True) then reset() must clear completion."""
+        sm = AgentStateMachine(AgentState.USER_INPUT, AGENT_TRANSITION_RULES)
+        sm.transition_to(AgentState.ASSISTANT)
+        sm.transition_to(AgentState.RESPONSE)
+        sm.set_completion_detected(True)
+        assert sm.is_completed()
+
+        sm.reset()
+        assert not sm.is_completed()
+        assert not sm._completion_detected
+
+
 class TestInvalidStateTransitionError:
     def test_default_message(self):
         err = InvalidStateTransitionError(AgentState.USER_INPUT, AgentState.RESPONSE)

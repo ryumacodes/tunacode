@@ -37,22 +37,22 @@ from tunacode.utils.messaging.adapter import (
 
 
 class TestGetAttr:
-    def test_dict_access(self):
+    def test_dict_access(self) -> None:
         assert _get_attr({"key": "val"}, "key") == "val"
 
-    def test_dict_missing_key(self):
+    def test_dict_missing_key(self) -> None:
         assert _get_attr({"key": "val"}, "missing") is None
 
-    def test_dict_default(self):
+    def test_dict_default(self) -> None:
         assert _get_attr({}, "key", "default") == "default"
 
-    def test_object_access(self):
+    def test_object_access(self) -> None:
         class Obj:
             key = "val"
 
         assert _get_attr(Obj(), "key") == "val"
 
-    def test_object_missing_attr(self):
+    def test_object_missing_attr(self) -> None:
         assert _get_attr(object(), "key") is None
 
 
@@ -70,6 +70,15 @@ class TestGetParts:
 
     def test_none_parts(self):
         assert _get_parts({"parts": None}) == []
+
+    def test_object_with_parts_list(self):
+        from types import SimpleNamespace
+
+        msg = SimpleNamespace(parts=["a", "b"])
+        assert _get_parts(msg) == ["a", "b"]
+
+    def test_object_with_no_parts_attr(self):
+        assert _get_parts(object()) == []
 
 
 class TestConvertPartToCanonical:
@@ -119,6 +128,8 @@ class TestConvertPartToCanonical:
         result = _convert_part_to_canonical(part)
         assert isinstance(result, RetryPromptPart)
         assert result.content == "retry reason"
+        assert result.tool_call_id == "tc1"
+        assert result.tool_name == "bash"
 
     def test_system_prompt_part(self):
         part = {"part_kind": PYDANTIC_PART_KIND_SYSTEM_PROMPT, "content": "sys prompt"}
@@ -198,6 +209,8 @@ class TestFallbackContentParts:
     def test_list_of_strings(self):
         result = _fallback_content_parts({"content": ["a", "b"]})
         assert len(result) == 2
+        assert result[0].content == "a"
+        assert result[1].content == "b"
 
     def test_list_of_dicts_with_text(self):
         result = _fallback_content_parts({"content": [{"text": "hi"}]})
@@ -399,6 +412,16 @@ class TestGetToolReturnIds:
             parts=(ToolReturnPart(tool_call_id="tc1", content="output"),),
         )
         assert get_tool_return_ids(msg) == {"tc1"}
+
+    def test_extracts_return_ids_from_dict(self):
+        msg = {
+            "kind": "request",
+            "parts": [
+                {"part_kind": "tool-return", "tool_call_id": "tc1", "content": "ok"},
+                {"part_kind": "tool-return", "tool_call_id": "tc2", "content": "ok"},
+            ],
+        }
+        assert get_tool_return_ids(msg) == {"tc1", "tc2"}
 
 
 class TestFindDanglingToolCalls:
