@@ -31,8 +31,8 @@ class CopyOnSelectStatic(Static):
     only the *final* selection (after the drag ends) triggers the copy.
     """
 
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, content: RenderableType = "") -> None:
+        super().__init__(content)
         self._copy_timer: Timer | None = None
 
     def selection_updated(self, selection: Selection | None) -> None:
@@ -43,9 +43,7 @@ class CopyOnSelectStatic(Static):
             self._copy_timer = None
         if selection is None:
             return
-        self._copy_timer = self.set_timer(
-            _COPY_DEBOUNCE_MS, self._copy_current_selection
-        )
+        self._copy_timer = self.set_timer(_COPY_DEBOUNCE_MS, self._copy_current_selection)
 
     def _copy_current_selection(self) -> None:
         """Extract the current selection text and copy it to the clipboard."""
