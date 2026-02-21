@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.74] - 2026-02-21
+
+### Changed
+- Rewrite system prompt to describe tools by purpose, not signature
+- Clean up discover.py (remove section comments and inline comments)
+
+### Fixed
+- Normalize @mentions to absolute paths in UI
+
 ## [0.1.73] - 2026-02-20
 
 ### Changed

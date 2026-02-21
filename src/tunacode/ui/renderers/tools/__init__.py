@@ -22,6 +22,7 @@ from tunacode.ui.renderers.tools.base import (
     truncate_line,
 )
 from tunacode.ui.renderers.tools.bash import render_bash
+from tunacode.ui.renderers.tools.discover import render_discover
 from tunacode.ui.renderers.tools.glob import render_glob
 from tunacode.ui.renderers.tools.grep import render_grep
 from tunacode.ui.renderers.tools.list_dir import render_list_dir
@@ -63,6 +64,7 @@ __all__ = [
     "tool_renderer",
     # Render functions
     "render_bash",
+    "render_discover",
     "render_glob",
     "render_grep",
     "render_list_dir",
