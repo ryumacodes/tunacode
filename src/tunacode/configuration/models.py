@@ -167,6 +167,38 @@ def get_provider_alchemy_api(provider_id: str) -> str | None:
     return normalized_alchemy_api
 
 
+VALID_EDIT_MODES = frozenset({"hashline", "str_replace", "both"})
+DEFAULT_EDIT_MODE = "hashline"
+
+
+def get_model_edit_mode(model_string: str) -> str:
+    """Return the configured edit mode for a model.
+
+    Precedence:
+    1) Per-model ``edit_mode`` in the models registry.
+    2) Module-level ``DEFAULT_EDIT_MODE``.
+
+    Valid values: ``"hashline"``, ``"str_replace"``, ``"both"``.
+    """
+    registry = get_cached_models_registry()
+    if registry is None:
+        return DEFAULT_EDIT_MODE
+
+    try:
+        provider_id, model_id = parse_model_string(model_string)
+    except ValueError:
+        return DEFAULT_EDIT_MODE
+
+    provider = registry.get(provider_id, {})
+    model = provider.get("models", {}).get(model_id, {})
+    mode = model.get("edit_mode", DEFAULT_EDIT_MODE)
+
+    if mode not in VALID_EDIT_MODES:
+        return DEFAULT_EDIT_MODE
+
+    return str(mode)
+
+
 def get_model_context_window(model_string: str) -> int:
     """Get context window limit for a model from cached models_registry data.
 

@@ -5,5 +5,7 @@ Read file contents. Requires absolute filepath.
 - Reads up to 2000 lines by default
 - Use offset/limit for large files
 - Can read images and PDFs
+- Lines are tagged with content hashes: "line_number:hash|content"
+- Use these line:hash references with hashline_edit for validated edits
     </description>
 </tool_prompt>

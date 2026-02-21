@@ -6,6 +6,8 @@ import os
 from tunacode.exceptions import ToolExecutionError
 
 from tunacode.tools.decorators import file_tool
+from tunacode.tools.hashline import HashedLine, content_hash, format_hashline
+from tunacode.tools.line_cache import store as _cache_store
 
 KB_BYTES = 1024
 MAX_FILE_SIZE_KB = 100
@@ -15,22 +17,21 @@ MSG_FILE_SIZE_LIMIT = " Please specify a smaller file or use other tools to proc
 DEFAULT_READ_LIMIT = 2000
 MAX_LINE_LENGTH = 2000
 DEFAULT_FILE_ENCODING = "utf-8"
-LINE_NUMBER_PAD_WIDTH = 5
-LINE_NUMBER_START = 1
-LINE_NUMBER_SEPARATOR = "| "
 TRUNCATION_SUFFIX = "..."
 FILE_TAG_OPEN = "<file>"
 FILE_TAG_CLOSE = "</file>"
 MORE_LINES_MESSAGE = "(File has more lines. Use 'offset' to read beyond line {last_line})"
 END_OF_FILE_MESSAGE = "(End of file - total {total_lines} lines)"
 
+# Removed constants only used by old formatting:
+# LINE_NUMBER_PAD_WIDTH, LINE_NUMBER_START, LINE_NUMBER_SEPARATOR
 
-def _format_content_line(line: str, line_number: int, line_limit: int) -> str:
-    line_text = line.rstrip("\n")
-    needs_truncation = len(line_text) > line_limit
-    truncated_line = line_text[:line_limit] + TRUNCATION_SUFFIX if needs_truncation else line_text
-    padded_number = str(line_number).zfill(LINE_NUMBER_PAD_WIDTH)
-    return f"{padded_number}{LINE_NUMBER_SEPARATOR}{truncated_line}"
+
+def _truncate_line(line_text: str, line_limit: int) -> str:
+    """Truncate a line if it exceeds the limit, appending an ellipsis."""
+    if len(line_text) > line_limit:
+        return line_text[:line_limit] + TRUNCATION_SUFFIX
+    return line_text
 
 
 @file_tool
@@ -47,7 +48,7 @@ async def read_file(
         limit: The number of lines to read. Defaults to DEFAULT_READ_LIMIT (2000).
 
     Returns:
-        The formatted file contents with line numbers.
+        The formatted file contents with content-hash tagged line numbers.
     """
     if os.path.getsize(filepath) > MAX_FILE_SIZE:
         raise ToolExecutionError(
@@ -58,8 +59,14 @@ async def read_file(
     effective_limit = limit if limit is not None else DEFAULT_READ_LIMIT
     max_line_len = MAX_LINE_LENGTH
 
-    def _read_sync(path: str, line_limit: int, line_offset: int, line_count: int) -> str:
-        content_lines: list[str] = []
+    def _read_sync(
+        path: str,
+        line_limit: int,
+        line_offset: int,
+        line_count: int,
+    ) -> tuple[str, list[HashedLine]]:
+        display_lines: list[str] = []
+        hashed_lines: list[HashedLine] = []
         skipped_lines = 0
 
         with open(path, encoding=DEFAULT_FILE_ENCODING) as f:
@@ -73,26 +80,44 @@ async def read_file(
                 line = f.readline()
                 if not line:
                     break
-                line_number = skipped_lines + line_index + LINE_NUMBER_START
-                formatted_line = _format_content_line(line, line_number, line_limit)
-                content_lines.append(formatted_line)
+                line_text = line.rstrip("\n")
+                line_number = skipped_lines + line_index + 1
+
+                # Build the HashedLine from the *original* content (pre-truncation)
+                h = content_hash(line_text)
+                hl = HashedLine(line_number=line_number, hash=h, content=line_text)
+                hashed_lines.append(hl)
+
+                # Display may be truncated but cache stores the full line
+                truncated_text = _truncate_line(line_text, line_limit)
+                display_hl = HashedLine(
+                    line_number=line_number, hash=h, content=truncated_text,
+                )
+                display_lines.append(format_hashline(display_hl))
 
             extra_line = f.readline()
             has_more_lines = bool(extra_line)
 
-        last_line = skipped_lines + len(content_lines)
+        last_line = skipped_lines + len(display_lines)
 
         output = f"{FILE_TAG_OPEN}\n"
-        output += "\n".join(content_lines)
+        output += "\n".join(display_lines)
 
         if has_more_lines:
             output += f"\n\n{MORE_LINES_MESSAGE.format(last_line=last_line)}"
             output += f"\n{FILE_TAG_CLOSE}"
-            return output
+            return output, hashed_lines
 
         total_lines = last_line
         output += f"\n\n{END_OF_FILE_MESSAGE.format(total_lines=total_lines)}"
         output += f"\n{FILE_TAG_CLOSE}"
-        return output
+        return output, hashed_lines
 
-    return await asyncio.to_thread(_read_sync, filepath, max_line_len, offset, effective_limit)
+    result, hashed = await asyncio.to_thread(
+        _read_sync, filepath, max_line_len, offset, effective_limit,
+    )
+
+    # Populate the line cache so hashline_edit can validate references
+    _cache_store(filepath, hashed)
+
+    return result
