@@ -1936,15 +1936,12 @@ wheels = [
 
 [[package]]
 name = "tiny-agent-os"
-version = "1.2.1"
+version = "1.2.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/57/6e/36af597658d3c29e51dc7aedc05e37c3278db5aee7605e9ab582c9946885/tiny_agent_os-1.2.1.tar.gz", hash = "sha256:ff09fa25c4088714d7cc82af4176e4fc02045d8d175f54d1ae1b52268c409ed1", size = 178994, upload-time = "2026-02-18T21:15:20.644Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c4/69/0e843e95219fb49730959eca1183d280a1e61f383aeea401fe4cd3fa59f9/tiny_agent_os-1.2.1-cp310-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:8b6c284311a71bff2b4f7bc3921c70aff0f7df4741f82b7624eff364a9c7822f", size = 4280410, upload-time = "2026-02-18T21:15:18.608Z" },
-]
+sdist = { url = "https://files.pythonhosted.org/packages/ba/72/5f303c11e072f834b1d6f7aed143d930aab9c1fd0089d3f9aaa18e559764/tiny_agent_os-1.2.4.tar.gz", hash = "sha256:f854cca5e282214cb668cd4bbef7b2a7dca75efd3b91c05072d72b95545c6b8f", size = 187005, upload-time = "2026-02-21T22:28:58.346Z" }
 
 [[package]]
 name = "toml"
@@ -2103,7 +2100,7 @@ requires-dist = [
     { name = "textual", specifier = ">=4.0.0,<5.0.0" },
     { name = "textual-autocomplete", specifier = ">=4.0.6" },
     { name = "textual-dev", marker = "extra == 'dev'" },
-    { name = "tiny-agent-os", specifier = ">=1.2.1" },
+    { name = "tiny-agent-os", specifier = ">=1.2.4" },
     { name = "twine", marker = "extra == 'dev'" },
     { name = "typer", specifier = ">=0.15.0" },
     { name = "unimport", marker = "extra == 'dev'", specifier = ">=1.0.0" },
