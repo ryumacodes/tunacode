@@ -63,6 +63,7 @@ from tunacode.ui.repl_support import (
     build_tool_result_callback,
     build_tool_start_callback,
     format_user_message,
+    normalize_agent_message_text,
 )
 from tunacode.ui.shell_runner import ShellRunner
 from tunacode.ui.slopgotchi import (
@@ -331,7 +332,8 @@ class TextualReplApp(App[None]):
 
         if await handle_command(self, message.text):
             return
-        await self.request_queue.put(message.text)
+        normalized_message = normalize_agent_message_text(message.text)
+        await self.request_queue.put(normalized_message)
         from datetime import datetime
 
         timestamp = datetime.now().strftime("%I:%M %p").lstrip("0")

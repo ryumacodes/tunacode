@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+from pathlib import Path
 from typing import Protocol
 
 from rich.console import Console
@@ -39,6 +40,8 @@ DIAGNOSTICS_BLOCK_PATTERN: str = f"{DIAGNOSTICS_BLOCK_START}.*?{DIAGNOSTICS_BLOC
 DIAGNOSTICS_BLOCK_RE = re.compile(DIAGNOSTICS_BLOCK_PATTERN, re.DOTALL)
 CALLBACK_TRUNCATION_NOTICE: str = "\n... [truncated for safety]"
 CALLBACK_TRUNCATION_NOTICE_LEN: int = len(CALLBACK_TRUNCATION_NOTICE)
+AT_MENTION_PATTERN: re.Pattern[str] = re.compile(r"(?<!\S)@(?P<path>\S+)")
+AT_MENTION_TRAILING_PUNCTUATION: str = ".,:;!?)]}"
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +91,45 @@ def format_collapsed_message(text: str, style: str, *, width: int) -> Text:
     render_lines.append((f"[[ {collapsed} more lines ]]", f"dim {style}"))
     render_lines.extend((line, style) for line in lines[-2:])
     return _format_prefixed_wrapped_lines(render_lines, width=width)
+
+
+def _split_mention_path(token: str) -> tuple[str, str]:
+    path_token = token.rstrip(AT_MENTION_TRAILING_PUNCTUATION)
+    trailing = token[len(path_token) :]
+    return path_token, trailing
+
+
+def _resolve_mentioned_path(path_token: str, cwd: Path) -> Path | None:
+    if not path_token:
+        return None
+
+    candidate = Path(path_token).expanduser()
+    if not candidate.is_absolute():
+        candidate = cwd / candidate
+
+    resolved = candidate.resolve()
+    if not resolved.exists():
+        return None
+    return resolved
+
+
+def normalize_agent_message_text(text: str, *, cwd: Path | None = None) -> str:
+    """Replace @file mentions with absolute existing paths for agent execution."""
+    if "@" not in text:
+        return text
+
+    base_dir = cwd or Path.cwd()
+
+    def _replace(match: re.Match[str]) -> str:
+        token = match.group("path")
+        path_token, trailing = _split_mention_path(token)
+        resolved = _resolve_mentioned_path(path_token, base_dir)
+        if resolved is None:
+            return match.group(0)
+        resolved_path = resolved.as_posix()
+        return f"{resolved_path}{trailing}"
+
+    return AT_MENTION_PATTERN.sub(_replace, text)
 
 
 class StatusBarLike(Protocol):
