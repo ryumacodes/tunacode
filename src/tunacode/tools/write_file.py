@@ -23,7 +23,7 @@ async def write_file(filepath: str, content: str) -> str:
     if os.path.exists(filepath):
         raise ToolRetryError(
             f"File '{filepath}' already exists. "
-            "Use the `update_file` tool to modify it, or choose a different filepath."
+            "Read the file first with `read_file`, then use `hashline_edit` to modify it."
         )
 
     dirpath = os.path.dirname(filepath)

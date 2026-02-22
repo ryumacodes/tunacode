@@ -65,7 +65,7 @@ class TestToolDiscovery:
         assert len(ALL_TOOLS) > 0, "No tools discovered"
 
     def test_discovered_file_tools(self):
-        """Should find file tools (read_file, write_file, update_file)."""
+        """Should find file tools (read_file, write_file, hashline_edit)."""
         assert len(FILE_TOOLS) > 0, "No file tools discovered"
 
     def test_discovered_base_tools(self):

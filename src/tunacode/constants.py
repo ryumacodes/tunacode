@@ -58,7 +58,7 @@ class ToolName(str, Enum):
 
     READ_FILE = "read_file"
     WRITE_FILE = "write_file"
-    UPDATE_FILE = "update_file"
+    HASHLINE_EDIT = "hashline_edit"
     BASH = "bash"
     GREP = "grep"
     LIST_DIR = "list_dir"

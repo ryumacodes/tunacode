@@ -11,9 +11,9 @@ from tunacode.ui.renderers.tools.base import (
 from tunacode.ui.renderers.tools.bash import BashRenderer
 from tunacode.ui.renderers.tools.glob import GlobRenderer
 from tunacode.ui.renderers.tools.grep import GrepRenderer
+from tunacode.ui.renderers.tools.hashline_edit import HashlineEditRenderer
 from tunacode.ui.renderers.tools.list_dir import ListDirRenderer
 from tunacode.ui.renderers.tools.read_file import ReadFileRenderer
-from tunacode.ui.renderers.tools.update_file import UpdateFileRenderer
 from tunacode.ui.renderers.tools.web_fetch import WebFetchRenderer
 
 TEST_MAX_WIDTH: int = 50
@@ -30,7 +30,7 @@ def test_registry_contains_unified_renderers() -> None:
     assert "read_file" in renderers
     assert "glob" in renderers
     assert "grep" in renderers
-    assert "update_file" in renderers
+    assert "hashline_edit" in renderers
     assert "web_fetch" in renderers
 
 
@@ -67,7 +67,7 @@ UNIFIED_RENDERERS = {
     "read_file": ReadFileRenderer,
     "glob": GlobRenderer,
     "grep": GrepRenderer,
-    "update_file": UpdateFileRenderer,
+    "hashline_edit": HashlineEditRenderer,
     "web_fetch": WebFetchRenderer,
 }
 

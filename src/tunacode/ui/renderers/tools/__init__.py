@@ -25,6 +25,7 @@ from tunacode.ui.renderers.tools.bash import render_bash
 from tunacode.ui.renderers.tools.discover import render_discover
 from tunacode.ui.renderers.tools.glob import render_glob
 from tunacode.ui.renderers.tools.grep import render_grep
+from tunacode.ui.renderers.tools.hashline_edit import render_hashline_edit
 from tunacode.ui.renderers.tools.list_dir import render_list_dir
 from tunacode.ui.renderers.tools.read_file import render_read_file
 from tunacode.ui.renderers.tools.syntax_utils import (
@@ -35,7 +36,6 @@ from tunacode.ui.renderers.tools.syntax_utils import (
     get_lexer,
     syntax_or_text,
 )
-from tunacode.ui.renderers.tools.update_file import render_update_file
 from tunacode.ui.renderers.tools.web_fetch import render_web_fetch
 from tunacode.ui.renderers.tools.write_file import render_write_file
 
@@ -69,7 +69,7 @@ __all__ = [
     "render_grep",
     "render_list_dir",
     "render_read_file",
-    "render_update_file",
+    "render_hashline_edit",
     "render_web_fetch",
     "render_write_file",
 ]

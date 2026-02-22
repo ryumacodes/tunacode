@@ -30,7 +30,7 @@ from tunacode.ui.widgets import ToolResultDisplay
 
 COLLAPSE_THRESHOLD: int = 10
 
-FILE_EDIT_TOOLS: frozenset[str] = frozenset({"write_file", "update_file"})
+FILE_EDIT_TOOLS: frozenset[str] = frozenset({"write_file", "hashline_edit"})
 
 USER_MESSAGE_PREFIX: str = "│ "
 DEFAULT_USER_MESSAGE_WIDTH: int = 80

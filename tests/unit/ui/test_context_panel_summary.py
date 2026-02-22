@@ -92,7 +92,7 @@ async def test_reset_context_panel_state_clears_edited_files() -> None:
     async with app.run_test(headless=True):
         app.on_tool_result_display(
             ToolResultDisplay(
-                tool_name="update_file",
+                tool_name="hashline_edit",
                 status="completed",
                 args={"filepath": "/tmp/reset-me.py"},
                 result="ok",

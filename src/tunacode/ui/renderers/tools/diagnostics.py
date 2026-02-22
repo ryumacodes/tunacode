@@ -104,7 +104,7 @@ def parse_diagnostics_block(content: str) -> DiagnosticsData | None:
 
 
 def render_diagnostics_inline(data: DiagnosticsData) -> RenderableType:
-    """Render diagnostics as inline zone within update_file panel.
+    """Render diagnostics as inline zone within edit tool panel.
 
     NeXTSTEP 4-Zone Layout:
     +----------------------------------+

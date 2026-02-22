@@ -19,7 +19,6 @@ from tinyagent.alchemy_provider import OpenAICompatModel, stream_alchemy_openai_
 
 from tunacode.configuration.limits import get_max_tokens
 from tunacode.configuration.models import (
-    get_model_edit_mode,
     get_provider_alchemy_api,
     get_provider_base_url,
     get_provider_env_var,
@@ -35,7 +34,6 @@ from tunacode.tools.decorators import to_tinyagent_tool
 from tunacode.tools.discover import discover
 from tunacode.tools.hashline_edit import hashline_edit
 from tunacode.tools.read_file import read_file
-from tunacode.tools.update_file import update_file
 from tunacode.tools.web_fetch import web_fetch
 from tunacode.tools.write_file import write_file
 
@@ -91,7 +89,6 @@ def _compute_agent_version(
     request_delay: float,
     *,
     max_tokens: int | None,
-    edit_mode: str,
 ) -> int:
     """Compute a hash representing agent-defining configuration."""
 
@@ -102,7 +99,6 @@ def _compute_agent_version(
             str(request_delay),
             str(settings.get("global_request_timeout", 90.0)),
             str(max_tokens),
-            edit_mode,
         )
     )
 
@@ -174,34 +170,16 @@ def load_tunacode_context() -> str:
         raise
 
 
-def _build_tools(edit_mode: str = "hashline") -> list[AgentTool]:
-    """Return the full TunaCode tool set as tinyagent AgentTools.
-
-    Args:
-        edit_mode: Which edit tool(s) to expose.
-            ``"hashline"`` — hashline_edit only (default).
-            ``"str_replace"`` — update_file only (legacy).
-            ``"both"`` — both edit tools.
-    """
-    tools: list[AgentTool] = [
+def _build_tools() -> list[AgentTool]:
+    """Return the full TunaCode tool set as tinyagent AgentTools."""
+    return [
         to_tinyagent_tool(bash),
         to_tinyagent_tool(discover),
         to_tinyagent_tool(read_file),
+        to_tinyagent_tool(hashline_edit),
+        to_tinyagent_tool(web_fetch),
+        to_tinyagent_tool(write_file),
     ]
-
-    if edit_mode == "str_replace":
-        tools.append(to_tinyagent_tool(update_file))
-    elif edit_mode == "both":
-        tools.append(to_tinyagent_tool(update_file))
-        tools.append(to_tinyagent_tool(hashline_edit))
-    else:
-        # Default: hashline
-        tools.append(to_tinyagent_tool(hashline_edit))
-
-    tools.append(to_tinyagent_tool(web_fetch))
-    tools.append(to_tinyagent_tool(write_file))
-
-    return tools
 
 
 def _normalize_chat_completions_url(base_url: str | None) -> str | None:
@@ -369,11 +347,8 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
 
     max_tokens = get_max_tokens()
 
-    # Resolve edit mode: user config override, then per-model registry, then default.
-    edit_mode = str(settings.get("edit_mode", get_model_edit_mode(model)))
-
     agent_version = _compute_agent_version(
-        settings, request_delay, max_tokens=max_tokens, edit_mode=edit_mode,
+        settings, request_delay, max_tokens=max_tokens,
     )
 
     session_agent = session.agents.get(model)
@@ -398,7 +373,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     system_prompt = load_system_prompt(base_path, model=model)
     system_prompt += load_tunacode_context()
 
-    tools_list = _build_tools(edit_mode=edit_mode)
+    tools_list = _build_tools()
 
     stream_fn = _build_stream_fn(request_delay=request_delay, max_tokens=max_tokens)
     opts = AgentOptions(

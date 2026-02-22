@@ -1,4 +1,4 @@
-"""NeXTSTEP-style panel renderer for update_file tool output."""
+"""NeXTSTEP-style panel renderer for hashline_edit tool output."""
 
 from __future__ import annotations
 
@@ -35,8 +35,8 @@ _SIDE_BY_SIDE_DIVIDER: str = "│"
 
 
 @dataclass(frozen=True)
-class UpdateFileData:
-    """Parsed update_file result for structured display."""
+class EditDiffData:
+    """Parsed edit result for structured diff display."""
 
     filepath: str
     filename: str
@@ -63,16 +63,16 @@ class DiffSideBySideLine:
     kind: DiffLineKind
 
 
-class UpdateFileRenderer(BaseToolRenderer[UpdateFileData]):
-    """Renderer for update_file output with optional diagnostics zone."""
+class HashlineEditRenderer(BaseToolRenderer[EditDiffData]):
+    """Renderer for hashline_edit output with optional diagnostics zone."""
 
     _hunk_header = re.compile(
         r"^@@ -(?P<old_start>\d+)(?:,(?P<old_count>\d+))? "
         r"\+(?P<new_start>\d+)(?:,(?P<new_count>\d+))? @@"
     )
 
-    def parse_result(self, args: dict[str, Any] | None, result: str) -> UpdateFileData | None:
-        """Extract structured data from update_file output."""
+    def parse_result(self, args: dict[str, Any] | None, result: str) -> EditDiffData | None:
+        """Extract structured data from hashline_edit output."""
         if not result:
             return None
 
@@ -110,7 +110,7 @@ class UpdateFileRenderer(BaseToolRenderer[UpdateFileData]):
             elif line.startswith("@@"):
                 hunks += 1
 
-        return UpdateFileData(
+        return EditDiffData(
             filepath=filepath,
             filename=Path(filepath).name,
             root_path=root_path,
@@ -124,7 +124,7 @@ class UpdateFileRenderer(BaseToolRenderer[UpdateFileData]):
 
     def build_header(
         self,
-        data: UpdateFileData,
+        data: EditDiffData,
         duration_ms: float | None,
         max_line_width: int,
     ) -> Text:
@@ -137,7 +137,7 @@ class UpdateFileRenderer(BaseToolRenderer[UpdateFileData]):
         header.append(f"-{data.deletions}", style="red")
         return header
 
-    def build_params(self, data: UpdateFileData, max_line_width: int) -> Text:
+    def build_params(self, data: EditDiffData, max_line_width: int) -> Text:
         """Zone 2: Full filepath."""
         return build_hook_path_params(data.filepath, data.root_path)
 
@@ -300,7 +300,7 @@ class UpdateFileRenderer(BaseToolRenderer[UpdateFileData]):
 
         return table
 
-    def build_viewport(self, data: UpdateFileData, max_line_width: int) -> RenderableType:
+    def build_viewport(self, data: EditDiffData, max_line_width: int) -> RenderableType:
         """Zone 3: Diff viewport with syntax highlighting."""
         side_by_side_rows = self._parse_side_by_side_rows(data.diff_content)
 
@@ -335,7 +335,7 @@ class UpdateFileRenderer(BaseToolRenderer[UpdateFileData]):
 
     def build_status(
         self,
-        data: UpdateFileData,
+        data: EditDiffData,
         duration_ms: float | None,
         max_line_width: int,
     ) -> Text:
@@ -363,7 +363,7 @@ class UpdateFileRenderer(BaseToolRenderer[UpdateFileData]):
         duration_ms: float | None,
         max_line_width: int,
     ) -> ToolRenderResult:
-        """Render update_file with NeXTSTEP zoned layout plus optional diagnostics."""
+        """Render hashline_edit with NeXTSTEP zoned layout plus optional diagnostics."""
         data = self.parse_result(args, result)
         if data is None:
             return None
@@ -428,15 +428,15 @@ class UpdateFileRenderer(BaseToolRenderer[UpdateFileData]):
 
 
 # Module-level renderer instance
-_renderer = UpdateFileRenderer(RendererConfig(tool_name="update_file"))
+_renderer = HashlineEditRenderer(RendererConfig(tool_name="hashline_edit"))
 
 
-@tool_renderer("update_file")
-def render_update_file(
+@tool_renderer("hashline_edit")
+def render_hashline_edit(
     args: dict[str, Any] | None,
     result: str,
     duration_ms: float | None,
     max_line_width: int,
 ) -> ToolRenderResult:
-    """Render update_file with NeXTSTEP zoned layout."""
+    """Render hashline_edit with NeXTSTEP zoned layout."""
     return _renderer.render(args, result, duration_ms, max_line_width)
