@@ -53,18 +53,25 @@ class CompactCommand(Command):
         controller.set_status_callback(app._update_compaction_status)
 
         tokens_before = estimate_messages_tokens(history)
-        compaction_outcome = await controller.force_compact(
-            history,
-            max_tokens=conversation.max_tokens,
-            signal=None,
-        )
+        compaction_outcome = None
+        try:
+            compaction_outcome = await controller.force_compact(
+                history,
+                max_tokens=conversation.max_tokens,
+                signal=None,
+            )
+        finally:
+            controller.set_status_callback(None)
+            app._update_compaction_status(False)
+            app._update_resource_bar()
+
+        if compaction_outcome is None:
+            return
+
         compacted_history = apply_compaction_messages(
             app.state_manager,
             compaction_outcome.messages,
         )
-
-        app._update_compaction_status(False)
-        app._update_resource_bar()
         await app.state_manager.save_session()
 
         if compaction_outcome.status != COMPACTION_STATUS_COMPACTED:
