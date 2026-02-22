@@ -6,6 +6,9 @@ can validate that a file has not changed since the model last read it.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from types import MappingProxyType
+
 from tunacode.tools.hashline import HashedLine, content_hash
 
 # Module-level singleton cache: filepath -> {line_number -> HashedLine}
@@ -17,9 +20,12 @@ def store(filepath: str, lines: list[HashedLine]) -> None:
     _cache[filepath] = {hl.line_number: hl for hl in lines}
 
 
-def get(filepath: str) -> dict[int, HashedLine] | None:
-    """Return cached lines for a file, or None if uncached."""
-    return _cache.get(filepath)
+def get(filepath: str) -> Mapping[int, HashedLine] | None:
+    """Return cached lines for a file as a read-only view, or None if uncached."""
+    file_lines = _cache.get(filepath)
+    if file_lines is None:
+        return None
+    return MappingProxyType(file_lines)
 
 
 def get_line(filepath: str, line_number: int) -> HashedLine | None:
@@ -52,7 +58,10 @@ def update_lines(filepath: str, updates: dict[int, str]) -> None:
     """
     file_lines = _cache.get(filepath)
     if file_lines is None:
-        return
+        raise RuntimeError(
+            f"update_lines called for uncached file '{filepath}'. "
+            "This violates the _validate_ref precondition in hashline_edit."
+        )
 
     for line_number, new_content in updates.items():
         h = content_hash(new_content)
@@ -81,7 +90,10 @@ def replace_range(
     """
     file_lines = _cache.get(filepath)
     if file_lines is None:
-        return
+        raise RuntimeError(
+            f"replace_range called for uncached file '{filepath}'. "
+            "This violates the _validate_ref precondition in hashline_edit."
+        )
 
     old_count = end_line - start_line + 1
     new_count = len(new_lines)

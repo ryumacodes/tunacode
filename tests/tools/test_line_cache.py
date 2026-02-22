@@ -35,6 +35,16 @@ class TestStoreAndGet:
         assert cached[2].content == "b"
         assert cached[3].content == "c"
 
+    def test_get_returns_read_only_view(self) -> None:
+        lines = _make_lines(["a"])
+        line_cache.store("/tmp/test.py", lines)
+
+        cached = line_cache.get("/tmp/test.py")
+        assert cached is not None
+
+        with pytest.raises(TypeError):
+            cached[1] = HashedLine(line_number=1, hash="00", content="x")  # type: ignore[index]
+
     def test_get_uncached_returns_none(self) -> None:
         assert line_cache.get("/nonexistent") is None
 
@@ -104,9 +114,9 @@ class TestUpdateLines:
         assert hl.content == "updated"
         assert hl.hash == content_hash("updated")
 
-    def test_update_uncached_is_noop(self) -> None:
-        # Should not raise
-        line_cache.update_lines("/nope", {1: "x"})
+    def test_update_uncached_raises_runtime_error(self) -> None:
+        with pytest.raises(RuntimeError, match="update_lines called for uncached file"):
+            line_cache.update_lines("/nope", {1: "x"})
 
 
 class TestReplaceRange:
@@ -155,8 +165,9 @@ class TestReplaceRange:
         assert line_cache.get_line("/tmp/f.py", 4) is not None
         assert line_cache.get_line("/tmp/f.py", 4).content == "c"  # type: ignore[union-attr]
 
-    def test_replace_range_uncached_is_noop(self) -> None:
-        line_cache.replace_range("/nope", 1, 2, ["x"])
+    def test_replace_range_uncached_raises_runtime_error(self) -> None:
+        with pytest.raises(RuntimeError, match="replace_range called for uncached file"):
+            line_cache.replace_range("/nope", 1, 2, ["x"])
 
 
 class TestInvalidateAndClear:

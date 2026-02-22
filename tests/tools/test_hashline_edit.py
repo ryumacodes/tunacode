@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+from collections.abc import Iterator
 
 import pytest
 
@@ -61,6 +62,11 @@ class TestValidateRef:
         with pytest.raises(ToolRetryError, match="hash mismatch"):
             _validate_ref("/tmp/f.py", "1:zz")
 
+    def test_invalid_ref_format(self) -> None:
+        _cache_file("/tmp/f.py", ["hello"])
+        with pytest.raises(ToolRetryError, match="Invalid line reference"):
+            _validate_ref("/tmp/f.py", "not-a-ref")
+
 
 class TestApplyReplace:
     def test_replace_line(self) -> None:
@@ -68,7 +74,7 @@ class TestApplyReplace:
         _cache_file("/tmp/f.py", contents)
         ref = _make_ref("    return 1", 2)
 
-        new_lines, desc = _apply_replace("/tmp/f.py", contents, ref, "    return 2")
+        new_lines, desc, _ = _apply_replace("/tmp/f.py", contents, ref, "    return 2")
         assert new_lines == ["def foo():", "    return 2", ""]
         assert "replaced line 2" in desc
 
@@ -79,9 +85,9 @@ class TestApplyReplace:
     def test_replace_out_of_range(self) -> None:
         contents = ["only line"]
         _cache_file("/tmp/f.py", contents)
-        # Manually add a cache entry for a line beyond file length
+        # Add a cache entry for a line beyond file length
+        line_cache.update_lines("/tmp/f.py", {99: "ghost"})
         h = content_hash("ghost")
-        line_cache.get("/tmp/f.py")[99] = HashedLine(99, h, "ghost")  # type: ignore[index]
 
         with pytest.raises(ToolRetryError, match="out of range"):
             _apply_replace("/tmp/f.py", contents, f"99:{h}", "new")
@@ -94,7 +100,7 @@ class TestApplyReplaceRange:
         start = _make_ref("b", 2)
         end = _make_ref("c", 3)
 
-        new_lines, desc = _apply_replace_range(
+        new_lines, desc, _ = _apply_replace_range(
             "/tmp/f.py",
             contents,
             start,
@@ -110,7 +116,7 @@ class TestApplyReplaceRange:
         start = _make_ref("b", 2)
         end = _make_ref("b", 2)
 
-        new_lines, _ = _apply_replace_range(
+        new_lines, _, _ = _apply_replace_range(
             "/tmp/f.py",
             contents,
             start,
@@ -144,7 +150,7 @@ class TestApplyInsertAfter:
         _cache_file("/tmp/f.py", contents)
         ref = _make_ref("b", 2)
 
-        new_lines, desc = _apply_insert_after(
+        new_lines, desc, _ = _apply_insert_after(
             "/tmp/f.py",
             contents,
             ref,
@@ -158,7 +164,7 @@ class TestApplyInsertAfter:
         _cache_file("/tmp/f.py", contents)
         ref = _make_ref("b", 2)
 
-        new_lines, _ = _apply_insert_after(
+        new_lines, _, _ = _apply_insert_after(
             "/tmp/f.py",
             contents,
             ref,
@@ -175,12 +181,12 @@ class TestHashlineEditIntegration:
     """Integration tests that exercise the full async tool function."""
 
     @pytest.fixture
-    def temp_file(self) -> str:
+    def temp_file(self) -> Iterator[str]:
         """Create a temp file with known content."""
         fd, path = tempfile.mkstemp(suffix=".py")
         with os.fdopen(fd, "w") as f:
             f.write("line one\nline two\nline three\n")
-        yield path  # type: ignore[misc]
+        yield path
         os.unlink(path)
 
     @pytest.mark.asyncio
@@ -228,6 +234,34 @@ class TestHashlineEditIntegration:
         with open(temp_file) as f:
             content = f.read()
         assert "inserted line" in content
+
+    @pytest.mark.asyncio
+    async def test_disk_changes_but_cache_match_still_allows_edit(self, temp_file: str) -> None:
+        from tunacode.tools.hashline_edit import hashline_edit
+
+        with open(temp_file) as f:
+            lines_content = [raw.rstrip("\n") for raw in f.readlines()]
+        _cache_file(temp_file, lines_content)
+
+        with open(temp_file, "w") as f:
+            f.write("disk one\ndisk two\ndisk three\n")
+
+        ref = _make_ref("line two", 2)
+        result = await hashline_edit(
+            filepath=temp_file,
+            operation="replace",
+            line=ref,
+            new="CACHE MATCH EDIT",
+        )
+
+        assert "updated" in result
+        with open(temp_file) as f:
+            content = f.read()
+        assert "CACHE MATCH EDIT" in content
+
+        cached_line = line_cache.get_line(temp_file, 2)
+        assert cached_line is not None
+        assert cached_line.content == "CACHE MATCH EDIT"
 
     @pytest.mark.asyncio
     async def test_stale_ref_rejected(self, temp_file: str) -> None:

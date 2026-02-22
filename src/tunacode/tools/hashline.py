@@ -30,7 +30,7 @@ def content_hash(line: str) -> str:
     Two hex characters provide 256 buckets — sufficient to detect stale
     references without inflating the context window.
     """
-    return hashlib.md5(line.encode()).hexdigest()[:HASH_LENGTH]
+    return hashlib.md5(line.encode(), usedforsecurity=False).hexdigest()[:HASH_LENGTH]
 
 
 def tag_lines(content: str, offset: int = 0) -> list[HashedLine]:

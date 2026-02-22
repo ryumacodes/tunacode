@@ -13,8 +13,9 @@ If the hash does not match, the tool rejects the edit and instructs the
 model to re-read the file.
 """
 
+import asyncio
 import difflib
-import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
 
@@ -47,6 +48,11 @@ FILE_NOT_FOUND_MESSAGE = "File '{filepath}' not found. Cannot edit."
 DEFAULT_ENCODING = "utf-8"
 
 
+INVALID_REF_MESSAGE = (
+    "Invalid line reference '{ref}': {error}. Use '<line>:<hash>' from read_file output."
+)
+
+
 def _validate_ref(filepath: str, ref: str) -> int:
     """Parse and validate a line:hash reference against the cache.
 
@@ -56,7 +62,10 @@ def _validate_ref(filepath: str, ref: str) -> int:
         ToolRetryError: If the file is not cached, the line is missing,
             or the hash does not match.
     """
-    line_number, expected_hash = parse_line_ref(ref)
+    try:
+        line_number, expected_hash = parse_line_ref(ref)
+    except ValueError as exc:
+        raise ToolRetryError(INVALID_REF_MESSAGE.format(ref=ref, error=str(exc))) from exc
 
     cached = _cache_get(filepath)
     if cached is None:
@@ -78,18 +87,25 @@ def _validate_ref(filepath: str, ref: str) -> int:
     return line_number
 
 
-def _read_file_lines(filepath: str) -> list[str]:
-    """Read all lines from a file, preserving line content without newlines."""
+def _read_file_lines(filepath: str) -> tuple[list[str], bool]:
+    """Read all lines and whether the file ends with a trailing newline."""
     with open(filepath, encoding=DEFAULT_ENCODING) as f:
-        return [line.rstrip("\n") for line in f.readlines()]
+        content = f.read()
+    has_trailing_newline = content.endswith("\n")
+    return content.splitlines(), has_trailing_newline
 
 
-def _write_file_lines(filepath: str, lines: list[str]) -> None:
-    """Write lines back to a file with newline separators."""
+def _write_file_lines(
+    filepath: str,
+    lines: list[str],
+    preserve_trailing_newline: bool,
+) -> None:
+    """Write lines back to a file while preserving trailing newline state."""
+    serialized = "\n".join(lines)
+    if preserve_trailing_newline:
+        serialized += "\n"
     with open(filepath, "w", encoding=DEFAULT_ENCODING) as f:
-        f.write("\n".join(lines))
-        if lines:
-            f.write("\n")
+        f.write(serialized)
 
 
 def _make_diff(
@@ -145,10 +161,11 @@ async def hashline_edit(
     Returns:
         A message with the diff of changes applied.
     """
-    if not os.path.exists(filepath):
+    path = Path(filepath)
+    if not await asyncio.to_thread(path.exists):
         raise ToolRetryError(FILE_NOT_FOUND_MESSAGE.format(filepath=filepath))
 
-    original_lines = _read_file_lines(filepath)
+    original_lines, had_trailing_newline = await asyncio.to_thread(_read_file_lines, filepath)
 
     if operation == "replace":
         result = _apply_replace(filepath, original_lines, line, new)
@@ -161,8 +178,14 @@ async def hashline_edit(
             f"Unknown operation '{operation}'. Use 'replace', 'replace_range', or 'insert_after'."
         )
 
-    new_lines, description = result
-    _write_file_lines(filepath, new_lines)
+    new_lines, description, cache_mutation = result
+    await asyncio.to_thread(
+        _write_file_lines,
+        filepath,
+        new_lines,
+        had_trailing_newline,
+    )
+    cache_mutation()
 
     diff_text = _make_diff(filepath, original_lines, new_lines)
     output = f"{description}\n\n{diff_text}"
@@ -175,7 +198,7 @@ def _apply_replace(
     lines: list[str],
     line_ref: str | None,
     new_content: str,
-) -> tuple[list[str], str]:
+) -> tuple[list[str], str, Callable[[], None]]:
     """Replace a single line."""
     if line_ref is None:
         raise ToolRetryError("The 'line' parameter is required for the 'replace' operation.")
@@ -188,10 +211,10 @@ def _apply_replace(
     new_lines = list(lines)
     new_lines[idx] = new_content
 
-    # Update cache: single line replacement preserves line count
-    _cache_update_lines(filepath, {line_number: new_content})
+    def cache_mutation() -> None:
+        _cache_update_lines(filepath, {line_number: new_content})
 
-    return new_lines, f"File '{filepath}' updated: replaced line {line_number}."
+    return new_lines, f"File '{filepath}' updated: replaced line {line_number}.", cache_mutation
 
 
 def _apply_replace_range(
@@ -200,7 +223,7 @@ def _apply_replace_range(
     start_ref: str | None,
     end_ref: str | None,
     new_content: str,
-) -> tuple[list[str], str]:
+) -> tuple[list[str], str, Callable[[], None]]:
     """Replace a contiguous range of lines."""
     if start_ref is None:
         raise ToolRetryError("The 'start' parameter is required for the 'replace_range' operation.")
@@ -225,12 +248,13 @@ def _apply_replace_range(
     replacement_lines = new_content.splitlines() if new_content else []
     new_lines = lines[:start_idx] + replacement_lines + lines[end_idx:]
 
-    # Update cache with the new line arrangement
-    _cache_replace_range(filepath, start_line, end_line, replacement_lines)
+    def cache_mutation() -> None:
+        _cache_replace_range(filepath, start_line, end_line, replacement_lines)
 
     return (
         new_lines,
         f"File '{filepath}' updated: replaced lines {start_line}-{end_line}.",
+        cache_mutation,
     )
 
 
@@ -239,7 +263,7 @@ def _apply_insert_after(
     lines: list[str],
     after_ref: str | None,
     new_content: str,
-) -> tuple[list[str], str]:
+) -> tuple[list[str], str, Callable[[], None]]:
     """Insert new lines after a referenced line."""
     if after_ref is None:
         raise ToolRetryError("The 'after' parameter is required for the 'insert_after' operation.")
@@ -252,17 +276,17 @@ def _apply_insert_after(
     insertion_lines = new_content.splitlines() if new_content else []
     new_lines = lines[:insert_idx] + insertion_lines + lines[insert_idx:]
 
-    # Update cache: this is equivalent to replacing a zero-width range
-    # at the position right after the referenced line, then shifting.
-    _cache_replace_range(
-        filepath,
-        after_line + 1,
-        after_line,  # end < start means zero-width range
-        insertion_lines,
-    )
+    def cache_mutation() -> None:
+        _cache_replace_range(
+            filepath,
+            after_line + 1,
+            after_line,  # end < start means zero-width range
+            insertion_lines,
+        )
 
     return (
         new_lines,
         f"File '{filepath}' updated: inserted {len(insertion_lines)} "
         f"line(s) after line {after_line}.",
+        cache_mutation,
     )

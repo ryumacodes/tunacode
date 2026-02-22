@@ -27,14 +27,13 @@ class TestContentHash:
 
     def test_matches_md5_prefix(self) -> None:
         line = "function hello() {"
-        expected = hashlib.md5(line.encode()).hexdigest()[:HASH_LENGTH]
+        expected = hashlib.md5(line.encode(), usedforsecurity=False).hexdigest()[:HASH_LENGTH]
         assert content_hash(line) == expected
 
     def test_different_content_usually_different_hash(self) -> None:
-        # Not guaranteed for all inputs (only 256 buckets), but these differ
         h1 = content_hash("aaa")
         h2 = content_hash("bbb")
-        # We just verify they're both valid; collision is theoretically possible
+        assert h1 != h2
         assert len(h1) == HASH_LENGTH
         assert len(h2) == HASH_LENGTH
 

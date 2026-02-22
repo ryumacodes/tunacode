@@ -23,9 +23,6 @@ FILE_TAG_CLOSE = "</file>"
 MORE_LINES_MESSAGE = "(File has more lines. Use 'offset' to read beyond line {last_line})"
 END_OF_FILE_MESSAGE = "(End of file - total {total_lines} lines)"
 
-# Removed constants only used by old formatting:
-# LINE_NUMBER_PAD_WIDTH, LINE_NUMBER_START, LINE_NUMBER_SEPARATOR
-
 
 def _truncate_line(line_text: str, line_limit: int) -> str:
     """Truncate a line if it exceeds the limit, appending an ellipsis."""
@@ -49,6 +46,13 @@ async def read_file(
 
     Returns:
         The formatted file contents with content-hash tagged line numbers.
+
+    Notes:
+        Each call replaces the cache for ``filepath`` with only the lines returned
+        by that read (paginated reads do not merge prior cache windows).
+        ``hashline_edit`` can only edit lines present in the current cache and
+        raises ``ToolRetryError`` with an offset hint when a requested line is
+        missing from cache.
     """
     if os.path.getsize(filepath) > MAX_FILE_SIZE:
         raise ToolExecutionError(

@@ -219,9 +219,9 @@ def test_write_file_tool() -> None:
         Path(target).unlink(missing_ok=True)
 
 
-def test_hashline_edit_tool() -> None:
+def test_hashline_edit_tool(tmp_path: Path) -> None:
     """hashline_edit tool: read then edit a pre-created file."""
-    target = Path(f"/tmp/tunatest_edit_{uuid.uuid4().hex[:8]}.txt")
+    target = tmp_path / f"tunatest_edit_{uuid.uuid4().hex[:8]}.txt"
     original_line = "color = red"
     expected_line = "color = blue"
     try:
