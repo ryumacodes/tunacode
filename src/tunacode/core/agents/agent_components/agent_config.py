@@ -13,7 +13,6 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, cast
 
-from tinyagent import Agent, AgentOptions
 from tinyagent.agent_types import AgentMessage, AgentTool
 from tinyagent.alchemy_provider import OpenAICompatModel, stream_alchemy_openai_completions
 
@@ -32,8 +31,8 @@ from tunacode.types import ModelName
 from tunacode.tools.bash import bash
 from tunacode.tools.decorators import to_tinyagent_tool
 from tunacode.tools.discover import discover
+from tunacode.tools.hashline_edit import hashline_edit
 from tunacode.tools.read_file import read_file
-from tunacode.tools.update_file import update_file
 from tunacode.tools.web_fetch import web_fetch
 from tunacode.tools.write_file import write_file
 
@@ -43,6 +42,8 @@ from tunacode.infrastructure.cache.caches import tunacode_context as context_cac
 from tunacode.core.compaction.controller import get_or_create_compaction_controller
 from tunacode.core.logging import get_logger
 from tunacode.core.types import SessionStateProtocol, StateManagerProtocol
+
+from tinyagent import Agent, AgentOptions
 
 ENV_OPENAI_API_KEY = "OPENAI_API_KEY"
 OPENAI_CHAT_COMPLETIONS_PATH = "/chat/completions"
@@ -172,12 +173,11 @@ def load_tunacode_context() -> str:
 
 def _build_tools() -> list[AgentTool]:
     """Return the full TunaCode tool set as tinyagent AgentTools."""
-
     return [
         to_tinyagent_tool(bash),
         to_tinyagent_tool(discover),
         to_tinyagent_tool(read_file),
-        to_tinyagent_tool(update_file),
+        to_tinyagent_tool(hashline_edit),
         to_tinyagent_tool(web_fetch),
         to_tinyagent_tool(write_file),
     ]
@@ -347,7 +347,12 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     load_models_registry()
 
     max_tokens = get_max_tokens()
-    agent_version = _compute_agent_version(settings, request_delay, max_tokens=max_tokens)
+
+    agent_version = _compute_agent_version(
+        settings,
+        request_delay,
+        max_tokens=max_tokens,
+    )
 
     session_agent = session.agents.get(model)
     session_version = session.agent_versions.get(model)

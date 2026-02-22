@@ -219,16 +219,16 @@ def test_write_file_tool() -> None:
         Path(target).unlink(missing_ok=True)
 
 
-def test_update_file_tool() -> None:
-    """update_file tool: replace text in a pre-created file."""
-    target = Path(f"/tmp/tunatest_update_{uuid.uuid4().hex[:8]}.txt")
+def test_hashline_edit_tool(tmp_path: Path) -> None:
+    """hashline_edit tool: read then edit a pre-created file."""
+    target = tmp_path / f"tunatest_edit_{uuid.uuid4().hex[:8]}.txt"
     original_line = "color = red"
     expected_line = "color = blue"
     try:
         target.write_text(original_line)
         with tmux_session() as s:
-            s.send(f"update_file {target} -- replace the line 'color = red' with 'color = blue'")
-            wait_for_tool(s, "update_file")
+            s.send(f"read {target} then change 'color = red' to 'color = blue'")
+            wait_for_tool(s, "hashline_edit")
             updated = target.read_text()
             assert expected_line in updated, f"Expected {expected_line!r} in:\n{updated}"
     finally:

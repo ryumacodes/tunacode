@@ -29,6 +29,6 @@ class ApplicationSettings:
             ToolName.GREP,
             ToolName.LIST_DIR,
             ToolName.READ_FILE,
-            ToolName.UPDATE_FILE,
+            ToolName.HASHLINE_EDIT,
             ToolName.WRITE_FILE,
         ]

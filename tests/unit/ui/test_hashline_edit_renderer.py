@@ -5,9 +5,9 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
-from tunacode.ui.renderers.tools.update_file import (
+from tunacode.ui.renderers.tools.hashline_edit import (
     DiffSideBySideLine,
-    UpdateFileData,
+    EditDiffData,
     _renderer,
 )
 
@@ -55,7 +55,7 @@ def test_build_viewport_returns_table_for_side_by_side_diff() -> None:
 -old line
 +new line
 """
-    data = UpdateFileData(
+    data = EditDiffData(
         filepath="src/file.py",
         filename="file.py",
         root_path=Path("."),
@@ -79,7 +79,7 @@ def test_build_viewport_renders_before_after_separator_lane() -> None:
 -old line
 +new line
 """
-    data = UpdateFileData(
+    data = EditDiffData(
         filepath="src/file.py",
         filename="file.py",
         root_path=Path("."),

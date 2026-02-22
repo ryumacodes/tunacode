@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<tool_prompt>
-    <description>
-Replace text in a file. Provide old_string and new_string.
-- old_string must match exactly and be unique in the file
-- Use replace_all=true to replace all occurrences
-- Read the file first before editing
-    </description>
-</tool_prompt>
