@@ -49,7 +49,7 @@ def load_config() -> UserConfig | None:
 def merge_user_config(default_config: UserConfig, user_config: UserConfig | None) -> UserConfig:
     """Merge user config on top of defaults."""
     if not user_config:
-        return default_config
+        return copy.deepcopy(default_config)
 
     merged_config = copy.deepcopy(default_config)
     merged_config.update(user_config)
