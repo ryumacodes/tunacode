@@ -91,16 +91,12 @@ def parse_line_ref(ref: str) -> tuple[int, str]:
         ValueError: If the reference format is invalid.
     """
     if LINE_HASH_SEPARATOR not in ref:
-        raise ValueError(
-            f"Invalid line reference '{ref}': expected format '<line>:<hash>'"
-        )
+        raise ValueError(f"Invalid line reference '{ref}': expected format '<line>:<hash>'")
     parts = ref.split(LINE_HASH_SEPARATOR, 1)
     try:
         line_number = int(parts[0])
     except ValueError as exc:
-        raise ValueError(
-            f"Invalid line number in reference '{ref}': {parts[0]}"
-        ) from exc
+        raise ValueError(f"Invalid line number in reference '{ref}': {parts[0]}") from exc
     expected_hash = parts[1]
     if len(expected_hash) != HASH_LENGTH:
         raise ValueError(

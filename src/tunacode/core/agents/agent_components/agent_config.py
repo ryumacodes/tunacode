@@ -13,7 +13,6 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, cast
 
-from tinyagent import Agent, AgentOptions
 from tinyagent.agent_types import AgentMessage, AgentTool
 from tinyagent.alchemy_provider import OpenAICompatModel, stream_alchemy_openai_completions
 
@@ -43,6 +42,8 @@ from tunacode.infrastructure.cache.caches import tunacode_context as context_cac
 from tunacode.core.compaction.controller import get_or_create_compaction_controller
 from tunacode.core.logging import get_logger
 from tunacode.core.types import SessionStateProtocol, StateManagerProtocol
+
+from tinyagent import Agent, AgentOptions
 
 ENV_OPENAI_API_KEY = "OPENAI_API_KEY"
 OPENAI_CHAT_COMPLETIONS_PATH = "/chat/completions"
@@ -348,7 +349,9 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     max_tokens = get_max_tokens()
 
     agent_version = _compute_agent_version(
-        settings, request_delay, max_tokens=max_tokens,
+        settings,
+        request_delay,
+        max_tokens=max_tokens,
     )
 
     session_agent = session.agents.get(model)

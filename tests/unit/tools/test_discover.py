@@ -183,9 +183,7 @@ class TestEvaluateProspect:
     def test_keeps_high_relevance_file(self, isolated_tmp_dir):
         f = isolated_tmp_dir / "auth.py"
         f.write_text(
-            "def validate_token(token):\n"
-            "    # auth token validation\n"
-            "    return check_jwt(token)\n"
+            "def validate_token(token):\n    # auth token validation\n    return check_jwt(token)\n"
         )
         terms = {
             "exact": ["validate_token"],
@@ -252,9 +250,15 @@ class TestClusterProspects:
         score: float = 5.0,
     ) -> _Prospect:
         return _Prospect(
-            path=Path(path), keep=keep, relevance=relevance,
-            role="test", key_symbols=[], imports=[],
-            excerpt="", line_count=10, score=score,
+            path=Path(path),
+            keep=keep,
+            relevance=relevance,
+            role="test",
+            key_symbols=[],
+            imports=[],
+            excerpt="",
+            line_count=10,
+            score=score,
         )
 
     def test_groups_by_directory(self):
@@ -305,9 +309,15 @@ class TestBuildRelevantTree:
 
         prospects = [
             _Prospect(
-                path=login_file, keep=True, relevance=Relevance.HIGH,
-                role="test", key_symbols=[], imports=[],
-                excerpt="", line_count=1, score=5.0,
+                path=login_file,
+                keep=True,
+                relevance=Relevance.HIGH,
+                role="test",
+                key_symbols=[],
+                imports=[],
+                excerpt="",
+                line_count=1,
+                score=5.0,
             ),
         ]
         tree = _build_relevant_tree(prospects, isolated_tmp_dir)

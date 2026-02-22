@@ -91,7 +91,9 @@ async def read_file(
                 # Display may be truncated but cache stores the full line
                 truncated_text = _truncate_line(line_text, line_limit)
                 display_hl = HashedLine(
-                    line_number=line_number, hash=h, content=truncated_text,
+                    line_number=line_number,
+                    hash=h,
+                    content=truncated_text,
                 )
                 display_lines.append(format_hashline(display_hl))
 
@@ -114,7 +116,11 @@ async def read_file(
         return output, hashed_lines
 
     result, hashed = await asyncio.to_thread(
-        _read_sync, filepath, max_line_len, offset, effective_limit,
+        _read_sync,
+        filepath,
+        max_line_len,
+        offset,
+        effective_limit,
     )
 
     # Populate the line cache so hashline_edit can validate references

@@ -24,29 +24,122 @@ MAX_EXCERPT_LINES = 3
 MAX_SYMBOLS_PER_FILE = 8
 MAX_IMPORTS_PER_FILE = 8
 
-SOURCE_EXTENSIONS = frozenset({
-    ".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs", ".java",
-    ".rb", ".php", ".c", ".cpp", ".h", ".hpp", ".cs", ".swift",
-    ".kt", ".scala", ".lua", ".sh", ".bash", ".zsh",
-    ".md", ".txt", ".yaml", ".yml", ".toml", ".json", ".ini",
-    ".cfg", ".conf", ".sql",
-})
+SOURCE_EXTENSIONS = frozenset(
+    {
+        ".py",
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".go",
+        ".rs",
+        ".java",
+        ".rb",
+        ".php",
+        ".c",
+        ".cpp",
+        ".h",
+        ".hpp",
+        ".cs",
+        ".swift",
+        ".kt",
+        ".scala",
+        ".lua",
+        ".sh",
+        ".bash",
+        ".zsh",
+        ".md",
+        ".txt",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".json",
+        ".ini",
+        ".cfg",
+        ".conf",
+        ".sql",
+    }
+)
 
-_PYTHON_KEYWORDS = frozenset({
-    "False", "None", "True", "and", "as", "assert", "async", "await",
-    "break", "class", "continue", "def", "del", "elif", "else",
-    "except", "finally", "for", "from", "global", "if", "import",
-    "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise",
-    "return", "try", "while", "with", "yield",
-})
+_PYTHON_KEYWORDS = frozenset(
+    {
+        "False",
+        "None",
+        "True",
+        "and",
+        "as",
+        "assert",
+        "async",
+        "await",
+        "break",
+        "class",
+        "continue",
+        "def",
+        "del",
+        "elif",
+        "else",
+        "except",
+        "finally",
+        "for",
+        "from",
+        "global",
+        "if",
+        "import",
+        "in",
+        "is",
+        "lambda",
+        "nonlocal",
+        "not",
+        "or",
+        "pass",
+        "raise",
+        "return",
+        "try",
+        "while",
+        "with",
+        "yield",
+    }
+)
 
-_JS_KEYWORDS = frozenset({
-    "const", "let", "var", "function", "class", "export", "default",
-    "import", "from", "return", "if", "else", "for", "while", "do",
-    "switch", "case", "break", "continue", "new", "this", "super",
-    "async", "await", "try", "catch", "finally", "throw", "typeof",
-    "instanceof", "void", "delete", "in", "of", "yield",
-})
+_JS_KEYWORDS = frozenset(
+    {
+        "const",
+        "let",
+        "var",
+        "function",
+        "class",
+        "export",
+        "default",
+        "import",
+        "from",
+        "return",
+        "if",
+        "else",
+        "for",
+        "while",
+        "do",
+        "switch",
+        "case",
+        "break",
+        "continue",
+        "new",
+        "this",
+        "super",
+        "async",
+        "await",
+        "try",
+        "catch",
+        "finally",
+        "throw",
+        "typeof",
+        "instanceof",
+        "void",
+        "delete",
+        "in",
+        "of",
+        "yield",
+    }
+)
 
 _ALL_KEYWORDS = _PYTHON_KEYWORDS | _JS_KEYWORDS
 
@@ -95,9 +188,7 @@ class DiscoveryReport:
         lines: list[str] = []
         lines.append(f"# Discovery: {self.query}")
         lines.append(self.summary)
-        lines.append(
-            f"({self.total_files_scanned} scanned → {self.total_candidates} relevant)\n"
-        )
+        lines.append(f"({self.total_files_scanned} scanned → {self.total_candidates} relevant)\n")
 
         if self.file_tree:
             lines.append("```")
@@ -126,19 +217,56 @@ class DiscoveryReport:
 
 
 CONCEPT_EXPANSIONS: dict[str, list[str]] = {
-    "auth": ["auth", "login", "session", "token", "jwt", "oauth",
-             "credential", "permission", "role", "passport", "sso"],
-    "database": ["db", "database", "model", "schema", "migration",
-                 "orm", "query", "repository", "entity"],
-    "api": ["api", "route", "endpoint", "controller", "handler",
-            "middleware", "request", "response"],
+    "auth": [
+        "auth",
+        "login",
+        "session",
+        "token",
+        "jwt",
+        "oauth",
+        "credential",
+        "permission",
+        "role",
+        "passport",
+        "sso",
+    ],
+    "database": [
+        "db",
+        "database",
+        "model",
+        "schema",
+        "migration",
+        "orm",
+        "query",
+        "repository",
+        "entity",
+    ],
+    "api": [
+        "api",
+        "route",
+        "endpoint",
+        "controller",
+        "handler",
+        "middleware",
+        "request",
+        "response",
+    ],
     "test": ["test", "spec", "fixture", "mock"],
     "config": ["config", "settings", "env", "constant"],
     "error": ["error", "exception", "fallback", "retry"],
     "cache": ["cache", "redis", "memcache", "store"],
     "queue": ["queue", "worker", "job", "task", "celery"],
-    "ontolog": ["ontolog", "relation", "graph", "edge", "node",
-                "entity", "schema", "hierarchy", "taxonomy"],
+    "ontolog": [
+        "ontolog",
+        "relation",
+        "graph",
+        "edge",
+        "node",
+        "entity",
+        "schema",
+        "hierarchy",
+        "taxonomy",
+    ],
     "type": ["type", "schema", "interface", "protocol", "contract"],
     "tool": ["tool", "command", "action", "executor"],
     "agent": ["agent", "loop", "step", "run", "execute"],
@@ -147,12 +275,38 @@ CONCEPT_EXPANSIONS: dict[str, list[str]] = {
     "compaction": ["compact", "compaction", "summary", "summarize", "truncate"],
 }
 
-_NOISE_WORDS = frozenset({
-    "where", "what", "how", "the", "and", "are", "all", "code",
-    "related", "find", "show", "module", "file", "defined", "does",
-    "this", "that", "which", "with", "for", "from", "about", "look",
-    "get", "used", "using", "implement", "implementation",
-})
+_NOISE_WORDS = frozenset(
+    {
+        "where",
+        "what",
+        "how",
+        "the",
+        "and",
+        "are",
+        "all",
+        "code",
+        "related",
+        "find",
+        "show",
+        "module",
+        "file",
+        "defined",
+        "does",
+        "this",
+        "that",
+        "which",
+        "with",
+        "for",
+        "from",
+        "about",
+        "look",
+        "get",
+        "used",
+        "using",
+        "implement",
+        "implementation",
+    }
+)
 
 
 def _extract_search_terms(query: str) -> dict[str, list[str]]:
@@ -172,8 +326,7 @@ def _extract_search_terms(query: str) -> dict[str, list[str]]:
         matched = False
         for concept, expansions in CONCEPT_EXPANSIONS.items():
             if word == concept or (
-                len(word) >= 4
-                and (word.startswith(concept) or concept.startswith(word))
+                len(word) >= 4 and (word.startswith(concept) or concept.startswith(word))
             ):
                 filename_terms.extend(expansions[:4])
                 content_terms.extend(expansions)
@@ -322,17 +475,28 @@ def _evaluate_prospect(
     excerpt = _build_excerpt(all_lines[:max_preview_lines], terms, max_lines=MAX_EXCERPT_LINES)
 
     return _Prospect(
-        path=path, keep=True, relevance=relevance, role=role,
+        path=path,
+        keep=True,
+        relevance=relevance,
+        role=role,
         key_symbols=symbols[:MAX_SYMBOLS_PER_FILE],
         imports=imports[:MAX_IMPORTS_PER_FILE],
-        excerpt=excerpt, line_count=line_count, score=score,
+        excerpt=excerpt,
+        line_count=line_count,
+        score=score,
     )
 
 
 def _empty_prospect(path: Path) -> _Prospect:
     return _Prospect(
-        path=path, keep=False, relevance=Relevance.MEDIUM,
-        role="", key_symbols=[], imports=[], excerpt="", line_count=0,
+        path=path,
+        keep=False,
+        relevance=Relevance.MEDIUM,
+        role="",
+        key_symbols=[],
+        imports=[],
+        excerpt="",
+        line_count=0,
     )
 
 
@@ -348,9 +512,7 @@ def _extract_symbols(text: str) -> list[str]:
     for match in re.finditer(r"func\s+(?:\([^)]+\)\s+)?([a-zA-Z_]\w+)", text):
         symbols.append(match.group(1))
     # Rust
-    symbols.extend(
-        re.findall(r"(?:pub\s+)?(?:fn|struct|enum|trait)\s+([a-zA-Z_]\w+)", text)
-    )
+    symbols.extend(re.findall(r"(?:pub\s+)?(?:fn|struct|enum|trait)\s+([a-zA-Z_]\w+)", text))
 
     # Deduplicate, filter keywords
     seen: set[str] = set()
@@ -442,11 +604,13 @@ def _cluster_prospects(
             )
             for p in sorted(group, key=lambda x: -x.score)
         ]
-        clusters.append(ConceptCluster(
-            name=name,
-            description=f"{len(group)} files ({high} high relevance)",
-            files=files,
-        ))
+        clusters.append(
+            ConceptCluster(
+                name=name,
+                description=f"{len(group)} files ({high} high relevance)",
+                files=files,
+            )
+        )
 
     clusters.sort(key=lambda c: -sum(1 for f in c.files if f.relevance == Relevance.HIGH))
 
@@ -534,8 +698,7 @@ def _discover_sync(query: str, project_root: str) -> DiscoveryReport:
 
     cluster_count = len(clusters)
     summary = (
-        f"Found {len(kept)} relevant files "
-        f"({high} high, {med} medium) in {cluster_count} areas."
+        f"Found {len(kept)} relevant files ({high} high, {med} medium) in {cluster_count} areas."
     )
     if clusters:
         summary += f" Key: {', '.join(c.name for c in clusters[:3])}."

@@ -37,9 +37,7 @@ STALE_REF_MESSAGE = (
     "File has changed since last read — line {line} hash mismatch "
     "(expected '{expected}', cached '{actual}'). Re-read the file first."
 )
-UNCACHED_FILE_MESSAGE = (
-    "File '{filepath}' has no cached state. Read the file first with read_file."
-)
+UNCACHED_FILE_MESSAGE = "File '{filepath}' has no cached state. Read the file first with read_file."
 LINE_NOT_CACHED_MESSAGE = (
     "Line {line} is not in the cached state for '{filepath}'. "
     "The file may have been read with an offset that skipped this line. "
@@ -66,9 +64,7 @@ def _validate_ref(filepath: str, ref: str) -> int:
 
     cached_line = cached.get(line_number)
     if cached_line is None:
-        raise ToolRetryError(
-            LINE_NOT_CACHED_MESSAGE.format(line=line_number, filepath=filepath)
-        )
+        raise ToolRetryError(LINE_NOT_CACHED_MESSAGE.format(line=line_number, filepath=filepath))
 
     if cached_line.hash != expected_hash:
         raise ToolRetryError(
@@ -162,8 +158,7 @@ async def hashline_edit(
         result = _apply_insert_after(filepath, original_lines, after, new)
     else:
         raise ToolRetryError(
-            f"Unknown operation '{operation}'. "
-            "Use 'replace', 'replace_range', or 'insert_after'."
+            f"Unknown operation '{operation}'. Use 'replace', 'replace_range', or 'insert_after'."
         )
 
     new_lines, description = result
@@ -183,16 +178,12 @@ def _apply_replace(
 ) -> tuple[list[str], str]:
     """Replace a single line."""
     if line_ref is None:
-        raise ToolRetryError(
-            "The 'line' parameter is required for the 'replace' operation."
-        )
+        raise ToolRetryError("The 'line' parameter is required for the 'replace' operation.")
     line_number = _validate_ref(filepath, line_ref)
     idx = line_number - 1
 
     if idx < 0 or idx >= len(lines):
-        raise ToolRetryError(
-            f"Line {line_number} is out of range (file has {len(lines)} lines)."
-        )
+        raise ToolRetryError(f"Line {line_number} is out of range (file has {len(lines)} lines).")
 
     new_lines = list(lines)
     new_lines[idx] = new_content
@@ -212,13 +203,9 @@ def _apply_replace_range(
 ) -> tuple[list[str], str]:
     """Replace a contiguous range of lines."""
     if start_ref is None:
-        raise ToolRetryError(
-            "The 'start' parameter is required for the 'replace_range' operation."
-        )
+        raise ToolRetryError("The 'start' parameter is required for the 'replace_range' operation.")
     if end_ref is None:
-        raise ToolRetryError(
-            "The 'end' parameter is required for the 'replace_range' operation."
-        )
+        raise ToolRetryError("The 'end' parameter is required for the 'replace_range' operation.")
     start_line = _validate_ref(filepath, start_ref)
     end_line = _validate_ref(filepath, end_ref)
 
@@ -232,8 +219,7 @@ def _apply_replace_range(
 
     if start_idx < 0 or end_idx > len(lines):
         raise ToolRetryError(
-            f"Line range {start_line}-{end_line} is out of bounds "
-            f"(file has {len(lines)} lines)."
+            f"Line range {start_line}-{end_line} is out of bounds (file has {len(lines)} lines)."
         )
 
     replacement_lines = new_content.splitlines() if new_content else []
@@ -256,16 +242,12 @@ def _apply_insert_after(
 ) -> tuple[list[str], str]:
     """Insert new lines after a referenced line."""
     if after_ref is None:
-        raise ToolRetryError(
-            "The 'after' parameter is required for the 'insert_after' operation."
-        )
+        raise ToolRetryError("The 'after' parameter is required for the 'insert_after' operation.")
     after_line = _validate_ref(filepath, after_ref)
     insert_idx = after_line  # insert after this line
 
     if insert_idx > len(lines):
-        raise ToolRetryError(
-            f"Line {after_line} is out of range (file has {len(lines)} lines)."
-        )
+        raise ToolRetryError(f"Line {after_line} is out of range (file has {len(lines)} lines).")
 
     insertion_lines = new_content.splitlines() if new_content else []
     new_lines = lines[:insert_idx] + insertion_lines + lines[insert_idx:]

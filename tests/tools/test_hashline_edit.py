@@ -95,7 +95,11 @@ class TestApplyReplaceRange:
         end = _make_ref("c", 3)
 
         new_lines, desc = _apply_replace_range(
-            "/tmp/f.py", contents, start, end, "X\nY\nZ",
+            "/tmp/f.py",
+            contents,
+            start,
+            end,
+            "X\nY\nZ",
         )
         assert new_lines == ["a", "X", "Y", "Z", "d"]
         assert "replaced lines 2-3" in desc
@@ -107,7 +111,11 @@ class TestApplyReplaceRange:
         end = _make_ref("b", 2)
 
         new_lines, _ = _apply_replace_range(
-            "/tmp/f.py", contents, start, end, "",
+            "/tmp/f.py",
+            contents,
+            start,
+            end,
+            "",
         )
         assert new_lines == ["a", "c"]
 
@@ -137,7 +145,10 @@ class TestApplyInsertAfter:
         ref = _make_ref("b", 2)
 
         new_lines, desc = _apply_insert_after(
-            "/tmp/f.py", contents, ref, "X\nY",
+            "/tmp/f.py",
+            contents,
+            ref,
+            "X\nY",
         )
         assert new_lines == ["a", "b", "X", "Y", "c"]
         assert "inserted 2 line(s)" in desc
@@ -148,7 +159,10 @@ class TestApplyInsertAfter:
         ref = _make_ref("b", 2)
 
         new_lines, _ = _apply_insert_after(
-            "/tmp/f.py", contents, ref, "c",
+            "/tmp/f.py",
+            contents,
+            ref,
+            "c",
         )
         assert new_lines == ["a", "b", "c"]
 
