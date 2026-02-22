@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from rich.cells import cell_len
+from rich.style import Style, StyleType
 from rich.text import Text
 from textual import events
 from textual.binding import Binding
@@ -22,6 +23,17 @@ class _WrappedEditorState:
     lines: list[Text]
     cursor_offset: tuple[int, int]
     wrap_width: int
+
+
+def _require_style_type(style: object, *, component_name: str) -> StyleType:
+    """Validate and narrow a style object to Rich StyleType."""
+    if isinstance(style, (str, Style)):
+        return style
+
+    message = (
+        f"Component style '{component_name}' must be a str or Style, got {type(style).__name__}"
+    )
+    raise TypeError(message)
 
 
 class Editor(Input):
@@ -279,7 +291,7 @@ class Editor(Input):
             wrap_width=wrap_width,
         )
 
-    def _build_empty_display(self, cursor_style: object) -> tuple[Text, int]:
+    def _build_empty_display(self, cursor_style: StyleType) -> tuple[Text, int]:
         """Build display text when input value is empty."""
         placeholder = Text(self.placeholder, justify="left", end="", overflow="fold")
         placeholder.stylize(self.get_component_rich_style("input--placeholder"))
@@ -325,7 +337,10 @@ class Editor(Input):
         return prefix + result, cursor_index + len(prefix.plain)
 
     def _build_wrapped_display_text(self) -> tuple[Text, int]:
-        cursor_style = self.get_component_rich_style("input--cursor")
+        cursor_style = _require_style_type(
+            self.get_component_rich_style("input--cursor"),
+            component_name="input--cursor",
+        )
 
         if not self.value:
             return self._build_empty_display(cursor_style)

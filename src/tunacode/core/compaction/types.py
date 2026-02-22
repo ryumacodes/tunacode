@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Final, Literal, TypeAlias
 
 from tinyagent.agent_types import AgentMessage
 
@@ -15,9 +15,15 @@ KEY_COMPACTION_COUNT = "compaction_count"
 KEY_PREVIOUS_SUMMARY = "previous_summary"
 KEY_LAST_COMPACTED_AT = "last_compacted_at"
 
-COMPACTION_STATUS_COMPACTED = "compacted"
-COMPACTION_STATUS_SKIPPED = "skipped"
-COMPACTION_STATUS_FAILED = "failed"
+CompactionStatus: TypeAlias = Literal[
+    "compacted",
+    "skipped",
+    "failed",
+]
+
+COMPACTION_STATUS_COMPACTED: Final[Literal["compacted"]] = "compacted"
+COMPACTION_STATUS_SKIPPED: Final[Literal["skipped"]] = "skipped"
+COMPACTION_STATUS_FAILED: Final[Literal["failed"]] = "failed"
 
 COMPACTION_REASON_COMPACTED = "compacted"
 COMPACTION_REASON_ALREADY_COMPACTED = "already_compacted_this_request"
@@ -36,12 +42,6 @@ COMPACTION_CAPABILITY_SKIP_REASONS: frozenset[str] = frozenset(
         COMPACTION_REASON_MISSING_API_KEY,
     }
 )
-
-CompactionStatus = Literal[
-    "compacted",
-    "skipped",
-    "failed",
-]
 
 
 __all__: list[str] = [
