@@ -23,11 +23,12 @@ Every capability the agent can invoke during a conversation. Each tool is an asy
 | `bash.py` | `bash` | Execute shell commands with timeout and output capture. |
 | `glob.py` | `glob` | Find files by glob pattern, respecting ignore rules. |
 | `grep.py` | `grep` | Regex search across files using ripgrep. |
-| `read_file.py` | `read_file` | Read file contents with optional line range. |
+| `read_file.py` | `read_file` | Read file contents with hash-tagged line numbers for validation. |
 | `write_file.py` | `write_file` | Create or overwrite a file. |
-| `update_file.py` | `update_file` | Apply a targeted string replacement in a file. |
+| `hashline_edit.py` | `hashline_edit` | Apply validated edits using content-hash line references. |
 | `list_dir.py` | `list_dir` | List directory contents with file metadata. |
-| `web_fetch.py` | `web_fetch` | Fetch and summarize a web page. |
+| `web_fetch.py` | `web_fetch` | Fetch and convert web pages with URL security validation. |
+| `discover.py` | `discover` | Find and map code related to concepts via natural language. |
 
 ### Framework
 
@@ -37,6 +38,21 @@ Every capability the agent can invoke during a conversation. Each tool is an asy
 | `xml_helper.py` | Loads tool descriptions from XML prompt files. If a tool has a matching XML file, its docstring is replaced with the XML content at decoration time. |
 | `ignore.py` | Core ignore-pattern matching logic. |
 | `ignore_manager.py` | Manages the full ignore stack (built-in + `.gitignore` + user overrides). |
+
+### Hashline Edit System
+
+| File | Purpose |
+|------|---------|
+| `hashline.py` | Content-hash line tagging and validation. Provides `HashedLine`, `format_hashline()`, and `parse_line_ref()` for read/write validation. |
+| `line_cache.py` | In-memory cache for edit validation. Stores `{path: {line_number: HashedLine}}` to detect stale references. |
+
+### Discover Engine (`utils/`)
+
+| File | Purpose |
+|------|---------|
+| `discover_pipeline.py` | Core discovery pipeline logic. Implements term extraction, glob generation, candidate scoring, and clustering. |
+| `discover_terms.py` | Lexical vocabularies for search heuristics. Defines `SOURCE_EXTENSIONS`, `CONCEPT_EXPANSIONS`, and noise filtering. |
+| `discover_types.py` | Data structures for discovery reports. Provides `DiscoveryReport`, `ConceptCluster`, `FileEntry`, and `Relevance` enum. |
 
 ### Grep Engine (`grep_components/`)
 
@@ -61,7 +77,6 @@ Every capability the agent can invoke during a conversation. Each tool is an asy
 |------|---------|
 | `formatting.py` | Text formatting helpers (truncation, line numbering). |
 | `ripgrep.py` | Ripgrep binary detection and invocation. |
-| `text_match.py` | Fuzzy and exact text matching for update operations. |
 
 ### Cache Accessors (`cache_accessors/`)
 
@@ -85,6 +100,12 @@ Error contract:
 - `ToolExecutionError` -- hard failure, reported to user.
 - `FileOperationError` -- file-specific hard failure.
 
+### UI Renderers
+
+Each tool with visual output has a renderer in `src/tunacode/ui/renderers/`. The `hashline_edit` renderer displays diffs with syntax highlighting and line change indicators.
+
 ## Why
 
 The decorator pattern means tool authors only write the business logic. Error handling, schema generation, and abort-signal checking are handled uniformly. The XML prompt system lets tool descriptions be edited without touching Python code.
+
+The hashline edit system replaces the previous fuzzy matching approach with cryptographic validation, preventing edits to stale file content. Each line read by `read_file` is tagged with a content hash; `hashline_edit` validates these hashes before applying any changes.
