@@ -13,7 +13,8 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, cast
 
-from tinyagent.agent_types import AgentMessage, AgentTool
+from tinyagent import Agent, AgentOptions
+from tinyagent.agent_types import AgentMessage, AgentTool, AgentToolResult
 from tinyagent.alchemy_provider import OpenAICompatModel, stream_alchemy_openai_completions
 
 from tunacode.configuration.limits import get_max_tokens
@@ -43,11 +44,11 @@ from tunacode.core.compaction.controller import get_or_create_compaction_control
 from tunacode.core.logging import get_logger
 from tunacode.core.types import SessionStateProtocol, StateManagerProtocol
 
-from tinyagent import Agent, AgentOptions
-
 ENV_OPENAI_API_KEY = "OPENAI_API_KEY"
 OPENAI_CHAT_COMPLETIONS_PATH = "/chat/completions"
 OPENROUTER_PROVIDER_ID = "openrouter"
+MAX_PARALLEL_TOOL_CALLS = 3
+MIN_PARALLEL_TOOL_CALLS = 1
 
 
 async def _sleep_with_delay(total_delay: float) -> None:
@@ -100,6 +101,7 @@ def _compute_agent_version(
             str(request_delay),
             str(settings.get("global_request_timeout", 90.0)),
             str(max_tokens),
+            str(MAX_PARALLEL_TOOL_CALLS),
         )
     )
 
@@ -171,9 +173,49 @@ def load_tunacode_context() -> str:
         raise
 
 
+def _wrap_tool_with_concurrency_limit(
+    tool: AgentTool,
+    *,
+    limiter: asyncio.Semaphore,
+) -> AgentTool:
+    execute_fn = tool.execute
+    if execute_fn is None:
+        raise ValueError(f"Tool '{tool.name}' must define an execute handler")
+
+    async def _execute_with_limit(
+        tool_call_id: str,
+        args: dict[str, Any],
+        signal: asyncio.Event | None,
+        on_update: Callable[[AgentToolResult], None],
+    ) -> AgentToolResult:
+        await limiter.acquire()
+        try:
+            return await execute_fn(tool_call_id, args, signal, on_update)
+        finally:
+            limiter.release()
+
+    tool.execute = _execute_with_limit
+    return tool
+
+
+def _apply_tool_concurrency_limit(
+    tools: list[AgentTool],
+    *,
+    max_parallel_tool_calls: int = MAX_PARALLEL_TOOL_CALLS,
+) -> list[AgentTool]:
+    if max_parallel_tool_calls < MIN_PARALLEL_TOOL_CALLS:
+        raise ValueError(
+            f"max_parallel_tool_calls must be >= {MIN_PARALLEL_TOOL_CALLS}, "
+            f"got {max_parallel_tool_calls}"
+        )
+
+    limiter = asyncio.Semaphore(max_parallel_tool_calls)
+    return [_wrap_tool_with_concurrency_limit(tool, limiter=limiter) for tool in tools]
+
+
 def _build_tools() -> list[AgentTool]:
     """Return the full TunaCode tool set as tinyagent AgentTools."""
-    return [
+    tools = [
         to_tinyagent_tool(bash),
         to_tinyagent_tool(discover),
         to_tinyagent_tool(read_file),
@@ -181,6 +223,7 @@ def _build_tools() -> list[AgentTool]:
         to_tinyagent_tool(web_fetch),
         to_tinyagent_tool(write_file),
     ]
+    return _apply_tool_concurrency_limit(tools)
 
 
 def _normalize_chat_completions_url(base_url: str | None) -> str | None:

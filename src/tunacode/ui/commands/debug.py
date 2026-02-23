@@ -36,6 +36,10 @@ class DebugCommand(Command):
             app.chat_container.write(
                 f"[dim]Debug logging enabled. Logs also written to {log_path_display}[/dim]"
             )
+            app.chat_container.write(
+                "[dim]Parallel tool-call traces appear as lifecycle lines "
+                "prefixed with 'Parallel tool calls'.[/dim]"
+            )
             logger.info(debug_message)
             logger.info("Lifecycle logging enabled")
             log_usage_update(

@@ -37,7 +37,7 @@ A terminal-based AI coding agent with a NeXTSTEP-inspired interface.
 **Recent Breaking Changes:**
 
 - Session persistence format changed - existing sessions may not load correctly
-- Tool execution is sequential — parallel tool calls are on the roadmap
+- Tool execution runs in parallel batches with a strict cap of 3 in-flight tool calls
 - The `docs/` directory has been restructured
 
 For full details, see the [CHANGELOG](CHANGELOG.md).
@@ -122,7 +122,7 @@ Slash commands are command objects in `tunacode.ui.commands`; each one is a `Com
 | `/help` | Show available commands |
 | `/clear` | Clear transient agent state while preserving message history. |
 | `/compact` | Force context compaction |
-| `/debug` | Toggle debug logging to screen |
+| `/debug` | Toggle debug logging to screen (includes parallel tool-call lifecycle lines) |
 | `/model` | Open model picker or switch model |
 | `/theme` | Open theme picker or switch theme |
 | `/resume` | List, load, or delete persisted sessions. |
@@ -131,6 +131,15 @@ Slash commands are command objects in `tunacode.ui.commands`; each one is a `Com
 | `/exit` | Exit TunaCode |
 | `exit` | Legacy alias for exit |
 
+### Confirm Parallel Tool Calls
+
+Run `/debug` to enable lifecycle logs. During agent execution, parallel batches are reported with lines prefixed by:
+
+- `[LIFECYCLE] Parallel tool calls active: ...`
+- `[LIFECYCLE] Parallel tool calls update: ...`
+- `[LIFECYCLE] Parallel tool calls complete`
+
+If no `Parallel tool calls` lifecycle lines appear, that request did not execute a parallel tool batch.
 ## Tools
 
 <img src="docs/images/tool-calls.png" alt="Tool calls in tunacode" width="600"/>

@@ -142,3 +142,19 @@ def test_failed_tool_panel_uses_failed_status_class() -> None:
     assert "tool-panel" in classes
     assert "tool-read-file" in classes
     assert "failed" in classes
+
+
+def test_running_tool_panel_uses_running_status_class() -> None:
+    _, panel_meta = tool_panel_smart(
+        name="read_file",
+        status="running",
+        args={"filepath": "src/streaming.py"},
+        result=None,
+        duration_ms=None,
+        max_line_width=TEST_MAX_LINE_WIDTH,
+    )
+
+    classes = _css_classes(panel_meta.css_class)
+    assert "tool-panel" in classes
+    assert "tool-read-file" in classes
+    assert "running" in classes

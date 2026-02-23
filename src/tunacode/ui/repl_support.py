@@ -138,6 +138,7 @@ class StatusBarLike(Protocol):
     def update_last_action(self, tool_name: str) -> None: ...
 
     def update_running_action(self, tool_name: str) -> None: ...
+    def complete_running_action(self, tool_name: str) -> None: ...
 
 
 class AppForCallbacks(Protocol):
@@ -200,6 +201,7 @@ def build_tool_result_callback(app: AppForCallbacks) -> ToolResultCallback:
                 app.status_bar.add_edited_file(filepath)
                 app.update_lsp_for_file(filepath)
 
+        app.status_bar.complete_running_action(tool_name)
         app.status_bar.update_last_action(tool_name)
 
         safe_result = _truncate_for_safety(result)

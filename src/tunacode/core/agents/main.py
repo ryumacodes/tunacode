@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, cast
+
+from tinyagent import Agent
 
 from tunacode.constants import DEFAULT_CONTEXT_WINDOW
 from tunacode.exceptions import (
@@ -38,8 +41,6 @@ from tunacode.core.debug import log_usage_update
 from tunacode.core.logging import get_logger
 from tunacode.core.types import RuntimeState, StateManagerProtocol
 
-from tinyagent import Agent
-
 from . import agent_components as ac
 from .helpers import (
     CONTEXT_OVERFLOW_FAILURE_NOTICE,
@@ -56,6 +57,9 @@ __all__ = ["process_request", "get_agent_tool"]
 DEFAULT_MAX_ITERATIONS: int = 15
 REQUEST_ID_LENGTH: int = 8
 MILLISECONDS_PER_SECOND: int = 1000
+TOOL_EXECUTION_LIFECYCLE_PREFIX: str = "Tool execution"
+PARALLEL_TOOL_CALLS_LIFECYCLE_PREFIX: str = "Parallel tool calls"
+DURATION_NOT_AVAILABLE_LABEL: str = "n/a"
 
 
 @dataclass
@@ -75,6 +79,8 @@ class RequestContext:
 class _TinyAgentStreamState:
     runtime: RuntimeState
     tool_start_times: dict[str, float]
+    active_tool_call_ids: set[str]
+    batch_tool_call_ids: set[str]
     last_assistant_message: dict[str, Any] | None = None
 
 
@@ -323,6 +329,131 @@ class RequestOrchestrator:
     def _agent_error_text(self, agent: Agent) -> str:
         return coerce_error_text(agent.state.get("error"))
 
+    def _normalize_tool_event_args(
+        self,
+        raw_args: object,
+        *,
+        event_name: str,
+        tool_call_id: str,
+    ) -> dict[str, Any]:
+        if raw_args is None:
+            return {}
+
+        if isinstance(raw_args, dict):
+            return cast(dict[str, Any], raw_args)
+
+        if isinstance(raw_args, str):
+            stripped_args = raw_args.strip()
+            if not stripped_args:
+                return {}
+            try:
+                parsed_args = json.loads(stripped_args)
+            except json.JSONDecodeError as exc:
+                raise TypeError(
+                    f"{event_name} args must be a JSON object for tool_call_id='{tool_call_id}'"
+                ) from exc
+            if isinstance(parsed_args, dict):
+                return cast(dict[str, Any], parsed_args)
+            raise TypeError(
+                f"{event_name} args must decode to an object for tool_call_id='{tool_call_id}', "
+                f"got {type(parsed_args).__name__}"
+            )
+
+        raise TypeError(
+            f"{event_name} args must be a dict or JSON string for tool_call_id='{tool_call_id}', "
+            f"got {type(raw_args).__name__}"
+        )
+
+    def _mark_tool_start_batch_state(
+        self,
+        state: _TinyAgentStreamState,
+        *,
+        tool_call_id: str,
+    ) -> None:
+        active_tool_call_ids = state.active_tool_call_ids
+        if active_tool_call_ids:
+            state.batch_tool_call_ids.update(active_tool_call_ids)
+            state.batch_tool_call_ids.add(tool_call_id)
+        active_tool_call_ids.add(tool_call_id)
+
+    def _clear_tool_batch_state_if_idle(self, state: _TinyAgentStreamState) -> None:
+        if state.active_tool_call_ids:
+            return
+        state.batch_tool_call_ids.clear()
+
+    def _format_duration_ms(self, duration_ms: float | None) -> str:
+        if duration_ms is None:
+            return DURATION_NOT_AVAILABLE_LABEL
+        return f"{duration_ms:.1f}"
+
+    def _log_tool_execution_start_lifecycle(
+        self,
+        *,
+        state: _TinyAgentStreamState,
+        tool_call_id: str,
+        tool_name: str,
+    ) -> None:
+        logger = get_logger()
+        in_flight = len(state.active_tool_call_ids)
+        logger.lifecycle(
+            f"{TOOL_EXECUTION_LIFECYCLE_PREFIX} start: "
+            f"name={tool_name} tool_call_id={tool_call_id} in_flight={in_flight}"
+        )
+        if in_flight <= 1:
+            return
+        batch_size = len(state.batch_tool_call_ids)
+        logger.lifecycle(
+            f"{PARALLEL_TOOL_CALLS_LIFECYCLE_PREFIX} active: "
+            f"in_flight={in_flight} batch_size={batch_size}"
+        )
+
+    def _log_tool_execution_end_lifecycle(
+        self,
+        *,
+        state: _TinyAgentStreamState,
+        tool_call_id: str,
+        tool_name: str,
+        status: str,
+        duration_ms: float | None,
+        was_parallel_batch_member: bool,
+    ) -> None:
+        logger = get_logger()
+        in_flight = len(state.active_tool_call_ids)
+        duration_text = self._format_duration_ms(duration_ms)
+        logger.lifecycle(
+            f"{TOOL_EXECUTION_LIFECYCLE_PREFIX} end: "
+            f"name={tool_name} tool_call_id={tool_call_id} status={status} "
+            f"in_flight={in_flight} duration_ms={duration_text}"
+        )
+        if not was_parallel_batch_member:
+            return
+        batch_size = len(state.batch_tool_call_ids)
+        logger.lifecycle(
+            f"{PARALLEL_TOOL_CALLS_LIFECYCLE_PREFIX} update: "
+            f"in_flight={in_flight} batch_size={batch_size}"
+        )
+        if in_flight != 0:
+            return
+        logger.lifecycle(f"{PARALLEL_TOOL_CALLS_LIFECYCLE_PREFIX} complete")
+
+    def _resolve_tool_duration_ms(
+        self,
+        state: _TinyAgentStreamState,
+        *,
+        tool_call_id: str,
+    ) -> float | None:
+        start_time = state.tool_start_times.pop(tool_call_id, None)
+        if start_time is None:
+            return None
+
+        if tool_call_id in state.batch_tool_call_ids:
+            # tinyagent emits end events only after all tools in the batch finish.
+            # Start->end deltas in this mode represent batch latency, not per-tool latency.
+            return None
+
+        elapsed_seconds = time.perf_counter() - start_time
+        return elapsed_seconds * MILLISECONDS_PER_SECOND
+
     def _persist_agent_messages(self, agent: Any, baseline_message_count: int) -> None:
         session = self.state_manager.session
         conversation = session.conversation
@@ -406,10 +537,20 @@ class RequestOrchestrator:
         tool_call_id = cast(str, getattr(event_obj, "tool_call_id", ""))
         tool_name = cast(str, getattr(event_obj, "tool_name", ""))
         raw_args = getattr(event_obj, "args", None)
+        args = self._normalize_tool_event_args(
+            raw_args,
+            event_name="tool_execution_start",
+            tool_call_id=tool_call_id,
+        )
         state.tool_start_times[tool_call_id] = time.perf_counter()
-        args = cast(dict[str, Any], raw_args or {})
+        self._mark_tool_start_batch_state(state, tool_call_id=tool_call_id)
         state.runtime.tool_registry.register(tool_call_id, tool_name, args)
         state.runtime.tool_registry.start(tool_call_id)
+        self._log_tool_execution_start_lifecycle(
+            state=state,
+            tool_call_id=tool_call_id,
+            tool_name=tool_name,
+        )
         if self.tool_start_callback is not None:
             self.tool_start_callback(tool_name)
         return False
@@ -428,19 +569,27 @@ class RequestOrchestrator:
         tool_name = cast(str, getattr(event_obj, "tool_name", ""))
         is_error = bool(getattr(event_obj, "is_error", False))
         result = getattr(event_obj, "result", None)
-        duration_ms: float | None = None
-        start_time = state.tool_start_times.pop(tool_call_id, None)
-        if start_time is not None:
-            duration_ms = (time.perf_counter() - start_time) * MILLISECONDS_PER_SECOND
+        duration_ms = self._resolve_tool_duration_ms(state, tool_call_id=tool_call_id)
         result_text = extract_tool_result_text(result)
+        status = "failed" if is_error else "completed"
+        was_parallel_batch_member = tool_call_id in state.batch_tool_call_ids
         if is_error:
             state.runtime.tool_registry.fail(tool_call_id, error=result_text)
         else:
             state.runtime.tool_registry.complete(tool_call_id, result=result_text)
+        state.active_tool_call_ids.discard(tool_call_id)
+        self._clear_tool_batch_state_if_idle(state)
+        self._log_tool_execution_end_lifecycle(
+            state=state,
+            tool_call_id=tool_call_id,
+            tool_name=tool_name,
+            status=status,
+            duration_ms=duration_ms,
+            was_parallel_batch_member=was_parallel_batch_member,
+        )
         if self.tool_result_callback is None:
             return False
         args = state.runtime.tool_registry.get_args(tool_call_id) or {}
-        status = "failed" if is_error else "completed"
         self.tool_result_callback(
             tool_name,
             status,
@@ -472,7 +621,12 @@ class RequestOrchestrator:
     ) -> Agent:
         logger = get_logger()
         runtime = self.state_manager.session.runtime
-        state = _TinyAgentStreamState(runtime=runtime, tool_start_times={})
+        state = _TinyAgentStreamState(
+            runtime=runtime,
+            tool_start_times={},
+            active_tool_call_ids=set(),
+            batch_tool_call_ids=set(),
+        )
         handlers: dict[str, Callable[..., Awaitable[bool]]] = {
             "turn_end": self._handle_stream_turn_end,
             "message_update": self._handle_stream_message_update,
@@ -564,9 +718,8 @@ class RequestOrchestrator:
 
 def get_agent_tool() -> tuple[type[Any], type[Any]]:
     """Return the (Agent, AgentTool) classes."""
-    from tinyagent.agent_types import AgentTool as ToolCls
-
     from tinyagent import Agent as AgentCls
+    from tinyagent.agent_types import AgentTool as ToolCls
 
     return AgentCls, ToolCls
 

@@ -465,6 +465,7 @@ class TextualReplApp(App[None]):
         self.status_bar.update_running_action("shell")
 
     def shell_status_last(self) -> None:
+        self.status_bar.complete_running_action("shell")
         self.status_bar.update_last_action("shell")
 
     def reset_context_panel_state(self) -> None:

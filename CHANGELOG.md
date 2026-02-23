@@ -11,11 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tool panel CSS flow with status-based classes (running/completed/failed)
 - Compaction awareness indicator in context panel
 - CSS tint styling for file tool states (read/update)
+- Parallel tool lifecycle coverage: capped-concurrency execution test, RequestOrchestrator parallel batch tests, and status-bar callback sequencing tests
 
 ### Changed
 - Enhanced `/compact` command with error handling and user feedback
 - Updated read_file renderer to support new hashline format (1:ab|content)
 - Improved tool panel rendering with semantic CSS classes
+- Bumped `tiny-agent-os` dependency to `>=1.2.5` and refreshed lockfile resolution
+- Enforced max 3 in-flight tool executions via shared tool semaphore wrapping
+- Hardened RequestOrchestrator tool-start arg normalization and made batch-mode duration reporting explicit (suppressed for multi-tool batches)
+- Updated status bar running-state behavior to stay coherent while multiple tools are active
 
 ## [0.1.74] - 2026-02-21
 

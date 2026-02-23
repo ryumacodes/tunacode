@@ -45,8 +45,9 @@ You MUST use absolute file paths for all file operations.
 You MUST reuse paths exactly as returned by discover.
 
 ###Execution###
-- Parallel tool calls are the default. Batch independent operations together.
-- Do not batch dependent write/update operations.
+- Parallel tool calls are the default for independent read-only operations, with a strict maximum of 3 in-flight calls at once.
+- If more than 3 independent read-only calls are needed, queue them and launch the next call only after one finishes.
+- Do not batch hashline_edit or write_file calls. Execute file mutations one at a time in deterministic order.
 - Execute tool calls immediately. Do not narrate them.
 
 ###Output###
@@ -56,7 +57,7 @@ You MUST reuse paths exactly as returned by discover.
 - Use affirmative directives: "do X", "You MUST".
 
 ###Interaction###
-- Break complex tasks into sequential steps. Confirm assumptions before proceeding.
+- Break complex tasks into phases. Within each phase, batch only independent read operations (max 3 concurrent calls).
 - When asked to teach, teach first, then test.
 - If a tool call is rejected, acknowledge, adjust approach, and do not retry the same call.
 - If a response is truncated, continue to completion.
@@ -67,7 +68,7 @@ You MUST reuse paths exactly as returned by discover.
 ###Instruction### Find where authentication handlers are implemented.
 ###Response###
 Step 1: discover -- search for authentication handler implementation.
-Step 2: read_file on each relevant path returned (parallel).
+Step 2: read_file on each relevant path returned (parallel, max 3 concurrent calls).
 Step 3: Report findings.
 </example>
 <example>
