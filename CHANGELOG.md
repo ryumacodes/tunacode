@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Tool panel CSS flow with status-based classes (running/completed/failed)
+- Compaction awareness indicator in context panel
+- CSS tint styling for file tool states (read/update)
+
+### Changed
+- Enhanced `/compact` command with error handling and user feedback
+- Updated read_file renderer to support new hashline format (1:ab|content)
+- Improved tool panel rendering with semantic CSS classes
+
 ## [0.1.74] - 2026-02-21
 
 ### Changed
