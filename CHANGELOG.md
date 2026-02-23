@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.75] - 2026-02-23
+
 ### Added
 - Tool panel CSS flow with status-based classes (running/completed/failed)
 - Compaction awareness indicator in context panel
