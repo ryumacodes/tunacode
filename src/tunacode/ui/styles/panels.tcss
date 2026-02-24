@@ -12,6 +12,17 @@
     width: 1fr;
 }
 
+/* User message block - lightweight guide, not full panel chrome */
+.user-message {
+    margin: 0 0 1 0;
+    padding: 0 0 0 1;
+    background: $background;
+    border-top: solid $background;
+    border-right: solid $background;
+    border-bottom: solid $background;
+    border-left: solid $primary;
+}
+
 /* Expand variant - full available width */
 .expand {
     width: 1fr;
@@ -29,42 +40,42 @@
     background: $surface;
     padding: 0 1;
     margin: 0 0 1 0;
-    border-top: solid $bevel-light;
-    border-left: solid $bevel-light;
-    border-bottom: solid $bevel-dark;
-    border-right: solid $bevel-dark;
-}
-
-/* Semantic panel outlines */
-.agent-panel {
-    outline: solid $accent;
+    border-top: solid $border;
+    border-left: solid $border;
+    border-bottom: solid $border;
+    border-right: solid $border;
 }
 
 .thinking-panel {
-    max-height: 6;
+    max-height: 4;
     overflow-y: auto;
-    background: $background;
+    background: $surface;
     color: $text-muted;
+    border-top: solid $surface;
+    border-right: solid $surface;
+    border-bottom: solid $surface;
+    border-left: solid $border;
     border-title-color: $text-muted;
     border-title-style: bold;
-    outline: solid $border;
+    margin: 0 1 1 1;
+    padding: 0 1;
 }
 
 .info-panel {
-    outline: solid $secondary;
+    tint: $secondary 3%;
 }
 
 .success-panel {
-    outline: solid $success;
+    tint: $success 3%;
 }
 
 .warning-panel {
-    outline: solid $warning;
+    tint: $warning 3%;
 }
 
 /* Tool execution panels - cyan by default */
 .tool-panel {
-    outline: solid $primary;
+    tint: $primary 3%;
 }
 
 .tool-panel.running {
@@ -76,7 +87,7 @@
 }
 
 .tool-panel.completed {
-    outline: solid $success;
+    tint: $success 4%;
 }
 
 .tool-panel.failed {
@@ -115,7 +126,7 @@
 
 /* Search result panels */
 .search-panel {
-    outline: solid $accent;
+    tint: $accent 3%;
 }
 
 /* Pagination controls in search */

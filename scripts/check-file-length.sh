@@ -23,17 +23,17 @@ should_skip_file() {
     # Skip app.tcss and code_index.py pending refactor (see issue #155)
     # Skip test_tool_call_lifecycle.py as it contains comprehensive integration tests (issue #259)
     # Skip sanitize.py as it contains complex session resume sanitization logic
-    # Skip app.py temporarily — parallel tool call release pushed it to 601 lines
-    [[ "$file" == *"/src/tunacode/tools/glob.py" ]] || \
-    [[ "$file" == *"/src/tunacode/tools/grep.py" ]] || \
-    [[ "$file" == *"/src/tunacode/core/agents/main.py" ]] || \
-    [[ "$file" == *"/src/tunacode/core/agents/resume/sanitize.py" ]] || \
-    [[ "$file" == *"/src/tunacode/prompts/"*".xml" ]] || \
-    [[ "$file" == *"/src/tunacode/ui/app.py" ]] || \
-    [[ "$file" == *"/src/tunacode/ui/app.tcss" ]] || \
-    [[ "$file" == *"/src/tunacode/indexing/code_index.py" ]] || \
-    [[ "$file" == *"/tests/test_tool_call_lifecycle.py" ]] || \
-    [[ "$file" == *"/tests/integration/core/test_tool_call_lifecycle.py" ]]
+    # Paths can be passed as src/... or ./src/... depending on caller.
+    [[ "$file" == *"src/tunacode/tools/glob.py" ]] || \
+    [[ "$file" == *"src/tunacode/tools/grep.py" ]] || \
+    [[ "$file" == *"src/tunacode/core/agents/main.py" ]] || \
+    [[ "$file" == *"src/tunacode/core/agents/resume/sanitize.py" ]] || \
+    [[ "$file" == *"src/tunacode/prompts/"*".xml" ]] || \
+    [[ "$file" == *"src/tunacode/ui/app.py" ]] || \
+    [[ "$file" == *"src/tunacode/ui/app.tcss" ]] || \
+    [[ "$file" == *"src/tunacode/indexing/code_index.py" ]] || \
+    [[ "$file" == *"tests/test_tool_call_lifecycle.py" ]] || \
+    [[ "$file" == *"tests/integration/core/test_tool_call_lifecycle.py" ]]
 }
 check_file_length() {
     local file="$1"
