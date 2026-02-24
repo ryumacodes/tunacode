@@ -74,7 +74,6 @@ ResourceBar.hidden {
     border-title-align: center;
     border-title-color: $accent;
     border-title-style: bold;
-    outline: solid $primary;
 }
 
 #context-rail.hidden {
@@ -104,11 +103,11 @@ ResourceBar.hidden {
     height: auto;
     margin: 0 0 1 0;
     padding: 0 1;
-    background: $background;
-    border-top: solid $bevel-dark;
-    border-left: solid $bevel-dark;
-    border-bottom: solid $bevel-light;
-    border-right: solid $bevel-light;
+    background: $surface;
+    border-top: solid $border;
+    border-left: solid $border;
+    border-bottom: solid $border;
+    border-right: solid $border;
     border-title-align: left;
     border-title-color: $accent;
     border-title-style: bold;
