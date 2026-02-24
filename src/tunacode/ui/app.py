@@ -141,7 +141,6 @@ class TextualReplApp(App[None]):
         self._field_files: Static | None = None
         self._field_compaction: Static | None = None
         self._slopgotchi_state: SlopgotchiPanelState = SlopgotchiPanelState()
-
         self._field_slopgotchi: Static | None = None
         self._slopgotchi_handler: SlopgotchiHandler | None = None
         self._slopgotchi_timer: Timer | None = None
@@ -339,7 +338,7 @@ class TextualReplApp(App[None]):
         render_width = max(1, self.chat_container.size.width - 2)
         user_block = format_user_message(message.text, STYLE_PRIMARY, width=render_width)
         user_block.append(f"│ you {timestamp}", style=f"dim {STYLE_PRIMARY}")
-        self.chat_container.write(user_block)
+        self.chat_container.write(user_block).add_class("user-message")
 
     def on_tool_result_display(self, message: ToolResultDisplay) -> None:
         max_line_width = self.tool_panel_max_width()

@@ -12,6 +12,17 @@
     width: 1fr;
 }
 
+/* User message block - lightweight guide, not full panel chrome */
+.user-message {
+    margin: 0 0 1 0;
+    padding: 0 0 0 1;
+    background: $background;
+    border-top: solid $background;
+    border-right: solid $background;
+    border-bottom: solid $background;
+    border-left: solid $primary;
+}
+
 /* Expand variant - full available width */
 .expand {
     width: 1fr;
@@ -36,13 +47,18 @@
 }
 
 .thinking-panel {
-    max-height: 6;
+    max-height: 4;
     overflow-y: auto;
-    background: $background;
+    background: $surface;
     color: $text-muted;
+    border-top: solid $surface;
+    border-right: solid $surface;
+    border-bottom: solid $surface;
+    border-left: solid $border;
     border-title-color: $text-muted;
     border-title-style: bold;
-    outline: solid $border;
+    margin: 0 1 1 1;
+    padding: 0 1;
 }
 
 .info-panel {
