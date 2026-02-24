@@ -59,6 +59,25 @@ The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. T
 - Avoid new core dependencies. Tiny deps OK if widely reused.
 - Run tests with: `uv run pytest`.
 
+## Testing
+
+This project uses a **tmux-driven system test suite** for end-to-end tool verification. See [`tests/system/cli/test_tmux_tools.py`](tests/system/cli/test_tmux_tools.py) for details.
+
+The suite launches tunacode in a real tmux session, sends prompts, and verifies tool execution by checking the status bar shows `last: <tool_name>` and expected output appears in the captured pane.
+
+Run with:
+```bash
+uv run pytest tests/system/cli/test_tmux_tools.py -v -m tmux
+```
+
+**Requirements:**
+- tmux binary installed
+- `MINIMAX_API_KEY` in environment or `~/.config/tunacode.json`
+
+**Tested tools:** bash, read_file, write_file, hashline_edit, discover, web_fetch
+
+See [`docs/modules/tools/tools.md`](docs/modules/tools/tools.md) for tool documentation.
+
 ## Scope & Maintenance
 
 - No cutover shims, aliases, or dual-path compatibility layers. Do full replacement everywhere in the same change.
