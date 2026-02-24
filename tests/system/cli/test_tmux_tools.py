@@ -189,7 +189,9 @@ def wait_for_idle(
 def test_bash_tool() -> None:
     """bash tool: run ``echo hello world`` and verify output."""
     with tmux_session() as s:
-        s.send("use the bash tool to run echo hello world")
+        s.send(
+            "You MUST call the bash tool. Run: echo hello world. Do not answer until the tool runs."
+        )
         output = wait_for_tool(s, "bash")
         assert "hello world" in output.lower(), f"Expected 'hello world' in output:\n{output}"
 
@@ -197,7 +199,10 @@ def test_bash_tool() -> None:
 def test_read_file_tool() -> None:
     """read_file tool: read pyproject.toml and check for project name."""
     with tmux_session() as s:
-        s.send("use the read_file tool to read /home/tuna/tunacode/pyproject.toml")
+        s.send(
+            "You MUST call the read_file tool. Read /home/tuna/tunacode/pyproject.toml. "
+            "Do not answer until the tool runs."
+        )
         output = wait_for_tool(s, "read_file")
         assert "tunacode" in output.lower(), f"Expected 'tunacode' in output:\n{output}"
 
@@ -208,7 +213,10 @@ def test_write_file_tool() -> None:
     content_marker = "hello from tunacode"
     try:
         with tmux_session() as s:
-            s.send(f'use the write_file tool to create {target} with content "{content_marker}"')
+            s.send(
+                f"You MUST call the write_file tool. Create {target} with content "
+                f'"{content_marker}". Do not answer until the tool runs.'
+            )
             wait_for_tool(s, "write_file")
             written = Path(target)
             assert written.exists(), f"write_file did not create {target}"
@@ -227,7 +235,11 @@ def test_hashline_edit_tool(tmp_path: Path) -> None:
     try:
         target.write_text(original_line)
         with tmux_session() as s:
-            s.send(f"read {target} then change 'color = red' to 'color = blue'")
+            s.send(
+                "You MUST call read_file, then hashline_edit. "
+                f"Read {target}, then change 'color = red' to 'color = blue'. "
+                "Do not answer until both tools run."
+            )
             wait_for_tool(s, "hashline_edit")
             updated = target.read_text()
             assert expected_line in updated, f"Expected {expected_line!r} in:\n{updated}"
@@ -238,7 +250,10 @@ def test_hashline_edit_tool(tmp_path: Path) -> None:
 def test_discover_tool() -> None:
     """discover tool: search for tool definitions and verify structured output."""
     with tmux_session() as s:
-        s.send("use the discover tool to find where tools are defined")
+        s.send(
+            "You MUST call the discover tool. Query: where tools are defined. "
+            "Do not answer until the tool runs."
+        )
         output = wait_for_tool(s, "discover")
         assert "scanned:" in output, f"Expected 'scanned:' stats in discover output:\n{output}"
 
@@ -246,6 +261,9 @@ def test_discover_tool() -> None:
 def test_web_fetch_tool() -> None:
     """web_fetch tool: fetch tunacode.xyz and verify content appears."""
     with tmux_session() as s:
-        s.send("use the web_fetch tool to fetch https://tunacode.xyz/")
+        s.send(
+            "You MUST call the web_fetch tool. Fetch https://tunacode.xyz/. "
+            "Do not answer until the tool runs."
+        )
         output = wait_for_tool(s, "web_fetch")
         assert "tunacode" in output.lower(), f"Expected 'tunacode' in fetched output:\n{output}"
