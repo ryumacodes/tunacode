@@ -206,8 +206,14 @@ Priority 1: cancel current request task
 Priority 2: cancel running shell command
 ```
 
-### Rendering Pipeline
+**UI Behavior on Cancel:**
+- Completed tool panels already rendered to the chat remain visible
+- In-flight tool calls and streaming responses are stopped
+- A "Cancelled" notification appears
+- Loading indicator and streaming output are cleared
+- Status bar updates to show the cancelled action
 
+### Rendering Pipeline
 ```
 Agent/tool output → Renderer function
     |
