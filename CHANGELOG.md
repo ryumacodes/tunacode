@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.77] - 2026-02-25
+
+### Changed
+- Tightened the session inspector presentation and removed a redundant compaction field to reduce TUI chrome noise.
+
 ## [0.1.75] - 2026-02-23
 
 ### Added
