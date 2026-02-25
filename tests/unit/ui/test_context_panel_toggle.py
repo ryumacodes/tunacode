@@ -12,6 +12,7 @@ async def test_context_panel_toggle_ctrl_e() -> None:
     async with app.run_test(headless=True) as pilot:
         context_rail = app.query_one("#context-rail", Container)
         resource_bar = app.query_one(ResourceBar)
+        assert len(app.query("#field-compaction")) == 0
         assert not resource_bar.has_class(app.CONTEXT_PANEL_COLLAPSED_CLASS)
         assert context_rail.has_class(app.CONTEXT_PANEL_COLLAPSED_CLASS)
 
