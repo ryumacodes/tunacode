@@ -11,10 +11,10 @@ from tunacode.ui.styles import STYLE_ERROR, STYLE_SUCCESS
 SLOPGOTCHI_NAME: str = "Slopgotchi"
 SLOPGOTCHI_HEART: str = "\u2665"
 SLOPGOTCHI_ART_STATES: tuple[str, str] = (
-    " /\\_/\\\n( T.T )\n > _ <",
-    " /\\_/\\\n( ;.; )\n > _ <",
+    " /\\_/\\\n( o.o )",
+    " /\\_/\\\n( -.- )",
 )
-SLOPGOTCHI_MOVE_RANGE: int = 4
+SLOPGOTCHI_MOVE_RANGE: int = 2
 SLOPGOTCHI_AUTO_MOVE_INTERVAL_SECONDS: float = 0.75
 
 

@@ -62,9 +62,9 @@ ResourceBar.hidden {
  * The $surface background peeks between fields = depth cue.
  * ============================================ */
 #context-rail {
-    width: 40;
-    min-width: 32;
-    max-width: 52;
+    width: 34;
+    min-width: 28;
+    max-width: 44;
     height: 1fr;
     background: $surface;
     border-top: solid $bevel-light;
@@ -115,7 +115,7 @@ ResourceBar.hidden {
 
 /* Pet field - fixed height prevents panel shift during animation */
 #field-pet {
-    height: 6;
+    height: 4;
     padding: 0 1;
 }
 
