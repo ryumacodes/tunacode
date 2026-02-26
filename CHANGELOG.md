@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.78] - 2026-02-26
+
+### Changed
+- Removed dead NeXTSTEP UI tool renderer modules for retired tools (`glob`, `grep`, `list_dir`) and cleaned renderer exports/tests to match the tinyagent-only tool surface.
+
 ## [0.1.77] - 2026-02-25
 
 ### Changed
