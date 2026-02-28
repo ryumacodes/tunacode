@@ -44,3 +44,16 @@ def load_prompt_from_xml(tool_name: str) -> str | None:
     prompt = description.text.strip()
     xml_prompts_cache.set_prompt(tool_name, prompt=prompt, file_path=prompt_file)
     return prompt
+
+
+def get_xml_prompt_path(tool_name: str) -> Path | None:
+    """Get the path to the XML prompt file for a tool.
+
+    Args:
+        tool_name: Name of the tool (e.g., 'grep', 'glob')
+
+    Returns:
+        Path to the XML prompt file or None if not found.
+    """
+    prompt_file = Path(__file__).parent / "prompts" / f"{tool_name}_prompt.xml"
+    return prompt_file if prompt_file.exists() else None

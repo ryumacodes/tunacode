@@ -33,7 +33,7 @@ from tunacode.exceptions import (
     UserAbortError,
 )
 
-from tunacode.tools.xml_helper import load_prompt_from_xml
+from tunacode.tools.xml_helper import get_xml_prompt_path, load_prompt_from_xml
 
 if TYPE_CHECKING:
     from tinyagent import AgentTool
@@ -156,12 +156,21 @@ def to_tinyagent_tool(
 
     from tinyagent import AgentTool, AgentToolResult
 
+    from tunacode.prompts.versioning import get_or_compute_prompt_version
+    from tunacode.types.canonical import PromptVersion
+
     tool_name = name or func.__name__
     tool_label = label or tool_name
 
     sig = inspect.signature(func)
     parameters_schema = _build_openai_parameters_schema(func)
     description = inspect.getdoc(func) or ""
+
+    # Capture prompt version for XML-loaded tools
+    prompt_version: PromptVersion | None = None
+    xml_path = get_xml_prompt_path(tool_name)
+    if xml_path is not None:
+        prompt_version = get_or_compute_prompt_version(xml_path)
 
     async def execute(
         tool_call_id: str,
@@ -197,13 +206,18 @@ def to_tinyagent_tool(
         # Tools in this codebase typically return ``str``.
         return AgentToolResult(content=[{"type": "text", "text": str(result)}], details={})
 
-    return AgentTool(
+    agent_tool = AgentTool(
         name=tool_name,
         label=tool_label,
         description=description,
         parameters=parameters_schema,
         execute=execute,
     )
+
+    # Attach prompt version for observability
+    agent_tool.prompt_version = prompt_version  # type: ignore[attr-defined]
+
+    return agent_tool
 
 
 def _build_openai_parameters_schema(func: Callable[..., object]) -> dict[str, object]:

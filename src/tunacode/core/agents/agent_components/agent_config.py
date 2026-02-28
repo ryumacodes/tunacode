@@ -27,7 +27,12 @@ from tunacode.configuration.models import (
 )
 from tunacode.configuration.user_config import load_config
 from tunacode.constants import ENV_OPENAI_BASE_URL
+from tunacode.prompts.versioning import (
+    compute_agent_prompt_versions,
+    get_or_compute_prompt_version,
+)
 from tunacode.types import ModelName
+from tunacode.types.canonical import PromptVersion
 
 from tunacode.tools.bash import bash
 from tunacode.tools.decorators import to_tinyagent_tool
@@ -141,8 +146,14 @@ def invalidate_agent_cache(model: str, state_manager: StateManagerProtocol) -> b
     return invalidated
 
 
-def load_system_prompt(base_path: Path, model: str | None = None) -> str:
-    """Load the system prompt from a single MD file."""
+def load_system_prompt(
+    base_path: Path, model: str | None = None
+) -> tuple[str, PromptVersion | None]:
+    """Load the system prompt from a single MD file with version tracking.
+
+    Returns:
+        Tuple of (prompt_content, PromptVersion) where PromptVersion is None if file not found.
+    """
 
     _ = model
 
@@ -151,11 +162,18 @@ def load_system_prompt(base_path: Path, model: str | None = None) -> str:
     if not prompt_file.exists():
         raise FileNotFoundError(f"Required prompt file not found: {prompt_file}")
 
-    return prompt_file.read_text(encoding="utf-8")
+    content = prompt_file.read_text(encoding="utf-8")
+    version = get_or_compute_prompt_version(prompt_file)
+
+    return content, version
 
 
-def load_tunacode_context() -> str:
-    """Load guide file context with caching."""
+def load_tunacode_context() -> tuple[str, PromptVersion | None]:
+    """Load guide file context with caching and version tracking.
+
+    Returns:
+        Tuple of (context_content, PromptVersion) where PromptVersion is None if file not found.
+    """
 
     logger = get_logger()
 
@@ -166,7 +184,10 @@ def load_tunacode_context() -> str:
             guide_file = config["settings"].get("guide_file", "AGENTS.md")
         tunacode_path = Path.cwd() / guide_file
 
-        return context_cache.get_context(tunacode_path)
+        content = context_cache.get_context(tunacode_path)
+        version = get_or_compute_prompt_version(tunacode_path)
+
+        return content, version
 
     except Exception as e:
         logger.error(f"Unexpected error loading guide file: {e}")
@@ -416,10 +437,26 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
         return cached_agent
 
     base_path = Path(__file__).parent.parent.parent.parent
-    system_prompt = load_system_prompt(base_path, model=model)
-    system_prompt += load_tunacode_context()
+    system_prompt_content, system_version = load_system_prompt(base_path, model=model)
+    tunacode_context_content, context_version = load_tunacode_context()
+
+    system_prompt = system_prompt_content + tunacode_context_content
 
     tools_list = _build_tools()
+
+    # Collect tool prompt versions from tools
+    tool_prompt_versions: dict[str, PromptVersion] = {}
+    for tool in tools_list:
+        tool_version = getattr(tool, "prompt_version", None)
+        if tool_version is not None:
+            tool_prompt_versions[tool.name] = tool_version
+
+    # Compute combined prompt versions
+    prompt_versions = compute_agent_prompt_versions(
+        system_prompt_path=base_path / "prompts" / "system_prompt.md",
+        tunacode_context_path=Path.cwd() / "AGENTS.md",
+        tool_prompt_paths=tool_prompt_versions,
+    )
 
     stream_fn = _build_stream_fn(request_delay=request_delay, max_tokens=max_tokens)
     opts = AgentOptions(
@@ -434,10 +471,18 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     agent.set_model(_build_tinyagent_model(model, session))
     agent.set_tools(tools_list)
 
+    # Attach prompt versions to agent for observability
+    agent.prompt_versions = prompt_versions  # type: ignore[attr-defined]
+
     agents_cache.set_agent(model, agent=agent, version=agent_version)
     session.agent_versions[model] = agent_version
     session.agents[model] = agent
 
-    logger.info(f"Agent created: {model}")
+    logger.info(
+        f"Agent created: {model}, "
+        f"system_prompt={system_version.content_hash[:12] if system_version else 'N/A'}, "
+        f"context={context_version.content_hash[:12] if context_version else 'N/A'}, "
+        f"fingerprint={prompt_versions.fingerprint[:12]}"
+    )
 
     return cast(Agent, agent)
