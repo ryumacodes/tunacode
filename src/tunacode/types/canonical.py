@@ -308,6 +308,46 @@ class RecursiveContext:
 
 
 # =============================================================================
+# Prompt Versioning Types
+# =============================================================================
+# These provide immutable version tracking for system prompts and tool prompts.
+
+
+@dataclass(frozen=True, slots=True)
+class PromptVersion:
+    """Immutable version identifier for a prompt.
+
+    Captures the content hash, modification time, and size of a prompt file.
+    Used for detecting when prompts have changed and require cache invalidation.
+    """
+
+    source_path: str  # Path to prompt file
+    content_hash: str  # SHA-256 of content
+    mtime: float  # File modification time (seconds since epoch)
+    computed_at: float  # When version was computed (seconds since epoch)
+    length: int  # Character count for size tracking
+
+    def __str__(self) -> str:
+        """Return short hash representation for logging."""
+        return f"{self.source_path}:{self.content_hash[:12]}"
+
+
+@dataclass(frozen=True, slots=True)
+class AgentPromptVersions:
+    """Combined version report for all prompts used by an agent.
+
+    Aggregates versions for system prompt, tunacode context, and all tool prompts.
+    The fingerprint provides a single hash representing the complete prompt state.
+    """
+
+    system_prompt: PromptVersion | None
+    tunacode_context: PromptVersion | None
+    tool_prompts: dict[str, PromptVersion]  # tool_name -> version
+    fingerprint: str  # Combined hash of all versions
+    computed_at: float  # When versions were computed (seconds since epoch)
+
+
+# =============================================================================
 # Exports
 # =============================================================================
 
@@ -331,4 +371,7 @@ __all__ = [
     "UsageMetrics",
     # Recursive context types
     "RecursiveContext",
+    # Prompt versioning types
+    "PromptVersion",
+    "AgentPromptVersions",
 ]
