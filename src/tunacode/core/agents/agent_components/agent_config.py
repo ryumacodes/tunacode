@@ -444,18 +444,20 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
 
     tools_list = _build_tools()
 
-    # Collect tool prompt versions from tools
-    tool_prompt_versions: dict[str, PromptVersion] = {}
+    # Collect tool prompt paths from tools (for version computation)
+    from tunacode.tools.xml_helper import get_xml_prompt_path
+
+    tool_prompt_paths: dict[str, Path | str] = {}
     for tool in tools_list:
-        tool_version = getattr(tool, "prompt_version", None)
-        if tool_version is not None:
-            tool_prompt_versions[tool.name] = tool_version
+        xml_path = get_xml_prompt_path(tool.name)
+        if xml_path is not None:
+            tool_prompt_paths[tool.name] = xml_path
 
     # Compute combined prompt versions
     prompt_versions = compute_agent_prompt_versions(
         system_prompt_path=base_path / "prompts" / "system_prompt.md",
         tunacode_context_path=Path.cwd() / "AGENTS.md",
-        tool_prompt_paths=tool_prompt_versions,
+        tool_prompt_paths=tool_prompt_paths,
     )
 
     stream_fn = _build_stream_fn(request_delay=request_delay, max_tokens=max_tokens)

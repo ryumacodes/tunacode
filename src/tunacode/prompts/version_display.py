@@ -128,11 +128,3 @@ def print_prompt_versions() -> None:
     """
     versions = get_current_prompt_versions()
     print(display_prompt_versions(versions))
-
-
-__all__ = [
-    "format_prompt_version",
-    "display_prompt_versions",
-    "get_current_prompt_versions",
-    "print_prompt_versions",
-]
