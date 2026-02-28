@@ -95,7 +95,17 @@ See `docs/agent-docs/card-format.md` for frontmatter spec and body sections when
 
 ## Quality Gates
 
-See `docs/agent-docs/quality-gates.md` for Gates 0-6 (shims, coupling, dependency direction, contracts, docs, indirection, exception paths).
+Run after completing features: `uv run python scripts/run_gates.py`
+
+| Gate | Check | Tool |
+|------|-------|------|
+| 0 | Shims (no `__all__` exports) | grep |
+| 1 | Coupling (complexity, flakes) | ruff |
+| 2 | Deps (layer violations) | grimp |
+| 3 | Types | mypy |
+| 6 | Security | bandit |
+
+Output: `ALL GATES PASSED` or failures only with minimal context.
 
 ---
 
