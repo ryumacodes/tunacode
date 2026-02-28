@@ -13,6 +13,11 @@ from pathlib import Path
 
 from tunacode.types.canonical import AgentPromptVersions, PromptVersion
 
+from tunacode.infrastructure.cache.caches.prompt_version_cache import (
+    get_prompt_version,
+    set_prompt_version,
+)
+
 
 def compute_prompt_version(source_path: Path | str) -> PromptVersion | None:
     """Compute a version identifier for a prompt file.
@@ -50,6 +55,39 @@ def compute_prompt_version(source_path: Path | str) -> PromptVersion | None:
         computed_at=computed_at,
         length=length,
     )
+
+
+def get_or_compute_prompt_version(source_path: Path | str) -> PromptVersion | None:
+    """Get cached PromptVersion or compute if cache miss.
+
+    Args:
+        source_path: Path to the prompt file.
+
+    Returns:
+        Cached PromptVersion if file unchanged, newly computed version,
+        or None if file doesn't exist.
+
+    Examples:
+        >>> version = get_or_compute_prompt_version("prompts/system_prompt.md")
+        >>> version.content_hash  # doctest: +SKIP
+        'a1b2c3d4...'
+    """
+    path = Path(source_path) if not isinstance(source_path, Path) else source_path
+
+    if not path.exists():
+        return None
+
+    # Check cache first
+    cached = get_prompt_version(path)
+    if cached is not None:
+        return cached
+
+    # Cache miss - compute and store
+    version = compute_prompt_version(path)
+    if version is not None:
+        set_prompt_version(path, version)
+
+    return version
 
 
 def compute_agent_prompt_versions(
@@ -157,6 +195,7 @@ def agent_versions_equal(
 
 __all__ = [
     "compute_prompt_version",
+    "get_or_compute_prompt_version",
     "compute_agent_prompt_versions",
     "versions_equal",
     "agent_versions_equal",
