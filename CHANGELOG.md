@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Fixed `original_query` being reset on every request instead of preserved across multi-turn sessions
+
 ## [0.1.78] - 2026-02-26
 
 ### Changed
