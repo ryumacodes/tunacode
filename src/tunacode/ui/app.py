@@ -14,7 +14,6 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
 from textual.timer import Timer
-from textual.widget import Widget
 from textual.widgets import LoadingIndicator, Static
 
 if TYPE_CHECKING:
@@ -131,7 +130,7 @@ class TextualReplApp(App[None]):
         self.resource_bar: ResourceBar
         self.status_bar: StatusBarLike
         self.streaming_output: Static
-        self._thinking_panel_widget: Widget | None = None
+        self._thinking_panel_widget: Static | None = None
         self._context_panel_visible: bool = False
         self._edited_files: set[str] = set()
         self._field_model: Static | None = None

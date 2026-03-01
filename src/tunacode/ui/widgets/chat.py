@@ -310,7 +310,7 @@ class ChatContainer(VerticalScroll):
         *,
         expand: bool = False,
         panel_meta: PanelMeta | None = None,
-    ) -> Widget:
+    ) -> CopyOnSelectStatic:
         """Append a renderable to the chat container.
 
         This is the primary API for adding content, compatible with RichLog.write().
