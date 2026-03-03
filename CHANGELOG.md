@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.80] - 2026-03-03
+
+### Fixed
+- Aligned the `bash` tool timeout contract to seconds across prompt docs and runtime validation to prevent repeated millisecond-based tool failures.
+- Hardened `bash` timeout bounds handling by rejecting `timeout=0` and added regression tests for timeout validation and prompt contract drift.
+
 ## [0.1.79] - 2026-03-03
 
 ### Added
