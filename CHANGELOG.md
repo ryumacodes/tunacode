@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- Fixed `original_query` being reset on every request instead of preserved across multi-turn sessions
+## [0.1.79] - 2026-03-03
 
+### Added
+- Added a full prompt-versioning pipeline with computed hashes, mtime-aware caching, and agent-level observability hooks.
+
+### Fixed
+- Fixed `original_query` being reset on every request instead of preserved across multi-turn sessions.
+- Hid internal tool validation errors from user-facing output.
+- Fixed typing issues in the thinking panel widget and constants module.
 ## [0.1.78] - 2026-02-26
 
 ### Changed
