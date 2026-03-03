@@ -191,10 +191,7 @@ def to_tinyagent_tool(
             bound = sig.bind(**args)
             bound.apply_defaults()
         except TypeError as exc:
-            raise ToolRetryError(
-                f"Invalid arguments for tool '{tool_name}': {exc}. "
-                f"Expected schema: {parameters_schema}"
-            ) from exc
+            raise ToolRetryError(f"Invalid arguments for tool '{tool_name}': {exc}") from exc
 
         result = await func(**cast(dict[str, Any], bound.arguments))
 
