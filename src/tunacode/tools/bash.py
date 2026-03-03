@@ -14,6 +14,9 @@ COMMAND_OUTPUT_THRESHOLD = 3500
 COMMAND_OUTPUT_START_INDEX = 2500
 COMMAND_OUTPUT_END_SIZE = 1000
 CMD_OUTPUT_TRUNCATED = "\n...\n[truncated]\n...\n"
+MIN_TIMEOUT_SECONDS = 1
+MAX_TIMEOUT_SECONDS = 300
+DEFAULT_TIMEOUT_SECONDS = 30
 
 
 @base_tool
@@ -21,7 +24,7 @@ async def bash(
     command: str,
     cwd: str | None = None,
     env: dict[str, str] | None = None,
-    timeout: int | None = 30,
+    timeout: int | None = DEFAULT_TIMEOUT_SECONDS,
     capture_output: bool = True,
 ) -> str:
     """Execute a bash command with enhanced features.
@@ -90,9 +93,9 @@ def _validate_inputs(command: str, cwd: str | None, timeout: int | None) -> None
     if not command.strip():
         raise ToolRetryError("Empty command not allowed")
 
-    if timeout and (timeout < 1 or timeout > 300):
+    if timeout is not None and (timeout < MIN_TIMEOUT_SECONDS or timeout > MAX_TIMEOUT_SECONDS):
         raise ToolRetryError(
-            "Timeout must be between 1 and 300 seconds. "
+            f"Timeout must be between {MIN_TIMEOUT_SECONDS} and {MAX_TIMEOUT_SECONDS} seconds. "
             "Use shorter timeouts for quick commands, longer for builds/tests."
         )
 

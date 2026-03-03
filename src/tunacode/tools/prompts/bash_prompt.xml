@@ -5,6 +5,7 @@ Execute bash commands. Use for git, npm, docker, and system operations.
 - Quote paths with spaces: cd "/path with spaces"
 - Chain commands with &amp;&amp; or ;
 - Use the discover tool for code search instead of grep/find/ls
-- Optional timeout in milliseconds (default 120000, max 600000)
+- Optional timeout in seconds (default 30, range 1-300)
+- Example: timeout=60 for a long-running build/test command
     </description>
 </tool_prompt>
