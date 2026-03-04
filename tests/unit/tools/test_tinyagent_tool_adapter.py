@@ -3,6 +3,7 @@
 import asyncio
 
 import pytest
+from tinyagent.agent_types import TextContent
 
 from tunacode.exceptions import ToolRetryError
 
@@ -24,8 +25,11 @@ class TestToTinyagentTool:
             lambda _update: None,
         )
 
-        assert result.content[0]["type"] == "text"
-        assert "echo: hi" in result.content[0]["text"]
+        first_item = result.content[0]
+        assert isinstance(first_item, TextContent)
+        assert first_item.type == "text"
+        assert isinstance(first_item.text, str)
+        assert "echo: hi" in first_item.text
 
     async def test_execute_validates_arguments(self, mock_no_xml_prompt):
         @base_tool

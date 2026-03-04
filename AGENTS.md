@@ -37,7 +37,7 @@ The TUI design is heavily inspired by the classic **NeXTSTEP** user interface. T
 - Enforce `ruff check --fix .` before PRs.
 - Use explicit typing. `cast(...)` and `assert ...` are OK.
 - `# type: ignore` only with strong justification.
-- **Mypy Status (2026-01-27):** 50 errors in 17 files. Gate 2 dependency direction work complete (PR #316). Use `git commit -n` to bypass pre-commit hooks if blocked. Do NOT introduce new type errors.
+
 - You must flatten nested conditionals by returning early, so pre-conditions are explicit.
 - If it is never executed, remove it. You MUST make sure what we remove has been committed before in case we need to rollback.
 - Normalize symmetries: you must make identical things look identical and different things look different for faster pattern-spotting.

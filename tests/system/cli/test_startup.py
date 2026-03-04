@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from tinyagent.agent_types import AssistantMessage, TextContent, ToolCallContent, UserMessage
 from typer.testing import CliRunner
 
 HEADLESS_TIMEOUT_SECONDS = 60
@@ -170,11 +171,8 @@ class TestHeadlessModeMocked:
         mock_run.result = None
 
         messages: list = [
-            {"role": "user", "content": [{"type": "text", "text": "Hi"}]},
-            {
-                "role": "assistant",
-                "content": [{"type": "text", "text": "  Hello there  "}],
-            },
+            UserMessage(content=[TextContent(text="Hi")]),
+            AssistantMessage(content=[TextContent(text="  Hello there  ")]),
         ]
 
         result = resolve_output(mock_run, messages)
@@ -188,21 +186,16 @@ class TestHeadlessModeMocked:
         mock_run.result = None
 
         messages: list = [
-            {
-                "role": "assistant",
-                "content": [{"type": "text", "text": "First response"}],
-            },
-            {
-                "role": "assistant",
-                "content": [
-                    {
-                        "type": "tool_call",
-                        "id": "call_1",
-                        "name": "bash",
-                        "arguments": {"cmd": "echo hi"},
-                    }
-                ],
-            },
+            AssistantMessage(content=[TextContent(text="First response")]),
+            AssistantMessage(
+                content=[
+                    ToolCallContent(
+                        id="call_1",
+                        name="bash",
+                        arguments={"cmd": "echo hi"},
+                    )
+                ]
+            ),
         ]
 
         result = resolve_output(mock_run, messages)

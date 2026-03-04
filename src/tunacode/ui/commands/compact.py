@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
-from tinyagent.agent_types import AgentMessage
+from tinyagent.agent_types import (
+    AgentMessage,
+    AssistantMessage,
+    CustomAgentMessage,
+    ToolResultMessage,
+    UserMessage,
+)
 
 from tunacode.core.compaction.controller import (
     apply_compaction_messages,
@@ -24,6 +30,7 @@ if TYPE_CHECKING:
 COMPACT_USAGE_HINT = "Usage: /compact"
 COMPACT_EMPTY_HISTORY_NOTICE = "Nothing to compact."
 COMPACT_COMPLETE_TEMPLATE = "Compaction complete: {removed} messages, ~{tokens} tokens reclaimed"
+_AGENT_MESSAGE_TYPES = UserMessage, AssistantMessage, ToolResultMessage, CustomAgentMessage
 
 
 class CompactCommand(Command):
@@ -115,8 +122,8 @@ class CompactCommand(Command):
         )
 
 
-def _coerce_history(messages: list[AgentMessage]) -> list[dict[str, Any]]:
-    if all(isinstance(message, dict) for message in messages):
-        return [cast(dict[str, Any], message) for message in messages]
+def _coerce_history(messages: list[AgentMessage]) -> list[AgentMessage]:
+    if all(isinstance(message, _AGENT_MESSAGE_TYPES) for message in messages):
+        return list(messages)
 
-    raise TypeError("Session history is not in tinyagent dict format")
+    raise TypeError("Session history must contain tinyagent message models")

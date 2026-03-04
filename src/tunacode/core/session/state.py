@@ -14,12 +14,23 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+from tinyagent.agent_types import (
+    AgentMessage,
+    AssistantMessage,
+    CustomAgentMessage,
+    ToolResultMessage,
+    UserMessage,
+)
+
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.types import InputSessions, ModelName, SessionId, UserConfig
 from tunacode.types.canonical import UsageMetrics
 
 from tunacode.core.compaction.types import CompactionRecord
 from tunacode.core.types import ConversationState, RuntimeState, TaskState, UsageState
+
+_AGENT_MESSAGE_TYPES = UserMessage, AssistantMessage, ToolResultMessage, CustomAgentMessage
 
 
 @dataclass
@@ -159,30 +170,54 @@ class StateManager:
         return storage_dir / f"{self._session.project_id}_{self._session.session_id}.json"
 
     def _serialize_messages(self) -> list[dict[str, Any]]:
-        """Serialize session message history.
-
-        TunaCode persists history as tinyagent-style dict messages.
-        Any non-dict message indicates a bug in the tinyagent migration and is
-        rejected (hard break; no legacy pydantic-ai message support).
-        """
+        """Serialize in-memory tinyagent message models to JSON dictionaries."""
 
         serialized_messages: list[dict[str, Any]] = []
-        for idx, msg in enumerate(self._session.conversation.messages):
-            if not isinstance(msg, dict):
-                message_type = type(msg).__name__
+        for idx, message in enumerate(self._session.conversation.messages):
+            if not isinstance(message, _AGENT_MESSAGE_TYPES):
+                message_type = type(message).__name__
                 raise TypeError(
-                    f"Session messages must be tinyagent dicts; found {message_type} at index {idx}"
+                    "Session messages must be tinyagent message models; "
+                    f"found {message_type} at index {idx}"
                 )
 
-            serialized_messages.append(msg)
+            serialized_message = message.model_dump(exclude_none=True)
+            if not isinstance(serialized_message, dict):
+                raise TypeError(
+                    "Session message model_dump(exclude_none=True) must return dict; "
+                    f"got {type(serialized_message).__name__} at index {idx}"
+                )
+
+            serialized_messages.append(serialized_message)
 
         return serialized_messages
 
-    def _deserialize_messages(self, data: Any) -> list[dict[str, Any]]:
-        """Deserialize JSON session messages.
+    def _deserialize_message(self, raw_message: Any, *, index: int) -> AgentMessage:
+        if not isinstance(raw_message, dict):
+            raise TypeError(
+                "Session messages must be tinyagent JSON objects; "
+                f"found {type(raw_message).__name__} at index {index}"
+            )
 
-        We expect a list of tinyagent-style dict messages.
-        """
+        role = raw_message.get("role")
+        if not isinstance(role, str) or not role:
+            raise TypeError(f"Session message at index {index} must contain a non-empty 'role'")
+
+        try:
+            if role == "user":
+                return UserMessage.model_validate(raw_message)
+            if role == "assistant":
+                return AssistantMessage.model_validate(raw_message)
+            if role == "tool_result":
+                return ToolResultMessage.model_validate(raw_message)
+            return CustomAgentMessage.model_validate(raw_message)
+        except ValidationError as exc:
+            raise TypeError(
+                f"Session message at index {index} failed validation for role '{role}': {exc}"
+            ) from exc
+
+    def _deserialize_messages(self, data: Any) -> list[AgentMessage]:
+        """Deserialize persisted JSON messages into tinyagent message models."""
 
         if data is None:
             return []
@@ -190,17 +225,11 @@ class StateManager:
         if not isinstance(data, list):
             raise TypeError(f"Session 'messages' must be a list, got {type(data).__name__}")
 
-        messages: list[dict[str, Any]] = []
+        deserialized_messages: list[AgentMessage] = []
         for idx, item in enumerate(data):
-            if not isinstance(item, dict):
-                raise TypeError(
-                    "Session messages must be tinyagent dicts; "
-                    f"found {type(item).__name__} at index {idx}"
-                )
+            deserialized_messages.append(self._deserialize_message(item, index=idx))
 
-            messages.append(item)
-
-        return messages
+        return deserialized_messages
 
     def _serialize_compaction(self) -> dict[str, Any] | None:
         record = self._session.compaction
@@ -218,13 +247,23 @@ class StateManager:
 
         return CompactionRecord.from_dict(data)
 
-    def _split_thought_messages(self, messages: list[Any]) -> tuple[list[str], list[Any]]:
-        """Separate thought entries from message history."""
-        thoughts: list[str] = []
-        cleaned_messages: list[Any] = []
+    def _split_thought_messages(
+        self,
+        messages: list[Any],
+    ) -> tuple[list[str], list[dict[str, Any]]]:
+        """Separate legacy thought entries from persisted message history."""
 
-        for message in messages:
-            if isinstance(message, dict) and "thought" in message:
+        thoughts: list[str] = []
+        cleaned_messages: list[dict[str, Any]] = []
+
+        for index, message in enumerate(messages):
+            if not isinstance(message, dict):
+                raise TypeError(
+                    "Session messages must be tinyagent JSON objects; "
+                    f"found {type(message).__name__} at index {index}"
+                )
+
+            if "thought" in message:
                 thought_value = message.get("thought")
                 if thought_value is not None:
                     thoughts.append(str(thought_value))
@@ -233,6 +272,23 @@ class StateManager:
             cleaned_messages.append(message)
 
         return thoughts, cleaned_messages
+
+    def _deserialize_thoughts(self, raw_thoughts: Any) -> list[str]:
+        if raw_thoughts is None:
+            return []
+
+        if not isinstance(raw_thoughts, list):
+            raise TypeError(f"Session 'thoughts' must be a list, got {type(raw_thoughts).__name__}")
+
+        thoughts: list[str] = []
+        for index, thought in enumerate(raw_thoughts):
+            if not isinstance(thought, str):
+                raise TypeError(
+                    f"Session 'thoughts[{index}]' must be a string, got {type(thought).__name__}"
+                )
+            thoughts.append(thought)
+
+        return thoughts
 
     def _write_session_file(self, session_file: Path, session_data: dict[str, Any]) -> None:
         session_file.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -317,11 +373,19 @@ class StateManager:
             self._session.usage.session_total_usage = UsageMetrics.from_dict(
                 data.get("session_total_usage", {})
             )
-            loaded_messages = self._deserialize_messages(data.get("messages", []))
-            stored_thoughts = data.get("thoughts") or []
-            extracted_thoughts, cleaned_messages = self._split_thought_messages(loaded_messages)
+
+            raw_messages = data.get("messages", [])
+            if not isinstance(raw_messages, list):
+                raise TypeError(
+                    f"Session 'messages' must be a list, got {type(raw_messages).__name__}"
+                )
+
+            extracted_thoughts, cleaned_messages = self._split_thought_messages(raw_messages)
+            loaded_messages = self._deserialize_messages(cleaned_messages)
+            stored_thoughts = self._deserialize_thoughts(data.get("thoughts"))
+
             self._session.conversation.thoughts = [*stored_thoughts, *extracted_thoughts]
-            self._session.conversation.messages = cleaned_messages
+            self._session.conversation.messages = loaded_messages
             self._session.compaction = self._deserialize_compaction(data.get("compaction"))
 
             return True

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from tinyagent.agent_types import AssistantMessage
+
 from tunacode.core.ui_api.messaging import get_content
 
 TEXT_ATTRIBUTES: tuple[str, ...] = ("output", "text", "content", "message")
-
-ROLE_ASSISTANT: str = "assistant"
 
 
 def _normalize_text(value: object) -> str | None:
@@ -46,7 +46,7 @@ def _extract_from_result(agent_run: object) -> str | None:
 def _extract_from_messages(messages: list[Any]) -> str | None:
     """Extract text from the latest assistant message in messages."""
     for message in reversed(messages):
-        if not isinstance(message, dict) or message.get("role") != ROLE_ASSISTANT:
+        if not isinstance(message, AssistantMessage):
             continue
 
         content = get_content(message)

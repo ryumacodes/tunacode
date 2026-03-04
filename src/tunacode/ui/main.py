@@ -6,6 +6,12 @@ import os
 import sys
 
 import typer
+from tinyagent.agent_types import (
+    AssistantMessage,
+    CustomAgentMessage,
+    ToolResultMessage,
+    UserMessage,
+)
 
 from tunacode.core import ConfigurationError, UserAbortError
 from tunacode.core.session import StateManager
@@ -256,15 +262,20 @@ def run_headless(
     raise typer.Exit(code=exit_code)
 
 
-def _serialize_message(msg: object) -> dict:
-    """Serialize a message object to a JSON-compatible dictionary.
+def _serialize_message(msg: object) -> dict[str, object]:
+    """Serialize an in-memory tinyagent message model to JSON-compatible dict."""
 
-    Per hard-break policy (state.py:167-171), all messages MUST be dicts.
-    Non-dict messages indicate a bug upstream.
-    """
-    if isinstance(msg, dict):
-        return msg
-    raise TypeError(f"Expected dict message, got {type(msg).__name__}")
+    if not isinstance(msg, UserMessage | AssistantMessage | ToolResultMessage | CustomAgentMessage):
+        raise TypeError(f"Expected tinyagent message model, got {type(msg).__name__}")
+
+    serialized_message = msg.model_dump(exclude_none=True)
+    if not isinstance(serialized_message, dict):
+        raise TypeError(
+            "tinyagent message model_dump(exclude_none=True) must return dict; "
+            f"got {type(serialized_message).__name__}"
+        )
+
+    return serialized_message
 
 
 if __name__ == "__main__":

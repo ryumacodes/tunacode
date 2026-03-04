@@ -3,14 +3,29 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import time
 import uuid
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
-from tinyagent import Agent
+from tinyagent import Agent, extract_text
+from tinyagent.agent_types import (
+    AgentEndEvent,
+    AgentEvent,
+    AgentMessage,
+    AssistantMessage,
+    MessageEndEvent,
+    MessageUpdateEvent,
+    TextContent,
+    ToolExecutionEndEvent,
+    ToolExecutionStartEvent,
+    TurnEndEvent,
+    is_agent_end_event,
+    is_message_end_event,
+    is_tool_execution_end_event,
+    is_tool_execution_start_event,
+    is_turn_end_event,
+)
 
 from tunacode.constants import DEFAULT_CONTEXT_WINDOW
 from tunacode.exceptions import (
@@ -47,7 +62,6 @@ from .helpers import (
     CONTEXT_OVERFLOW_RETRY_NOTICE,
     coerce_error_text,
     coerce_tinyagent_history,
-    extract_assistant_text,
     extract_tool_result_text,
     is_context_overflow_error,
     parse_canonical_usage,
@@ -81,7 +95,7 @@ class _TinyAgentStreamState:
     tool_start_times: dict[str, float]
     active_tool_call_ids: set[str]
     batch_tool_call_ids: set[str]
-    last_assistant_message: dict[str, Any] | None = None
+    last_assistant_message: AssistantMessage | None = None
 
 
 class EmptyResponseHandler:
@@ -253,8 +267,8 @@ class RequestOrchestrator:
 
     async def _compact_history_for_request(
         self,
-        history: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
+        history: list[AgentMessage],
+    ) -> list[AgentMessage]:
         self.compaction_controller.reset_request_state()
         max_tokens = self.state_manager.session.conversation.max_tokens
         compaction_outcome = await self.compaction_controller.check_and_compact(
@@ -264,16 +278,15 @@ class RequestOrchestrator:
             allow_threshold=True,
         )
         self._maybe_emit_compaction_notice(compaction_outcome)
-        applied_messages = apply_compaction_messages(
+        return apply_compaction_messages(
             self.state_manager,
             compaction_outcome.messages,
         )
-        return [cast(dict[str, Any], message) for message in applied_messages]
 
     async def _force_compact_history(
         self,
-        history: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
+        history: list[AgentMessage],
+    ) -> list[AgentMessage]:
         max_tokens = self.state_manager.session.conversation.max_tokens
         compaction_outcome = await self.compaction_controller.force_compact(
             history,
@@ -281,18 +294,17 @@ class RequestOrchestrator:
             signal=None,
         )
         self._maybe_emit_compaction_notice(compaction_outcome)
-        applied_messages = apply_compaction_messages(
+        return apply_compaction_messages(
             self.state_manager,
             compaction_outcome.messages,
         )
-        return [cast(dict[str, Any], message) for message in applied_messages]
 
     async def _retry_after_context_overflow_if_needed(
         self,
         *,
         agent: Agent,
         request_context: RequestContext,
-        pre_request_history: list[dict[str, Any]],
+        pre_request_history: list[AgentMessage],
     ) -> None:
         error_text = self._agent_error_text(agent)
         if not is_context_overflow_error(error_text):
@@ -326,7 +338,7 @@ class RequestOrchestrator:
         )
 
     def _agent_error_text(self, agent: Agent) -> str:
-        return coerce_error_text(agent.state.get("error"))
+        return coerce_error_text(agent.state.error)
 
     def _normalize_tool_event_args(
         self,
@@ -339,27 +351,10 @@ class RequestOrchestrator:
             return {}
 
         if isinstance(raw_args, dict):
-            return cast(dict[str, Any], raw_args)
-
-        if isinstance(raw_args, str):
-            stripped_args = raw_args.strip()
-            if not stripped_args:
-                return {}
-            try:
-                parsed_args = json.loads(stripped_args)
-            except json.JSONDecodeError as exc:
-                raise TypeError(
-                    f"{event_name} args must be a JSON object for tool_call_id='{tool_call_id}'"
-                ) from exc
-            if isinstance(parsed_args, dict):
-                return cast(dict[str, Any], parsed_args)
-            raise TypeError(
-                f"{event_name} args must decode to an object for tool_call_id='{tool_call_id}', "
-                f"got {type(parsed_args).__name__}"
-            )
+            return raw_args
 
         raise TypeError(
-            f"{event_name} args must be a dict or JSON string for tool_call_id='{tool_call_id}', "
+            f"{event_name} args must be an object for tool_call_id='{tool_call_id}', "
             f"got {type(raw_args).__name__}"
         )
 
@@ -453,26 +448,24 @@ class RequestOrchestrator:
         elapsed_seconds = time.perf_counter() - start_time
         return elapsed_seconds * MILLISECONDS_PER_SECOND
 
-    def _persist_agent_messages(self, agent: Any, baseline_message_count: int) -> None:
+    def _persist_agent_messages(self, agent: Agent, baseline_message_count: int) -> None:
         session = self.state_manager.session
         conversation = session.conversation
         # Preserve anything that might have been appended externally during the run.
         external_messages = list(conversation.messages[baseline_message_count:])
-        agent_messages = agent.state.get("messages", [])
-        if not isinstance(agent_messages, list):
-            raise TypeError("tinyagent Agent.state['messages'] must be a list")
+        agent_messages = list(agent.state.messages)
         conversation.messages = [*agent_messages, *external_messages]
 
     async def _handle_stream_turn_end(
         self,
-        event_obj: object,
+        event_obj: TurnEndEvent,
         *,
-        agent: Any,
+        agent: Agent,
         state: _TinyAgentStreamState,
         request_context: RequestContext,
         baseline_message_count: int,
     ) -> bool:
-        _ = baseline_message_count
+        _ = (event_obj, baseline_message_count)
         state.runtime.iteration_count += 1
         state.runtime.current_iteration = state.runtime.iteration_count
         if state.runtime.iteration_count <= request_context.max_iterations:
@@ -482,9 +475,9 @@ class RequestOrchestrator:
 
     async def _handle_stream_message_update(
         self,
-        event_obj: object,
+        event_obj: MessageUpdateEvent,
         *,
-        agent: Any,
+        agent: Agent,
         state: _TinyAgentStreamState,
         request_context: RequestContext,
         baseline_message_count: int,
@@ -495,21 +488,20 @@ class RequestOrchestrator:
 
     async def _handle_stream_message_end(
         self,
-        event_obj: object,
+        event_obj: MessageEndEvent,
         *,
-        agent: Any,
+        agent: Agent,
         state: _TinyAgentStreamState,
         request_context: RequestContext,
         baseline_message_count: int,
     ) -> bool:
-        _ = (agent, request_context, baseline_message_count)
-        msg = getattr(event_obj, "message", None)
-        if not isinstance(msg, dict):
+        _ = (agent, baseline_message_count)
+        message = event_obj.message
+        if not isinstance(message, AssistantMessage):
             return False
-        if msg.get("role") != "assistant":
-            return False
-        state.last_assistant_message = cast(dict[str, Any], msg)
-        usage = parse_canonical_usage(msg.get("usage"))
+
+        state.last_assistant_message = message
+        usage = parse_canonical_usage(message.usage)
         session = self.state_manager.session
         session.usage.last_call_usage = usage
         session.usage.session_total_usage.add(usage)
@@ -525,19 +517,18 @@ class RequestOrchestrator:
 
     async def _handle_stream_tool_execution_start(
         self,
-        event_obj: object,
+        event_obj: ToolExecutionStartEvent,
         *,
-        agent: Any,
+        agent: Agent,
         state: _TinyAgentStreamState,
         request_context: RequestContext,
         baseline_message_count: int,
     ) -> bool:
         _ = (agent, request_context, baseline_message_count)
-        tool_call_id = cast(str, getattr(event_obj, "tool_call_id", ""))
-        tool_name = cast(str, getattr(event_obj, "tool_name", ""))
-        raw_args = getattr(event_obj, "args", None)
+        tool_call_id = event_obj.tool_call_id
+        tool_name = event_obj.tool_name
         args = self._normalize_tool_event_args(
-            raw_args,
+            event_obj.args,
             event_name="tool_execution_start",
             tool_call_id=tool_call_id,
         )
@@ -556,20 +547,19 @@ class RequestOrchestrator:
 
     async def _handle_stream_tool_execution_end(
         self,
-        event_obj: object,
+        event_obj: ToolExecutionEndEvent,
         *,
-        agent: Any,
+        agent: Agent,
         state: _TinyAgentStreamState,
         request_context: RequestContext,
         baseline_message_count: int,
     ) -> bool:
         _ = (agent, request_context, baseline_message_count)
-        tool_call_id = cast(str, getattr(event_obj, "tool_call_id", ""))
-        tool_name = cast(str, getattr(event_obj, "tool_name", ""))
-        is_error = bool(getattr(event_obj, "is_error", False))
-        result = getattr(event_obj, "result", None)
+        tool_call_id = event_obj.tool_call_id
+        tool_name = event_obj.tool_name
+        is_error = event_obj.is_error
         duration_ms = self._resolve_tool_duration_ms(state, tool_call_id=tool_call_id)
-        result_text = extract_tool_result_text(result)
+        result_text = extract_tool_result_text(event_obj.result)
         status = "failed" if is_error else "completed"
         was_parallel_batch_member = tool_call_id in state.batch_tool_call_ids
         if is_error:
@@ -588,11 +578,14 @@ class RequestOrchestrator:
         )
         if self.tool_result_callback is None:
             return False
-        args = state.runtime.tool_registry.get_args(tool_call_id) or {}
+
+        args = state.runtime.tool_registry.get_args(tool_call_id)
+        if args is None:
+            args = {}
         self.tool_result_callback(
             tool_name,
             status,
-            cast(dict[str, Any], args),
+            args,
             result_text,
             duration_ms,
         )
@@ -600,9 +593,9 @@ class RequestOrchestrator:
 
     async def _handle_stream_agent_end(
         self,
-        event_obj: object,
+        event_obj: AgentEndEvent,
         *,
-        agent: Any,
+        agent: Agent,
         state: _TinyAgentStreamState,
         request_context: RequestContext,
         baseline_message_count: int,
@@ -611,10 +604,75 @@ class RequestOrchestrator:
         self._persist_agent_messages(agent, baseline_message_count)
         return True
 
+    async def _dispatch_stream_event(
+        self,
+        *,
+        event: AgentEvent,
+        agent: Agent,
+        state: _TinyAgentStreamState,
+        request_context: RequestContext,
+        baseline_message_count: int,
+    ) -> bool:
+        if is_turn_end_event(event):
+            return await self._handle_stream_turn_end(
+                event,
+                agent=agent,
+                state=state,
+                request_context=request_context,
+                baseline_message_count=baseline_message_count,
+            )
+
+        if isinstance(event, MessageUpdateEvent):
+            return await self._handle_stream_message_update(
+                event,
+                agent=agent,
+                state=state,
+                request_context=request_context,
+                baseline_message_count=baseline_message_count,
+            )
+
+        if is_message_end_event(event):
+            return await self._handle_stream_message_end(
+                event,
+                agent=agent,
+                state=state,
+                request_context=request_context,
+                baseline_message_count=baseline_message_count,
+            )
+
+        if is_tool_execution_start_event(event):
+            return await self._handle_stream_tool_execution_start(
+                event,
+                agent=agent,
+                state=state,
+                request_context=request_context,
+                baseline_message_count=baseline_message_count,
+            )
+
+        if is_tool_execution_end_event(event):
+            return await self._handle_stream_tool_execution_end(
+                event,
+                agent=agent,
+                state=state,
+                request_context=request_context,
+                baseline_message_count=baseline_message_count,
+            )
+
+        if is_agent_end_event(event):
+            return await self._handle_stream_agent_end(
+                event,
+                agent=agent,
+                state=state,
+                request_context=request_context,
+                baseline_message_count=baseline_message_count,
+            )
+
+        return False
+
     async def _run_stream(
         self,
         *,
-        agent: Any,
+        agent: Agent,
         request_context: RequestContext,
         baseline_message_count: int,
     ) -> Agent:
@@ -626,24 +684,10 @@ class RequestOrchestrator:
             active_tool_call_ids=set(),
             batch_tool_call_ids=set(),
         )
-        handlers: dict[str, Callable[..., Awaitable[bool]]] = {
-            "turn_end": self._handle_stream_turn_end,
-            "message_update": self._handle_stream_message_update,
-            "message_end": self._handle_stream_message_end,
-            "tool_execution_start": self._handle_stream_tool_execution_start,
-            "tool_execution_end": self._handle_stream_tool_execution_end,
-            "agent_end": self._handle_stream_agent_end,
-        }
         started_at = time.perf_counter()
         async for event in agent.stream(self.message):
-            ev_type = getattr(event, "type", None)
-            if not isinstance(ev_type, str):
-                continue
-            handler = handlers.get(ev_type)
-            if handler is None:
-                continue
-            should_stop = await handler(
-                event,
+            should_stop = await self._dispatch_stream_event(
+                event=event,
                 agent=agent,
                 state=state,
                 request_context=request_context,
@@ -651,6 +695,7 @@ class RequestOrchestrator:
             )
             if should_stop:
                 break
+
         elapsed_ms = (time.perf_counter() - started_at) * MILLISECONDS_PER_SECOND
         logger.lifecycle(f"Request complete ({elapsed_ms:.0f}ms)")
 
@@ -658,7 +703,7 @@ class RequestOrchestrator:
         if error_text and not is_context_overflow_error(error_text):
             raise AgentError(error_text)
 
-        assistant_text = extract_assistant_text(state.last_assistant_message)
+        assistant_text = extract_text(state.last_assistant_message)
         is_empty = not assistant_text.strip()
         self.empty_handler.track(is_empty)
         if is_empty and self.empty_handler.should_intervene():
@@ -669,13 +714,13 @@ class RequestOrchestrator:
             )
         return agent
 
-    async def _handle_message_update(self, event: Any) -> None:
-        assistant_event = getattr(event, "assistant_message_event", None)
-        if not isinstance(assistant_event, dict):
+    async def _handle_message_update(self, event: MessageUpdateEvent) -> None:
+        assistant_event = event.assistant_message_event
+        if assistant_event is None:
             return
 
-        event_type = assistant_event.get("type")
-        delta = assistant_event.get("delta")
+        event_type = assistant_event.type
+        delta = assistant_event.delta
         if not isinstance(delta, str) or not delta:
             return
 
@@ -702,12 +747,11 @@ class RequestOrchestrator:
         if partial_text.strip():
             interrupted_text = f"[INTERRUPTED]\n\n{partial_text}"
             conversation.messages.append(
-                {
-                    "role": "assistant",
-                    "stop_reason": "aborted",
-                    "content": [{"type": "text", "text": interrupted_text}],
-                    "timestamp": int(time.time() * 1000),
-                }
+                AssistantMessage(
+                    content=[TextContent(text=interrupted_text)],
+                    stop_reason="aborted",
+                    timestamp=int(time.time() * 1000),
+                )
             )
         if invalidate_cache:
             invalidated = ac.invalidate_agent_cache(self.model, self.state_manager)

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any
 
 import pytest
+from tinyagent.agent_types import AgentMessage, AssistantMessage, TextContent, UserMessage
 
 from tunacode.core.compaction.controller import CompactionController, build_compaction_notice
 from tunacode.core.compaction.summarizer import ContextSummarizer
@@ -36,25 +36,20 @@ def _build_state_manager(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Sta
     return state_manager
 
 
-def _build_compactable_history() -> list[dict[str, Any]]:
+def _build_compactable_history() -> list[AgentMessage]:
     return [
-        {
-            "role": "user",
-            "content": [{"type": "text", "text": "old"}],
-            "timestamp": None,
-        },
-        {
-            "role": "assistant",
-            "stop_reason": "complete",
-            "content": [{"type": "text", "text": "recent"}],
-            "timestamp": None,
-        },
+        UserMessage(content=[TextContent(text="old")], timestamp=None),
+        AssistantMessage(
+            content=[TextContent(text="recent")],
+            stop_reason="complete",
+            timestamp=None,
+        ),
     ]
 
 
 def _patch_token_estimates(
     monkeypatch: pytest.MonkeyPatch,
-    messages: list[dict[str, Any]],
+    messages: list[AgentMessage],
     token_counts: list[int],
 ) -> None:
     if len(messages) != len(token_counts):

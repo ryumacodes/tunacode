@@ -4,6 +4,16 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+from tinyagent.agent_types import (
+    AgentMessage,
+    AgentToolResult,
+    AssistantMessage,
+    CustomAgentMessage,
+    TextContent,
+    ToolResultMessage,
+    UserMessage,
+)
+
 from tunacode.types import UsageMetrics
 
 CONTEXT_OVERFLOW_PATTERNS: tuple[str, ...] = (
@@ -14,6 +24,8 @@ CONTEXT_OVERFLOW_RETRY_NOTICE = "Context overflow detected. Compacting and retry
 CONTEXT_OVERFLOW_FAILURE_NOTICE = (
     "Context is still too large after compaction. Use /compact or /clear and retry."
 )
+
+_AGENT_MESSAGE_TYPES = UserMessage, AssistantMessage, ToolResultMessage, CustomAgentMessage
 
 
 def coerce_error_text(value: object) -> str:
@@ -40,57 +52,31 @@ def parse_canonical_usage(raw_usage: object) -> UsageMetrics:
 
 
 def is_tinyagent_message(value: object) -> bool:
-    if not isinstance(value, dict):
-        return False
-    role = value.get("role")
-    return role in {"user", "assistant", "tool_result"}
+    return isinstance(value, _AGENT_MESSAGE_TYPES)
 
 
-def coerce_tinyagent_history(messages: list[Any]) -> list[dict[str, Any]]:
+def coerce_tinyagent_history(messages: list[Any]) -> list[AgentMessage]:
     if not messages:
         return []
-    if all(is_tinyagent_message(m) for m in messages):
-        return [cast(dict[str, Any], m) for m in messages]
+
+    if all(is_tinyagent_message(message) for message in messages):
+        return [cast(AgentMessage, message) for message in messages]
+
     raise TypeError(
-        "Session history contains non-tinyagent messages. "
-        "Back-compat for pydantic-ai sessions has been removed. "
-        "Start a new session or delete the persisted session file."
+        "Session history contains non-tinyagent message models. "
+        "Expected UserMessage/AssistantMessage/ToolResultMessage/CustomAgentMessage."
     )
 
 
-def extract_assistant_text(message: dict[str, Any] | None) -> str:
-    if not message:
-        return ""
-    if message.get("role") != "assistant":
-        return ""
-    content = message.get("content")
-    if not isinstance(content, list):
-        return ""
-    parts: list[str] = []
-    for item in content:
-        if not isinstance(item, dict):
-            continue
-        if item.get("type") != "text":
-            continue
-        text = item.get("text")
-        if isinstance(text, str):
-            parts.append(text)
-    return "".join(parts)
-
-
-def extract_tool_result_text(result: Any) -> str | None:
+def extract_tool_result_text(result: AgentToolResult | None) -> str | None:
     if result is None:
         return None
-    content = getattr(result, "content", None)
-    if not isinstance(content, list):
-        return None
+
     parts: list[str] = []
-    for item in content:
-        if not isinstance(item, dict):
+    for item in result.content:
+        if not isinstance(item, TextContent):
             continue
-        if item.get("type") != "text":
-            continue
-        text = item.get("text")
-        if isinstance(text, str):
-            parts.append(text)
+        if isinstance(item.text, str):
+            parts.append(item.text)
+
     return "".join(parts) if parts else None

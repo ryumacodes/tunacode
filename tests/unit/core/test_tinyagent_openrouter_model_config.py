@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from tinyagent.agent_types import Context, Model, SimpleStreamOptions
 
 from tunacode.constants import ENV_OPENAI_BASE_URL
 
@@ -157,25 +158,30 @@ def test_build_api_key_resolver_prefers_minimax_cn_provider_key(
 async def test_build_stream_fn_uses_alchemy_stream_and_overrides_max_tokens(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    captured_options: dict[str, Any] = {}
+    captured_options: list[SimpleStreamOptions] = []
 
-    async def _fake_stream(model: Any, context: Any, options: dict[str, Any]) -> object:
+    async def _fake_stream(
+        model: Model,
+        context: Context,
+        options: SimpleStreamOptions,
+    ) -> object:
         _ = model
         _ = context
-        captured_options.update(options)
+        captured_options.append(options)
         return {"ok": True}
 
     monkeypatch.setattr(agent_config, "stream_alchemy_openai_completions", _fake_stream)
 
     stream_fn = agent_config._build_stream_fn(request_delay=0.0, max_tokens=128)
-    original_options: dict[str, Any] = {"api_key": "sk-test", "max_tokens": None}
+    original_options = SimpleStreamOptions(api_key="sk-test", max_tokens=None)
 
-    result = await stream_fn(object(), object(), original_options)
+    result = await stream_fn(Model(), Context(), original_options)
 
     assert result == {"ok": True}
-    assert captured_options["api_key"] == "sk-test"
-    assert captured_options["max_tokens"] == 128
-    assert original_options["max_tokens"] is None
+    assert len(captured_options) == 1
+    assert captured_options[0].api_key == "sk-test"
+    assert captured_options[0].max_tokens == 128
+    assert original_options.max_tokens is None
 
 
 def test_compaction_controller_model_and_api_key_support_non_openrouter_provider(
@@ -270,12 +276,11 @@ async def test_compaction_generate_summary_uses_alchemy_stream(
     captured: dict[str, Any] = {}
 
     class _FakeResponse:
-        async def result(self) -> dict[str, Any]:
+        async def result(self) -> Any:
             return {
                 "role": "assistant",
                 "content": [{"type": "text", "text": " summary from rust "}],
                 "timestamp": None,
-                "tool_calls": None,
                 "provider": "openrouter",
                 "model": "openai/gpt-4.1",
                 "usage": {
@@ -295,7 +300,7 @@ async def test_compaction_generate_summary_uses_alchemy_stream(
                 "error_message": None,
             }
 
-    async def _fake_stream(model: Any, context: Any, options: dict[str, Any]) -> _FakeResponse:
+    async def _fake_stream(model: Any, context: Any, options: Any) -> _FakeResponse:
         captured["model"] = model
         captured["context"] = context
         captured["options"] = options
@@ -309,8 +314,8 @@ async def test_compaction_generate_summary_uses_alchemy_stream(
     assert summary == "summary from rust"
     assert captured["model"].provider == "openrouter"
     assert captured["model"].id == "openai/gpt-4.1"
-    assert captured["options"]["api_key"] == "sk-openai"
-    assert captured["options"]["max_tokens"] == 321
+    assert captured["options"].api_key == "sk-openai"
+    assert captured["options"].max_tokens == 321
 
 
 def test_compaction_controller_raises_when_provider_has_no_api_and_override_missing(

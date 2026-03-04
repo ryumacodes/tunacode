@@ -1,37 +1,12 @@
-"""Message adapter for converting between tinyagent messages and canonical types.
+"""Message adapter for converting tinyagent messages and canonical types.
 
-TunaCode stores conversation history as tinyagent-style ``AgentMessage`` dicts.
-The supported shapes are:
+TunaCode's in-memory runtime uses typed tinyagent message models. Persisted
+session JSON stores the same messages as dictionaries at the explicit
+serialization boundary.
 
-- User message::
-
-    {"role": "user", "content": [{"type": "text", "text": "..."}], ...}
-
-- Assistant message::
-
-    {
-        "role": "assistant",
-        "content": [
-            {"type": "text", "text": "..."},
-            {"type": "thinking", "thinking": "..."},
-            {"type": "tool_call", "id": "...", "name": "...", "arguments": {...}},
-        ],
-        ...
-    }
-
-- Tool result message::
-
-    {
-        "role": "tool_result",
-        "tool_call_id": "...",
-        "tool_name": "...",
-        "content": [{"type": "text", "text": "..."}],
-        ...
-    }
-
-This module converts those messages into TunaCode's internal canonical dataclasses
-(``CanonicalMessage`` / ``CanonicalPart``) for normalization and tool-history
-utilities.
+This adapter accepts both representations and converts to TunaCode's canonical
+message dataclasses (``CanonicalMessage`` / ``CanonicalPart``) for
+normalization and tool-history utilities.
 
 Legacy pydantic-ai message formats are intentionally **not** supported.
 """
@@ -39,6 +14,13 @@ Legacy pydantic-ai message formats are intentionally **not** supported.
 from __future__ import annotations
 
 from typing import Any, cast
+
+from tinyagent.agent_types import (
+    AssistantMessage,
+    CustomAgentMessage,
+    ToolResultMessage,
+    UserMessage,
+)
 
 from tunacode.types.canonical import (
     CanonicalMessage,
@@ -265,16 +247,33 @@ def _content_items_to_parts(
     return tuple(parts)
 
 
+def _coerce_agent_message_dict(message: Any) -> dict[str, Any]:
+    if isinstance(message, dict):
+        return cast(dict[str, Any], message)
+
+    if not isinstance(
+        message,
+        UserMessage | AssistantMessage | ToolResultMessage | CustomAgentMessage,
+    ):
+        raise TypeError(f"Unsupported message type: {type(message).__name__}")
+
+    serialized_message = message.model_dump(exclude_none=True)
+    if not isinstance(serialized_message, dict):
+        raise TypeError(
+            "tinyagent message model_dump(exclude_none=True) must return dict; "
+            f"got {type(serialized_message).__name__}"
+        )
+
+    return cast(dict[str, Any], serialized_message)
+
+
 def to_canonical(message: Any) -> CanonicalMessage:
-    """Convert a tinyagent message dict to :class:`~tunacode.types.canonical.CanonicalMessage`."""
+    """Convert a tinyagent message payload to canonical format."""
 
     if isinstance(message, CanonicalMessage):
         return message
 
-    if not isinstance(message, dict):
-        raise TypeError(f"Unsupported message type: {type(message).__name__}")
-
-    msg = cast(dict[str, Any], message)
+    msg = _coerce_agent_message_dict(message)
     role_raw = _coerce_role(msg)
 
     canonical_role = ROLE_TO_CANONICAL.get(role_raw)

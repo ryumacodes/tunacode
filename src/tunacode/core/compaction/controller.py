@@ -7,7 +7,13 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
-from tinyagent.agent_types import AgentMessage, Context, SimpleStreamOptions
+from tinyagent.agent_types import (
+    AgentMessage,
+    Context,
+    SimpleStreamOptions,
+    TextContent,
+    UserMessage,
+)
 from tinyagent.alchemy_provider import OpenAICompatModel, stream_alchemy_openai_completions
 
 from tunacode.configuration.limits import get_max_tokens
@@ -48,8 +54,6 @@ DEFAULT_RESERVE_TOKENS = 16_384
 COMPACTION_SUMMARY_HEADER = "[Compaction summary]"
 COMPACTION_SUMMARY_KEY = "compaction_summary"
 
-ROLE_USER = "user"
-CONTENT_TYPE_TEXT = "text"
 ENV_OPENAI_API_KEY = "OPENAI_API_KEY"
 OPENAI_CHAT_COMPLETIONS_PATH = "/chat/completions"
 OPENROUTER_PROVIDER_ID = "openrouter"
@@ -338,19 +342,18 @@ class CompactionController:
         model = self._build_model()
         api_key = self._resolve_api_key(model.provider)
 
-        message: dict[str, Any] = {
-            "role": ROLE_USER,
-            "content": [{"type": CONTENT_TYPE_TEXT, "text": prompt}],
-            "timestamp": None,
-        }
-        context = Context(system_prompt="", messages=[message], tools=None)
+        summary_prompt = UserMessage(
+            content=[TextContent(text=prompt)],
+            timestamp=None,
+        )
+        context = Context(system_prompt="", messages=[summary_prompt], tools=None)
 
-        options: SimpleStreamOptions = {
-            "api_key": api_key,
-            "signal": signal,
-            "temperature": None,
-            "max_tokens": get_max_tokens(),
-        }
+        options = SimpleStreamOptions(
+            api_key=api_key,
+            signal=signal,
+            temperature=None,
+            max_tokens=get_max_tokens(),
+        )
 
         response = await stream_alchemy_openai_completions(model, context, options)
         final_message = await response.result()
@@ -499,21 +502,22 @@ def build_compaction_notice(outcome: CompactionOutcome) -> str | None:
 
 
 def _is_compaction_summary_message(message: AgentMessage) -> bool:
-    if not isinstance(message, dict):
+    if not isinstance(message, UserMessage):
         return False
 
-    if message.get(COMPACTION_SUMMARY_KEY) is True:
+    summary_marker = getattr(message, COMPACTION_SUMMARY_KEY, None)
+    if summary_marker is True:
         return True
 
-    content = message.get("content")
-    if not isinstance(content, list) or not content:
+    content = message.content
+    if not content:
         return False
 
     first_item = content[0]
-    if not isinstance(first_item, dict):
+    if not isinstance(first_item, TextContent):
         return False
 
-    text = first_item.get("text")
+    text = first_item.text
     if not isinstance(text, str):
         return False
 
@@ -522,9 +526,8 @@ def _is_compaction_summary_message(message: AgentMessage) -> bool:
 
 def _build_summary_user_message(summary_text: str) -> AgentMessage:
     payload_text = f"{COMPACTION_SUMMARY_HEADER}\n\n{summary_text}"
-    return {
-        "role": ROLE_USER,
-        "content": [{"type": CONTENT_TYPE_TEXT, "text": payload_text}],
-        "timestamp": None,
-        COMPACTION_SUMMARY_KEY: True,
-    }
+    return UserMessage(
+        content=[TextContent(text=payload_text)],
+        timestamp=None,
+        compaction_summary=True,
+    )
