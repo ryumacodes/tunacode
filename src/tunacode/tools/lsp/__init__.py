@@ -10,8 +10,6 @@ from tunacode.tools.lsp.client import Diagnostic, LSPClient
 from tunacode.tools.lsp.servers import get_server_command
 from tunacode.tools.utils.formatting import truncate_diagnostic_message
 
-__all__ = ["get_diagnostics", "format_diagnostics"]
-
 _clients: dict[str, LSPClient] = {}
 
 WORKSPACE_MARKERS: tuple[str, ...] = (

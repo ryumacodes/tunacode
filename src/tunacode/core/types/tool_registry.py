@@ -184,6 +184,3 @@ class ToolCallRegistry:
         updated_call = replace(call, **updates)
         self._calls[tool_call_id] = updated_call
         return updated_call
-
-
-__all__ = ["ToolCallRegistry"]

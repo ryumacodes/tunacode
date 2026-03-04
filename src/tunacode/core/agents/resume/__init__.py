@@ -9,7 +9,7 @@ TunaCode persists history as tinyagent-style dict messages:
 Legacy pydantic-ai message formats are intentionally not supported.
 """
 
-from tunacode.core.agents.resume.sanitize import (
+from tunacode.core.agents.resume.sanitize import (  # noqa: F401
     find_dangling_tool_call_ids,
     remove_consecutive_requests,
     remove_dangling_tool_calls,
@@ -17,14 +17,4 @@ from tunacode.core.agents.resume.sanitize import (
     run_cleanup_loop,
     sanitize_history_for_resume,
 )
-from tunacode.core.agents.resume.sanitize_debug import log_message_history_debug
-
-__all__ = [
-    "sanitize_history_for_resume",
-    "run_cleanup_loop",
-    "remove_dangling_tool_calls",
-    "remove_empty_responses",
-    "remove_consecutive_requests",
-    "find_dangling_tool_call_ids",
-    "log_message_history_debug",
-]
+from tunacode.core.agents.resume.sanitize_debug import log_message_history_debug  # noqa: F401

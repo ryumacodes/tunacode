@@ -5,11 +5,6 @@ from __future__ import annotations
 from os import DirEntry
 from pathlib import Path
 
-from tunacode.configuration.ignore_patterns import (
-    DEFAULT_EXCLUDE_DIRS,
-    DEFAULT_IGNORE_PATTERNS,
-)
-
 from tunacode.tools.cache_accessors.ignore_manager_cache import (
     get_ignore_manager as _get_cached_ignore_manager,
 )
@@ -44,12 +39,3 @@ def traverse_gitignore(
         return True
 
     return ignore_manager.should_ignore(entry_path)
-
-
-__all__ = [
-    "DEFAULT_EXCLUDE_DIRS",
-    "DEFAULT_IGNORE_PATTERNS",
-    "IgnoreManager",
-    "get_ignore_manager",
-    "traverse_gitignore",
-]

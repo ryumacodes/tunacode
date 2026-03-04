@@ -442,15 +442,3 @@ def find_dangling_tool_calls(messages: list[Any]) -> set[str]:
         return_ids.update(canonical.get_tool_return_ids())
 
     return call_ids - return_ids
-
-
-__all__ = [
-    "to_canonical",
-    "to_canonical_list",
-    "from_canonical",
-    "from_canonical_list",
-    "get_content",
-    "get_tool_call_ids",
-    "get_tool_return_ids",
-    "find_dangling_tool_calls",
-]
