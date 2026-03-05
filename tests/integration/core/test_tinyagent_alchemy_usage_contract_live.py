@@ -2,69 +2,102 @@ from __future__ import annotations
 
 import asyncio
 import os
+from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from tinyagent.agent_types import AssistantMessage, Context
+from tinyagent.agent_types import Context, SimpleStreamOptions, TextContent, UserMessage
 from tinyagent.alchemy_provider import OpenAICompatModel, stream_alchemy_openai_completions
 
-OPENROUTER_API_KEY_ENV = "OPENROUTER_API_KEY"
-OPENROUTER_CHAT_COMPLETIONS_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_TEST_MODEL_ID = "openai/gpt-4o-mini"
+CHUTES_API_KEY_ENV = "CHUTES_API_KEY"
+CHUTES_CHAT_COMPLETIONS_URL = "https://llm.chutes.ai/v1/chat/completions"
+CHUTES_TEST_MODEL_ID = "deepseek-ai/DeepSeek-V3.1"
+LIVE_PROMPT_TEXT = "Reply with exactly: OK"
+LIVE_SYSTEM_PROMPT = "Respond with exactly OK."
 STREAM_TIMEOUT_SECONDS = 90
-OPENROUTER_API_KEY = os.environ.get(OPENROUTER_API_KEY_ENV)
+LIVE_MAX_TOKENS = 32
+DOTENV_FILE = ".env"
+ENV_COMMENT_PREFIX = "#"
+ENV_ASSIGNMENT_SEPARATOR = "="
 EXPECTED_USAGE_KEYS = frozenset(
     {"input", "output", "cache_read", "cache_write", "total_tokens", "cost"}
 )
 EXPECTED_COST_KEYS = frozenset({"input", "output", "cache_read", "cache_write", "total"})
 
 
+def _read_dotenv_value(key: str) -> str | None:
+    dotenv_path = Path(DOTENV_FILE)
+    if not dotenv_path.exists():
+        return None
+
+    key_prefix = f"{key}{ENV_ASSIGNMENT_SEPARATOR}"
+    for raw_line in dotenv_path.read_text().splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith(ENV_COMMENT_PREFIX):
+            continue
+        if not line.startswith(key_prefix):
+            continue
+
+        raw_value = line[len(key_prefix) :].strip()
+        if not raw_value:
+            return None
+
+        normalized_value = raw_value.strip("\"'")
+        if not normalized_value:
+            return None
+        return normalized_value
+
+    return None
+
+
+CHUTES_API_KEY = os.environ.get(CHUTES_API_KEY_ENV) or _read_dotenv_value(CHUTES_API_KEY_ENV)
+
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.skipif(
-    not OPENROUTER_API_KEY,
-    reason="Requires OPENROUTER_API_KEY for live alchemy usage contract test",
+    not CHUTES_API_KEY,
+    reason="Requires CHUTES_API_KEY in env or .env for live alchemy usage contract test",
 )
 async def test_tinyagent_alchemy_result_includes_canonical_usage_contract() -> None:
     model = OpenAICompatModel(
-        provider="openrouter",
-        id=OPENROUTER_TEST_MODEL_ID,
-        base_url=OPENROUTER_CHAT_COMPLETIONS_URL,
+        provider="chutes",
+        id=CHUTES_TEST_MODEL_ID,
+        base_url=CHUTES_CHAT_COMPLETIONS_URL,
         headers={"X-Title": "tunacode-live-alchemy-usage-contract-test"},
     )
     context = Context(
-        system_prompt="Respond with exactly OK.",
+        system_prompt=LIVE_SYSTEM_PROMPT,
         messages=[
-            {
-                "role": "user",
-                "content": [{"type": "text", "text": "Reply with exactly: OK"}],
-            }
+            UserMessage(
+                content=[
+                    TextContent(text=LIVE_PROMPT_TEXT),
+                ],
+            )
         ],
         tools=None,
     )
 
+    stream_options = SimpleStreamOptions(
+        api_key=CHUTES_API_KEY,
+        max_tokens=LIVE_MAX_TOKENS,
+    )
     response = await asyncio.wait_for(
-        stream_alchemy_openai_completions(
-            model,
-            context,
-            {"api_key": OPENROUTER_API_KEY},
-        ),
+        stream_alchemy_openai_completions(model, context, stream_options),
         timeout=STREAM_TIMEOUT_SECONDS,
     )
 
     saw_done_event = False
     async for event in response:
-        event_dict = cast(dict[str, Any], event)
-        saw_done_event = saw_done_event or event_dict.get("type") == "done"
+        if event.type == "done":
+            saw_done_event = True
 
-    final_message = cast(
-        AssistantMessage,
-        await asyncio.wait_for(response.result(), timeout=STREAM_TIMEOUT_SECONDS),
-    )
-
+    final_message = await asyncio.wait_for(response.result(), timeout=STREAM_TIMEOUT_SECONDS)
     assert saw_done_event
 
-    usage_raw = final_message.get("usage")
+    usage_raw = final_message.usage
     assert isinstance(usage_raw, dict)
 
     missing_usage_keys = EXPECTED_USAGE_KEYS.difference(usage_raw.keys())
