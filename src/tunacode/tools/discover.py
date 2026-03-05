@@ -1,33 +1,11 @@
-"""Code discovery tool entrypoint and compatibility re-exports."""
+"""Code discovery tool entrypoint."""
 
 from __future__ import annotations
 
 import asyncio
 
 from tunacode.tools.decorators import base_tool
-from tunacode.tools.utils.discover_pipeline import (
-    _build_excerpt,
-    _build_relevant_tree,
-    _cluster_prospects,
-    _collect_candidates,
-    _detect_dominant_extensions,
-    _discover_sync,
-    _empty_prospect,
-    _evaluate_prospect,
-    _extract_imports,
-    _extract_search_terms,
-    _extract_symbols,
-    _generate_glob_patterns,
-    _infer_role,
-    _Prospect,
-)
-from tunacode.tools.utils.discover_types import (
-    MAX_REPORT_FILES,
-    ConceptCluster,
-    DiscoveryReport,
-    FileEntry,
-    Relevance,
-)
+from tunacode.tools.utils.discover_pipeline import _discover_sync
 
 
 @base_tool
@@ -51,27 +29,3 @@ async def discover(
     """
     report = await asyncio.to_thread(_discover_sync, query, directory)
     return report.to_context()
-
-
-__all__ = [
-    "MAX_REPORT_FILES",
-    "ConceptCluster",
-    "DiscoveryReport",
-    "FileEntry",
-    "Relevance",
-    "_Prospect",
-    "_build_excerpt",
-    "_build_relevant_tree",
-    "_cluster_prospects",
-    "_collect_candidates",
-    "_detect_dominant_extensions",
-    "_discover_sync",
-    "_empty_prospect",
-    "_evaluate_prospect",
-    "_extract_imports",
-    "_extract_search_terms",
-    "_extract_symbols",
-    "_generate_glob_patterns",
-    "_infer_role",
-    "discover",
-]

@@ -6,6 +6,14 @@ import json
 from pathlib import Path
 
 import pytest
+from tinyagent.agent_types import (
+    AgentMessage,
+    AssistantMessage,
+    TextContent,
+    ToolCallContent,
+    ToolResultMessage,
+    UserMessage,
+)
 
 from tunacode.core.compaction.controller import (
     CompactionController,
@@ -59,41 +67,41 @@ def _make_text_message(
     text: str,
     *,
     stop_reason: str | None = None,
-) -> dict[str, object]:
-    message: dict[str, object] = {
-        "role": role,
-        "content": [{"type": "text", "text": text}],
-        "timestamp": None,
-    }
-    if stop_reason is not None:
-        message["stop_reason"] = stop_reason
-    return message
+) -> AgentMessage:
+    if role == "user":
+        return UserMessage(content=[TextContent(text=text)], timestamp=None)
+
+    if role == "assistant":
+        return AssistantMessage(
+            content=[TextContent(text=text)],
+            stop_reason=stop_reason,
+            timestamp=None,
+        )
+
+    raise ValueError(f"Unsupported role for test fixture: {role}")
 
 
-def _make_tool_call_message() -> dict[str, object]:
-    return {
-        "role": "assistant",
-        "content": [
-            {
-                "type": "tool_call",
-                "id": "tc-1",
-                "name": "bash",
-                "arguments": {"command": "ls -la"},
-            }
+def _make_tool_call_message() -> AssistantMessage:
+    return AssistantMessage(
+        content=[
+            ToolCallContent(
+                id="tc-1",
+                name="bash",
+                arguments={"command": "ls -la"},
+            )
         ],
-        "stop_reason": "tool_calls",
-        "timestamp": None,
-    }
+        stop_reason="tool_calls",
+        timestamp=None,
+    )
 
 
-def _make_tool_result_message(tool_output: str) -> dict[str, object]:
-    return {
-        "role": "tool_result",
-        "tool_call_id": "tc-1",
-        "tool_name": "bash",
-        "content": [{"type": "text", "text": tool_output}],
-        "timestamp": None,
-    }
+def _make_tool_result_message(tool_output: str) -> ToolResultMessage:
+    return ToolResultMessage(
+        tool_call_id="tc-1",
+        tool_name="bash",
+        content=[TextContent(text=tool_output)],
+        timestamp=None,
+    )
 
 
 @pytest.mark.asyncio
@@ -110,7 +118,7 @@ async def test_compaction_flow_end_to_end(tmp_path: Path, monkeypatch: pytest.Mo
     conversation.max_tokens = MAX_TOKENS
 
     tool_output = "x" * 700
-    history: list[dict[str, object]] = [
+    history: list[AgentMessage] = [
         _make_text_message("user", "u" * 200),
         _make_text_message("assistant", "a" * 200, stop_reason="complete"),
         _make_tool_call_message(),
@@ -181,9 +189,14 @@ async def test_compaction_flow_end_to_end(tmp_path: Path, monkeypatch: pytest.Mo
     assert second_outcome.messages == compacted
 
     transformed = controller.inject_summary_message(compacted)
-    assert transformed[0]["role"] == "user"
-    assert transformed[0]["compaction_summary"] is True
-    first_text = transformed[0]["content"][0]["text"]
+    first_message = transformed[0]
+    assert isinstance(first_message, UserMessage)
+    assert getattr(first_message, "compaction_summary", None) is True
+
+    first_item = first_message.content[0]
+    assert isinstance(first_item, TextContent)
+    first_text = first_item.text
+    assert isinstance(first_text, str)
     assert "## Goal" in first_text
 
     assert await state_manager.save_session()
@@ -254,7 +267,7 @@ async def test_force_compaction_runs_below_threshold_with_valid_boundary(
     session.working_directory = "/tmp"
     session.conversation.max_tokens = MAX_TOKENS
 
-    history: list[dict[str, object]] = [
+    history: list[AgentMessage] = [
         _make_text_message("user", "old"),
         _make_text_message("assistant", "reply-without-stop-reason"),
     ]

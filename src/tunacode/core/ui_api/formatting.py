@@ -4,8 +4,6 @@ from __future__ import annotations
 
 MAX_DIAGNOSTIC_MESSAGE_LENGTH = 80
 
-__all__: list[str] = ["truncate_diagnostic_message"]
-
 
 def truncate_diagnostic_message(
     message: str,

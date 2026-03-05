@@ -14,8 +14,6 @@ from tunacode.utils.messaging import get_content, get_tool_call_ids, get_tool_re
 
 from tunacode.core.logging import get_logger
 
-__all__ = ["log_message_history_debug"]
-
 DEBUG_PREVIEW_SUFFIX: str = "..."
 DEBUG_NEWLINE_REPLACEMENT: str = "\\n"
 DEBUG_HISTORY_MESSAGE_PREVIEW_LEN: int = 160

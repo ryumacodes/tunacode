@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
+from tinyagent.agent_types import AssistantMessageEvent, MessageUpdateEvent
 
 from tunacode.core.agents.main import RequestOrchestrator
 from tunacode.core.session import StateManager
@@ -42,7 +42,9 @@ async def test_text_delta_routes_to_streaming_and_updates_debug_accumulator() ->
         thinking_chunks=thought_chunks,
     )
 
-    event = SimpleNamespace(assistant_message_event={"type": "text_delta", "delta": "hello"})
+    event = MessageUpdateEvent(
+        assistant_message_event=AssistantMessageEvent(type="text_delta", delta="hello")
+    )
     await orchestrator._handle_message_update(event)
 
     assert streamed == ["hello"]
@@ -56,7 +58,9 @@ async def test_text_delta_updates_debug_accumulator_without_streaming_callback()
         thinking_chunks=[],
     )
 
-    event = SimpleNamespace(assistant_message_event={"type": "text_delta", "delta": "hello"})
+    event = MessageUpdateEvent(
+        assistant_message_event=AssistantMessageEvent(type="text_delta", delta="hello")
+    )
     await orchestrator._handle_message_update(event)
 
     assert state_manager.session._debug_raw_stream_accum == "hello"
@@ -69,8 +73,8 @@ async def test_thinking_delta_routes_without_streaming_callback() -> None:
         thinking_chunks=thought_chunks,
     )
 
-    event = SimpleNamespace(
-        assistant_message_event={"type": "thinking_delta", "delta": "reasoning"}
+    event = MessageUpdateEvent(
+        assistant_message_event=AssistantMessageEvent(type="thinking_delta", delta="reasoning")
     )
     await orchestrator._handle_message_update(event)
 
@@ -87,10 +91,14 @@ async def test_non_delta_or_invalid_events_are_ignored() -> None:
     )
 
     invalid_events = [
-        SimpleNamespace(assistant_message_event=None),
-        SimpleNamespace(assistant_message_event={"type": "text_delta", "delta": ""}),
-        SimpleNamespace(assistant_message_event={"type": "thinking_delta", "delta": 123}),
-        SimpleNamespace(assistant_message_event={"type": "message_end", "delta": "ignored"}),
+        MessageUpdateEvent(assistant_message_event=None),
+        MessageUpdateEvent(
+            assistant_message_event=AssistantMessageEvent(type="text_delta", delta="")
+        ),
+        MessageUpdateEvent(assistant_message_event=AssistantMessageEvent(type="thinking_delta")),
+        MessageUpdateEvent(
+            assistant_message_event=AssistantMessageEvent(type="done", delta="ignored")
+        ),
     ]
 
     for event in invalid_events:

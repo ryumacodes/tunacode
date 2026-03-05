@@ -1,6 +1,6 @@
 # tunacode-cli
 
-<img src="docs/images/tunacode.png" alt="tunacode" width="600"/>
+<img src="assets/home.png" alt="tunacode" width="600"/>
 
 [![PyPI version](https://badge.fury.io/py/tunacode-cli.svg)](https://badge.fury.io/py/tunacode-cli)
 [![Downloads](https://pepy.tech/badge/tunacode-cli)](https://pepy.tech/project/tunacode-cli)
@@ -32,15 +32,6 @@ A terminal-based AI coding agent with a NeXTSTEP-inspired interface.
 - **Rich** - Terminal rendering with syntax highlighting
 - **Typer** - CLI framework
 
-### Migration Notes
-
-**Recent Breaking Changes:**
-
-- Session persistence format changed - existing sessions may not load correctly
-- Tool execution runs in parallel batches with a strict cap of 3 in-flight tool calls
-- The `docs/` directory has been restructured
-
-For full details, see the [CHANGELOG](CHANGELOG.md).
 
 ## Installation
 
@@ -142,7 +133,7 @@ Run `/debug` to enable lifecycle logs. During agent execution, parallel batches 
 If no `Parallel tool calls` lifecycle lines appear, that request did not execute a parallel tool batch.
 ## Tools
 
-<img src="docs/images/tool-calls.png" alt="Tool calls in tunacode" width="600"/>
+
 
 The agent has access to:
 
@@ -156,6 +147,8 @@ The agent has access to:
 | `grep` | Search file contents |
 | `list_dir` | List directory tree |
 | `web_fetch` | Fetch web page content |
+
+<img src="assets/hashline-edit.png" alt="hashline-edit tool in tunacode" width="600"/>
 
 ## LSP Integration
 

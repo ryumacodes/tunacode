@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 
 import pytest
+from tinyagent.agent_types import (
+    AgentMessage,
+    AssistantMessage,
+    TextContent,
+    ToolCallContent,
+    ToolResultMessage,
+    UserMessage,
+)
 
 from tunacode.core.compaction.summarizer import ContextSummarizer
 
@@ -14,9 +21,58 @@ async def _unused_summary_generator(_prompt: str, _signal: asyncio.Event | None)
     raise AssertionError("summary generation should not run in boundary tests")
 
 
+def _user_message(text: str) -> UserMessage:
+    return UserMessage(content=[TextContent(text=text)], timestamp=None)
+
+
+def _assistant_text_message(
+    text: str,
+    *,
+    stop_reason: str | None = None,
+) -> AssistantMessage:
+    return AssistantMessage(
+        content=[TextContent(text=text)],
+        stop_reason=stop_reason,
+        timestamp=None,
+    )
+
+
+def _assistant_tool_call_message(
+    tool_call_id: str,
+    tool_name: str,
+    arguments: dict[str, object],
+    *,
+    stop_reason: str | None,
+) -> AssistantMessage:
+    return AssistantMessage(
+        content=[
+            ToolCallContent(
+                id=tool_call_id,
+                name=tool_name,
+                arguments=arguments,
+            )
+        ],
+        stop_reason=stop_reason,
+        timestamp=None,
+    )
+
+
+def _tool_result_message(
+    tool_call_id: str,
+    tool_name: str,
+    text: str,
+) -> ToolResultMessage:
+    return ToolResultMessage(
+        tool_call_id=tool_call_id,
+        tool_name=tool_name,
+        content=[TextContent(text=text)],
+        timestamp=None,
+    )
+
+
 def _patch_token_estimates(
     monkeypatch: pytest.MonkeyPatch,
-    messages: list[dict[str, Any]],
+    messages: list[AgentMessage],
     token_counts: list[int],
 ) -> None:
     if len(messages) != len(token_counts):
@@ -44,23 +100,10 @@ def test_retention_boundary_treats_threshold_equality_as_satisfied(
 ) -> None:
     """Equality contract: retained suffix tokens == threshold keeps current boundary."""
 
-    messages: list[dict[str, Any]] = [
-        {
-            "role": "user",
-            "content": [{"type": "text", "text": "old"}],
-            "timestamp": None,
-        },
-        {
-            "role": "assistant",
-            "stop_reason": "complete",
-            "content": [{"type": "text", "text": "recent-a"}],
-            "timestamp": None,
-        },
-        {
-            "role": "user",
-            "content": [{"type": "text", "text": "recent-b"}],
-            "timestamp": None,
-        },
+    messages: list[AgentMessage] = [
+        _user_message("old"),
+        _assistant_text_message("recent-a", stop_reason="complete"),
+        _user_message("recent-b"),
     ]
     _patch_token_estimates(monkeypatch, messages, token_counts=[5, 7, 13])
 
@@ -77,26 +120,14 @@ def test_retention_boundary_snaps_to_zero_for_unsafe_assistant_tool_shape(
 ) -> None:
     """Boundary contracts must never split at invalid assistant positions."""
 
-    messages: list[dict[str, Any]] = [
-        {
-            "role": "assistant",
-            "content": [
-                {
-                    "type": "tool_call",
-                    "id": "tc-1",
-                    "name": "bash",
-                    "arguments": {"command": "ls"},
-                }
-            ],
-            "timestamp": None,
-        },
-        {
-            "role": "tool_result",
-            "tool_call_id": "tc-1",
-            "tool_name": "bash",
-            "content": [{"type": "text", "text": "ok"}],
-            "timestamp": None,
-        },
+    messages: list[AgentMessage] = [
+        _assistant_tool_call_message(
+            "tc-1",
+            "bash",
+            {"command": "ls"},
+            stop_reason=None,
+        ),
+        _tool_result_message("tc-1", "bash", "ok"),
     ]
     _patch_token_estimates(monkeypatch, messages, token_counts=[2, 8])
 
@@ -112,22 +143,10 @@ def test_retention_boundary_allows_safe_assistant_without_stop_reason(
 ) -> None:
     """Assistant text-only turns can close boundaries even when stop_reason is absent."""
 
-    messages: list[dict[str, Any]] = [
-        {
-            "role": "user",
-            "content": [{"type": "text", "text": "old"}],
-            "timestamp": None,
-        },
-        {
-            "role": "assistant",
-            "content": [{"type": "text", "text": "complete turn"}],
-            "timestamp": None,
-        },
-        {
-            "role": "user",
-            "content": [{"type": "text", "text": "recent"}],
-            "timestamp": None,
-        },
+    messages: list[AgentMessage] = [
+        _user_message("old"),
+        _assistant_text_message("complete turn", stop_reason=None),
+        _user_message("recent"),
     ]
     _patch_token_estimates(monkeypatch, messages, token_counts=[3, 4, 10])
 
@@ -143,18 +162,9 @@ def test_force_retention_boundary_compacts_even_below_threshold(
 ) -> None:
     """Manual force boundary ignores token threshold and picks the latest valid cut."""
 
-    messages: list[dict[str, Any]] = [
-        {
-            "role": "user",
-            "content": [{"type": "text", "text": "hello"}],
-            "timestamp": None,
-        },
-        {
-            "role": "assistant",
-            "stop_reason": "complete",
-            "content": [{"type": "text", "text": "world"}],
-            "timestamp": None,
-        },
+    messages: list[AgentMessage] = [
+        _user_message("hello"),
+        _assistant_text_message("world", stop_reason="complete"),
     ]
     _patch_token_estimates(monkeypatch, messages, token_counts=[2, 3])
 
@@ -172,38 +182,16 @@ def test_retention_boundary_never_starts_with_tool_result(
 ) -> None:
     """Compaction must retain tool call/result pairs atomically."""
 
-    messages: list[dict[str, Any]] = [
-        {
-            "role": "user",
-            "content": [{"type": "text", "text": "first"}],
-            "timestamp": None,
-        },
-        {
-            "role": "assistant",
-            "stop_reason": "tool_calls",
-            "content": [
-                {
-                    "type": "tool_call",
-                    "id": "tc-1",
-                    "name": "bash",
-                    "arguments": {"command": "ls"},
-                }
-            ],
-            "timestamp": None,
-        },
-        {
-            "role": "tool_result",
-            "tool_call_id": "tc-1",
-            "tool_name": "bash",
-            "content": [{"type": "text", "text": "ok"}],
-            "timestamp": None,
-        },
-        {
-            "role": "assistant",
-            "stop_reason": "complete",
-            "content": [{"type": "text", "text": "done"}],
-            "timestamp": None,
-        },
+    messages: list[AgentMessage] = [
+        _user_message("first"),
+        _assistant_tool_call_message(
+            "tc-1",
+            "bash",
+            {"command": "ls"},
+            stop_reason="tool_calls",
+        ),
+        _tool_result_message("tc-1", "bash", "ok"),
+        _assistant_text_message("done", stop_reason="complete"),
     ]
     _patch_token_estimates(monkeypatch, messages, token_counts=[1, 1, 6, 4])
 
@@ -212,4 +200,4 @@ def test_retention_boundary_never_starts_with_tool_result(
     boundary = summarizer.calculate_retention_boundary(messages, keep_recent_tokens=10)
 
     assert boundary == 1
-    assert messages[boundary]["role"] != "tool_result"
+    assert not isinstance(messages[boundary], ToolResultMessage)

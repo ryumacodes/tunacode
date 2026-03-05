@@ -2,12 +2,7 @@
 
 from pathlib import Path
 
-from tunacode.tools.discover import (
-    MAX_REPORT_FILES,
-    ConceptCluster,
-    DiscoveryReport,
-    FileEntry,
-    Relevance,
+from tunacode.tools.utils.discover_pipeline import (
     _build_excerpt,
     _build_relevant_tree,
     _cluster_prospects,
@@ -22,6 +17,13 @@ from tunacode.tools.discover import (
     _generate_glob_patterns,
     _infer_role,
     _Prospect,
+)
+from tunacode.tools.utils.discover_types import (
+    MAX_REPORT_FILES,
+    ConceptCluster,
+    DiscoveryReport,
+    FileEntry,
+    Relevance,
 )
 
 # ---------------------------------------------------------------------------

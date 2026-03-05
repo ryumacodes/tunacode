@@ -14,7 +14,18 @@ from pathlib import Path
 from typing import Any, cast
 
 from tinyagent import Agent, AgentOptions
-from tinyagent.agent_types import AgentMessage, AgentTool, AgentToolResult
+from tinyagent.agent_types import (
+    AgentMessage,
+    AgentTool,
+    AgentToolResult,
+    AgentToolUpdateCallback,
+    Context,
+    JsonObject,
+    Model,
+    SimpleStreamOptions,
+    StreamFn,
+    StreamResponse,
+)
 from tinyagent.alchemy_provider import OpenAICompatModel, stream_alchemy_openai_completions
 
 from tunacode.configuration.limits import get_max_tokens
@@ -205,9 +216,9 @@ def _wrap_tool_with_concurrency_limit(
 
     async def _execute_with_limit(
         tool_call_id: str,
-        args: dict[str, Any],
+        args: JsonObject,
         signal: asyncio.Event | None,
-        on_update: Callable[[AgentToolResult], None],
+        on_update: AgentToolUpdateCallback,
     ) -> AgentToolResult:
         await limiter.acquire()
         try:
@@ -329,21 +340,34 @@ def _build_api_key_resolver(session: SessionStateProtocol) -> Callable[[str], st
     return _resolve
 
 
+def _merge_stream_options(
+    *,
+    options: SimpleStreamOptions,
+    max_tokens: int | None,
+) -> SimpleStreamOptions:
+    if max_tokens is None:
+        return options
+
+    return options.model_copy(update={"max_tokens": max_tokens})
+
+
 def _build_stream_fn(
     *,
     request_delay: float,
     max_tokens: int | None,
-) -> Callable[..., Awaitable[Any]]:
-    async def _stream(model: Any, context: Any, options: dict[str, Any]) -> Any:
+) -> StreamFn:
+    async def _stream(
+        model: Model,
+        context: Context,
+        options: SimpleStreamOptions,
+    ) -> StreamResponse:
         if request_delay > 0:
             await _sleep_with_delay(request_delay)
 
         # tinyagent's agent loop passes max_tokens=None by default; we inject
         # TunaCode's configured limit if one exists.
-        if max_tokens is not None:
-            options = {**options, "max_tokens": max_tokens}
-
-        return await stream_alchemy_openai_completions(model, context, options)
+        stream_options = _merge_stream_options(options=options, max_tokens=max_tokens)
+        return await stream_alchemy_openai_completions(model, context, stream_options)
 
     return _stream
 

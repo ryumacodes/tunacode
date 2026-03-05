@@ -4,6 +4,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from tinyagent.agent_types import (
+    ZERO_USAGE,
+    AssistantMessage,
+    AssistantMessageEvent,
+    Context,
+    Model,
+    SimpleStreamOptions,
+    TextContent,
+)
 
 from tunacode.core.agents.agent_components import agent_config
 from tunacode.core.session import StateManager
@@ -22,19 +31,21 @@ class _FakeResponse:
     def __aiter__(self) -> _FakeResponse:
         return self
 
-    async def __anext__(self) -> dict[str, Any]:
+    async def __anext__(self) -> AssistantMessageEvent:
         if self._done_emitted:
             raise StopAsyncIteration
 
         self._done_emitted = True
-        return {"type": "done"}
+        return AssistantMessageEvent(type="done")
 
-    async def result(self) -> dict[str, Any]:
-        return {
-            "role": "assistant",
-            "content": [{"type": "text", "text": "ok"}],
-            "timestamp": None,
-        }
+    async def result(self) -> AssistantMessage:
+        return AssistantMessage(
+            content=[TextContent(text="ok")],
+            stop_reason="stop",
+            provider="minimax-coding-plan",
+            model="MiniMax-M2.1",
+            usage=ZERO_USAGE,
+        )
 
 
 @pytest.mark.integration
@@ -52,7 +63,11 @@ async def test_minimax_coding_plan_execution_path_uses_minimax_alchemy_contract(
 
     captured: dict[str, Any] = {}
 
-    async def _fake_stream(model: Any, context: Any, options: dict[str, Any]) -> _FakeResponse:
+    async def _fake_stream(
+        model: Model,
+        context: Context,
+        options: SimpleStreamOptions,
+    ) -> _FakeResponse:
         captured["model"] = model
         captured["context"] = context
         captured["options"] = options
@@ -76,4 +91,5 @@ async def test_minimax_coding_plan_execution_path_uses_minimax_alchemy_contract(
     assert model.base_url == MINIMAX_CHAT_COMPLETIONS_URL
 
     options = captured["options"]
-    assert options["api_key"] == MINIMAX_API_KEY_VALUE
+    assert isinstance(options, SimpleStreamOptions)
+    assert options.api_key == MINIMAX_API_KEY_VALUE

@@ -15,6 +15,7 @@ from textual.binding import Binding
 from textual.containers import Container
 from textual.timer import Timer
 from textual.widgets import LoadingIndicator, Static
+from tinyagent.agent_types import AssistantMessage, TextContent, UserMessage
 
 if TYPE_CHECKING:
     from textual.theme import Theme
@@ -293,26 +294,19 @@ class TextualReplApp(App[None]):
     def _get_latest_response_text(self) -> str | None:
         messages = self.state_manager.session.conversation.messages
         for message in reversed(messages):
-            if not isinstance(message, dict):
+            if not isinstance(message, AssistantMessage):
                 continue
-            if message.get("role") != "assistant":
-                continue
-
-            content_items = message.get("content")
-            if not isinstance(content_items, list):
-                return None
 
             text_segments: list[str] = []
-            for raw_item in content_items:
-                if not isinstance(raw_item, dict):
+            for item in message.content:
+                if not isinstance(item, TextContent):
                     continue
-                if raw_item.get("type") != "text":
+
+                text_value = item.text
+                if not isinstance(text_value, str) or not text_value:
                     continue
-                raw_text = raw_item.get("text", "")
-                text_segment = raw_text if isinstance(raw_text, str) else str(raw_text)
-                if not text_segment:
-                    continue
-                text_segments.append(text_segment)
+
+                text_segments.append(text_value)
 
             normalized_content = " ".join(text_segments).strip()
             if not normalized_content:
@@ -384,25 +378,25 @@ class TextualReplApp(App[None]):
         from tunacode.core.ui_api.messaging import get_content
 
         conversation = self.state_manager.session.conversation
-        for msg in conversation.messages:
-            if not isinstance(msg, dict):
-                continue
-            role = msg.get("role")
-            if role == "user":
-                content = get_content(msg)
+        for message in conversation.messages:
+            if isinstance(message, UserMessage):
+                content = get_content(message)
                 if not content:
                     continue
+
                 user_block = Text()
                 user_block.append(f"| {content}\n", style=STYLE_PRIMARY)
                 user_block.append("| (restored)", style=f"dim {STYLE_PRIMARY}")
                 self.chat_container.write(user_block)
                 continue
-            if role != "assistant":
+
+            if not isinstance(message, AssistantMessage):
                 continue
 
-            content = get_content(msg)
+            content = get_content(message)
             if not content:
                 continue
+
             self.chat_container.write(Text("agent:", style="accent"))
             self.chat_container.write(Markdown(content))
 

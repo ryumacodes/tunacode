@@ -20,6 +20,3 @@ class FileFilter(InfrastructureFileFilter):
             max_depth=AUTOCOMPLETE_MAX_DEPTH,
             root=root,
         )
-
-
-__all__: list[str] = ["FileFilter"]

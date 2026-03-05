@@ -35,9 +35,10 @@ from tunacode.tools.cache_accessors.ignore_manager_cache import clear_ignore_man
 from tunacode.tools.cache_accessors.ripgrep_cache import clear_ripgrep_cache
 from tunacode.tools.cache_accessors.xml_prompts_cache import clear_xml_prompts_cache
 from tunacode.tools.decorators import base_tool, to_tinyagent_tool
-from tunacode.tools.discover import _extract_search_terms, discover
+from tunacode.tools.discover import discover
 from tunacode.tools.ignore import get_ignore_manager
 from tunacode.tools.read_file import read_file
+from tunacode.tools.utils.discover_pipeline import _extract_search_terms
 from tunacode.tools.utils.ripgrep import RipgrepExecutor
 
 # ---------------------------------------------------------------------------

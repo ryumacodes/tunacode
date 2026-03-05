@@ -13,8 +13,6 @@ from tunacode.configuration.user_config import (
 )
 from tunacode.types import UserConfig
 
-__all__: list[str] = ["load_config_with_defaults", "save_config"]
-
 
 def load_config_with_defaults(default_config: UserConfig) -> UserConfig:
     """Load user config from disk and merge with defaults.

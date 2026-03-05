@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
+from tinyagent.agent_types import (
+    AgentToolResult,
+    TextContent,
+    ToolExecutionEndEvent,
+    ToolExecutionStartEvent,
+)
 
 from tunacode.types.canonical import ToolCallStatus
 
@@ -63,17 +67,21 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
     )
 
     await orchestrator._handle_stream_tool_execution_start(
-        SimpleNamespace(tool_call_id="tool-a", tool_name="read_file", args={"filepath": "a.py"}),
+        ToolExecutionStartEvent(
+            tool_call_id="tool-a",
+            tool_name="read_file",
+            args={"filepath": "a.py"},
+        ),
         agent=object(),
         state=state,
         request_context=request_context,
         baseline_message_count=0,
     )
     await orchestrator._handle_stream_tool_execution_start(
-        SimpleNamespace(
+        ToolExecutionStartEvent(
             tool_call_id="tool-b",
             tool_name="grep",
-            args='{"pattern": "TODO"}',
+            args={"pattern": "TODO"},
         ),
         agent=object(),
         state=state,
@@ -86,11 +94,11 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
     assert state_manager.session.runtime.tool_registry.get_args("tool-b") == {"pattern": "TODO"}
 
     await orchestrator._handle_stream_tool_execution_end(
-        SimpleNamespace(
+        ToolExecutionEndEvent(
             tool_call_id="tool-a",
             tool_name="read_file",
             is_error=False,
-            result={"content": [{"type": "text", "text": "read complete"}]},
+            result=AgentToolResult(content=[TextContent(text="read complete")], details={}),
         ),
         agent=object(),
         state=state,
@@ -98,11 +106,11 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
         baseline_message_count=0,
     )
     await orchestrator._handle_stream_tool_execution_end(
-        SimpleNamespace(
+        ToolExecutionEndEvent(
             tool_call_id="tool-b",
             tool_name="grep",
             is_error=False,
-            result={"content": [{"type": "text", "text": "found"}]},
+            result=AgentToolResult(content=[TextContent(text="found")], details={}),
         ),
         agent=object(),
         state=state,
@@ -133,9 +141,9 @@ async def test_tool_start_rejects_malformed_args_payload() -> None:
         result_events=[],
     )
 
-    with pytest.raises(TypeError, match="tool_execution_start args must be a dict or JSON string"):
+    with pytest.raises(TypeError, match="tool_execution_start args must be an object"):
         await orchestrator._handle_stream_tool_execution_start(
-            SimpleNamespace(tool_call_id="tool-a", tool_name="read_file", args=["bad"]),
+            ToolExecutionStartEvent(tool_call_id="tool-a", tool_name="read_file", args=["bad"]),
             agent=object(),
             state=state,
             request_context=request_context,
@@ -160,18 +168,22 @@ async def test_single_tool_duration_is_reported_when_not_in_parallel_batch(
     monkeypatch.setattr(agent_main.time, "perf_counter", lambda: next(perf_counter_values))
 
     await orchestrator._handle_stream_tool_execution_start(
-        SimpleNamespace(tool_call_id="tool-a", tool_name="read_file", args={"filepath": "a.py"}),
+        ToolExecutionStartEvent(
+            tool_call_id="tool-a",
+            tool_name="read_file",
+            args={"filepath": "a.py"},
+        ),
         agent=object(),
         state=state,
         request_context=request_context,
         baseline_message_count=0,
     )
     await orchestrator._handle_stream_tool_execution_end(
-        SimpleNamespace(
+        ToolExecutionEndEvent(
             tool_call_id="tool-a",
             tool_name="read_file",
             is_error=False,
-            result={"content": [{"type": "text", "text": "done"}]},
+            result=AgentToolResult(content=[TextContent(text="done")], details={}),
         ),
         agent=object(),
         state=state,

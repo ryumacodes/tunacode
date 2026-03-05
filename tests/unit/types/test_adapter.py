@@ -10,6 +10,7 @@ Legacy pydantic-ai message formats are intentionally not supported.
 from __future__ import annotations
 
 import pytest
+from tinyagent.agent_types import AssistantMessage, TextContent, UserMessage
 
 from tunacode.types.canonical import (
     CanonicalMessage,
@@ -87,6 +88,13 @@ class TestToCanonical:
 
         assert result.role == MessageRole.USER
         assert result.parts == (TextPart(content="Hello world"),)
+
+    def test_user_message_model_to_canonical(self) -> None:
+        msg = UserMessage(content=[TextContent(text="Hello model")])
+        result = to_canonical(msg)
+
+        assert result.role == MessageRole.USER
+        assert result.parts == (TextPart(content="Hello model"),)
 
     def test_assistant_text_message_to_canonical(self) -> None:
         msg = _assistant_message(_text_item("I can help"))
@@ -208,6 +216,10 @@ class TestExtractionHelpers:
     def test_get_content_from_canonical(self) -> None:
         msg = CanonicalMessage(role=MessageRole.USER, parts=(TextPart(content="Direct"),))
         assert get_content(msg) == "Direct"
+
+    def test_get_content_from_tinyagent_model(self) -> None:
+        msg = AssistantMessage(content=[TextContent(text="Model text")])
+        assert get_content(msg) == "Model text"
 
     def test_get_tool_call_ids_from_assistant_message(self) -> None:
         msg = _assistant_message(

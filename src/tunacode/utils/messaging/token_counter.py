@@ -1,9 +1,11 @@
 """Token counting utility using a lightweight heuristic.
 
 Phase 6+ note:
-TunaCode stores history as tinyagent-style dict messages.
-This module intentionally supports only:
-- tinyagent dict messages
+TunaCode stores history as typed tinyagent messages in memory, and as tinyagent
+JSON dicts at persistence boundaries.
+This module intentionally supports:
+- tinyagent message models
+- tinyagent dict messages (serialization boundary)
 - :class:`~tunacode.types.canonical.CanonicalMessage`
 
 Legacy pydantic-ai message objects are not supported.

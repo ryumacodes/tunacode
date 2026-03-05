@@ -3,7 +3,13 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from tinyagent.agent_types import AgentTool, AgentToolResult
+from tinyagent.agent_types import (
+    AgentTool,
+    AgentToolResult,
+    AgentToolUpdateCallback,
+    JsonObject,
+    TextContent,
+)
 
 from tunacode.core.agents.agent_components import agent_config
 
@@ -22,9 +28,9 @@ async def test_apply_tool_concurrency_limit_caps_in_flight_and_preserves_queue_o
 
     async def _execute(
         tool_call_id: str,
-        args: dict[str, object],
+        args: JsonObject,
         signal: asyncio.Event | None,
-        on_update: object,
+        on_update: AgentToolUpdateCallback,
     ) -> AgentToolResult:
         _ = (args, signal, on_update)
         nonlocal inflight
@@ -35,7 +41,7 @@ async def test_apply_tool_concurrency_limit_caps_in_flight_and_preserves_queue_o
         entered_order.append(tool_call_id)
         await release_gate.wait()
         inflight -= 1
-        return AgentToolResult(content=[{"type": "text", "text": tool_call_id}], details={})
+        return AgentToolResult(content=[TextContent(text=tool_call_id)], details={})
 
     raw_tools = [
         AgentTool(name=f"tool-{index}", label=f"tool-{index}", execute=_execute)

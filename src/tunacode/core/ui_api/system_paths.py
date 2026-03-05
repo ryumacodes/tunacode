@@ -15,13 +15,6 @@ from tunacode.configuration.paths import (
     get_project_id as _get_project_id,
 )
 
-__all__: list[str] = [
-    "check_for_updates",
-    "delete_session_file",
-    "get_installed_version",
-    "get_project_id",
-]
-
 
 def get_project_id() -> str:
     """Return the hashed project identifier for the current working directory."""

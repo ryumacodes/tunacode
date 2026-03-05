@@ -5,9 +5,15 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Awaitable, Callable
-from typing import Any
 
-from tinyagent.agent_types import AgentMessage
+from tinyagent.agent_types import (
+    AgentMessage,
+    AssistantMessage,
+    TextContent,
+    ToolCallContent,
+    ToolResultMessage,
+    UserMessage,
+)
 
 from tunacode.utils.messaging import estimate_message_tokens, get_content
 
@@ -20,9 +26,6 @@ from tunacode.core.compaction.prompts import (
 ROLE_USER = "user"
 ROLE_ASSISTANT = "assistant"
 ROLE_TOOL_RESULT = "tool_result"
-
-CONTENT_TYPE_TEXT = "text"
-CONTENT_TYPE_TOOL_CALL = "tool_call"
 
 TOOL_RESULT_TRUNCATION_LIMIT = 500
 TOOL_RESULT_TRUNCATION_SUFFIX = "...[truncated]"
@@ -82,21 +85,35 @@ class ContextSummarizer:
 
         lines: list[str] = []
 
-        for index, raw_message in enumerate(messages):
-            message = _coerce_message_dict(raw_message, index=index)
+        for index, message in enumerate(messages):
             role = _coerce_role(message, index=index)
 
             if role == ROLE_USER:
+                if not isinstance(message, UserMessage):
+                    raise TypeError(
+                        f"Compaction expects UserMessage for role='user'; "
+                        f"got {type(message).__name__} at index {index}"
+                    )
                 user_lines = _serialize_user_message(message)
                 lines.extend(user_lines)
                 continue
 
             if role == ROLE_ASSISTANT:
+                if not isinstance(message, AssistantMessage):
+                    raise TypeError(
+                        f"Compaction expects AssistantMessage for role='assistant'; "
+                        f"got {type(message).__name__} at index {index}"
+                    )
                 assistant_lines = _serialize_assistant_message(message)
                 lines.extend(assistant_lines)
                 continue
 
             if role == ROLE_TOOL_RESULT:
+                if not isinstance(message, ToolResultMessage):
+                    raise TypeError(
+                        f"Compaction expects ToolResultMessage for role='tool_result'; "
+                        f"got {type(message).__name__} at index {index}"
+                    )
                 tool_result_lines = _serialize_tool_result_message(message)
                 lines.extend(tool_result_lines)
                 continue
@@ -192,90 +209,76 @@ class ContextSummarizer:
         if boundary > len(messages):
             return False
 
-        previous = _coerce_message_dict(messages[boundary - 1], index=boundary - 1)
+        previous = messages[boundary - 1]
         if not _is_boundary_after_message(previous):
             return False
 
         if boundary == len(messages):
             return True
 
-        next_message = _coerce_message_dict(messages[boundary], index=boundary)
+        next_message = messages[boundary]
         return not _is_tool_result_message(next_message)
 
 
-def _coerce_message_dict(raw_message: AgentMessage, *, index: int) -> dict[str, Any]:
-    if isinstance(raw_message, dict):
-        return raw_message
-
-    message_type = type(raw_message).__name__
-    raise TypeError(f"Compaction expects dict messages; got {message_type} at index {index}")
-
-
-def _coerce_role(message: dict[str, Any], *, index: int) -> str:
-    role = message.get("role")
+def _coerce_role(message: AgentMessage, *, index: int) -> str:
+    role = message.role
     if isinstance(role, str):
         return role
     raise TypeError(f"Message at index {index} is missing a valid 'role' string")
 
 
-def _is_boundary_after_message(message: dict[str, Any]) -> bool:
-    role = message.get("role")
-
-    if role == ROLE_USER:
+def _is_boundary_after_message(message: AgentMessage) -> bool:
+    if isinstance(message, UserMessage):
         return True
 
-    if role != ROLE_ASSISTANT:
+    if not isinstance(message, AssistantMessage):
         return False
 
-    stop_reason = message.get("stop_reason")
-    if stop_reason is not None:
+    if message.stop_reason is not None:
         return True
 
     return _has_safe_assistant_turn_shape_without_stop_reason(message)
 
 
-def _has_safe_assistant_turn_shape_without_stop_reason(message: dict[str, Any]) -> bool:
-    content_items = _coerce_content_items(message)
-
+def _has_safe_assistant_turn_shape_without_stop_reason(message: AssistantMessage) -> bool:
     has_non_empty_text = False
-    for raw_item in content_items:
-        if not isinstance(raw_item, dict):
+
+    for item in message.content:
+        if item is None:
             continue
 
-        item_type = raw_item.get("type")
-        if item_type == CONTENT_TYPE_TOOL_CALL:
+        if isinstance(item, ToolCallContent):
             return False
 
-        if item_type != CONTENT_TYPE_TEXT:
+        if not isinstance(item, TextContent):
             continue
 
-        text = raw_item.get(CONTENT_TYPE_TEXT)
+        text = item.text
         if isinstance(text, str) and text.strip():
             has_non_empty_text = True
 
     return has_non_empty_text
 
 
-def _is_tool_result_message(message: dict[str, Any]) -> bool:
-    return message.get("role") == ROLE_TOOL_RESULT
+def _is_tool_result_message(message: AgentMessage) -> bool:
+    return isinstance(message, ToolResultMessage)
 
 
-def _serialize_user_message(message: dict[str, Any]) -> list[str]:
+def _serialize_user_message(message: UserMessage) -> list[str]:
     content = get_content(message).strip()
     if not content:
         return []
     return [f"{SERIALIZED_USER_PREFIX} {content}"]
 
 
-def _serialize_assistant_message(message: dict[str, Any]) -> list[str]:
+def _serialize_assistant_message(message: AssistantMessage) -> list[str]:
     lines: list[str] = []
 
     assistant_text = get_content(message).strip()
     if assistant_text:
         lines.append(f"{SERIALIZED_ASSISTANT_PREFIX} {assistant_text}")
 
-    content_items = _coerce_content_items(message)
-    for item in content_items:
+    for item in message.content:
         tool_call_line = _serialize_tool_call_item(item)
         if tool_call_line is None:
             continue
@@ -284,7 +287,7 @@ def _serialize_assistant_message(message: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _serialize_tool_result_message(message: dict[str, Any]) -> list[str]:
+def _serialize_tool_result_message(message: ToolResultMessage) -> list[str]:
     content = get_content(message).strip()
     truncated_content = _truncate_tool_result(content)
     if not truncated_content:
@@ -292,30 +295,15 @@ def _serialize_tool_result_message(message: dict[str, Any]) -> list[str]:
     return [f"{SERIALIZED_TOOL_RESULT_PREFIX} {truncated_content}"]
 
 
-def _coerce_content_items(message: dict[str, Any]) -> list[Any]:
-    content = message.get("content")
-    if content is None:
-        return []
-
-    if isinstance(content, list):
-        return content
-
-    raise TypeError(f"Message 'content' must be a list, got {type(content).__name__}")
-
-
-def _serialize_tool_call_item(item: Any) -> str | None:
-    if not isinstance(item, dict):
+def _serialize_tool_call_item(item: object) -> str | None:
+    if not isinstance(item, ToolCallContent):
         return None
 
-    item_type = item.get("type")
-    if item_type != CONTENT_TYPE_TOOL_CALL:
-        return None
-
-    tool_name = item.get("name")
+    tool_name = item.name
     if not isinstance(tool_name, str) or not tool_name:
         raise TypeError("tool_call item missing non-empty 'name'")
 
-    arguments_raw = item.get("arguments", {})
+    arguments_raw = item.arguments
     if not isinstance(arguments_raw, dict):
         raise TypeError("tool_call item 'arguments' must be a dict")
 

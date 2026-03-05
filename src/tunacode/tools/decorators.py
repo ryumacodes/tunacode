@@ -154,7 +154,8 @@ def to_tinyagent_tool(
         A tinyAgent ``AgentTool``.
     """
 
-    from tinyagent import AgentTool, AgentToolResult
+    from tinyagent import AgentTool, AgentToolResult, TextContent
+    from tinyagent.agent_types import AgentToolUpdateCallback, JsonObject
 
     from tunacode.prompts.versioning import get_or_compute_prompt_version
     from tunacode.types.canonical import PromptVersion
@@ -174,18 +175,15 @@ def to_tinyagent_tool(
 
     async def execute(
         tool_call_id: str,
-        args: dict[str, Any],
+        args: JsonObject,
         signal: asyncio.Event | None,
-        on_update: Callable[[AgentToolResult], None],
+        on_update: AgentToolUpdateCallback,
     ) -> AgentToolResult:
         _ = tool_call_id
         _ = on_update
 
         if signal is not None and signal.is_set():
             raise UserAbortError(f"Tool execution aborted: {tool_name}")
-
-        if not isinstance(args, dict):
-            raise ToolRetryError(f"Tool arguments must be an object, got {type(args).__name__}")
 
         try:
             bound = sig.bind(**args)
@@ -194,14 +192,15 @@ def to_tinyagent_tool(
             raise ToolRetryError(f"Invalid arguments for tool '{tool_name}': {exc}") from exc
 
         result = await func(**cast(dict[str, Any], bound.arguments))
+        if not isinstance(result, str):
+            raise ToolExecutionError(
+                tool_name=tool_name,
+                message=(
+                    f"Tool returned non-text result. Expected 'str', got {type(result).__name__}."
+                ),
+            )
 
-        if isinstance(result, AgentToolResult):
-            return result
-        if result is None:
-            return AgentToolResult(content=[], details={})
-
-        # Tools in this codebase typically return ``str``.
-        return AgentToolResult(content=[{"type": "text", "text": str(result)}], details={})
+        return AgentToolResult(content=[TextContent(text=result)], details={})
 
     agent_tool = AgentTool(
         name=tool_name,
