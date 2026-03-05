@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.81] - 2026-03-04
+
+### Changed
+- Migrated the live alchemy usage-contract integration test to the typed chutes flow for stricter runtime contract coverage.
+- Refined tinyagent typing and compaction boundaries to tighten type-safety and reduce ambiguity in session compaction behavior.
+- Removed residual `__all__` shim exports to satisfy Gate 0 and enforce direct exports only.
+- Refreshed README screenshots to match the current UI.
+
+### Fixed
+- Declared `pydantic` as a direct project dependency to satisfy dependency analysis and prevent missing-direct-dependency failures.
+
 ## [0.1.80] - 2026-03-03
 
 ### Fixed
