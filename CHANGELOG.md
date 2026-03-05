@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.82] - 2026-03-05
+
+### Changed
+- Bumped the packaged TunaCode version to `0.1.82` to cut a new PyPI release.
+
 ## [0.1.81] - 2026-03-04
 
 ### Changed
