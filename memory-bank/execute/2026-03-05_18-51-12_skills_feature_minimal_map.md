@@ -21,12 +21,21 @@ env: {target: "local", notes: ""}
 
 ### T001 – Define explicit skill dataclasses and enums
 - Status: completed
-- Commit: pending
+- Commit: `7bd8fc05`
 - Files: `src/tunacode/skills/__init__.py`, `src/tunacode/skills/models.py`
 - Commands: `uv run python - <<'PY' ...` → `demo demo demo`
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Added explicit frozen skill types for summaries, full loads, and session attachments.
+
+### T002 – Implement skill root discovery and precedence
+- Status: completed
+- Commit: pending
+- Files: `src/tunacode/skills/discovery.py`
+- Commands: `uv run pytest tests/unit/skills/test_discovery.py` → `5 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added deterministic root traversal, local-over-global precedence, and same-root duplicate detection.
 
 ## Gate Results
 - Tests: not run
