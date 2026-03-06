@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.83] - 2026-03-06
+
+### Added
+- Introduced a first-class skills subsystem with discovery, loading, session persistence, prompt rendering, and cache-backed registry support.
+- Added `/skills` catalog, search, clear, and loaded-skill management commands in the TUI.
+
+### Changed
+- Exposed selected skills in the session inspector and included available/selected skill context in agent prompt construction.
+
+### Fixed
+- Restored compatibility with legacy markdown-only `SKILL.md` files that do not start with YAML frontmatter.
+- Fixed local-over-global precedence for case-insensitive skill name collisions.
+- Prevented invalid discovered skill summaries from crashing agent creation for unrelated sessions.
+
 ## [0.1.82] - 2026-03-05
 
 ### Changed
