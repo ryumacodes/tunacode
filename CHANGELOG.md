@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.88] - 2026-03-06
+
+### Added
+- Added tmux system coverage that loads a local skill and verifies the agent uses its referenced file end-to-end.
+
+### Changed
+- Consolidated skill lookup, loading, and selected-skill summary resolution onto a single registry-backed path.
+
+### Fixed
+- Preserved missing selected skills in UI summary surfaces while keeping prompt-building fail-loud for unresolved skill loads.
+- Kept skill catalog and summary views limited to skill names and descriptions while direct selected-skill loads still inject full `SKILL.md` content plus absolute file paths.
+
 ## [0.1.87] - 2026-03-06
 
 ### Changed
