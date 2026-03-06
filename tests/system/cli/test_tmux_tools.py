@@ -11,6 +11,7 @@ tool dispatch, rendering).  They require a live API key and tmux.
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import time
@@ -70,8 +71,9 @@ pytestmark = [
 class TmuxSession:
     """Manage a detached tmux session running tunacode."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, *, working_directory: Path | None = None) -> None:
         self.name = name
+        self.working_directory = working_directory
 
     # -- tmux primitives -----------------------------------------------------
 
@@ -92,7 +94,11 @@ class TmuxSession:
         """Create a detached session and launch tunacode inside it."""
         activate = f"source {VENV_DIR / 'bin' / 'activate'}"
         launch = "tunacode"
-        shell_cmd = f"{activate} && {launch}"
+        if self.working_directory is None:
+            shell_cmd = f"{activate} && {launch}"
+        else:
+            quoted_working_directory = shlex.quote(str(self.working_directory))
+            shell_cmd = f"cd {quoted_working_directory} && {activate} && {launch}"
         self._run_tmux("new-session", "-d", "-s", self.name, "-x", "220", "-y", "50", shell_cmd)
         # Give the TUI a moment to render its first frame.
         time.sleep(3)
@@ -106,15 +112,18 @@ class TmuxSession:
         self._run_tmux("send-keys", "-t", self.name, text, "Enter")
 
     def capture(self) -> str:
-        """Return the full visible pane contents."""
-        return self._run_tmux("capture-pane", "-t", self.name, "-p")
+        """Return pane contents including recent scrollback history."""
+        return self._run_tmux("capture-pane", "-t", self.name, "-p", "-S", "-10000")
 
 
 @contextmanager
-def tmux_session() -> Generator[TmuxSession, None, None]:
+def tmux_session(
+    *,
+    working_directory: Path | None = None,
+) -> Generator[TmuxSession, None, None]:
     """Context manager: spin up a tunacode tmux session, tear it down on exit."""
     name = f"{SESSION_PREFIX}_{uuid.uuid4().hex[:8]}"
-    session = TmuxSession(name)
+    session = TmuxSession(name, working_directory=working_directory)
     session.start()
     try:
         yield session
@@ -268,3 +277,55 @@ def test_web_fetch_tool() -> None:
         )
         output = wait_for_tool(s, "web_fetch")
         assert "tunacode" in output.lower(), f"Expected 'tunacode' in fetched output:\n{output}"
+
+
+def test_loaded_skill_is_used_via_absolute_referenced_path(tmp_path: Path) -> None:
+    """Load a local skill in tmux, then verify the agent uses its referenced file."""
+    skill_name = "tmux-e2e-skill"
+    skill_description = "TMUX system test skill"
+    token = f"TMUX_SKILL_TOKEN_{uuid.uuid4().hex[:8]}"
+    skill_dir = tmp_path / ".claude" / "skills" / skill_name
+    skill_dir.mkdir(parents=True)
+    token_path = skill_dir / "token.txt"
+    skill_path = skill_dir / "SKILL.md"
+
+    token_path.write_text(token, encoding="utf-8")
+    skill_path.write_text(
+        "\n".join(
+            [
+                "---",
+                f"name: {skill_name}",
+                f"description: {skill_description}",
+                "---",
+                "",
+                "# TMUX E2E Skill",
+                "",
+                "When the user asks for the tmux skill token, you must follow this workflow:",
+                "1. Read [token.txt](token.txt).",
+                "2. Reply with the exact token from that file.",
+                '3. Include the sentence "This skill is loaded and being used."',
+                "4. Do not guess if you have not read the file.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with tmux_session(working_directory=tmp_path) as s:
+        s.send(f"/skills {skill_name}")
+        load_output = wait_for_text(s, f"Loaded skill: {skill_name}")
+        assert skill_description in load_output, (
+            f"Expected skill description in load output:\n{load_output}"
+        )
+
+        s.send("/skills loaded")
+        loaded_output = wait_for_text(s, "Loaded Skills [1]")
+        assert skill_name in loaded_output, (
+            f"Expected loaded skill {skill_name!r} in output:\n{loaded_output}"
+        )
+
+        s.send("What is the tmux skill token? Use the loaded skill and do not guess.")
+        tool_output = wait_for_tool(s, "read_file")
+        assert "token.txt" in tool_output, f"Expected token file read in output:\n{tool_output}"
+
+        final_output = wait_for_text(s, token)
+        assert token in final_output, f"Expected token in output:\n{final_output}"
