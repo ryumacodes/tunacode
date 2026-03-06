@@ -5,7 +5,7 @@ from pathlib import Path
 from tunacode.skills.discovery import DiscoveredSkillPath, discover_skills
 from tunacode.skills.loader import load_skill
 from tunacode.skills.models import SelectedSkill, SkillSummary
-from tunacode.skills.registry import get_skill_summary, load_skill_by_name
+from tunacode.skills.registry import get_skill_summary
 
 
 def _find_discovered_skill_by_name(
@@ -73,11 +73,17 @@ def resolve_selected_skills(
     selected_skills: list[SelectedSkill] = []
 
     for attachment_index, selected_skill_name in enumerate(selected_skill_names):
-        loaded_skill = load_skill_by_name(
+        # Discover first to get the correct path (local vs global)
+        discovered_skill = _find_discovered_skill_by_name(
             selected_skill_name,
             local_root=local_root,
             global_root=global_root,
         )
+        if discovered_skill is None:
+            raise KeyError(f"Unknown skill: {selected_skill_name}")
+
+        # Load using the discovered path directly
+        loaded_skill = load_skill(discovered_skill)
         selected_skills.append(
             SelectedSkill(
                 name=loaded_skill.name,
