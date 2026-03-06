@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from tunacode.skills.discovery import DiscoveredSkillPath, discover_skills
-from tunacode.skills.loader import load_skill
+from tunacode.skills.loader import list_skill_related_paths, load_skill
 from tunacode.skills.models import SelectedSkill, SkillSummary
 from tunacode.skills.registry import get_skill_summary
 
@@ -84,11 +84,18 @@ def resolve_selected_skills(
 
         # Load using the discovered path directly
         loaded_skill = load_skill(discovered_skill)
+        related_paths = list_skill_related_paths(
+            loaded_skill.skill_dir,
+            skill_path=loaded_skill.skill_path,
+        )
         selected_skills.append(
             SelectedSkill(
                 name=loaded_skill.name,
                 source=loaded_skill.source,
+                skill_dir=loaded_skill.skill_dir,
                 skill_path=loaded_skill.skill_path,
+                referenced_paths=loaded_skill.referenced_paths,
+                related_paths=related_paths,
                 content=loaded_skill.content,
                 attachment_index=attachment_index,
             )

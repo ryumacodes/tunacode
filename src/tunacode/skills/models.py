@@ -42,6 +42,9 @@ class SelectedSkill:
 
     name: str
     source: SkillSource
+    skill_dir: Path
     skill_path: Path
+    referenced_paths: tuple[Path, ...]
+    related_paths: tuple[Path, ...]
     content: str
     attachment_index: int

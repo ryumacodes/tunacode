@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable
+from pathlib import Path
 
 from tunacode.skills.models import SelectedSkill, SkillSummary
 
@@ -10,7 +12,16 @@ SELECTED_SKILLS_SECTION_TITLE = "# Selected Skills"
 SELECTED_SKILLS_INSTRUCTION = """\
 The following skills have been loaded for this session.
 You MUST read each skill's SKILL.md content fully and apply its guidance to all relevant tasks.
-Do not ignore these skills - they contain critical instructions for this codebase."""
+Use the exact absolute skill paths provided below as authoritative.
+These skill files may live outside the current project working directory.
+Do not assume searching only the repo root will find them."""
+
+SKILL_DIRECTORY_LABEL = "Skill directory (absolute)"
+SKILL_FILE_LABEL = "Skill definition file (absolute)"
+SKILL_REFERENCED_FILES_LABEL = "Files explicitly referenced by SKILL.md"
+SKILL_RELATED_FILES_LABEL = "Other files available in the skill directory"
+SKILL_CONTENT_LABEL = "Full SKILL.md content"
+EMPTY_PATH_LIST_LABEL = "(none)"
 
 
 def render_available_skills_block(skill_summaries: list[SkillSummary]) -> str:
@@ -32,9 +43,41 @@ def render_selected_skills_block(selected_skills: list[SelectedSkill]) -> str:
     lines.append(SELECTED_SKILLS_INSTRUCTION)
     lines.append("")
     for selected_skill in selected_skills:
-        lines.append(f"## {selected_skill.name} ({selected_skill.source.value})")
-        lines.append(selected_skill.content)
+        _append_selected_skill_block(lines, selected_skill)
     return "\n".join(lines)
+
+
+def _append_selected_skill_block(lines: list[str], selected_skill: SelectedSkill) -> None:
+    lines.append(f"## {selected_skill.name} ({selected_skill.source.value})")
+    lines.append(f"{SKILL_DIRECTORY_LABEL}: {selected_skill.skill_dir}")
+    lines.append(f"{SKILL_FILE_LABEL}: {selected_skill.skill_path}")
+    lines.append(
+        "These absolute paths are part of the loaded skill context. "
+        "Use them directly when you need skill files."
+    )
+    lines.append(f"{SKILL_REFERENCED_FILES_LABEL}:")
+    _append_path_list(lines, selected_skill.referenced_paths)
+
+    additional_related_paths = [
+        path for path in selected_skill.related_paths if path not in selected_skill.referenced_paths
+    ]
+    lines.append(f"{SKILL_RELATED_FILES_LABEL}:")
+    _append_path_list(lines, additional_related_paths)
+
+    lines.append("")
+    lines.append(f"{SKILL_CONTENT_LABEL}:")
+    lines.append(selected_skill.content)
+    lines.append("")
+
+
+def _append_path_list(lines: list[str], paths: Iterable[Path]) -> None:
+    materialized_paths = list(paths)
+    if not materialized_paths:
+        lines.append(f"- {EMPTY_PATH_LIST_LABEL}")
+        return
+
+    for path in materialized_paths:
+        lines.append(f"- {path}")
 
 
 def compute_skills_prompt_fingerprint(
@@ -50,10 +93,18 @@ def compute_skills_prompt_fingerprint(
 
     for selected_skill in selected_skills:
         content_hash = hashlib.sha256(selected_skill.content.encode("utf-8")).hexdigest()
+        referenced_paths_hash = _hash_paths(selected_skill.referenced_paths)
+        related_paths_hash = _hash_paths(selected_skill.related_paths)
         fingerprint_parts.append(
             "selected:"
-            f"{selected_skill.name}:{selected_skill.source.value}:{selected_skill.skill_path}:{content_hash}"
+            f"{selected_skill.name}:{selected_skill.source.value}:{selected_skill.skill_dir}:"
+            f"{selected_skill.skill_path}:{content_hash}:{referenced_paths_hash}:{related_paths_hash}"
         )
 
     fingerprint_input = "|".join(fingerprint_parts)
     return hashlib.sha256(fingerprint_input.encode("utf-8")).hexdigest()
+
+
+def _hash_paths(paths: Iterable[Path]) -> str:
+    joined_paths = "|".join(str(path) for path in paths)
+    return hashlib.sha256(joined_paths.encode("utf-8")).hexdigest()

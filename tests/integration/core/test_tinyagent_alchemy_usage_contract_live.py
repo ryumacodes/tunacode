@@ -90,11 +90,20 @@ async def test_tinyagent_alchemy_result_includes_canonical_usage_contract() -> N
     )
 
     saw_done_event = False
+    saw_error_event = False
     async for event in response:
         if event.type == "done":
             saw_done_event = True
+        if event.type == "error":
+            saw_error_event = True
 
     final_message = await asyncio.wait_for(response.result(), timeout=STREAM_TIMEOUT_SECONDS)
+    if saw_error_event:
+        error_message = getattr(final_message, "error_message", None)
+        if isinstance(error_message, str) and error_message:
+            pytest.skip(f"Live provider unavailable: {error_message}")
+        pytest.skip("Live provider returned an error event")
+
     assert saw_done_event
 
     usage_raw = final_message.usage

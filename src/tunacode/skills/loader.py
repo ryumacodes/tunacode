@@ -39,6 +39,18 @@ PATH_SUFFIXES = {
 }
 URL_PREFIXES = ("http://", "https://")
 DISALLOWED_REFERENCE_PREFIXES = ("#", "/", "~")
+EXCLUDED_RELATED_PATH_PARTS = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+    "venv",
+}
+EXCLUDED_RELATED_FILE_NAMES = {".DS_Store"}
+EXCLUDED_RELATED_FILE_SUFFIXES = {".pyc"}
 
 
 class SkillLoadError(RuntimeError):
@@ -99,6 +111,18 @@ def load_skill(discovered_skill: DiscoveredSkillPath) -> LoadedSkill:
         content=parsed_document.content,
         referenced_paths=referenced_paths,
     )
+
+
+def list_skill_related_paths(skill_dir: Path, *, skill_path: Path) -> tuple[Path, ...]:
+    """Return deterministic absolute paths for non-SKILL files under a skill directory."""
+
+    resolved_skill_path = skill_path.resolve()
+    related_paths = [
+        path.resolve()
+        for path in skill_dir.rglob("*")
+        if _should_include_related_path(path, resolved_skill_path)
+    ]
+    return tuple(sorted(set(related_paths), key=lambda path: str(path).casefold()))
 
 
 def _load_parsed_skill_document(discovered_skill: DiscoveredSkillPath) -> _ParsedSkillDocument:
@@ -294,6 +318,23 @@ def _resolve_referenced_path(
 def _find_recursive_reference_matches(skill_dir: Path, file_name: str) -> list[Path]:
     matching_paths = [path.resolve() for path in skill_dir.rglob(file_name) if path.is_file()]
     return sorted(set(matching_paths))
+
+
+def _should_include_related_path(path: Path, skill_path: Path) -> bool:
+    if not path.is_file():
+        return False
+
+    resolved_path = path.resolve()
+    if resolved_path == skill_path:
+        return False
+
+    if resolved_path.name in EXCLUDED_RELATED_FILE_NAMES:
+        return False
+
+    if resolved_path.suffix.lower() in EXCLUDED_RELATED_FILE_SUFFIXES:
+        return False
+
+    return not any(part in EXCLUDED_RELATED_PATH_PARTS for part in resolved_path.parts)
 
 
 def _iter_reference_candidates(content: str) -> list[str]:
