@@ -1,0 +1,171 @@
+---
+title: "Skills Feature – Execution Log"
+phase: Execute
+date: "2026-03-05T18:51:12-0600"
+owner: "pi"
+plan_path: "memory-bank/plan/2026-03-05_18-44-49_skills_feature_minimal_map.md"
+start_commit: "6cab24a2"
+end_commit: ""
+env: {target: "local", notes: ""}
+---
+
+## Pre-Flight Checks
+- Branch: master
+- Rollback: 7abb910d
+- DoR: satisfied
+- Access/secrets: not required
+- Fixtures/data: ready
+- Ready: yes
+
+## Task Execution
+
+### T001 – Define explicit skill dataclasses and enums
+- Status: completed
+- Commit: `7bd8fc05`
+- Files: `src/tunacode/skills/__init__.py`, `src/tunacode/skills/models.py`
+- Commands: `uv run python - <<'PY' ...` → `demo demo demo`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added explicit frozen skill types for summaries, full loads, and session attachments.
+
+### T002 – Implement skill root discovery and precedence
+- Status: completed
+- Commit: `b5217aab`
+- Files: `src/tunacode/skills/discovery.py`
+- Commands: `uv run pytest tests/unit/skills/test_discovery.py` → `5 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added deterministic root traversal, local-over-global precedence, and same-root duplicate detection.
+
+### T003 – Write discovery tests
+- Status: completed
+- Commit: `14a7303a`
+- Files: `tests/unit/skills/test_discovery.py`
+- Commands: `uv run pytest tests/unit/skills/test_discovery.py` → `5 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Covered local-only, global-only, override, ignore-without-SKILL, and same-root duplicate cases.
+
+### T004 – Implement summary/full skill loading
+- Status: completed
+- Commit: `436926c5`
+- Files: `src/tunacode/skills/loader.py`, `tests/unit/skills/test_loader.py`
+- Commands: `uv run pytest tests/unit/skills/test_loader.py` → `1 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added frontmatter parsing for startup summaries and a full loader that returns validated markdown bodies on demand.
+
+### T005 – Add fail-loud loader validation
+- Status: completed
+- Commit: `ecc5cf3a`
+- Files: `src/tunacode/skills/loader.py`, `tests/unit/skills/test_loader.py`
+- Commands: `uv run pytest tests/unit/skills/test_loader.py` → `4 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Tightened typed failures for missing files, malformed frontmatter, and missing relative references.
+
+### T006 – Add mtime-aware skill cache and registry APIs
+- Status: completed
+- Commit: `5cc1946f`
+- Files: `src/tunacode/infrastructure/cache/caches/skills.py`, `src/tunacode/skills/registry.py`, `tests/unit/skills/test_registry.py`
+- Commands: `uv run pytest tests/unit/skills/test_registry.py` → `3 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added registry list/get/load helpers that rescan roots and invalidate cached file reads on mtime changes.
+
+### T007 – Persist selected skill names in session state
+- Status: completed
+- Commit: `ba5ecb28`
+- Files: `src/tunacode/core/session/state.py`, `src/tunacode/core/types/state.py`
+- Commands: `uv run python - <<'PY' ...` → `imports-ok ... True`
+- Tests: deferred to final verification per user direction
+- Coverage delta: not measured
+- Notes: Added ordered selected skill persistence to session save/load and state protocols.
+
+### T008 – Implement selection and prompt rendering helpers
+- Status: completed
+- Commit: `8f1cbe1c`
+- Files: `src/tunacode/skills/selection.py`, `src/tunacode/skills/prompting.py`
+- Commands: `uv run python - <<'PY' ...` → `imports-ok`
+- Tests: deferred to final verification per user direction
+- Coverage delta: not measured
+- Notes: Added selection helpers plus deterministic available-skills and selected-skills prompt blocks.
+
+### T009 – Integrate skills into agent construction
+- Status: completed
+- Commit: `ed47d25d`
+- Files: `src/tunacode/core/agents/agent_components/agent_config.py`
+- Commands: `uv run python - <<'PY' ...` → `imports-ok`
+- Tests: deferred to final verification per user direction
+- Coverage delta: not measured
+- Notes: Agent prompts now always include skill summaries, inject selected skill bodies, and fingerprint cache state with skill prompt content.
+
+### T010 – Add /skill slash command
+- Status: completed
+- Commit: `d2222e00`
+- Files: `src/tunacode/ui/commands/skill.py`, `src/tunacode/ui/commands/__init__.py`
+- Commands: `uv run python - <<'PY' ...` → `ui-smoke-ok`
+- Tests: deferred to final verification per user direction
+- Coverage delta: not measured
+- Notes: Added list, attach, and clear behaviors with session persistence and visible confirmations.
+
+### T011 – Show active skills in Session Inspector
+- Status: completed
+- Commit: `6fccca57`
+- Files: `src/tunacode/ui/context_panel.py`, `src/tunacode/ui/app.py`
+- Commands: `uv run python - <<'PY' ...` → `ui-smoke-ok`
+- Tests: deferred to final verification per user direction
+- Coverage delta: not measured
+- Notes: Added a dedicated Skills field in the inspector and refresh wiring for active session attachments.
+
+### T012 – Add UI command tests
+- Status: completed
+- Commit: `10c904dc`
+- Files: `tests/unit/ui/test_skill_command.py`
+- Commands: `uv run pytest tests/unit/ui/test_skill_command.py tests/unit/ui/test_command_contracts.py -q` → `4 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Covered state changes, registry visibility, and autocomplete compatibility for `/skill`.
+
+### T013 – Add skills integration tests
+- Status: completed
+- Commit: `3ca1cc6a`
+- Files: `tests/integration/core/test_skills_integration.py`, `tests/unit/core/test_session_state_skills.py`
+- Commands: `uv run pytest tests/integration/core/test_skills_integration.py tests/unit/core/test_session_state_skills.py -q` → `3 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Proved prompt attachment, local override precedence, and persisted selected skill state.
+
+### T014 – Run formatting, tests, tmux verification, and gates
+- Status: completed
+- Commit: `7524233d`
+- Files: `src/tunacode/core/agents/agent_components/agent_config.py`, `src/tunacode/infrastructure/cache/caches/skills.py`, `src/tunacode/skills/loader.py`, `src/tunacode/skills/registry.py`, `src/tunacode/ui/app.py`, `src/tunacode/ui/commands/skill.py`, `tests/architecture/test_import_order.py`, `tests/unit/skills/test_loader.py`, `memory-bank/execute/2026-03-05_18-51-12_skills_feature_minimal_map.md`
+- Commands: `uv run ruff check --fix .` → `All checks passed!`; `uv run pytest` → `734 passed, 2 skipped`; `uv run python scripts/run_gates.py` → `ALL GATES PASSED`; `tmux new-session -d -s skillverify 'source .venv/bin/activate && tunacode'` + `/skill nextstep-ui` + `ctrl+e` → Session Inspector showed `Skills [1]` with `nextstep-ui [global]`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Fixed gate regressions by recognizing `tunacode.skills` in import-order checks and allowing YAML list continuation lines in skill frontmatter summaries.
+
+## Gate Results
+- Tests: `734 passed, 2 skipped`
+- Coverage: not reported by suite
+- Type checks: pass (via hooks and gates)
+- Security: pass (via hooks and gates)
+- Linters: pass (`uv run ruff check --fix .`)
+
+## Deployment (if applicable)
+- Staging: not applicable
+- Prod: not applicable
+- Timestamps: not applicable
+
+## Issues & Resolutions
+- T014 – Full `uv run pytest` initially failed on skill discovery from real global skills → updated summary parsing to tolerate indented YAML list items while still rejecting malformed top-level lines.
+- T014 – Import-order architecture test rejected the new `tunacode.skills` root → added `skills` to the shared-layer ordering and aligned affected import blocks.
+
+## Success Criteria
+- [x] All planned gates passed
+- [x] Rollout completed or rolled back
+- [x] KPIs/SLOs within thresholds
+- [x] Execution log saved
+
+## Next Steps
+- Push branch and open PR.

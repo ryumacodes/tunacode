@@ -13,6 +13,7 @@ from tunacode.ui.commands.exit import ExitCommand
 from tunacode.ui.commands.help import HelpCommand
 from tunacode.ui.commands.model import ModelCommand
 from tunacode.ui.commands.resume import ResumeCommand
+from tunacode.ui.commands.skills import SkillsCommand
 from tunacode.ui.commands.theme import ThemeCommand
 from tunacode.ui.commands.thoughts import ThoughtsCommand
 from tunacode.ui.commands.update import UpdateCommand
@@ -29,9 +30,10 @@ COMMANDS: dict[str, Command] = {
     "debug": DebugCommand(),
     "exit": ExitCommand(),
     "model": ModelCommand(),
+    "resume": ResumeCommand(),
+    "skills": SkillsCommand(),
     "theme": ThemeCommand(),
     "thoughts": ThoughtsCommand(),
-    "resume": ResumeCommand(),
     "update": UpdateCommand(),
 }
 

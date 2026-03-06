@@ -41,6 +41,7 @@ class SessionStateProtocol(Protocol):
     project_id: str
     created_at: str
     working_directory: str
+    selected_skill_names: list[str]
 
 
 class StateManagerProtocol(Protocol):

@@ -35,6 +35,7 @@ class ContextPanelWidgets:
     field_context: InspectorField
     field_cost: InspectorField
     field_files: InspectorField
+    field_skills: InspectorField
 
 
 def build_context_panel_widgets() -> ContextPanelWidgets:
@@ -73,12 +74,20 @@ def build_context_panel_widgets() -> ContextPanelWidgets:
     )
     field_files.border_title = "Files"
 
+    field_skills = InspectorField(
+        "",
+        id="field-skills",
+        classes="inspector-field",
+    )
+    field_skills.border_title = "Loaded Skills"
+
     widgets: tuple[Static, ...] = (
         field_slopgotchi,
         field_model,
         field_context,
         field_cost,
         field_files,
+        field_skills,
     )
 
     return ContextPanelWidgets(
@@ -88,6 +97,7 @@ def build_context_panel_widgets() -> ContextPanelWidgets:
         field_context=field_context,
         field_cost=field_cost,
         field_files=field_files,
+        field_skills=field_skills,
     )
 
 
@@ -140,6 +150,24 @@ def build_files_field(edited_files: set[str]) -> tuple[str, Text]:
         content.append("▸ ", style=STYLE_ACCENT)
         content.append(filepath, style=STYLE_PRIMARY)
         if index < file_count - 1:
+            content.append("\n")
+
+    return border_title, content
+
+
+def build_skills_field(skill_entries: list[tuple[str, str]]) -> tuple[str, Text]:
+    skill_count = len(skill_entries)
+    border_title = f"Loaded Skills [{skill_count}]"
+
+    if skill_count == 0:
+        return border_title, Text("(none)", style=f"dim {STYLE_MUTED}")
+
+    content = Text()
+    for index, (skill_name, source_label) in enumerate(skill_entries):
+        content.append("▸ ", style=STYLE_ACCENT)
+        content.append(skill_name, style=STYLE_PRIMARY)
+        content.append(f" [{source_label}]", style=f"dim {STYLE_MUTED}")
+        if index < skill_count - 1:
             content.append("\n")
 
     return border_title, content
