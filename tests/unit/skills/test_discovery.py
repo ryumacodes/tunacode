@@ -57,6 +57,19 @@ def test_discover_skills_prefers_local_over_global_on_name_collision(tmp_path: P
     assert discovered["demo"].skill_path == local_path.resolve()
 
 
+def test_discover_skills_prefers_local_over_global_on_casefold_collision(tmp_path: Path) -> None:
+    local_root = tmp_path / "local"
+    global_root = tmp_path / "global"
+    local_path = _write_skill(local_root, "demo", body="local")
+    _write_skill(global_root, "Demo", body="global")
+
+    discovered = discover_skills(local_root=local_root, global_root=global_root)
+
+    assert list(discovered) == ["demo"]
+    assert discovered["demo"].source is SkillSource.LOCAL
+    assert discovered["demo"].skill_path == local_path.resolve()
+
+
 def test_discover_skills_ignores_directories_without_skill_file(tmp_path: Path) -> None:
     local_root = tmp_path / "local"
     ignored_dir = local_root / "ignored"

@@ -11,6 +11,9 @@ FRONTMATTER_DELIMITER = "---"
 FRONTMATTER_REQUIRED_KEYS = ("name", "description")
 MARKDOWN_LINK_PATTERN = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 INLINE_CODE_PATTERN = re.compile(r"`([^`\n]+)`")
+MARKDOWN_HEADING_PREFIX = "#"
+MARKDOWN_FENCE_PREFIX = "```"
+LEGACY_DESCRIPTION_FALLBACK = "Legacy skill"
 PATH_SUFFIXES = {
     ".css",
     ".csv",
@@ -101,11 +104,19 @@ def load_skill(discovered_skill: DiscoveredSkillPath) -> LoadedSkill:
 
 def _load_parsed_skill_document(discovered_skill: DiscoveredSkillPath) -> _ParsedSkillDocument:
     raw_content = _read_skill_file(discovered_skill.skill_path)
-    frontmatter, _body = _parse_frontmatter(raw_content)
-    name = _read_required_frontmatter_value(frontmatter, key="name")
-    description = _read_required_frontmatter_value(frontmatter, key="description")
-    _validate_skill_name(discovered_skill=discovered_skill, name=name)
-    return _ParsedSkillDocument(name=name, description=description, content=raw_content)
+    if _starts_with_frontmatter(raw_content):
+        frontmatter, _body = _parse_frontmatter(raw_content)
+        name = _read_required_frontmatter_value(frontmatter, key="name")
+        description = _read_required_frontmatter_value(frontmatter, key="description")
+        _validate_skill_name(discovered_skill=discovered_skill, name=name)
+        return _ParsedSkillDocument(name=name, description=description, content=raw_content)
+
+    description = _derive_legacy_description(raw_content)
+    return _ParsedSkillDocument(
+        name=discovered_skill.name,
+        description=description,
+        content=raw_content,
+    )
 
 
 def _read_skill_file(skill_path: Path) -> str:
@@ -113,6 +124,13 @@ def _read_skill_file(skill_path: Path) -> str:
         return skill_path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise MissingSkillFileError(f"Skill file not found: {skill_path}") from exc
+
+
+def _starts_with_frontmatter(content: str) -> bool:
+    lines = content.splitlines()
+    if not lines:
+        raise SkillFrontmatterError("Skill file is empty")
+    return lines[0].strip() == FRONTMATTER_DELIMITER
 
 
 def _parse_frontmatter(content: str) -> tuple[dict[str, str], str]:
@@ -185,6 +203,35 @@ def _validate_skill_name(*, discovered_skill: DiscoveredSkillPath, name: str) ->
         "Skill frontmatter name does not match directory name: "
         f"expected {discovered_skill.name!r}, got {name!r}"
     )
+
+
+def _derive_legacy_description(content: str) -> str:
+    first_heading: str | None = None
+    in_code_fence = False
+
+    for raw_line in content.splitlines():
+        stripped_line = raw_line.strip()
+        if not stripped_line:
+            continue
+
+        if stripped_line.startswith(MARKDOWN_FENCE_PREFIX):
+            in_code_fence = not in_code_fence
+            continue
+
+        if in_code_fence:
+            continue
+
+        if stripped_line.startswith(MARKDOWN_HEADING_PREFIX):
+            if first_heading is None:
+                first_heading = stripped_line.lstrip(MARKDOWN_HEADING_PREFIX).strip()
+            continue
+
+        return stripped_line
+
+    if first_heading is not None:
+        return first_heading
+
+    return LEGACY_DESCRIPTION_FALLBACK
 
 
 def _collect_referenced_paths(

@@ -36,6 +36,16 @@ def test_load_skill_summary_returns_metadata_without_body(tmp_path: Path) -> Non
     assert not hasattr(summary, "content")
 
 
+def test_load_skill_summary_accepts_legacy_markdown_without_frontmatter(tmp_path: Path) -> None:
+    legacy_body = "# Demo Skill\n\nLegacy description line.\n"
+    discovered_skill = _build_discovered_skill(tmp_path, body=legacy_body)
+
+    summary = load_skill_summary(discovered_skill)
+
+    assert summary.name == "demo"
+    assert summary.description == "Legacy description line."
+
+
 def test_load_skill_raises_typed_error_for_missing_relative_reference(tmp_path: Path) -> None:
     discovered_skill = _build_discovered_skill(tmp_path, body=SKILL_TEMPLATE)
 

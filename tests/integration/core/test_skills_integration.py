@@ -29,6 +29,16 @@ description: Global demo skill
 GLOBAL BODY
 """
 
+LEGACY_GLOBAL_SKILL_TEMPLATE = """# Debug Tunacode API Integration
+
+This skill provides a systematic methodology for debugging Tunacode API integrations.
+"""
+
+INVALID_GLOBAL_SKILL_TEMPLATE = """---
+description: Broken skill
+---
+"""
+
 
 @pytest.fixture
 def clean_cache_manager() -> None:
@@ -81,6 +91,80 @@ def test_get_or_create_agent_includes_skill_metadata_and_selected_skill_body(
     assert "# Selected Skills" in prompt_with_selection
     assert "LOCAL BODY" in prompt_with_selection
     assert "GLOBAL BODY" not in prompt_with_selection
+
+
+def test_get_or_create_agent_accepts_legacy_global_skill_without_frontmatter(
+    clean_cache_manager: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    monkeypatch.chdir(project_root)
+
+    legacy_global_skill_dir = home / ".claude" / "skills" / "debug-tunacode-api"
+    legacy_global_skill_dir.mkdir(parents=True)
+    (legacy_global_skill_dir / "SKILL.md").write_text(
+        LEGACY_GLOBAL_SKILL_TEMPLATE,
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        agent_config, "load_system_prompt", lambda _base_path, model=None: ("SYSTEM", None)
+    )
+    monkeypatch.setattr(agent_config, "load_tunacode_context", lambda: ("CONTEXT", None))
+
+    state_manager = StateManager()
+    model_name = state_manager.session.current_model
+
+    agent = agent_config.get_or_create_agent(model_name, state_manager)
+    prompt = agent._state.system_prompt
+
+    assert "# Available Skills" in prompt
+    assert "debug-tunacode-api" in prompt
+    assert "systematic methodology" in prompt.casefold()
+
+
+def test_get_or_create_agent_skips_invalid_global_skill_summary(
+    clean_cache_manager: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    monkeypatch.chdir(project_root)
+
+    local_skill_dir = project_root / ".claude" / "skills" / "demo"
+    local_skill_dir.mkdir(parents=True)
+    (local_skill_dir / "SKILL.md").write_text(LOCAL_SKILL_TEMPLATE, encoding="utf-8")
+
+    invalid_global_skill_dir = home / ".claude" / "skills" / "broken"
+    invalid_global_skill_dir.mkdir(parents=True)
+    (invalid_global_skill_dir / "SKILL.md").write_text(
+        INVALID_GLOBAL_SKILL_TEMPLATE,
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        agent_config, "load_system_prompt", lambda _base_path, model=None: ("SYSTEM", None)
+    )
+    monkeypatch.setattr(agent_config, "load_tunacode_context", lambda: ("CONTEXT", None))
+
+    state_manager = StateManager()
+    model_name = state_manager.session.current_model
+
+    agent = agent_config.get_or_create_agent(model_name, state_manager)
+    prompt = agent._state.system_prompt
+
+    assert "# Available Skills" in prompt
+    assert "Local demo skill" in prompt
+    assert "broken" not in prompt
 
 
 async def test_selected_skill_names_persist_across_save_and_load(

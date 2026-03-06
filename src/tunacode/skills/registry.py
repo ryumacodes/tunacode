@@ -5,10 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from tunacode.skills.discovery import DiscoveredSkillPath, discover_skills
-from tunacode.skills.loader import load_skill, load_skill_summary
+from tunacode.skills.loader import SkillLoadError, load_skill, load_skill_summary
 from tunacode.skills.models import LoadedSkill, SkillSummary
 
 from tunacode.infrastructure.cache.caches import skills as skills_cache
+
+from tunacode.core.logging import get_logger
 
 
 def list_skill_summaries(
@@ -18,7 +20,15 @@ def list_skill_summaries(
 ) -> list[SkillSummary]:
     discovered_skills = discover_skills(local_root=local_root, global_root=global_root)
     sorted_skills = sorted(discovered_skills.values(), key=lambda skill: skill.name.casefold())
-    return [_get_or_load_summary(skill) for skill in sorted_skills]
+
+    summaries: list[SkillSummary] = []
+    for discovered_skill in sorted_skills:
+        summary = _try_get_or_load_summary(discovered_skill)
+        if summary is None:
+            continue
+        summaries.append(summary)
+
+    return summaries
 
 
 def get_skill_summary(
@@ -34,7 +44,7 @@ def get_skill_summary(
     )
     if discovered_skill is None:
         return None
-    return _get_or_load_summary(discovered_skill)
+    return _try_get_or_load_summary(discovered_skill)
 
 
 def load_skill_by_name(
@@ -61,11 +71,21 @@ def _find_discovered_skill(
 ) -> DiscoveredSkillPath | None:
     normalized_name = name.casefold()
     for discovered_skill in discover_skills(
-        local_root=local_root, global_root=global_root
+        local_root=local_root,
+        global_root=global_root,
     ).values():
         if discovered_skill.name.casefold() == normalized_name:
             return discovered_skill
     return None
+
+
+def _try_get_or_load_summary(discovered_skill: DiscoveredSkillPath) -> SkillSummary | None:
+    try:
+        return _get_or_load_summary(discovered_skill)
+    except SkillLoadError as exc:
+        logger = get_logger()
+        logger.warning(f"Skipping invalid skill summary at {discovered_skill.skill_path}: {exc}")
+        return None
 
 
 def _get_or_load_summary(discovered_skill: DiscoveredSkillPath) -> SkillSummary:

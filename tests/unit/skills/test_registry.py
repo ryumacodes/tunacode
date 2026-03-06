@@ -55,6 +55,49 @@ def test_get_skill_summary_resolves_case_insensitive_name(
     assert summary.name == "Demo"
 
 
+def test_get_skill_summary_prefers_local_on_casefold_collision(
+    clean_cache_manager: None,
+    tmp_path: Path,
+) -> None:
+    local_root = tmp_path / "local"
+    global_root = tmp_path / "global"
+    _write_skill(local_root, "demo", description="Local skill", body="local body")
+    _write_skill(global_root, "Demo", description="Global skill", body="global body")
+
+    summary = get_skill_summary("demo", local_root=local_root, global_root=global_root)
+
+    assert summary is not None
+    assert summary.name == "demo"
+    assert summary.description == "Local skill"
+    visible_skill_names = [
+        skill.name
+        for skill in list_skill_summaries(
+            local_root=local_root,
+            global_root=global_root,
+        )
+    ]
+    assert visible_skill_names == ["demo"]
+
+
+def test_list_skill_summaries_skips_invalid_skill_documents(
+    clean_cache_manager: None,
+    tmp_path: Path,
+) -> None:
+    local_root = tmp_path / "local"
+    global_root = tmp_path / "global"
+    _write_skill(local_root, "demo", description="Valid skill", body="body")
+    broken_skill_dir = global_root / "broken"
+    broken_skill_dir.mkdir(parents=True, exist_ok=True)
+    (broken_skill_dir / "SKILL.md").write_text(
+        "---\ndescription: Missing name\n---\n",
+        encoding="utf-8",
+    )
+
+    summaries = list_skill_summaries(local_root=local_root, global_root=global_root)
+
+    assert [summary.name for summary in summaries] == ["demo"]
+
+
 def test_load_skill_by_name_refreshes_after_mtime_change(
     clean_cache_manager: None,
     tmp_path: Path,

@@ -69,10 +69,7 @@ def discover_skills(
     )
     discovered_global = _discover_root_skills(resolved_global_root)
     discovered_local = _discover_root_skills(resolved_local_root)
-
-    merged_skills = dict(discovered_global)
-    merged_skills.update(discovered_local)
-    return merged_skills
+    return _merge_discovered_skills(discovered_global, discovered_local)
 
 
 def _resolve_requested_roots(
@@ -139,3 +136,27 @@ def _discover_root_skills(root: SkillRoot) -> dict[str, DiscoveredSkillPath]:
         )
 
     return discovered_by_name
+
+
+def _merge_discovered_skills(
+    discovered_global: dict[str, DiscoveredSkillPath],
+    discovered_local: dict[str, DiscoveredSkillPath],
+) -> dict[str, DiscoveredSkillPath]:
+    merged_by_key: dict[str, DiscoveredSkillPath] = {}
+
+    sorted_global_skills = sorted(
+        discovered_global.values(),
+        key=lambda skill: skill.name.casefold(),
+    )
+    for discovered_skill in sorted_global_skills:
+        merged_by_key[discovered_skill.name.casefold()] = discovered_skill
+
+    sorted_local_skills = sorted(
+        discovered_local.values(),
+        key=lambda skill: skill.name.casefold(),
+    )
+    for discovered_skill in sorted_local_skills:
+        merged_by_key[discovered_skill.name.casefold()] = discovered_skill
+
+    merged_skills = sorted(merged_by_key.values(), key=lambda skill: skill.name.casefold())
+    return {discovered_skill.name: discovered_skill for discovered_skill in merged_skills}

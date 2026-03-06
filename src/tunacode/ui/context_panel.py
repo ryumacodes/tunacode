@@ -79,7 +79,7 @@ def build_context_panel_widgets() -> ContextPanelWidgets:
         id="field-skills",
         classes="inspector-field",
     )
-    field_skills.border_title = "Skills"
+    field_skills.border_title = "Loaded Skills"
 
     widgets: tuple[Static, ...] = (
         field_slopgotchi,
@@ -157,7 +157,7 @@ def build_files_field(edited_files: set[str]) -> tuple[str, Text]:
 
 def build_skills_field(skill_entries: list[tuple[str, str]]) -> tuple[str, Text]:
     skill_count = len(skill_entries)
-    border_title = f"Skills [{skill_count}]"
+    border_title = f"Loaded Skills [{skill_count}]"
 
     if skill_count == 0:
         return border_title, Text("(none)", style=f"dim {STYLE_MUTED}")
