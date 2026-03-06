@@ -7,7 +7,7 @@ import pytest
 from tunacode.infrastructure.cache import clear_all
 
 from tunacode.skills.models import SkillSource
-from tunacode.skills.registry import get_skill_summary, load_skill_by_name
+from tunacode.skills.registry import get_skill_summary, load_skill_by_name, resolve_discovered_skill
 
 
 @pytest.fixture
@@ -57,3 +57,24 @@ def test_registry_lookup_prefers_local_skill_with_case_insensitive_resolution(
     assert loaded_skill.name == "Demo"
     assert loaded_skill.source is SkillSource.LOCAL
     assert loaded_skill.skill_path == local_skill_path.resolve()
+
+
+def test_resolve_discovered_skill_returns_local_match_for_mixed_case_lookup(
+    clean_cache_manager: None,
+    tmp_path: Path,
+) -> None:
+    local_root = tmp_path / "local-skills"
+    global_root = tmp_path / "global-skills"
+    local_skill_path = _write_skill(local_root, "Demo", "Local demo skill")
+    _write_skill(global_root, "demo", "Global demo skill")
+
+    discovered_skill = resolve_discovered_skill(
+        "deMO",
+        local_root=local_root,
+        global_root=global_root,
+    )
+
+    assert discovered_skill is not None
+    assert discovered_skill.name == "Demo"
+    assert discovered_skill.source is SkillSource.LOCAL
+    assert discovered_skill.skill_path == local_skill_path.resolve()

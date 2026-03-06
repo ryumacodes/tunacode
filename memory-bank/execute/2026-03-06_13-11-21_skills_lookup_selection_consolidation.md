@@ -57,7 +57,7 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 
 ### T005 – Adopt the shared selected-skill summary helper in the Session Inspector
 - Status: completed
-- Commit: pending
+- Commit: 12530b25
 - Files: src/tunacode/ui/app.py, tests/unit/ui/test_app_skills_entries.py
 - Commands: `uv run pytest tests/unit/ui/test_app_skills_entries.py -q` → pass (1 passed)
 - Tests: pass
@@ -65,7 +65,13 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 - Notes: Session Inspector skill entries now share the same canonical-name and missing-skill projection as `/skills loaded`.
 
 ### T006 – Add focused registry and selection regression tests
-- Status: pending
+- Status: completed
+- Commit: pending
+- Files: tests/unit/skills/test_registry.py, tests/unit/skills/test_selection.py
+- Commands: `uv run pytest tests/unit/skills/test_registry.py tests/unit/skills/test_selection.py -q` → pass (6 passed)
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Expanded focused skills regression coverage for canonical discovery resolution, local-over-global precedence, case-insensitive attach dedupe, missing-tolerant summary projection, and fail-loud selected-skill loading.
 
 ### T007 – Add UI regression tests for `/skills loaded` and Session Inspector display
 - Status: pending

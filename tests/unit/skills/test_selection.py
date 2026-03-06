@@ -110,3 +110,15 @@ def test_resolve_selected_skill_summaries_preserves_order_and_missing_entries(
     assert resolved_summaries[0].summary is not None
     assert resolved_summaries[0].summary.name == "Demo"
     assert resolved_summaries[1].summary is None
+
+
+def test_resolve_selected_skills_raises_for_missing_selected_skill(
+    clean_cache_manager: None,
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(KeyError, match="Unknown skill: ghost"):
+        resolve_selected_skills(
+            ["ghost"],
+            local_root=tmp_path / "local-skills",
+            global_root=tmp_path / "global-skills",
+        )
