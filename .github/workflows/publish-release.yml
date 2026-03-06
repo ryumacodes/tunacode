@@ -66,8 +66,8 @@ jobs:
         run: python -m build
 
       # Preferred: API token secret
-      - name: Publish to PyPI (API token)
+      - name: Publish to PyPI (API token, skip existing)
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: python -m twine upload dist/*
+        run: python -m twine upload --skip-existing dist/*
