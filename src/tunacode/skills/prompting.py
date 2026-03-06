@@ -7,6 +7,11 @@ from tunacode.skills.models import SelectedSkill, SkillSummary
 AVAILABLE_SKILLS_SECTION_TITLE = "# Available Skills"
 SELECTED_SKILLS_SECTION_TITLE = "# Selected Skills"
 
+SELECTED_SKILLS_INSTRUCTION = """\
+The following skills have been loaded for this session.
+You MUST read each skill's SKILL.md content fully and apply its guidance to all relevant tasks.
+Do not ignore these skills - they contain critical instructions for this codebase."""
+
 
 def render_available_skills_block(skill_summaries: list[SkillSummary]) -> str:
     lines = ["", "", AVAILABLE_SKILLS_SECTION_TITLE]
@@ -24,6 +29,8 @@ def render_selected_skills_block(selected_skills: list[SelectedSkill]) -> str:
         return ""
 
     lines = ["", "", SELECTED_SKILLS_SECTION_TITLE]
+    lines.append(SELECTED_SKILLS_INSTRUCTION)
+    lines.append("")
     for selected_skill in selected_skills:
         lines.append(f"## {selected_skill.name} ({selected_skill.source.value})")
         lines.append(selected_skill.content)
