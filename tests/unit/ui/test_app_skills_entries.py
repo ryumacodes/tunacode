@@ -57,3 +57,24 @@ def test_build_skill_entries_uses_canonical_names_and_missing_markers(
     skill_entries = TextualReplApp._build_skill_entries(app)
 
     assert skill_entries == [("Demo", "local"), ("ghost", "missing")]
+
+
+def test_build_skill_entries_preserves_requested_order_for_missing_and_loaded_items(
+    clean_cache_manager: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.chdir(tmp_path)
+
+    local_root = tmp_path / ".claude" / "skills"
+    _write_skill(local_root, "Demo", "Demo skill")
+
+    state_manager = StateManager()
+    state_manager.session.selected_skill_names = ["ghost", "DEMO"]
+    app = SimpleNamespace(state_manager=state_manager)
+
+    skill_entries = TextualReplApp._build_skill_entries(app)
+
+    assert skill_entries == [("ghost", "missing"), ("Demo", "local")]

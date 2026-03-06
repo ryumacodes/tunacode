@@ -9,7 +9,7 @@ from tunacode.infrastructure.cache import clear_all
 
 from tunacode.core.session import StateManager
 
-from tunacode.ui.commands.skills import SkillsCommand
+from tunacode.ui.commands.skills import MISSING_SKILL_DESCRIPTION, SkillsCommand
 
 
 @pytest.fixture
@@ -54,9 +54,15 @@ def test_build_loaded_skill_rows_renders_loaded_and_missing_entries(
     state_manager.session.selected_skill_names = ["demo", "ghost"]
     app = SimpleNamespace(state_manager=state_manager)
 
-    rows = SkillsCommand()._build_loaded_skill_rows(app)
+    command = SkillsCommand()
+    rows = command._build_loaded_skill_rows(app)
+    content = command._build_loaded_skills_content(rows)
 
-    assert [(row.name, row.source_label, row.status_label) for row in rows] == [
-        ("demo", "local", "loaded"),
-        ("ghost", "---", "missing"),
+    assert [(row.name, row.source_label, row.status_label, row.description) for row in rows] == [
+        ("demo", "local", "loaded", "Demo skill"),
+        ("ghost", "---", "missing", MISSING_SKILL_DESCRIPTION),
     ]
+    assert (
+        content.plain
+        == "▸ demo [local]\n  Demo skill\n\n✗ ghost [missing]\n  Skill file unavailable"
+    )
