@@ -111,12 +111,30 @@ env: {target: "local", notes: ""}
 
 ### T011 – Show active skills in Session Inspector
 - Status: completed
-- Commit: pending
+- Commit: `6fccca57`
 - Files: `src/tunacode/ui/context_panel.py`, `src/tunacode/ui/app.py`
 - Commands: `uv run python - <<'PY' ...` → `ui-smoke-ok`
 - Tests: deferred to final verification per user direction
 - Coverage delta: not measured
 - Notes: Added a dedicated Skills field in the inspector and refresh wiring for active session attachments.
+
+### T012 – Add UI command tests
+- Status: completed
+- Commit: pending
+- Files: `tests/unit/ui/test_skill_command.py`
+- Commands: `uv run pytest tests/unit/ui/test_skill_command.py tests/unit/ui/test_command_contracts.py -q` → `4 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Covered state changes, registry visibility, and autocomplete compatibility for `/skill`.
+
+### T013 – Add skills integration tests
+- Status: completed
+- Commit: pending
+- Files: `tests/integration/core/test_skills_integration.py`, `tests/unit/core/test_session_state_skills.py`
+- Commands: `uv run pytest tests/integration/core/test_skills_integration.py tests/unit/core/test_session_state_skills.py -q` → `3 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Proved prompt attachment, local override precedence, and persisted selected skill state.
 
 ## Gate Results
 - Tests: not run
