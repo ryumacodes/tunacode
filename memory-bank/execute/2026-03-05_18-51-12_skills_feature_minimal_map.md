@@ -30,12 +30,21 @@ env: {target: "local", notes: ""}
 
 ### T002 – Implement skill root discovery and precedence
 - Status: completed
-- Commit: pending
+- Commit: `b5217aab`
 - Files: `src/tunacode/skills/discovery.py`
 - Commands: `uv run pytest tests/unit/skills/test_discovery.py` → `5 passed`
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Added deterministic root traversal, local-over-global precedence, and same-root duplicate detection.
+
+### T003 – Write discovery tests
+- Status: completed
+- Commit: pending
+- Files: `tests/unit/skills/test_discovery.py`
+- Commands: `uv run pytest tests/unit/skills/test_discovery.py` → `5 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Covered local-only, global-only, override, ignore-without-SKILL, and same-root duplicate cases.
 
 ## Gate Results
 - Tests: not run
