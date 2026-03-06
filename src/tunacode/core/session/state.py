@@ -61,6 +61,7 @@ class SessionState:
     created_at: str = ""
     last_modified: str = ""
     working_directory: str = ""
+    selected_skill_names: list[str] = field(default_factory=list)
     # Recursive execution tracking
     current_recursion_depth: int = 0
     max_recursion_depth: int = 5
@@ -306,10 +307,29 @@ class StateManager:
             return value
         return str(value)
 
+    def _deserialize_selected_skill_names(self, data: Any) -> list[str]:
+        if data is None:
+            return []
+
+        if not isinstance(data, list):
+            raise TypeError(
+                f"Session 'selected_skill_names' must be a list, got {type(data).__name__}"
+            )
+
+        selected_skill_names: list[str] = []
+        for index, item in enumerate(data):
+            if not isinstance(item, str):
+                raise TypeError(
+                    f"Session 'selected_skill_names[{index}]' must be a string, "
+                    f"got {type(item).__name__}"
+                )
+            selected_skill_names.append(item)
+
+        return selected_skill_names
+
     async def save_session(self) -> bool:
         """Save current session to disk."""
         if not self._session.project_id:
-            pass
             return False
 
         self._session.last_modified = datetime.now(UTC).isoformat()
@@ -321,6 +341,7 @@ class StateManager:
             "created_at": self._session.created_at,
             "last_modified": self._session.last_modified,
             "working_directory": self._session.working_directory,
+            "selected_skill_names": self._session.selected_skill_names,
             "current_model": self._session.current_model,
             "session_total_usage": self._session.usage.session_total_usage.to_dict(),
             "thoughts": self._session.conversation.thoughts,
@@ -363,6 +384,9 @@ class StateManager:
             self._session.last_modified = last_modified_value
             working_directory_value = self._coerce_str_value(data.get("working_directory"), "")
             self._session.working_directory = working_directory_value
+            self._session.selected_skill_names = self._deserialize_selected_skill_names(
+                data.get("selected_skill_names")
+            )
             default_model = DEFAULT_USER_CONFIG["default_model"]
             current_model_value = self._coerce_str_value(data.get("current_model"), default_model)
             self._session.current_model = current_model_value

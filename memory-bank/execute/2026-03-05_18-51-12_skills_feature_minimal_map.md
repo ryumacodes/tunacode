@@ -66,12 +66,21 @@ env: {target: "local", notes: ""}
 
 ### T006 – Add mtime-aware skill cache and registry APIs
 - Status: completed
-- Commit: pending
+- Commit: `5cc1946f`
 - Files: `src/tunacode/infrastructure/cache/caches/skills.py`, `src/tunacode/skills/registry.py`, `tests/unit/skills/test_registry.py`
 - Commands: `uv run pytest tests/unit/skills/test_registry.py` → `3 passed`
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Added registry list/get/load helpers that rescan roots and invalidate cached file reads on mtime changes.
+
+### T007 – Persist selected skill names in session state
+- Status: completed
+- Commit: pending
+- Files: `src/tunacode/core/session/state.py`, `src/tunacode/core/types/state.py`
+- Commands: `uv run python - <<'PY' ...` → `imports-ok ... True`
+- Tests: deferred to final verification per user direction
+- Coverage delta: not measured
+- Notes: Added ordered selected skill persistence to session save/load and state protocols.
 
 ## Gate Results
 - Tests: not run
