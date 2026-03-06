@@ -39,12 +39,21 @@ env: {target: "local", notes: ""}
 
 ### T003 – Write discovery tests
 - Status: completed
-- Commit: pending
+- Commit: `14a7303a`
 - Files: `tests/unit/skills/test_discovery.py`
 - Commands: `uv run pytest tests/unit/skills/test_discovery.py` → `5 passed`
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Covered local-only, global-only, override, ignore-without-SKILL, and same-root duplicate cases.
+
+### T004 – Implement summary/full skill loading
+- Status: completed
+- Commit: pending
+- Files: `src/tunacode/skills/loader.py`, `tests/unit/skills/test_loader.py`
+- Commands: `uv run pytest tests/unit/skills/test_loader.py` → `1 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added frontmatter parsing for startup summaries and a full loader that returns validated markdown bodies on demand.
 
 ## Gate Results
 - Tests: not run
