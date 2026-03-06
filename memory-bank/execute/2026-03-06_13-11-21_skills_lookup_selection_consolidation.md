@@ -39,7 +39,7 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 
 ### T003 – Add a shared selected-skill summary resolution model and helper
 - Status: completed
-- Commit: pending
+- Commit: c4710aa2
 - Files: src/tunacode/skills/models.py, src/tunacode/skills/selection.py, tests/unit/skills/test_selection.py
 - Commands: `uv run pytest tests/unit/skills/test_selection.py -q` → pass (3 passed)
 - Tests: pass
@@ -47,7 +47,13 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 - Notes: Added `ResolvedSelectedSkillSummary` so display consumers can preserve requested names and surface unresolved selections without changing fail-loud prompt resolution.
 
 ### T004 – Adopt the shared selected-skill summary helper in `/skills loaded`
-- Status: pending
+- Status: completed
+- Commit: pending
+- Files: src/tunacode/ui/commands/skills.py, tests/unit/ui/test_skills_command.py
+- Commands: `uv run pytest tests/unit/ui/test_skills_command.py -q` → pass (1 passed)
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Switched the loaded-skills row builder to the shared summary resolver while preserving existing loaded and missing labels.
 
 ### T005 – Adopt the shared selected-skill summary helper in the Session Inspector
 - Status: pending

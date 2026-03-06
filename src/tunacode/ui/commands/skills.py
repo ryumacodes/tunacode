@@ -13,7 +13,11 @@ from tunacode.skills.loader import SkillLoadError
 from tunacode.skills.models import SkillSummary
 from tunacode.skills.registry import get_skill_summary, list_skill_summaries
 from tunacode.skills.search import filter_skill_summaries
-from tunacode.skills.selection import attach_skill, clear_attached_skills
+from tunacode.skills.selection import (
+    attach_skill,
+    clear_attached_skills,
+    resolve_selected_skill_summaries,
+)
 
 from tunacode.ui.commands.base import Command
 from tunacode.ui.styles import (
@@ -195,12 +199,15 @@ class SkillsCommand(Command):
 
     def _build_loaded_skill_rows(self, app: TextualReplApp) -> list[_LoadedSkillRow]:
         loaded_skill_rows: list[_LoadedSkillRow] = []
-        for loaded_skill_name in app.state_manager.session.selected_skill_names:
-            summary = get_skill_summary(loaded_skill_name)
+        resolved_summaries = resolve_selected_skill_summaries(
+            app.state_manager.session.selected_skill_names
+        )
+        for resolved_summary in resolved_summaries:
+            summary = resolved_summary.summary
             if summary is None:
                 loaded_skill_rows.append(
                     _LoadedSkillRow(
-                        name=loaded_skill_name,
+                        name=resolved_summary.requested_name,
                         source_label=NO_SOURCE_LABEL,
                         status_label=MISSING_STATUS_LABEL,
                         description=MISSING_SKILL_DESCRIPTION,
