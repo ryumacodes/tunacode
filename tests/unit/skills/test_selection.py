@@ -6,7 +6,11 @@ import pytest
 
 from tunacode.infrastructure.cache import clear_all
 
-from tunacode.skills.selection import attach_skill, resolve_selected_skills
+from tunacode.skills.selection import (
+    attach_skill,
+    resolve_selected_skill_summaries,
+    resolve_selected_skills,
+)
 
 
 @pytest.fixture
@@ -87,3 +91,22 @@ def test_resolve_selected_skills_returns_loaded_content_and_related_paths(
     assert selected_skills[0].name == "Demo"
     assert selected_skills[0].content == skill_path.read_text(encoding="utf-8")
     assert selected_skills[0].related_paths == (related_path.resolve(),)
+
+
+def test_resolve_selected_skill_summaries_preserves_order_and_missing_entries(
+    clean_cache_manager: None,
+    tmp_path: Path,
+) -> None:
+    local_root = tmp_path / "local-skills"
+    _write_skill(local_root, "Demo", "Demo skill")
+
+    resolved_summaries = resolve_selected_skill_summaries(
+        ["Demo", "ghost"],
+        local_root=local_root,
+        global_root=tmp_path / "global-skills",
+    )
+
+    assert [entry.requested_name for entry in resolved_summaries] == ["Demo", "ghost"]
+    assert resolved_summaries[0].summary is not None
+    assert resolved_summaries[0].summary.name == "Demo"
+    assert resolved_summaries[1].summary is None

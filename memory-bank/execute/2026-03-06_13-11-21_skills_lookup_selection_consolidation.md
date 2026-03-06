@@ -30,7 +30,7 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 
 ### T002 – Refactor selection to use registry-backed full loads only
 - Status: completed
-- Commit: pending
+- Commit: d147ef95
 - Files: src/tunacode/skills/selection.py, tests/unit/skills/test_selection.py
 - Commands: `uv run pytest tests/unit/skills/test_selection.py -q` → pass (2 passed)
 - Tests: pass
@@ -38,7 +38,13 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 - Notes: Removed selection-side rediscovery and direct full-load calls so attachment and prompt resolution now go through registry-backed summary/full-load APIs, preserving summary-only catalog access and direct-load full ingestion.
 
 ### T003 – Add a shared selected-skill summary resolution model and helper
-- Status: pending
+- Status: completed
+- Commit: pending
+- Files: src/tunacode/skills/models.py, src/tunacode/skills/selection.py, tests/unit/skills/test_selection.py
+- Commands: `uv run pytest tests/unit/skills/test_selection.py -q` → pass (3 passed)
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added `ResolvedSelectedSkillSummary` so display consumers can preserve requested names and surface unresolved selections without changing fail-loud prompt resolution.
 
 ### T004 – Adopt the shared selected-skill summary helper in `/skills loaded`
 - Status: pending

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from tunacode.skills.loader import list_skill_related_paths
-from tunacode.skills.models import SelectedSkill, SkillSummary
+from tunacode.skills.models import ResolvedSelectedSkillSummary, SelectedSkill, SkillSummary
 from tunacode.skills.registry import get_skill_summary, load_skill_by_name
 
 
@@ -78,8 +78,8 @@ def resolve_selected_skill_summaries(
     *,
     local_root: Path | None = None,
     global_root: Path | None = None,
-) -> list[SkillSummary]:
-    selected_summaries: list[SkillSummary] = []
+) -> list[ResolvedSelectedSkillSummary]:
+    selected_summaries: list[ResolvedSelectedSkillSummary] = []
 
     for selected_skill_name in selected_skill_names:
         summary = get_skill_summary(
@@ -87,8 +87,11 @@ def resolve_selected_skill_summaries(
             local_root=local_root,
             global_root=global_root,
         )
-        if summary is None:
-            raise KeyError(f"Unknown skill: {selected_skill_name}")
-        selected_summaries.append(summary)
+        selected_summaries.append(
+            ResolvedSelectedSkillSummary(
+                requested_name=selected_skill_name,
+                summary=summary,
+            )
+        )
 
     return selected_summaries

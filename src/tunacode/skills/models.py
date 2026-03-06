@@ -48,3 +48,11 @@ class SelectedSkill:
     related_paths: tuple[Path, ...]
     content: str
     attachment_index: int
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedSelectedSkillSummary:
+    """Display-friendly selected-skill projection that preserves missing entries."""
+
+    requested_name: str
+    summary: SkillSummary | None
