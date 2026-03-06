@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.85] - 2026-03-06
+
+### Fixed
+- Made `/skills` autocomplete prefer the most relevant skill match instead of fuzzy-reordering short prefixes.
+- Isolated slash-command autocomplete to command names so `/skills` navigation and Enter selection no longer get hijacked by hidden command suggestions.
+
 ## [0.1.84] - 2026-03-06
 
 ### Fixed
