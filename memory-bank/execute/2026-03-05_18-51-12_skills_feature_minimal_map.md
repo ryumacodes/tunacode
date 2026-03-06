@@ -48,12 +48,21 @@ env: {target: "local", notes: ""}
 
 ### T004 – Implement summary/full skill loading
 - Status: completed
-- Commit: pending
+- Commit: `436926c5`
 - Files: `src/tunacode/skills/loader.py`, `tests/unit/skills/test_loader.py`
 - Commands: `uv run pytest tests/unit/skills/test_loader.py` → `1 passed`
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Added frontmatter parsing for startup summaries and a full loader that returns validated markdown bodies on demand.
+
+### T005 – Add fail-loud loader validation
+- Status: completed
+- Commit: pending
+- Files: `src/tunacode/skills/loader.py`, `tests/unit/skills/test_loader.py`
+- Commands: `uv run pytest tests/unit/skills/test_loader.py` → `4 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Tightened typed failures for missing files, malformed frontmatter, and missing relative references.
 
 ## Gate Results
 - Tests: not run

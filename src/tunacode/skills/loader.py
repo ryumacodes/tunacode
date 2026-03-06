@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from tunacode.skills.discovery import DiscoveredSkillPath
@@ -58,17 +59,20 @@ class SkillNameMismatchError(SkillLoadError):
     """Raised when the frontmatter name disagrees with the directory name."""
 
 
+@dataclass(frozen=True, slots=True)
+class _ParsedSkillDocument:
+    name: str
+    description: str
+    content: str
+
+
 def load_skill_summary(discovered_skill: DiscoveredSkillPath) -> SkillSummary:
     """Load startup metadata for a skill without returning the full markdown body."""
 
-    raw_content = _read_skill_file(discovered_skill.skill_path)
-    frontmatter, _body = _parse_frontmatter(raw_content)
-    name = _read_required_frontmatter_value(frontmatter, key="name")
-    description = _read_required_frontmatter_value(frontmatter, key="description")
-    _validate_skill_name(discovered_skill=discovered_skill, name=name)
+    parsed_document = _load_parsed_skill_document(discovered_skill)
     return SkillSummary(
-        name=name,
-        description=description,
+        name=parsed_document.name,
+        description=parsed_document.description,
         source=discovered_skill.source,
         skill_dir=discovered_skill.skill_dir,
         skill_path=discovered_skill.skill_path,
@@ -78,22 +82,30 @@ def load_skill_summary(discovered_skill: DiscoveredSkillPath) -> SkillSummary:
 def load_skill(discovered_skill: DiscoveredSkillPath) -> LoadedSkill:
     """Load full skill content and validate explicit relative references."""
 
-    summary = load_skill_summary(discovered_skill)
-    content = _read_skill_file(discovered_skill.skill_path)
+    parsed_document = _load_parsed_skill_document(discovered_skill)
     referenced_paths = _collect_referenced_paths(
-        content=content,
+        content=parsed_document.content,
         skill_dir=discovered_skill.skill_dir,
         skill_path=discovered_skill.skill_path,
     )
     return LoadedSkill(
-        name=summary.name,
-        description=summary.description,
-        source=summary.source,
-        skill_dir=summary.skill_dir,
-        skill_path=summary.skill_path,
-        content=content,
+        name=parsed_document.name,
+        description=parsed_document.description,
+        source=discovered_skill.source,
+        skill_dir=discovered_skill.skill_dir,
+        skill_path=discovered_skill.skill_path,
+        content=parsed_document.content,
         referenced_paths=referenced_paths,
     )
+
+
+def _load_parsed_skill_document(discovered_skill: DiscoveredSkillPath) -> _ParsedSkillDocument:
+    raw_content = _read_skill_file(discovered_skill.skill_path)
+    frontmatter, _body = _parse_frontmatter(raw_content)
+    name = _read_required_frontmatter_value(frontmatter, key="name")
+    description = _read_required_frontmatter_value(frontmatter, key="description")
+    _validate_skill_name(discovered_skill=discovered_skill, name=name)
+    return _ParsedSkillDocument(name=name, description=description, content=raw_content)
 
 
 def _read_skill_file(skill_path: Path) -> str:
