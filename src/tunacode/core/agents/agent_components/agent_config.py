@@ -9,6 +9,8 @@ We intentionally do **not** preserve the pydantic-ai agent construction logic.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, cast
@@ -43,7 +45,7 @@ from tunacode.prompts.versioning import (
     get_or_compute_prompt_version,
 )
 from tunacode.types import ModelName
-from tunacode.types.canonical import PromptVersion
+from tunacode.types.canonical import AgentPromptVersions, PromptVersion
 
 from tunacode.tools.bash import bash
 from tunacode.tools.decorators import to_tinyagent_tool
@@ -59,6 +61,15 @@ from tunacode.infrastructure.cache.caches import tunacode_context as context_cac
 from tunacode.core.compaction.controller import get_or_create_compaction_controller
 from tunacode.core.logging import get_logger
 from tunacode.core.types import SessionStateProtocol, StateManagerProtocol
+
+from tunacode.skills.models import SelectedSkill
+from tunacode.skills.prompting import (
+    compute_skills_prompt_fingerprint,
+    render_available_skills_block,
+    render_selected_skills_block,
+)
+from tunacode.skills.registry import list_skill_summaries
+from tunacode.skills.selection import resolve_selected_skills
 
 ENV_OPENAI_API_KEY = "OPENAI_API_KEY"
 OPENAI_CHAT_COMPLETIONS_PATH = "/chat/completions"
@@ -107,6 +118,7 @@ def _compute_agent_version(
     request_delay: float,
     *,
     max_tokens: int | None,
+    skills_prompt_fingerprint: str,
 ) -> int:
     """Compute a hash representing agent-defining configuration."""
 
@@ -118,6 +130,7 @@ def _compute_agent_version(
             str(settings.get("global_request_timeout", 90.0)),
             str(max_tokens),
             str(MAX_PARALLEL_TOOL_CALLS),
+            skills_prompt_fingerprint,
         )
     )
 
@@ -422,6 +435,42 @@ def _build_tinyagent_model(
     )
 
 
+def _build_skills_prompt_state(
+    session: SessionStateProtocol,
+) -> tuple[str, str, str, list[SelectedSkill]]:
+    available_skill_summaries = list_skill_summaries()
+    selected_skills = resolve_selected_skills(session.selected_skill_names)
+    available_skills_block = render_available_skills_block(available_skill_summaries)
+    selected_skills_block = render_selected_skills_block(selected_skills)
+    skills_prompt_fingerprint = compute_skills_prompt_fingerprint(
+        available_skill_summaries,
+        selected_skills,
+    )
+    return (
+        available_skills_block,
+        selected_skills_block,
+        skills_prompt_fingerprint,
+        selected_skills,
+    )
+
+
+def _augment_prompt_versions_with_skills(
+    prompt_versions: AgentPromptVersions,
+    *,
+    skills_prompt_fingerprint: str,
+) -> AgentPromptVersions:
+    combined_fingerprint = hashlib.sha256(
+        f"{prompt_versions.fingerprint}|skills:{skills_prompt_fingerprint}".encode()
+    ).hexdigest()
+    return AgentPromptVersions(
+        system_prompt=prompt_versions.system_prompt,
+        tunacode_context=prompt_versions.tunacode_context,
+        tool_prompts=prompt_versions.tool_prompts,
+        fingerprint=combined_fingerprint,
+        computed_at=time.time(),
+    )
+
+
 def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -> Agent:
     """Get existing agent or create a new tinyagent Agent for the specified model."""
 
@@ -434,12 +483,16 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     # Ensure models_registry is cached so get_provider_env_var() works.
     load_models_registry()
 
+    available_skills_block, selected_skills_block, skills_prompt_fingerprint, _ = (
+        _build_skills_prompt_state(session)
+    )
     max_tokens = get_max_tokens()
 
     agent_version = _compute_agent_version(
         settings,
         request_delay,
         max_tokens=max_tokens,
+        skills_prompt_fingerprint=skills_prompt_fingerprint,
     )
 
     session_agent = session.agents.get(model)
@@ -464,7 +517,12 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     system_prompt_content, system_version = load_system_prompt(base_path, model=model)
     tunacode_context_content, context_version = load_tunacode_context()
 
-    system_prompt = system_prompt_content + tunacode_context_content
+    system_prompt = (
+        system_prompt_content
+        + tunacode_context_content
+        + available_skills_block
+        + selected_skills_block
+    )
 
     tools_list = _build_tools()
 
@@ -482,6 +540,10 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
         system_prompt_path=base_path / "prompts" / "system_prompt.md",
         tunacode_context_path=Path.cwd() / "AGENTS.md",
         tool_prompt_paths=tool_prompt_paths,
+    )
+    prompt_versions = _augment_prompt_versions_with_skills(
+        prompt_versions,
+        skills_prompt_fingerprint=skills_prompt_fingerprint,
     )
 
     stream_fn = _build_stream_fn(request_delay=request_delay, max_tokens=max_tokens)

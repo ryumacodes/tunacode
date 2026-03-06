@@ -84,12 +84,21 @@ env: {target: "local", notes: ""}
 
 ### T008 – Implement selection and prompt rendering helpers
 - Status: completed
-- Commit: pending
+- Commit: `8f1cbe1c`
 - Files: `src/tunacode/skills/selection.py`, `src/tunacode/skills/prompting.py`
 - Commands: `uv run python - <<'PY' ...` → `imports-ok`
 - Tests: deferred to final verification per user direction
 - Coverage delta: not measured
 - Notes: Added selection helpers plus deterministic available-skills and selected-skills prompt blocks.
+
+### T009 – Integrate skills into agent construction
+- Status: completed
+- Commit: pending
+- Files: `src/tunacode/core/agents/agent_components/agent_config.py`
+- Commands: `uv run python - <<'PY' ...` → `imports-ok`
+- Tests: deferred to final verification per user direction
+- Coverage delta: not measured
+- Notes: Agent prompts now always include skill summaries, inject selected skill bodies, and fingerprint cache state with skill prompt content.
 
 ## Gate Results
 - Tests: not run
