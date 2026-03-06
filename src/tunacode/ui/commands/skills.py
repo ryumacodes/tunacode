@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from tunacode.skills.loader import SkillLoadError
 from tunacode.skills.models import SkillSummary
 from tunacode.skills.registry import get_skill_summary, list_skill_summaries
+from tunacode.skills.search import filter_skill_summaries
 from tunacode.skills.selection import attach_skill, clear_attached_skills
 
 from tunacode.ui.commands.base import Command
@@ -216,20 +217,7 @@ class SkillsCommand(Command):
         *,
         query: str | None,
     ) -> list[SkillSummary]:
-        if query is None:
-            return skill_summaries
-
-        normalized_query = query.casefold()
-        matching_skills: list[SkillSummary] = []
-        for skill_summary in skill_summaries:
-            if normalized_query in skill_summary.name.casefold():
-                matching_skills.append(skill_summary)
-                continue
-
-            if normalized_query in skill_summary.description.casefold():
-                matching_skills.append(skill_summary)
-
-        return matching_skills
+        return filter_skill_summaries(skill_summaries, query=query)
 
     def _build_available_table_title(self, *, query: str | None, match_count: int) -> str:
         if query is None:

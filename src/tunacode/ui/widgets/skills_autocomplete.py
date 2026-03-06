@@ -5,9 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from textual.widgets import Input
-from textual_autocomplete import AutoComplete, DropdownItem, TargetState
+from textual_autocomplete import AutoComplete, DropdownItem, DropdownItemHit, TargetState
 
 from tunacode.skills.registry import list_skill_summaries
+from tunacode.skills.search import filter_skill_summaries
 
 SKILLS_COMMAND_PREFIX = "/skills"
 SEARCH_SUBCOMMAND = "search"
@@ -121,21 +122,37 @@ class SkillsAutoComplete(AutoComplete):
         return [DropdownItem(main=subcommand) for subcommand in matching_subcommands]
 
     def _skill_candidates(self, search: str) -> list[DropdownItem]:
-        normalized_search = search.casefold()
-        matching_skill_names: list[str] = []
-        for skill_summary in list_skill_summaries():
-            if not normalized_search:
-                matching_skill_names.append(skill_summary.name)
+        skill_summaries = list_skill_summaries()
+        matching_summaries = filter_skill_summaries(skill_summaries, query=search)
+        return [DropdownItem(main=skill_summary.name) for skill_summary in matching_summaries]
+
+    def get_matches(
+        self,
+        target_state: TargetState,
+        candidates: list[DropdownItem],
+        search_string: str,
+    ) -> list[DropdownItem]:
+        del target_state
+        if not search_string:
+            return candidates
+
+        ordered_matches: list[DropdownItem] = []
+        for candidate in candidates:
+            score, offsets = self.match(search_string, candidate.value)
+            if score <= 0:
                 continue
 
-            if normalized_search in skill_summary.name.casefold():
-                matching_skill_names.append(skill_summary.name)
-                continue
+            highlighted_main = self.apply_highlights(candidate.main, offsets)
+            ordered_matches.append(
+                DropdownItemHit(
+                    main=highlighted_main,
+                    prefix=candidate.prefix,
+                    id=candidate.id,
+                    disabled=candidate.disabled,
+                )
+            )
 
-            if normalized_search in skill_summary.description.casefold():
-                matching_skill_names.append(skill_summary.name)
-
-        return [DropdownItem(main=skill_name) for skill_name in matching_skill_names]
+        return ordered_matches
 
     def _replacement_prefix(self, mode: str) -> str:
         if mode == SEARCH_SUBCOMMAND:

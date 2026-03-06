@@ -104,6 +104,44 @@ async def test_skills_autocomplete_applies_search_subcommand_with_trailing_space
         assert app.editor.value == "/skills search "
 
 
+async def test_skills_autocomplete_enter_prefers_best_prefix_match(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    _write_skill(tmp_path, "dead-code-detector", description="Find dead code")
+    _write_skill(tmp_path, "demo", description="Demo skill")
+
+    app = TextualReplApp(state_manager=StateManager())
+
+    async with app.run_test(headless=True) as pilot:
+        autocomplete = app.query_one(SkillsAutoComplete)
+
+        await _type_text(pilot, "/skills de")
+        await pilot.pause()
+
+        assert autocomplete.display is True
+        assert app.editor.value == "/skills de"
+
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert app.editor.value == "/skills demo"
+
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert app.editor.value == ""
+        assert app.state_manager.session.selected_skill_names == ["demo"]
+
+
+async def _type_text(pilot, text: str) -> None:
+    for character in text:
+        key = "space" if character == " " else character
+        await pilot.press(key)
+
+
 def _write_skill(root: Path, name: str, *, description: str) -> None:
     skill_dir = root / ".claude" / "skills" / name
     skill_dir.mkdir(parents=True, exist_ok=True)
