@@ -120,7 +120,7 @@ env: {target: "local", notes: ""}
 
 ### T012 – Add UI command tests
 - Status: completed
-- Commit: pending
+- Commit: `10c904dc`
 - Files: `tests/unit/ui/test_skill_command.py`
 - Commands: `uv run pytest tests/unit/ui/test_skill_command.py tests/unit/ui/test_command_contracts.py -q` → `4 passed`
 - Tests: pass
