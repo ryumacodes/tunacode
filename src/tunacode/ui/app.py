@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
     from tunacode.ui.lifecycle import AppLifecycle
 
-from tunacode.skills.registry import get_skill_summary
+from tunacode.skills.selection import resolve_selected_skill_summaries
 
 from tunacode.core.agents.main import process_request
 from tunacode.core.debug import log_resource_bar_update
@@ -519,10 +519,13 @@ class TextualReplApp(App[None]):
 
     def _build_skill_entries(self) -> list[tuple[str, str]]:
         skill_entries: list[tuple[str, str]] = []
-        for selected_skill_name in self.state_manager.session.selected_skill_names:
-            summary = get_skill_summary(selected_skill_name)
+        resolved_summaries = resolve_selected_skill_summaries(
+            self.state_manager.session.selected_skill_names
+        )
+        for resolved_summary in resolved_summaries:
+            summary = resolved_summary.summary
             if summary is None:
-                skill_entries.append((selected_skill_name, "missing"))
+                skill_entries.append((resolved_summary.requested_name, "missing"))
                 continue
             skill_entries.append((summary.name, summary.source.value))
         return skill_entries

@@ -48,7 +48,7 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 
 ### T004 – Adopt the shared selected-skill summary helper in `/skills loaded`
 - Status: completed
-- Commit: pending
+- Commit: 8e71dbfd
 - Files: src/tunacode/ui/commands/skills.py, tests/unit/ui/test_skills_command.py
 - Commands: `uv run pytest tests/unit/ui/test_skills_command.py -q` → pass (1 passed)
 - Tests: pass
@@ -56,7 +56,13 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 - Notes: Switched the loaded-skills row builder to the shared summary resolver while preserving existing loaded and missing labels.
 
 ### T005 – Adopt the shared selected-skill summary helper in the Session Inspector
-- Status: pending
+- Status: completed
+- Commit: pending
+- Files: src/tunacode/ui/app.py, tests/unit/ui/test_app_skills_entries.py
+- Commands: `uv run pytest tests/unit/ui/test_app_skills_entries.py -q` → pass (1 passed)
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Session Inspector skill entries now share the same canonical-name and missing-skill projection as `/skills loaded`.
 
 ### T006 – Add focused registry and selection regression tests
 - Status: pending
