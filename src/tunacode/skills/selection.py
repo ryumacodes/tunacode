@@ -25,6 +25,11 @@ def attach_skill(
         if existing_name.casefold() == summary.name.casefold():
             return list(current_skill_names), summary, True
 
+    load_skill_by_name(
+        summary.name,
+        local_root=local_root,
+        global_root=global_root,
+    )
     next_skill_names = [*current_skill_names, summary.name]
     return next_skill_names, summary, False
 

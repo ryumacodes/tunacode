@@ -21,7 +21,7 @@ description: Demo skill
 
 # Demo Skill
 
-Use `helper.py` when needed.
+See [helper.py](helper.py) when needed.
 """
 
 
@@ -44,6 +44,21 @@ def test_load_skill_summary_accepts_legacy_markdown_without_frontmatter(tmp_path
 
     assert summary.name == "demo"
     assert summary.description == "Legacy description line."
+
+
+def test_load_skill_ignores_inline_code_that_looks_like_a_path(tmp_path: Path) -> None:
+    body = """---
+name: demo
+description: Demo skill
+---
+
+Use `.claude/metadata` for storage.
+"""
+    discovered_skill = _build_discovered_skill(tmp_path, body=body)
+
+    loaded_skill = load_skill(discovered_skill)
+
+    assert loaded_skill.referenced_paths == ()
 
 
 def test_load_skill_raises_typed_error_for_missing_relative_reference(tmp_path: Path) -> None:

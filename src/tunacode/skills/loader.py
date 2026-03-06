@@ -10,7 +10,6 @@ from tunacode.skills.models import LoadedSkill, SkillSummary
 FRONTMATTER_DELIMITER = "---"
 FRONTMATTER_REQUIRED_KEYS = ("name", "description")
 MARKDOWN_LINK_PATTERN = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
-INLINE_CODE_PATTERN = re.compile(r"`([^`\n]+)`")
 MARKDOWN_HEADING_PREFIX = "#"
 MARKDOWN_FENCE_PREFIX = "```"
 LEGACY_DESCRIPTION_FALLBACK = "Legacy skill"
@@ -83,7 +82,7 @@ def load_skill_summary(discovered_skill: DiscoveredSkillPath) -> SkillSummary:
 
 
 def load_skill(discovered_skill: DiscoveredSkillPath) -> LoadedSkill:
-    """Load full skill content and validate explicit relative references."""
+    """Load full skill content and validate explicit relative markdown references."""
 
     parsed_document = _load_parsed_skill_document(discovered_skill)
     referenced_paths = _collect_referenced_paths(
@@ -248,26 +247,58 @@ def _collect_referenced_paths(
         if relative_reference is None:
             continue
 
-        resolved_path = (skill_dir / relative_reference).resolve()
+        resolved_path = _resolve_referenced_path(
+            relative_reference=relative_reference,
+            skill_dir=skill_dir,
+            skill_path=skill_path,
+        )
         if resolved_path in seen_paths:
             continue
-        if resolved_path.exists():
-            ordered_paths.append(resolved_path)
-            seen_paths.add(resolved_path)
-            continue
 
+        ordered_paths.append(resolved_path)
+        seen_paths.add(resolved_path)
+
+    return tuple(ordered_paths)
+
+
+def _resolve_referenced_path(
+    *,
+    relative_reference: str,
+    skill_dir: Path,
+    skill_path: Path,
+) -> Path:
+    direct_path = (skill_dir / relative_reference).resolve()
+    if direct_path.exists():
+        return direct_path
+
+    reference_parts = Path(relative_reference).parts
+    if len(reference_parts) > 1:
         raise SkillReferenceError(
             f"Skill {skill_path} references missing relative path: {relative_reference}"
         )
 
-    return tuple(ordered_paths)
+    matching_paths = _find_recursive_reference_matches(skill_dir, reference_parts[0])
+    if not matching_paths:
+        raise SkillReferenceError(
+            f"Skill {skill_path} references missing relative path: {relative_reference}"
+        )
+
+    if len(matching_paths) > 1:
+        raise SkillReferenceError(
+            f"Skill {skill_path} references ambiguous relative path: {relative_reference}"
+        )
+
+    return matching_paths[0]
+
+
+def _find_recursive_reference_matches(skill_dir: Path, file_name: str) -> list[Path]:
+    matching_paths = [path.resolve() for path in skill_dir.rglob(file_name) if path.is_file()]
+    return sorted(set(matching_paths))
 
 
 def _iter_reference_candidates(content: str) -> list[str]:
     candidates: list[str] = []
     for match in MARKDOWN_LINK_PATTERN.finditer(content):
-        candidates.append(match.group(1))
-    for match in INLINE_CODE_PATTERN.finditer(content):
         candidates.append(match.group(1))
     return candidates
 

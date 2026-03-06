@@ -83,6 +83,7 @@ from tunacode.ui.widgets import (
     EditorSubmitRequested,
     FileAutoComplete,
     ResourceBar,
+    SkillsAutoComplete,
     StatusBar,
     ToolResultDisplay,
 )
@@ -186,6 +187,7 @@ class TextualReplApp(App[None]):
         yield self.editor
         yield FileAutoComplete(self.editor)
         yield CommandAutoComplete(self.editor)
+        yield SkillsAutoComplete(self.editor)
         yield self.status_bar
 
     @property

@@ -7,6 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from tunacode.skills.loader import SkillLoadError
 from tunacode.skills.models import SkillSummary
 from tunacode.skills.registry import get_skill_summary, list_skill_summaries
 from tunacode.skills.selection import attach_skill, clear_attached_skills
@@ -158,6 +159,10 @@ class SkillsCommand(Command):
             )
         except KeyError:
             app.notify(f"Unknown skill: {requested_name}", severity="error")
+            return False
+        except SkillLoadError as exc:
+            app.notify(f"Failed to load skill: {requested_name}", severity="error")
+            app.chat_container.write(f"Failed to load skill: {requested_name} ({exc})")
             return False
 
         session.selected_skill_names = next_skill_names

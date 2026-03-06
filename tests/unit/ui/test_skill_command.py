@@ -21,6 +21,16 @@ description: Demo skill
 Use this skill.
 """
 
+INVALID_SKILL_TEMPLATE = """---
+name: broken
+description: Broken skill
+---
+
+# Broken Skill
+
+See [missing.py](missing.py).
+"""
+
 
 async def test_skills_command_attaches_and_clears_selected_skills(
     tmp_path: Path,
@@ -50,6 +60,28 @@ async def test_skills_command_attaches_and_clears_selected_skills(
 
         assert app.state_manager.session.selected_skill_names == []
         assert field_skills.border_title == "Loaded Skills [0]"
+
+
+async def test_skills_command_rejects_invalid_skill_loads(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+
+    skill_dir = tmp_path / ".claude" / "skills" / "broken"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(INVALID_SKILL_TEMPLATE, encoding="utf-8")
+
+    app = TextualReplApp(state_manager=StateManager())
+
+    async with app.run_test(headless=True):
+        command = COMMANDS["skills"]
+        assert isinstance(command, SkillsCommand)
+
+        await command.execute(app, "broken")
+
+        assert app.state_manager.session.selected_skill_names == []
 
 
 async def test_skills_command_search_does_not_attach_partial_matches(
