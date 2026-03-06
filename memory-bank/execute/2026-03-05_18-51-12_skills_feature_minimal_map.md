@@ -57,12 +57,21 @@ env: {target: "local", notes: ""}
 
 ### T005 – Add fail-loud loader validation
 - Status: completed
-- Commit: pending
+- Commit: `ecc5cf3a`
 - Files: `src/tunacode/skills/loader.py`, `tests/unit/skills/test_loader.py`
 - Commands: `uv run pytest tests/unit/skills/test_loader.py` → `4 passed`
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Tightened typed failures for missing files, malformed frontmatter, and missing relative references.
+
+### T006 – Add mtime-aware skill cache and registry APIs
+- Status: completed
+- Commit: pending
+- Files: `src/tunacode/infrastructure/cache/caches/skills.py`, `src/tunacode/skills/registry.py`, `tests/unit/skills/test_registry.py`
+- Commands: `uv run pytest tests/unit/skills/test_registry.py` → `3 passed`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added registry list/get/load helpers that rescan roots and invalidate cached file reads on mtime changes.
 
 ## Gate Results
 - Tests: not run
