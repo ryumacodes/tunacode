@@ -1,3 +1,11 @@
+---
+title: "Research – Glob filesystem search_sync and block_anchor_replacer"
+type: metadata
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: 6122c5dd-c84e-4897-9265-ecb66b3d28e5
+---
+
 # Research – Glob filesystem search_sync and block_anchor_replacer
 **Date:** 2026-02-01
 **Phase:** Research

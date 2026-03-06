@@ -10,12 +10,24 @@ AVAILABLE_SKILLS_SECTION_TITLE = "# Available Skills"
 SELECTED_SKILLS_SECTION_TITLE = "# Selected Skills"
 
 SELECTED_SKILLS_INSTRUCTION = """\
-The following skills have been loaded for this session.
-You MUST read each skill's SKILL.md content fully and apply its guidance to all relevant tasks.
-Use the exact absolute skill paths provided below as authoritative.
+The user explicitly loaded the following skills via /skills, and they are ACTIVE for this session.
+These loaded skills are not optional reference material; they are active operating instructions.
+Before doing work, determine whether one or more loaded skills apply to the user's request.
+If a loaded skill applies, you MUST follow it,
+even if the user does not repeat its name in the latest message.
+When a loaded skill is relevant,
+prefer its workflow and guidance over generic default behavior.
+Before searching the repository for help,
+check the loaded skill paths below and use them directly when they are relevant.
+You MUST read each loaded skill's full SKILL.md content
+and use the exact absolute skill paths below as authoritative.
 These skill files may live outside the current project working directory.
-Do not assume searching only the repo root will find them."""
+Do not assume searching only the repo root will find them.
+When a loaded skill materially affects your answer or plan,
+explicitly say that the skill is loaded and being used.
+Do not ignore a loaded skill that matches the task."""
 
+SKILL_STATUS_LABEL = "Skill status"
 SKILL_DIRECTORY_LABEL = "Skill directory (absolute)"
 SKILL_FILE_LABEL = "Skill definition file (absolute)"
 SKILL_REFERENCED_FILES_LABEL = "Files explicitly referenced by SKILL.md"
@@ -49,11 +61,12 @@ def render_selected_skills_block(selected_skills: list[SelectedSkill]) -> str:
 
 def _append_selected_skill_block(lines: list[str], selected_skill: SelectedSkill) -> None:
     lines.append(f"## {selected_skill.name} ({selected_skill.source.value})")
+    lines.append(f"{SKILL_STATUS_LABEL}: ACTIVE - explicitly loaded by the user via /skills")
     lines.append(f"{SKILL_DIRECTORY_LABEL}: {selected_skill.skill_dir}")
     lines.append(f"{SKILL_FILE_LABEL}: {selected_skill.skill_path}")
     lines.append(
-        "These absolute paths are part of the loaded skill context. "
-        "Use them directly when you need skill files."
+        "This skill is active right now. "
+        "Use these absolute paths directly when you need skill files."
     )
     lines.append(f"{SKILL_REFERENCED_FILES_LABEL}:")
     _append_path_list(lines, selected_skill.referenced_paths)

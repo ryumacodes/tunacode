@@ -1,3 +1,11 @@
+---
+title: "GitHub release publish workflow: skip existing PyPI artifacts"
+type: delta
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: ba502a45-cae9-4026-8c3c-a4167ad8213b
+---
+
 # GitHub release publish workflow: skip existing PyPI artifacts
 
 ## Summary

@@ -1,3 +1,11 @@
+---
+title: "Task 10: Legacy Path Decommission"
+type: task
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: 84d799c0-b1df-4cc0-9930-e66f5f00e41e
+---
+
 # Task 10: Legacy Path Decommission
 
 ## Summary

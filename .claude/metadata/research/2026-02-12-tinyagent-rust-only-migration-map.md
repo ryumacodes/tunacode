@@ -1,3 +1,11 @@
+---
+title: "Research – TunaCode tinyagent Rust-only stream mapping"
+type: metadata
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: 421d2204-3f76-4437-95f8-f815a89c692e
+---
+
 # Research – TunaCode tinyagent Rust-only stream mapping
 **Date:** 2026-02-12
 **Phase:** Research

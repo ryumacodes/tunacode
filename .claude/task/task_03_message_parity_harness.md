@@ -1,3 +1,11 @@
+---
+title: "Task 03: Message Parity Harness"
+type: task
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: 126e3844-6c64-4499-9ce9-229beddb09e1
+---
+
 # Task 03: Message Parity Harness
 
 ## Summary

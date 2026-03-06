@@ -1,3 +1,11 @@
+---
+title: "Task 05: Tool Call Registry Ownership"
+type: task
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: 4736f7b4-04b7-4579-a024-337fc5f5f2a9
+---
+
 # Task 05: Tool Call Registry Ownership
 
 ## Summary

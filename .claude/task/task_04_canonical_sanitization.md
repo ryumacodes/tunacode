@@ -1,3 +1,11 @@
+---
+title: "Task 04: Canonical Sanitization"
+type: task
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: eaa5370f-cc3f-4dd3-a14d-58e86eb132a4
+---
+
 # Task 04: Canonical Sanitization
 
 ## Summary

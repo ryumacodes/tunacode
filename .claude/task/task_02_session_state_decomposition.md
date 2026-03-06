@@ -1,3 +1,11 @@
+---
+title: "Task 02: SessionState Decomposition"
+type: task
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: cf299522-eb4f-41df-a153-a4e24bf9fdfd
+---
+
 # Task 02: SessionState Decomposition
 
 ## Status: PENDING

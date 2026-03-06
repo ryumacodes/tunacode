@@ -521,8 +521,8 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     system_prompt = (
         system_prompt_content
         + tunacode_context_content
-        + available_skills_block
         + selected_skills_block
+        + available_skills_block
     )
 
     tools_list = _build_tools()

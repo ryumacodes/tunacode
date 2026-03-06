@@ -1,3 +1,11 @@
+---
+title: "Claude Journal"
+type: metadata
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: 4a225704-c3d4-4afb-9a94-17247607864e
+---
+
 # Claude Journal
 
 ## 2026-01-21: pydantic-ai System Prompt Stripping Fix (Branch: resume-qa)

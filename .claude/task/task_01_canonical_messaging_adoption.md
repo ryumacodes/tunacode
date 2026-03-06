@@ -1,3 +1,11 @@
+---
+title: "Task 01: Canonical Messaging Adoption"
+type: task
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: f71c2309-4adf-4ee1-803c-02b5db1d9258
+---
+
 # Task 01: Canonical Messaging Adoption
 
 ## Status: COMPLETE ✓

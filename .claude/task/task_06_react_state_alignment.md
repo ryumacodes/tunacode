@@ -1,3 +1,11 @@
+---
+title: "Task 06: ReAct State Alignment"
+type: task
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: c3569ebb-2b37-412e-8acb-638581d8107f
+---
+
 # Task 06: ReAct State Alignment
 
 ## Summary

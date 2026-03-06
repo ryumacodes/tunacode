@@ -1,3 +1,11 @@
+---
+title: "Continuous Learning Log"
+type: debug
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: c21d2cfb-ed4a-4e47-a355-d05f4220c73f
+---
+
 # Continuous Learning Log
 
 Bugs, smells, issues dumped here as encountered. Raw is fine. A skill will organize this into proper kb entries later.

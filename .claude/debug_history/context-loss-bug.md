@@ -1,3 +1,11 @@
+---
+title: "Bug: Messages Not Persisted on Error/Abort"
+type: debug
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: b2f4d4fd-7e70-48d8-b326-92bd9b697299
+---
+
 # Bug: Messages Not Persisted on Error/Abort
 
 ## Summary

@@ -1,3 +1,11 @@
+---
+title: "Task 08: Usage Metrics Consolidation"
+type: task
+created_at: 2026-03-06T05:18:58Z
+updated_at: 2026-03-06T05:18:58Z
+uuid: f99bc665-7a0e-4e56-a024-082111553c81
+---
+
 # Task 08: Usage Metrics Consolidation
 
 ## Summary
