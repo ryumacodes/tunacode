@@ -93,12 +93,21 @@ env: {target: "local", notes: ""}
 
 ### T009 – Integrate skills into agent construction
 - Status: completed
-- Commit: pending
+- Commit: `ed47d25d`
 - Files: `src/tunacode/core/agents/agent_components/agent_config.py`
 - Commands: `uv run python - <<'PY' ...` → `imports-ok`
 - Tests: deferred to final verification per user direction
 - Coverage delta: not measured
 - Notes: Agent prompts now always include skill summaries, inject selected skill bodies, and fingerprint cache state with skill prompt content.
+
+### T010 – Add /skill slash command
+- Status: completed
+- Commit: pending
+- Files: `src/tunacode/ui/commands/skill.py`, `src/tunacode/ui/commands/__init__.py`
+- Commands: `uv run python - <<'PY' ...` → `ui-smoke-ok`
+- Tests: deferred to final verification per user direction
+- Coverage delta: not measured
+- Notes: Added list, attach, and clear behaviors with session persistence and visible confirmations.
 
 ## Gate Results
 - Tests: not run
