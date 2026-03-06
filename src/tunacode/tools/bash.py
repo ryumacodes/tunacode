@@ -15,8 +15,8 @@ COMMAND_OUTPUT_START_INDEX = 2500
 COMMAND_OUTPUT_END_SIZE = 1000
 CMD_OUTPUT_TRUNCATED = "\n...\n[truncated]\n...\n"
 MIN_TIMEOUT_SECONDS = 1
-MAX_TIMEOUT_SECONDS = 300
-DEFAULT_TIMEOUT_SECONDS = 30
+MAX_TIMEOUT_SECONDS = 600
+DEFAULT_TIMEOUT_SECONDS = 120
 
 
 @base_tool
@@ -33,7 +33,7 @@ async def bash(
         command: The bash command to execute.
         cwd: Working directory for the command.
         env: Additional environment variables to set.
-        timeout: Command timeout in seconds (1-300, default 30).
+        timeout: Command timeout in seconds (1-600, default 120).
         capture_output: Whether to capture stdout/stderr.
 
     Returns:

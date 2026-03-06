@@ -88,7 +88,7 @@ class BashRenderer(BaseToolRenderer[BashData]):
         is_truncated = "[truncated]" in result
 
         args = args or {}
-        timeout = args.get("timeout", 30)
+        timeout = args.get("timeout", 120)
 
         return BashData(
             command=command,

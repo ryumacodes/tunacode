@@ -102,7 +102,7 @@ def _coerce_global_request_timeout(session: SessionStateProtocol) -> float | Non
     """Return validated global_request_timeout from session config, or None if disabled."""
 
     settings = session.user_config.get("settings", {})
-    timeout_raw = settings.get("global_request_timeout", 90.0)
+    timeout_raw = settings.get("global_request_timeout", 600.0)
     timeout = float(timeout_raw)
 
     if timeout < 0.0:
@@ -128,7 +128,7 @@ def _compute_agent_version(
             str(settings.get("max_retries", 3)),
             str(settings.get("tool_strict_validation", False)),
             str(request_delay),
-            str(settings.get("global_request_timeout", 90.0)),
+            str(settings.get("global_request_timeout", 600.0)),
             str(max_tokens),
             str(MAX_PARALLEL_TOOL_CALLS),
             skills_prompt_fingerprint,

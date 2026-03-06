@@ -17,7 +17,7 @@ from textual.notifications import SeverityLevel
 
 from tunacode.ui.renderers.tools.bash import render_bash
 
-SHELL_COMMAND_TIMEOUT_SECONDS: float = 30.0
+SHELL_COMMAND_TIMEOUT_SECONDS: float = 120.0
 SHELL_COMMAND_CANCEL_GRACE_SECONDS: float = 0.5
 SHELL_COMMAND_USAGE_TEXT = "Usage: !<command>"
 DEFAULT_NOTIFICATION_SEVERITY: SeverityLevel = "information"

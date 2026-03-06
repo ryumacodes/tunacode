@@ -23,7 +23,7 @@ DEFAULT_USER_CONFIG: UserConfig = {
         "max_retries": 3,
         "max_iterations": 40,
         "request_delay": 0.0,
-        "global_request_timeout": 120.0,
+        "global_request_timeout": 600.0,
         "guide_file": GUIDE_FILE_NAME,
         "theme": "dracula",
         "stream_agent_text": False,
