@@ -75,12 +75,21 @@ env: {target: "local", notes: ""}
 
 ### T007 – Persist selected skill names in session state
 - Status: completed
-- Commit: pending
+- Commit: `ba5ecb28`
 - Files: `src/tunacode/core/session/state.py`, `src/tunacode/core/types/state.py`
 - Commands: `uv run python - <<'PY' ...` → `imports-ok ... True`
 - Tests: deferred to final verification per user direction
 - Coverage delta: not measured
 - Notes: Added ordered selected skill persistence to session save/load and state protocols.
+
+### T008 – Implement selection and prompt rendering helpers
+- Status: completed
+- Commit: pending
+- Files: `src/tunacode/skills/selection.py`, `src/tunacode/skills/prompting.py`
+- Commands: `uv run python - <<'PY' ...` → `imports-ok`
+- Tests: deferred to final verification per user direction
+- Coverage delta: not measured
+- Notes: Added selection helpers plus deterministic available-skills and selected-skills prompt blocks.
 
 ## Gate Results
 - Tests: not run
