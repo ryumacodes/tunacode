@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.86] - 2026-03-06
+
+### Added
+- Introduced prompt context injection for actively loaded skills so selected skill guidance is surfaced to the agent runtime.
+
+### Changed
+- Refined skills UI styling and load behavior to improve local/global skill discovery ergonomics.
+
+### Fixed
+- Resolved selected-skill path handling to use discovered absolute paths reliably across local and global skill locations.
+- Included absolute skill paths in prompt context to prevent path-resolution drift when rendering skill metadata.
+
 ## [0.1.85] - 2026-03-06
 
 ### Fixed
