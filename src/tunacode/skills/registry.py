@@ -37,8 +37,8 @@ def get_skill_summary(
     local_root: Path | None = None,
     global_root: Path | None = None,
 ) -> SkillSummary | None:
-    discovered_skill = _find_discovered_skill(
-        name=name,
+    discovered_skill = resolve_discovered_skill(
+        name,
         local_root=local_root,
         global_root=global_root,
     )
@@ -53,8 +53,8 @@ def load_skill_by_name(
     local_root: Path | None = None,
     global_root: Path | None = None,
 ) -> LoadedSkill:
-    discovered_skill = _find_discovered_skill(
-        name=name,
+    discovered_skill = resolve_discovered_skill(
+        name,
         local_root=local_root,
         global_root=global_root,
     )
@@ -63,11 +63,11 @@ def load_skill_by_name(
     return _get_or_load_loaded_skill(discovered_skill)
 
 
-def _find_discovered_skill(
-    *,
+def resolve_discovered_skill(
     name: str,
-    local_root: Path | None,
-    global_root: Path | None,
+    *,
+    local_root: Path | None = None,
+    global_root: Path | None = None,
 ) -> DiscoveredSkillPath | None:
     normalized_name = name.casefold()
     for discovered_skill in discover_skills(
