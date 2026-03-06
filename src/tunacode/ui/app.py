@@ -44,6 +44,7 @@ from tunacode.ui.context_panel import (
     build_context_gauge,
     build_context_panel_widgets,
     build_files_field,
+    build_skills_field,
     is_widget_within_field,
     token_color,
     token_remaining_pct,
@@ -81,6 +82,8 @@ from tunacode.ui.widgets import (
     StatusBar,
     ToolResultDisplay,
 )
+
+from tunacode.skills.registry import get_skill_summary
 
 
 class TextualReplApp(App[None]):
@@ -138,6 +141,7 @@ class TextualReplApp(App[None]):
         self._field_context: Static | None = None
         self._field_cost: Static | None = None
         self._field_files: Static | None = None
+        self._field_skills: Static | None = None
         self._slopgotchi_state: SlopgotchiPanelState = SlopgotchiPanelState()
         self._field_slopgotchi: Static | None = None
         self._slopgotchi_handler: SlopgotchiHandler | None = None
@@ -175,6 +179,7 @@ class TextualReplApp(App[None]):
                 self._field_context = context_panel_widgets.field_context
                 self._field_cost = context_panel_widgets.field_cost
                 self._field_files = context_panel_widgets.field_files
+                self._field_skills = context_panel_widgets.field_skills
                 yield from context_panel_widgets.widgets
         yield self.editor
         yield FileAutoComplete(self.editor)
@@ -466,11 +471,13 @@ class TextualReplApp(App[None]):
         field_context = self._field_context
         field_cost = self._field_cost
         field_files = self._field_files
+        field_skills = self._field_skills
         if (
             field_model is None
             or field_context is None
             or field_cost is None
             or field_files is None
+            or field_skills is None
         ):
             return
         session = self.state_manager.session
@@ -497,9 +504,24 @@ class TextualReplApp(App[None]):
         field_files.border_title = files_title
         field_files.update(files_content)
 
+        skill_entries = self._build_skill_entries()
+        skills_title, skills_content = build_skills_field(skill_entries)
+        field_skills.border_title = skills_title
+        field_skills.update(skills_content)
+
         handler = self._slopgotchi_handler
         if handler is not None:
             handler._refresh()
+
+    def _build_skill_entries(self) -> list[tuple[str, str]]:
+        skill_entries: list[tuple[str, str]] = []
+        for selected_skill_name in self.state_manager.session.selected_skill_names:
+            summary = get_skill_summary(selected_skill_name)
+            if summary is None:
+                skill_entries.append((selected_skill_name, "missing"))
+                continue
+            skill_entries.append((summary.name, summary.source.value))
+        return skill_entries
 
     def on_click(self, event: events.Click) -> None:
         if not is_widget_within_field(event.widget, self, field_id="field-pet"):

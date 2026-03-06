@@ -102,12 +102,21 @@ env: {target: "local", notes: ""}
 
 ### T010 – Add /skill slash command
 - Status: completed
-- Commit: pending
+- Commit: `d2222e00`
 - Files: `src/tunacode/ui/commands/skill.py`, `src/tunacode/ui/commands/__init__.py`
 - Commands: `uv run python - <<'PY' ...` → `ui-smoke-ok`
 - Tests: deferred to final verification per user direction
 - Coverage delta: not measured
 - Notes: Added list, attach, and clear behaviors with session persistence and visible confirmations.
+
+### T011 – Show active skills in Session Inspector
+- Status: completed
+- Commit: pending
+- Files: `src/tunacode/ui/context_panel.py`, `src/tunacode/ui/app.py`
+- Commands: `uv run python - <<'PY' ...` → `ui-smoke-ok`
+- Tests: deferred to final verification per user direction
+- Coverage delta: not measured
+- Notes: Added a dedicated Skills field in the inspector and refresh wiring for active session attachments.
 
 ## Gate Results
 - Tests: not run
