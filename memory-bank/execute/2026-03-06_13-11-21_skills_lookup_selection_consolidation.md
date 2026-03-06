@@ -21,7 +21,7 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 
 ### T001 – Add a canonical registry resolver for case-insensitive skill lookup
 - Status: completed
-- Commit: pending
+- Commit: 4bef7037
 - Files: src/tunacode/skills/registry.py, tests/unit/skills/test_registry.py
 - Commands: `uv run pytest tests/unit/skills/test_registry.py -q` → pass (1 passed)
 - Tests: pass
@@ -29,7 +29,13 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 - Notes: Added `resolve_discovered_skill()` as the single case-insensitive discovered-skill resolver and verified local-over-global precedence for both summary and full-load registry entry points.
 
 ### T002 – Refactor selection to use registry-backed full loads only
-- Status: pending
+- Status: completed
+- Commit: pending
+- Files: src/tunacode/skills/selection.py, tests/unit/skills/test_selection.py
+- Commands: `uv run pytest tests/unit/skills/test_selection.py -q` → pass (2 passed)
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Removed selection-side rediscovery and direct full-load calls so attachment and prompt resolution now go through registry-backed summary/full-load APIs, preserving summary-only catalog access and direct-load full ingestion.
 
 ### T003 – Add a shared selected-skill summary resolution model and helper
 - Status: pending

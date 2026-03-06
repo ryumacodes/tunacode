@@ -2,27 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tunacode.skills.discovery import DiscoveredSkillPath, discover_skills
-from tunacode.skills.loader import list_skill_related_paths, load_skill
+from tunacode.skills.loader import list_skill_related_paths
 from tunacode.skills.models import SelectedSkill, SkillSummary
-from tunacode.skills.registry import get_skill_summary
-
-
-def _find_discovered_skill_by_name(
-    name: str,
-    *,
-    local_root: Path | None = None,
-    global_root: Path | None = None,
-) -> DiscoveredSkillPath | None:
-    """Find a discovered skill by name, preferring local over global."""
-    normalized_name = name.casefold()
-    for discovered_skill in discover_skills(
-        local_root=local_root,
-        global_root=global_root,
-    ).values():
-        if discovered_skill.name.casefold() == normalized_name:
-            return discovered_skill
-    return None
+from tunacode.skills.registry import get_skill_summary, load_skill_by_name
 
 
 def attach_skill(
@@ -32,18 +14,8 @@ def attach_skill(
     local_root: Path | None = None,
     global_root: Path | None = None,
 ) -> tuple[list[str], SkillSummary, bool]:
-    # Find the discovered skill first to ensure we use the correct path
-    discovered_skill = _find_discovered_skill_by_name(
-        requested_name,
-        local_root=local_root,
-        global_root=global_root,
-    )
-    if discovered_skill is None:
-        raise KeyError(f"Unknown skill: {requested_name}")
-
-    # Load the summary from the discovered skill (uses cache)
     summary = get_skill_summary(
-        discovered_skill.name,
+        requested_name,
         local_root=local_root,
         global_root=global_root,
     )
@@ -54,8 +26,11 @@ def attach_skill(
         if existing_name.casefold() == summary.name.casefold():
             return list(current_skill_names), summary, True
 
-    # Load the skill using the already-discovered path (don't rediscover)
-    load_skill(discovered_skill)
+    load_skill_by_name(
+        summary.name,
+        local_root=local_root,
+        global_root=global_root,
+    )
     next_skill_names = [*current_skill_names, summary.name]
     return next_skill_names, summary, False
 
@@ -73,17 +48,11 @@ def resolve_selected_skills(
     selected_skills: list[SelectedSkill] = []
 
     for attachment_index, selected_skill_name in enumerate(selected_skill_names):
-        # Discover first to get the correct path (local vs global)
-        discovered_skill = _find_discovered_skill_by_name(
+        loaded_skill = load_skill_by_name(
             selected_skill_name,
             local_root=local_root,
             global_root=global_root,
         )
-        if discovered_skill is None:
-            raise KeyError(f"Unknown skill: {selected_skill_name}")
-
-        # Load using the discovered path directly
-        loaded_skill = load_skill(discovered_skill)
         related_paths = list_skill_related_paths(
             loaded_skill.skill_dir,
             skill_path=loaded_skill.skill_path,
