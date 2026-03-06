@@ -254,7 +254,8 @@ def test_discover_tool() -> None:
             "You MUST call the discover tool. Query: where tools are defined. "
             "Do not answer until the tool runs."
         )
-        output = wait_for_tool(s, "discover")
+        wait_for_tool(s, "discover")
+        output = wait_for_text(s, "scanned:")
         assert "scanned:" in output, f"Expected 'scanned:' stats in discover output:\n{output}"
 
 

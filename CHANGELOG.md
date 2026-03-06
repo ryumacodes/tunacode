@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.87] - 2026-03-06
+
+### Changed
+- Increased the default shell tool timeout to two minutes to reduce premature command termination in normal workflows.
+
+### Fixed
+- Removed a flaky headless CLI system test from the release train.
+- Stabilized tmux discover-tool system coverage by waiting for rendered scan stats before asserting output.
+
 ## [0.1.86] - 2026-03-06
 
 ### Added
