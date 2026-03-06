@@ -7,6 +7,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from rich.text import Text
+
 from tunacode.skills.loader import SkillLoadError
 from tunacode.skills.models import SkillSummary
 from tunacode.skills.registry import get_skill_summary, list_skill_summaries
@@ -14,7 +16,13 @@ from tunacode.skills.search import filter_skill_summaries
 from tunacode.skills.selection import attach_skill, clear_attached_skills
 
 from tunacode.ui.commands.base import Command
-from tunacode.ui.styles import STYLE_PRIMARY, STYLE_SUCCESS, STYLE_WARNING
+from tunacode.ui.styles import (
+    STYLE_MUTED,
+    STYLE_PRIMARY,
+    STYLE_SUCCESS,
+    STYLE_WARNING,
+)
+from tunacode.ui.widgets.chat import PanelMeta
 
 if TYPE_CHECKING:
     from tunacode.ui.app import TextualReplApp
@@ -25,9 +33,11 @@ CLEAR_SUBCOMMAND = "clear"
 NO_SOURCE_LABEL = "---"
 MISSING_STATUS_LABEL = "missing"
 LOADED_STATUS_LABEL = "loaded"
-UNIQUE_MATCH_LABEL = "yes"
 EMPTY_STATE_LABEL = "(none)"
 MISSING_SKILL_DESCRIPTION = "Skill file unavailable"
+SKILL_PREFIX = "▸ "
+SKILL_BULLET_LOADED = "▸"
+SKILL_BULLET_AVAILABLE = "○"
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,8 +84,6 @@ class SkillsCommand(Command):
             await app.state_manager.save_session()
 
     def _render_available_skills(self, app: TextualReplApp, *, query: str | None = None) -> None:
-        from rich.table import Table
-
         available_skills = list_skill_summaries()
         if not available_skills:
             app.notify("No skills found")
@@ -89,54 +97,40 @@ class SkillsCommand(Command):
         active_skill_names = {
             skill_name.casefold() for skill_name in app.state_manager.session.selected_skill_names
         }
-        table_title = self._build_available_table_title(
+        panel_title = self._build_available_panel_title(
             query=query,
             match_count=len(matching_skills),
         )
-        table = Table(title=table_title, show_header=True)
-        table.add_column("Name", style=STYLE_PRIMARY)
-        table.add_column("Source")
-        table.add_column("Loaded")
-        table.add_column("Description")
 
-        for skill_summary in matching_skills:
-            loaded_label = (
-                UNIQUE_MATCH_LABEL if skill_summary.name.casefold() in active_skill_names else ""
-            )
-            table.add_row(
-                skill_summary.name,
-                skill_summary.source.value,
-                loaded_label,
-                skill_summary.description,
-            )
+        content = self._build_skills_list_content(
+            matching_skills,
+            active_skill_names=active_skill_names,
+        )
 
-        app.chat_container.write(table)
+        panel_meta = PanelMeta(
+            css_class="info-panel skills-catalog",
+            border_title=panel_title,
+        )
+        app.chat_container.write(content, panel_meta=panel_meta)
 
     def _render_loaded_skills(self, app: TextualReplApp) -> None:
-        from rich.table import Table
-
         loaded_skill_rows = self._build_loaded_skill_rows(app)
-        table = Table(title="Loaded Skills", show_header=True)
-        table.add_column("Name", style=STYLE_PRIMARY)
-        table.add_column("Source")
-        table.add_column("Status")
-        table.add_column("Description")
 
         if not loaded_skill_rows:
-            table.add_row(EMPTY_STATE_LABEL, NO_SOURCE_LABEL, EMPTY_STATE_LABEL, EMPTY_STATE_LABEL)
-            app.chat_container.write(table)
+            content = Text(EMPTY_STATE_LABEL, style=f"dim {STYLE_MUTED}")
+            panel_meta = PanelMeta(
+                css_class="info-panel skills-loaded",
+                border_title="Loaded Skills",
+            )
+            app.chat_container.write(content, panel_meta=panel_meta)
             return
 
-        for loaded_skill_row in loaded_skill_rows:
-            status_style = self._status_style(loaded_skill_row.status_label)
-            table.add_row(
-                loaded_skill_row.name,
-                loaded_skill_row.source_label,
-                f"[{status_style}]{loaded_skill_row.status_label}[/{status_style}]",
-                loaded_skill_row.description,
-            )
-
-        app.chat_container.write(table)
+        content = self._build_loaded_skills_content(loaded_skill_rows)
+        panel_meta = PanelMeta(
+            css_class="success-panel skills-loaded",
+            border_title=f"Loaded Skills [{len(loaded_skill_rows)}]",
+        )
+        app.chat_container.write(content, panel_meta=panel_meta)
 
     def _attach_or_search_skill(self, app: TextualReplApp, requested_name: str) -> bool:
         requested_summary = get_skill_summary(requested_name)
@@ -170,19 +164,33 @@ class SkillsCommand(Command):
         app._refresh_context_panel()
         if already_attached:
             app.notify(f"Skill already loaded: {summary.name}")
-            app.chat_container.write(
-                f"Skill already loaded: {summary.name} [{summary.source.value}]"
+            content = self._build_skill_notification_content(summary, status="already-loaded")
+            panel_meta = PanelMeta(
+                css_class="info-panel skill-notification",
+                border_title="Skill",
             )
+            app.chat_container.write(content, panel_meta=panel_meta)
             return False
 
         app.notify(f"Loaded skill: {summary.name}")
-        app.chat_container.write(f"Loaded skill: {summary.name} [{summary.source.value}]")
+        content = self._build_skill_notification_content(summary, status="loaded")
+        panel_meta = PanelMeta(
+            css_class="success-panel skill-notification",
+            border_title="Skill Loaded",
+        )
+        app.chat_container.write(content, panel_meta=panel_meta)
         return True
 
     def _clear_loaded_skills(self, app: TextualReplApp) -> None:
         app.state_manager.session.selected_skill_names = clear_attached_skills()
         app._refresh_context_panel()
         app.notify("Cleared loaded skills")
+        content = Text("All skills have been removed from the session.", style=STYLE_MUTED)
+        panel_meta = PanelMeta(
+            css_class="info-panel skill-notification",
+            border_title="Skills Cleared",
+        )
+        app.chat_container.write(content, panel_meta=panel_meta)
         app.chat_container.write("Cleared loaded skills")
 
     def _build_loaded_skill_rows(self, app: TextualReplApp) -> list[_LoadedSkillRow]:
@@ -219,12 +227,72 @@ class SkillsCommand(Command):
     ) -> list[SkillSummary]:
         return filter_skill_summaries(skill_summaries, query=query)
 
-    def _build_available_table_title(self, *, query: str | None, match_count: int) -> str:
+    def _build_available_panel_title(self, *, query: str | None, match_count: int) -> str:
         if query is None:
             return "Skills Catalog"
         return f"Skills Catalog — {match_count} match(es) for '{query}'"
 
-    def _status_style(self, status_label: str) -> str:
-        if status_label == LOADED_STATUS_LABEL:
-            return STYLE_SUCCESS
-        return STYLE_WARNING
+    def _build_skills_list_content(
+        self,
+        skill_summaries: list[SkillSummary],
+        active_skill_names: set[str],
+    ) -> Text:
+        content = Text()
+        for index, skill_summary in enumerate(skill_summaries):
+            is_loaded = skill_summary.name.casefold() in active_skill_names
+            bullet = SKILL_BULLET_LOADED if is_loaded else SKILL_BULLET_AVAILABLE
+            bullet_style = STYLE_SUCCESS if is_loaded else STYLE_MUTED
+
+            content.append(bullet, style=bullet_style)
+            content.append(" ", style=STYLE_MUTED)
+            content.append(skill_summary.name, style=STYLE_PRIMARY)
+            content.append(f" [{skill_summary.source.value}]", style=f"dim {STYLE_MUTED}")
+            if is_loaded:
+                content.append(" ✓", style=STYLE_SUCCESS)
+            content.append(f"\n  {skill_summary.description}", style=f"dim {STYLE_MUTED}")
+
+            if index < len(skill_summaries) - 1:
+                content.append("\n\n")
+
+        return content
+
+    def _build_loaded_skills_content(self, loaded_skill_rows: list[_LoadedSkillRow]) -> Text:
+        content = Text()
+        for index, row in enumerate(loaded_skill_rows):
+            status_bullet = "▸" if row.status_label == LOADED_STATUS_LABEL else "✗"
+            status_style = (
+                STYLE_SUCCESS if row.status_label == LOADED_STATUS_LABEL else STYLE_WARNING
+            )
+
+            content.append(status_bullet, style=status_style)
+            content.append(" ", style=STYLE_MUTED)
+            content.append(row.name, style=STYLE_PRIMARY)
+            if row.source_label != NO_SOURCE_LABEL:
+                content.append(f" [{row.source_label}]", style=f"dim {STYLE_MUTED}")
+            if row.status_label != LOADED_STATUS_LABEL:
+                content.append(f" [{row.status_label}]", style=STYLE_WARNING)
+            content.append(f"\n  {row.description}", style=f"dim {STYLE_MUTED}")
+
+            if index < len(loaded_skill_rows) - 1:
+                content.append("\n\n")
+
+        return content
+
+    def _build_skill_notification_content(self, summary: SkillSummary, *, status: str) -> Text:
+        content = Text()
+
+        if status == "loaded":
+            content.append("▸ ", style=STYLE_SUCCESS)
+            content.append(summary.name, style=f"bold {STYLE_PRIMARY}")
+        else:
+            content.append("○ ", style=STYLE_MUTED)
+            content.append(summary.name, style=STYLE_PRIMARY)
+
+        content.append(f" [{summary.source.value}]", style=f"dim {STYLE_MUTED}")
+
+        if status == "already-loaded":
+            content.append(" (already attached)", style=STYLE_WARNING)
+
+        content.append(f"\n{summary.description}", style=f"dim {STYLE_MUTED}")
+
+        return content

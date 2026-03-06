@@ -40,3 +40,60 @@ StatusBar Static {
     color: $success;
     background: $success 10%;
 }
+
+/* ============================================
+ * AUTOCOMPLETE DROPDOWNS - Skills, Commands, Files
+ * NeXTSTEP: Raised panel with bevel borders
+ * ============================================ */
+AutoComplete {
+    background: $surface;
+    border-top: solid $bevel-light;
+    border-left: solid $bevel-light;
+    border-bottom: solid $bevel-dark;
+    border-right: solid $bevel-dark;
+    padding: 0;
+    margin: 0;
+}
+
+AutoCompleteList {
+    background: $surface;
+    color: $text;
+    border: none;
+    padding: 0 1;
+    scrollbar-size-vertical: 1;
+    scrollbar-color: $scrollbar-thumb;
+    scrollbar-background: $scrollbar-track;
+}
+
+AutoCompleteList > .autocomplete--highlight-match {
+    text-style: bold;
+    color: $accent;
+}
+
+AutoCompleteList:focus > .autocomplete--highlight-match {
+    color: $accent;
+}
+
+/* Skills-specific styling for dropdown items */
+AutoCompleteList > Option {
+    padding: 0 1;
+    color: $text;
+}
+
+AutoCompleteList:focus > Option {
+    background: $primary 20%;
+}
+
+AutoCompleteList:focus > Option.highlighted {
+    background: $primary;
+    color: $surface;
+}
+
+/* Subcommand vs skill differentiation in dropdown */
+AutoCompleteList > Option.skill-item {
+    color: $text;
+}
+
+AutoCompleteList > Option.subcommand-item {
+    color: $secondary;
+}

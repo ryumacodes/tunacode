@@ -161,3 +161,86 @@
     color: $text-muted;
     padding-left: 2;
 }
+
+/* ============================================
+ * SKILLS PANELS - Catalog and loaded skills display
+ * NeXTSTEP: Clean list format with bullet indicators
+ * ============================================ */
+.skills-catalog {
+    tint: $secondary 3%;
+}
+
+.skills-loaded {
+    tint: $success 3%;
+}
+
+.skills-catalog .skill-item,
+.skills-loaded .skill-item {
+    padding: 0 1;
+    margin: 0 0 1 0;
+}
+
+.skills-catalog .skill-bullet,
+.skills-loaded .skill-bullet {
+    color: $accent;
+}
+
+.skills-catalog .skill-bullet.loaded,
+.skills-loaded .skill-bullet.loaded {
+    color: $success;
+}
+
+.skills-catalog .skill-name,
+.skills-loaded .skill-name {
+    color: $text;
+    text-style: bold;
+}
+
+.skills-catalog .skill-source,
+.skills-loaded .skill-source {
+    color: $text-muted;
+}
+
+.skills-catalog .skill-description,
+.skills-loaded .skill-description {
+    color: $text-muted;
+    margin-left: 2;
+}
+
+.skills-catalog .skill-loaded-indicator,
+.skills-loaded .skill-loaded-indicator {
+    color: $success;
+}
+
+/* ============================================
+ * SKILL NOTIFICATION PANELS - Individual skill load messages
+ * NeXTSTEP: Compact notification panels with semantic colors
+ * ============================================ */
+.skill-notification {
+    max-height: 4;
+    overflow-y: auto;
+    padding: 0 1;
+    margin: 0 0 1 0;
+}
+
+.skill-notification .skill-name {
+    text-style: bold;
+    color: $text;
+}
+
+.skill-notification .skill-source {
+    color: $text-muted;
+}
+
+.skill-notification .skill-description {
+    color: $text-muted;
+    margin-left: 2;
+}
+
+.skill-notification.success-panel {
+    tint: $success 5%;
+}
+
+.skill-notification.info-panel {
+    tint: $secondary 3%;
+}

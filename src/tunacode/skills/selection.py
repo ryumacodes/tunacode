@@ -2,8 +2,27 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tunacode.skills.discovery import DiscoveredSkillPath, discover_skills
+from tunacode.skills.loader import load_skill
 from tunacode.skills.models import SelectedSkill, SkillSummary
 from tunacode.skills.registry import get_skill_summary, load_skill_by_name
+
+
+def _find_discovered_skill_by_name(
+    name: str,
+    *,
+    local_root: Path | None = None,
+    global_root: Path | None = None,
+) -> DiscoveredSkillPath | None:
+    """Find a discovered skill by name, preferring local over global."""
+    normalized_name = name.casefold()
+    for discovered_skill in discover_skills(
+        local_root=local_root,
+        global_root=global_root,
+    ).values():
+        if discovered_skill.name.casefold() == normalized_name:
+            return discovered_skill
+    return None
 
 
 def attach_skill(
@@ -13,8 +32,18 @@ def attach_skill(
     local_root: Path | None = None,
     global_root: Path | None = None,
 ) -> tuple[list[str], SkillSummary, bool]:
-    summary = get_skill_summary(
+    # Find the discovered skill first to ensure we use the correct path
+    discovered_skill = _find_discovered_skill_by_name(
         requested_name,
+        local_root=local_root,
+        global_root=global_root,
+    )
+    if discovered_skill is None:
+        raise KeyError(f"Unknown skill: {requested_name}")
+
+    # Load the summary from the discovered skill (uses cache)
+    summary = get_skill_summary(
+        discovered_skill.name,
         local_root=local_root,
         global_root=global_root,
     )
@@ -25,11 +54,8 @@ def attach_skill(
         if existing_name.casefold() == summary.name.casefold():
             return list(current_skill_names), summary, True
 
-    load_skill_by_name(
-        summary.name,
-        local_root=local_root,
-        global_root=global_root,
-    )
+    # Load the skill using the already-discovered path (don't rediscover)
+    load_skill(discovered_skill)
     next_skill_names = [*current_skill_names, summary.name]
     return next_skill_names, summary, False
 
