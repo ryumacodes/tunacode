@@ -8,7 +8,8 @@ feeds_into: []
 
 # Module Documentation
 
-TunaCode is structured in seven layers. Dependencies flow downward only.
+TunaCode is structured in seven primary layers. Dependencies flow downward only inside that layered stack.
+The repository also contains shared support packages under `src/tunacode/` that are consumed across layers; `skills/` is the main one documented here.
 
 ```
 ui              Textual TUI, widgets, renderers, screens
@@ -41,6 +42,12 @@ Start from `core/core.md` if you need to understand how a user prompt becomes an
 | tools           | [tools/tools.md](tools/tools.md)                     | LLM-callable tool implementations    |
 | core            | [core/core.md](core/core.md)                       | Agent loop, compaction, session      |
 | ui              | [ui/ui.md](ui/ui.md)                           | Textual app, widgets, theming        |
+
+## Shared Support Packages
+
+| Package | Document | Key concern |
+|---------|----------|-------------|
+| skills  | [skills/skills.md](skills/skills.md) | Discovery, validation, selection, and prompt injection for `SKILL.md` workflows |
 
 ## Root-Level Files
 

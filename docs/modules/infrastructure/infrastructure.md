@@ -28,6 +28,7 @@ Concrete cache instances (agents, models registry, context, limits/settings) are
 | `cache/caches/models_registry.py` | `get_registry()` / `set_registry()` -- caches the parsed `models_registry.json`. |
 | `cache/caches/tunacode_context.py` | `get_context()` -- caches the guide file (`AGENTS.md`) content. Uses file-stat-based staleness. |
 | `cache/caches/limits_settings.py` | Caches resolved limit/setting values to avoid re-parsing user config on every call. |
+| `cache/caches/skills.py` | `get_skill_summary()` / `set_skill_summary()` / `get_loaded_skill()` / `set_loaded_skill()` -- mtime-based cache for parsed skill summaries and fully loaded skill bodies. |
 | `file_filter.py` | Shared file-filtering logic used by tools and UI. |
 
 ## How

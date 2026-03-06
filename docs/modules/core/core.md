@@ -22,7 +22,7 @@ The engine. Takes a user message, routes it through a tinyagent `Agent`, handles
 |------|---------|
 | `main.py` | `RequestOrchestrator` -- the main request lifecycle. `process_request()` is the public entry point. Handles: history coercion, pre-request compaction, streaming event dispatch, abort cleanup, empty-response intervention, context-overflow retry. |
 | `agent_components/__init__.py` | Re-exports from sub-modules. |
-| `agent_components/agent_config.py` | `get_or_create_agent()` -- builds or retrieves a cached tinyagent `Agent`. Configures: system prompt, tools, model, stream function, API key resolver, compaction transform. `invalidate_agent_cache()` clears both module and session caches after abort/timeout. `_build_tools()` constructs the tool list (bash, discover, read_file, hashline_edit, web_fetch, write_file). Validation functions: `_coerce_request_delay()`, `_coerce_global_request_timeout()`, `_compute_agent_version()`. |
+| `agent_components/agent_config.py` | `get_or_create_agent()` -- builds or retrieves a cached tinyagent `Agent`. Configures: system prompt, tools, model, stream function, API key resolver, compaction transform, and skill prompt injection. `invalidate_agent_cache()` clears both module and session caches after abort/timeout. `_build_tools()` constructs the tool list (bash, discover, read_file, hashline_edit, web_fetch, write_file). `_build_skills_prompt_state()` renders active and available skill blocks, `_augment_prompt_versions_with_skills()` folds the skills fingerprint into prompt observability, and validation helpers include `_coerce_request_delay()`, `_coerce_global_request_timeout()`, `_compute_agent_version()`. |
 | `agent_components/agent_helpers.py` | Human-readable tool descriptions for UI panels. `create_empty_response_message()` builds the intervention prompt when the model returns nothing. |
 | `agent_components/state_transition.py` | `AgentStateMachine` -- thread-safe FSM with states: `USER_INPUT -> ASSISTANT -> TOOL_EXECUTION -> RESPONSE`. `AGENT_TRANSITION_RULES` defines valid edges. |
 | `resume/sanitize.py` | Cleans persisted session messages for safe resume (removes dangling tool calls, fixes structural violations). |
@@ -128,8 +128,9 @@ CompactionController.check_and_compact(messages, max_tokens)
 - Compaction record
 - Usage totals
 - Model, project_id, timestamps
+- `selected_skill_names` so loaded skills survive `/resume`
 
-`StateManager.load_session()` deserializes and separates thought entries from message history.
+`StateManager.load_session()` deserializes and separates thought entries from message history, then validates `selected_skill_names` as a list of strings before restoring them onto the session.
 
 ### System Prompt
 
@@ -140,6 +141,12 @@ The system prompt defines TunaCode's identity and operational rules for the tiny
 **Loading mechanism:** `load_system_prompt()` in `agent_config.py` reads the markdown file at runtime and appends dynamic context from `load_tunacode_context()`.
 
 **Dynamic context:** `load_tunacode_context()` loads the user's `AGENTS.md` guide file (cached) and injects it into the prompt under the `<user_context>` section.
+
+**Skills injection:** before the final system prompt is set on the agent, `agent_config.py` appends two skill-derived blocks:
+- `# Selected Skills` -- full content, absolute paths, and operating instructions for skills explicitly loaded into the session
+- `# Available Skills` -- lightweight catalog metadata for discoverable skills
+
+Selected skills are treated as active instructions, and their fingerprint is included in the agent cache key so attaching, clearing, or editing a skill invalidates the cached agent.
 
 **Tool philosophy:** Tools are described by purpose and intent, not by function signature. The tinyagent framework provides JSON schemas separately. This keeps the prompt focused on *when* and *why* to use each tool:
 
@@ -152,7 +159,7 @@ The system prompt defines TunaCode's identity and operational rules for the tiny
 | `bash` | Execute shell commands for tests, linting, git, builds |
 | `web_fetch` | Fetch public web content as readable text |
 
-**Agent version hashing:** `_compute_agent_version()` generates a cache key from configuration that affects agent behavior: `max_retries`, `tool_strict_validation`, `request_delay`, `global_request_timeout`, `max_tokens`.
+**Agent version hashing:** `_compute_agent_version()` generates a cache key from configuration that affects agent behavior: `max_retries`, `tool_strict_validation`, `request_delay`, `global_request_timeout`, `max_tokens`, and the computed skills prompt fingerprint.
 
 ## Why
 

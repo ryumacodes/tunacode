@@ -52,6 +52,7 @@ Contract semantics:
   - `model -> ModelCommand`
   - `theme -> ThemeCommand`
   - `resume -> ResumeCommand`
+  - `skills -> SkillsCommand`
   - `update -> UpdateCommand`
 `handle_command(app, text)` returns `True` when input is consumed and `False` otherwise.
 
@@ -75,6 +76,7 @@ Routing rules:
 | `model.py` | `/model [provider:model-name]` | With arg: validates API key requirements and switches model + persists config. Without arg: opens provider/model picker screens. |
 | `theme.py` | `/theme [name]` | With arg: applies known theme and persists config. Without arg: opens picker screen. |
 | `resume.py` | `/resume [list|load <id>|delete <id>]` | `list` opens selector, `load` swaps session and replays messages, `delete` removes persisted session file. |
+| `skills.py` | `/skills [loaded|clear|search <query>|<exact-name>]` | Lists the skill catalog, searches by ranked name/description match, attaches one skill to the session, shows loaded skills, or clears them. Falls back to showing matches when no exact skill name exists. |
 | `update.py` | `/update [check]` | `check` only; default branch runs install flow with confirmation panel, then package upgrade path (`uv` or `pip`). |
 
 Notes:
