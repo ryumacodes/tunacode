@@ -134,6 +134,8 @@ def _parse_frontmatter(content: str) -> tuple[dict[str, str], str]:
             continue
 
         if ":" not in stripped_line:
+            if raw_line[:1].isspace() and frontmatter:
+                continue
             raise SkillFrontmatterError(f"Malformed frontmatter line: {raw_line!r}")
 
         key, raw_value = stripped_line.split(":", 1)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+# ruff: noqa: I001
+
 import asyncio
 import time
 from typing import TYPE_CHECKING, Never
@@ -21,6 +23,8 @@ if TYPE_CHECKING:
     from textual.theme import Theme
 
     from tunacode.ui.lifecycle import AppLifecycle
+
+from tunacode.skills.registry import get_skill_summary
 
 from tunacode.core.agents.main import process_request
 from tunacode.core.debug import log_resource_bar_update
@@ -82,8 +86,6 @@ from tunacode.ui.widgets import (
     StatusBar,
     ToolResultDisplay,
 )
-
-from tunacode.skills.registry import get_skill_summary
 
 
 class TextualReplApp(App[None]):

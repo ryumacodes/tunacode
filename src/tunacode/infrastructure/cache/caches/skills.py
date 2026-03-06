@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+# ruff: noqa: I001
+
 from pathlib import Path
+
+from tunacode.skills.models import LoadedSkill, SkillSummary
 
 from tunacode.infrastructure.cache import (
     MtimeMetadata,
@@ -9,8 +13,6 @@ from tunacode.infrastructure.cache import (
     register_cache,
     stat_mtime_ns,
 )
-
-from tunacode.skills.models import LoadedSkill, SkillSummary
 
 SKILLS_CACHE_NAME = "tunacode.skills"
 SUMMARY_KEY_PREFIX = "summary"

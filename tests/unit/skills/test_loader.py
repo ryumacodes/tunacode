@@ -51,6 +51,25 @@ def test_load_skill_summary_rejects_malformed_frontmatter(tmp_path: Path) -> Non
         load_skill_summary(discovered_skill)
 
 
+def test_load_skill_summary_accepts_yaml_list_lines_in_frontmatter(tmp_path: Path) -> None:
+    body_with_list_frontmatter = """---
+name: demo
+description: Demo skill
+tags:
+  - Bash
+  - tmux
+---
+
+# Demo Skill
+"""
+    discovered_skill = _build_discovered_skill(tmp_path, body=body_with_list_frontmatter)
+
+    summary = load_skill_summary(discovered_skill)
+
+    assert summary.name == "demo"
+    assert summary.description == "Demo skill"
+
+
 def test_load_skill_raises_typed_error_for_missing_skill_file(tmp_path: Path) -> None:
     skill_dir = tmp_path / "demo"
     skill_dir.mkdir()

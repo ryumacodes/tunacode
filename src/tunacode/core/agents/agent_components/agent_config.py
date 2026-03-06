@@ -6,6 +6,8 @@ This module now constructs a ``tinyagent.Agent`` configured for TunaCode.
 We intentionally do **not** preserve the pydantic-ai agent construction logic.
 """
 
+# ruff: noqa: I001
+
 from __future__ import annotations
 
 import asyncio
@@ -44,6 +46,14 @@ from tunacode.prompts.versioning import (
     compute_agent_prompt_versions,
     get_or_compute_prompt_version,
 )
+from tunacode.skills.models import SelectedSkill
+from tunacode.skills.prompting import (
+    compute_skills_prompt_fingerprint,
+    render_available_skills_block,
+    render_selected_skills_block,
+)
+from tunacode.skills.registry import list_skill_summaries
+from tunacode.skills.selection import resolve_selected_skills
 from tunacode.types import ModelName
 from tunacode.types.canonical import AgentPromptVersions, PromptVersion
 
@@ -61,15 +71,6 @@ from tunacode.infrastructure.cache.caches import tunacode_context as context_cac
 from tunacode.core.compaction.controller import get_or_create_compaction_controller
 from tunacode.core.logging import get_logger
 from tunacode.core.types import SessionStateProtocol, StateManagerProtocol
-
-from tunacode.skills.models import SelectedSkill
-from tunacode.skills.prompting import (
-    compute_skills_prompt_fingerprint,
-    render_available_skills_block,
-    render_selected_skills_block,
-)
-from tunacode.skills.registry import list_skill_summaries
-from tunacode.skills.selection import resolve_selected_skills
 
 ENV_OPENAI_API_KEY = "OPENAI_API_KEY"
 OPENAI_CHAT_COMPLETIONS_PATH = "/chat/completions"

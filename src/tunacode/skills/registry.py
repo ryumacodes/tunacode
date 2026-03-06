@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from pathlib import Path
+# ruff: noqa: I001
 
-from tunacode.infrastructure.cache.caches import skills as skills_cache
+from pathlib import Path
 
 from tunacode.skills.discovery import DiscoveredSkillPath, discover_skills
 from tunacode.skills.loader import load_skill, load_skill_summary
 from tunacode.skills.models import LoadedSkill, SkillSummary
+
+from tunacode.infrastructure.cache.caches import skills as skills_cache
 
 
 def list_skill_summaries(

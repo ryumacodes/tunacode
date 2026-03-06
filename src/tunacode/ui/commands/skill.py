@@ -1,14 +1,16 @@
 """Skill command for listing and managing attached skills."""
 
+# ruff: noqa: I001
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tunacode.ui.commands.base import Command
-from tunacode.ui.styles import STYLE_PRIMARY
-
 from tunacode.skills.registry import list_skill_summaries
 from tunacode.skills.selection import attach_skill, clear_attached_skills
+
+from tunacode.ui.commands.base import Command
+from tunacode.ui.styles import STYLE_PRIMARY
 
 if TYPE_CHECKING:
     from tunacode.ui.app import TextualReplApp

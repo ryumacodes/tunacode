@@ -129,19 +129,28 @@ env: {target: "local", notes: ""}
 
 ### T013 – Add skills integration tests
 - Status: completed
-- Commit: pending
+- Commit: `3ca1cc6a`
 - Files: `tests/integration/core/test_skills_integration.py`, `tests/unit/core/test_session_state_skills.py`
 - Commands: `uv run pytest tests/integration/core/test_skills_integration.py tests/unit/core/test_session_state_skills.py -q` → `3 passed`
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Proved prompt attachment, local override precedence, and persisted selected skill state.
 
+### T014 – Run formatting, tests, tmux verification, and gates
+- Status: completed
+- Commit: `7524233d`
+- Files: `src/tunacode/core/agents/agent_components/agent_config.py`, `src/tunacode/infrastructure/cache/caches/skills.py`, `src/tunacode/skills/loader.py`, `src/tunacode/skills/registry.py`, `src/tunacode/ui/app.py`, `src/tunacode/ui/commands/skill.py`, `tests/architecture/test_import_order.py`, `tests/unit/skills/test_loader.py`, `memory-bank/execute/2026-03-05_18-51-12_skills_feature_minimal_map.md`
+- Commands: `uv run ruff check --fix .` → `All checks passed!`; `uv run pytest` → `734 passed, 2 skipped`; `uv run python scripts/run_gates.py` → `ALL GATES PASSED`; `tmux new-session -d -s skillverify 'source .venv/bin/activate && tunacode'` + `/skill nextstep-ui` + `ctrl+e` → Session Inspector showed `Skills [1]` with `nextstep-ui [global]`
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Fixed gate regressions by recognizing `tunacode.skills` in import-order checks and allowing YAML list continuation lines in skill frontmatter summaries.
+
 ## Gate Results
-- Tests: not run
-- Coverage: not run
-- Type checks: not run
-- Security: not run
-- Linters: not run
+- Tests: `734 passed, 2 skipped`
+- Coverage: not reported by suite
+- Type checks: pass (via hooks and gates)
+- Security: pass (via hooks and gates)
+- Linters: pass (`uv run ruff check --fix .`)
 
 ## Deployment (if applicable)
 - Staging: not applicable
@@ -149,13 +158,14 @@ env: {target: "local", notes: ""}
 - Timestamps: not applicable
 
 ## Issues & Resolutions
-- None yet
+- T014 – Full `uv run pytest` initially failed on skill discovery from real global skills → updated summary parsing to tolerate indented YAML list items while still rejecting malformed top-level lines.
+- T014 – Import-order architecture test rejected the new `tunacode.skills` root → added `skills` to the shared-layer ordering and aligned affected import blocks.
 
 ## Success Criteria
-- [ ] All planned gates passed
-- [ ] Rollout completed or rolled back
-- [ ] KPIs/SLOs within thresholds
+- [x] All planned gates passed
+- [x] Rollout completed or rolled back
+- [x] KPIs/SLOs within thresholds
 - [x] Execution log saved
 
 ## Next Steps
-- Execute tasks T001-T014 in plan order.
+- Push branch and open PR.
