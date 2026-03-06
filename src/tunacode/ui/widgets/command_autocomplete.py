@@ -71,11 +71,15 @@ class CommandAutoComplete(AutoComplete):
         return not _is_exact_command_match(command_prefix)
 
     def get_candidates(self, target_state: TargetState) -> list[DropdownItem]:
-        """Return command candidates for current search."""
-        if not target_state.text.startswith(COMMAND_PREFIX):
+        """Return command candidates only while editing the slash-command name."""
+        command_prefix = _get_command_search_prefix(
+            target_state.text,
+            target_state.cursor_position,
+        )
+        if command_prefix is None:
             return []
 
-        search = self.get_search_string(target_state).lower()
+        search = command_prefix.lower()
         return [
             DropdownItem(main=f"{COMMAND_PREFIX}{name}{COMMAND_DESCRIPTION_SEPARATOR}{desc}")
             for name, desc in _COMMAND_ITEMS

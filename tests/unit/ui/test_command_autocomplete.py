@@ -11,7 +11,9 @@ from tunacode.ui.widgets.command_autocomplete import CommandAutoComplete
 
 async def _type_text(pilot, text: str) -> None:
     for character in text:
-        await pilot.press(character)
+        key = "space" if character == " " else character
+        await pilot.press(key)
+
 
 
 @pytest.mark.parametrize("command_name", ["help", "compact"])
@@ -47,3 +49,17 @@ async def test_exact_match_enter_submits_slash_command() -> None:
         assert app.editor.value == ""
         assert len(app.chat_container.children) == initial_message_count + 1
         assert isinstance(app.chat_container.children[-1].renderable, Table)
+
+
+async def test_command_autocomplete_ignores_slash_command_arguments() -> None:
+    app = TextualReplApp(state_manager=StateManager())
+
+    async with app.run_test(headless=True) as pilot:
+        autocomplete = app.query_one(CommandAutoComplete)
+
+        await _type_text(pilot, "/skills de")
+        await pilot.pause()
+
+        assert app.editor.value == "/skills de"
+        assert autocomplete.option_list.option_count == 0
+        assert autocomplete.display is False

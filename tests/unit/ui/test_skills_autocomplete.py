@@ -7,6 +7,7 @@ from textual_autocomplete import TargetState
 from tunacode.core.session import StateManager
 
 from tunacode.ui.app import TextualReplApp
+from tunacode.ui.widgets.command_autocomplete import CommandAutoComplete
 from tunacode.ui.widgets.skills_autocomplete import SkillsAutoComplete
 
 SKILL_TEMPLATE = """---
@@ -134,6 +135,52 @@ async def test_skills_autocomplete_enter_prefers_best_prefix_match(
 
         assert app.editor.value == ""
         assert app.state_manager.session.selected_skill_names == ["demo"]
+
+
+async def test_skills_autocomplete_down_selects_highlighted_skill(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    _write_skill(tmp_path, "alpha", description="Alpha skill")
+    _write_skill(tmp_path, "beta", description="Beta skill")
+
+    app = TextualReplApp(state_manager=StateManager())
+
+    async with app.run_test(headless=True) as pilot:
+        command_autocomplete = app.query_one(CommandAutoComplete)
+        skills_autocomplete = app.query_one(SkillsAutoComplete)
+
+        await _type_text(pilot, "/skills ")
+        await pilot.pause()
+
+        assert app.editor.value == "/skills "
+        assert command_autocomplete.option_list.option_count == 0
+        assert command_autocomplete.display is False
+        assert skills_autocomplete.display is True
+
+        await pilot.press("down")
+        await pilot.press("down")
+        await pilot.press("down")
+        await pilot.pause()
+
+        highlighted_index = skills_autocomplete.option_list.highlighted
+        assert highlighted_index == 3
+        highlighted_option = skills_autocomplete.option_list.get_option_at_index(highlighted_index)
+        assert highlighted_option.value == "alpha"
+
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert app.editor.value == "/skills alpha"
+        assert command_autocomplete.display is False
+
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert app.editor.value == ""
+        assert app.state_manager.session.selected_skill_names == ["alpha"]
 
 
 async def _type_text(pilot, text: str) -> None:
