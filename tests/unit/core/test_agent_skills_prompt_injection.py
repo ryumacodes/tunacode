@@ -37,7 +37,7 @@ def clean_cache_manager() -> None:
     clear_all()
 
 
-def test_get_or_create_agent_injects_loaded_skill_prompt_with_absolute_paths(
+def test_get_or_create_agent_injects_loaded_skill_prompt_with_canonical_paths(
     clean_cache_manager: None,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -68,7 +68,7 @@ def test_get_or_create_agent_injects_loaded_skill_prompt_with_absolute_paths(
     )
 
     state_manager = StateManager()
-    state_manager.session.selected_skill_names = [SKILL_NAME]
+    state_manager.session.selected_skill_names = [SKILL_NAME.upper()]
 
     agent = agent_config.get_or_create_agent(state_manager.session.current_model, state_manager)
     system_prompt = agent._state.system_prompt
@@ -79,8 +79,11 @@ def test_get_or_create_agent_injects_loaded_skill_prompt_with_absolute_paths(
     assert selected_index < available_index
     assert "ACTIVE for this session" in system_prompt
     assert "explicitly say that the skill is loaded and being used" in system_prompt
+    assert f"## {SKILL_NAME} (local)" in system_prompt
     assert f"Skill definition file (absolute): {skill_path.resolve()}" in system_prompt
     assert f"Skill directory (absolute): {skill_dir.resolve()}" in system_prompt
     assert f"- {script_path.resolve()}" in system_prompt
     assert f"- {readme_path.resolve()}" in system_prompt
+    assert "Full SKILL.md content:" in system_prompt
+    assert SKILL_TEMPLATE.strip() in system_prompt
     assert SCRIPT_REFERENCE_LINE in system_prompt

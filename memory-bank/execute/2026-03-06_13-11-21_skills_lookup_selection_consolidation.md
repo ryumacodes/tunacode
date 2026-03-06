@@ -75,7 +75,7 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 
 ### T007 – Add UI regression tests for `/skills loaded` and Session Inspector display
 - Status: completed
-- Commit: pending
+- Commit: 9185318d
 - Files: tests/unit/ui/test_skills_command.py, tests/unit/ui/test_app_skills_entries.py
 - Commands: `uv run pytest tests/unit/ui/test_skills_command.py tests/unit/ui/test_app_skills_entries.py -q` → pass (3 passed)
 - Tests: pass
@@ -83,7 +83,13 @@ env: {target: "local", notes: "Focused local refactor and unit-test execution."}
 - Notes: Strengthened UI-facing regression tests to cover loaded/missing row rendering, content text, canonical naming, and order preservation across both display consumers.
 
 ### T008 – Extend prompt-injection coverage to protect refactor invariants
-- Status: pending
+- Status: completed
+- Commit: pending
+- Files: tests/unit/core/test_agent_skills_prompt_injection.py
+- Commands: `uv run pytest tests/unit/core/test_agent_skills_prompt_injection.py -q` → pass (1 passed)
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Updated prompt-injection coverage to prove mixed-case selected skill names resolve to canonical skill paths while selected-skill prompt blocks still include absolute paths and full `SKILL.md` content.
 
 ### T009 – Run targeted formatting and contract checks for the skills slice
 - Status: pending
