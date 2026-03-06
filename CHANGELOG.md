@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.84] - 2026-03-06
+
+### Fixed
+- Improved skills loading UX and restored slash-command submit behavior.
+
 ## [0.1.83] - 2026-03-06
 
 ### Added
