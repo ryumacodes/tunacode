@@ -15,7 +15,6 @@ from textual.strip import Strip
 from textual.widgets import Input
 
 from .messages import EditorSubmitRequested
-from .status_bar import StatusBar
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,16 +76,6 @@ class Editor(Input):
         char_count = len(self._pasted_content)
         return self.PASTE_INDICATOR_CHARS_TEMPLATE.format(char_count=char_count)
 
-    @property
-    def _status_bar(self) -> StatusBar | None:
-        """Get status bar or None if not available."""
-        from textual.css.query import NoMatches
-
-        try:
-            return self.app.query_one(StatusBar)
-        except NoMatches:
-            return None
-
     def on_key(self, event: events.Key) -> None:
         """Handle key events for bash-mode auto-spacing."""
         has_paste_buffer = bool(getattr(self, "has_paste_buffer", False))
@@ -138,10 +127,6 @@ class Editor(Input):
         self._clear_paste_buffer()
         self.scroll_to(x=0, y=0, animate=False, immediate=True)
 
-        # Reset StatusBar mode
-        if status_bar := self._status_bar:
-            status_bar.set_mode(None)
-
     def _on_paste(self, event: events.Paste) -> None:
         """Capture full paste content before Input truncates to first line."""
         line_count = max(1, len(event.text.splitlines()))
@@ -173,7 +158,7 @@ class Editor(Input):
             self._placeholder_cleared = True
 
     def _update_bash_mode(self, value: str) -> None:
-        """Toggle bash-mode class and status bar indicator."""
+        """Toggle bash-mode styling."""
         self.remove_class("bash-mode")
 
         if self.has_paste_buffer:
@@ -181,10 +166,6 @@ class Editor(Input):
 
         if value.startswith(self.BASH_MODE_PREFIX):
             self.add_class("bash-mode")
-
-        if status_bar := self._status_bar:
-            mode = "bash mode" if value.startswith(self.BASH_MODE_PREFIX) else None
-            status_bar.set_mode(mode)
 
     def _clear_paste_buffer(self) -> None:
         previous_summary = self.paste_summary

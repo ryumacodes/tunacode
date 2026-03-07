@@ -63,10 +63,8 @@ from tunacode.ui.renderers.thinking import (
 )
 from tunacode.ui.repl_support import (
     FILE_EDIT_TOOLS,
-    StatusBarLike,
     build_textual_tool_callback,
     build_tool_result_callback,
-    build_tool_start_callback,
     format_user_message,
     normalize_agent_message_text,
 )
@@ -84,7 +82,6 @@ from tunacode.ui.widgets import (
     FileAutoComplete,
     ResourceBar,
     SkillsAutoComplete,
-    StatusBar,
     ToolResultDisplay,
 )
 
@@ -135,7 +132,6 @@ class TextualReplApp(App[None]):
         self.chat_container: ChatContainer
         self.editor: Editor
         self.resource_bar: ResourceBar
-        self.status_bar: StatusBarLike
         self.streaming_output: Static
         self._thinking_panel_widget: Static | None = None
         self._context_panel_visible: bool = False
@@ -161,7 +157,6 @@ class TextualReplApp(App[None]):
         self.streaming_output = Static("", id="streaming-output")
         self.loading_indicator = LoadingIndicator()
         self.editor = Editor()
-        self.status_bar = StatusBar()
         yield self.resource_bar
         with Container(id="workspace"):
             with Container(id="viewport"):
@@ -188,7 +183,6 @@ class TextualReplApp(App[None]):
         yield FileAutoComplete(self.editor)
         yield CommandAutoComplete(self.editor)
         yield SkillsAutoComplete(self.editor)
-        yield self.status_bar
 
     @property
     def supported_themes(self) -> dict[str, Theme]:
@@ -257,7 +251,7 @@ class TextualReplApp(App[None]):
                     streaming_callback=streaming_callback,
                     thinking_callback=self._thinking_callback,
                     tool_result_callback=build_tool_result_callback(self),
-                    tool_start_callback=build_tool_start_callback(self),
+                    tool_start_callback=None,
                     notice_callback=self._show_system_notice,
                     compaction_status_callback=self._update_compaction_status,
                 )
@@ -458,13 +452,6 @@ class TextualReplApp(App[None]):
 
     def write_shell_output(self, renderable: RenderableType) -> None:
         self.chat_container.write(renderable)
-
-    def shell_status_running(self) -> None:
-        self.status_bar.update_running_action("shell")
-
-    def shell_status_last(self) -> None:
-        self.status_bar.complete_running_action("shell")
-        self.status_bar.update_last_action("shell")
 
     def reset_context_panel_state(self) -> None:
         self._edited_files.clear()

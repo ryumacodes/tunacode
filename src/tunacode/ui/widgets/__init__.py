@@ -11,4 +11,3 @@ from .messages import (  # noqa: F401
 )
 from .resource_bar import ResourceBar  # noqa: F401
 from .skills_autocomplete import SkillsAutoComplete  # noqa: F401
-from .status_bar import StatusBar  # noqa: F401

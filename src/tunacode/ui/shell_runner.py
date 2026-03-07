@@ -82,10 +82,6 @@ class ShellRunnerHost(Protocol):
 
     def write_shell_output(self, renderable: RenderableType) -> None: ...
 
-    def shell_status_running(self) -> None: ...
-
-    def shell_status_last(self) -> None: ...
-
     def tool_panel_max_width(self) -> int: ...
 
 
@@ -231,7 +227,6 @@ STDERR:
         start_time = time.perf_counter()
         self._run_context = ShellRunContext(cmd=cmd, cwd=cwd, start_time=start_time)
 
-        self.host.shell_status_running()
         self.host.notify(f"Running: {cmd}")
 
         process = await asyncio.create_subprocess_shell(
@@ -257,7 +252,6 @@ STDERR:
             raise
         finally:
             self._process = None
-            self.host.shell_status_last()
 
         duration_ms = (time.perf_counter() - start_time) * MS_PER_SECOND
         exit_code = process.returncode if process.returncode is not None else DEFAULT_EXIT_CODE

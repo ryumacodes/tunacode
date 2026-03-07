@@ -23,7 +23,6 @@ from tunacode.core.ui_api.shared_types import (
     ToolCallPartProtocol,
     ToolName,
     ToolResultCallback,
-    ToolStartCallback,
 )
 
 from tunacode.ui.widgets import ToolResultDisplay
@@ -132,18 +131,7 @@ def normalize_agent_message_text(text: str, *, cwd: Path | None = None) -> str:
     return AT_MENTION_PATTERN.sub(_replace, text)
 
 
-class StatusBarLike(Protocol):
-    def add_edited_file(self, filepath: str) -> None: ...
-
-    def update_last_action(self, tool_name: str) -> None: ...
-
-    def update_running_action(self, tool_name: str) -> None: ...
-    def complete_running_action(self, tool_name: str) -> None: ...
-
-
 class AppForCallbacks(Protocol):
-    status_bar: StatusBarLike
-
     def post_message(self, message: ToolResultDisplay) -> bool: ...
 
     def update_lsp_for_file(self, filepath: str) -> None: ...
@@ -204,12 +192,10 @@ def build_tool_result_callback(app: AppForCallbacks) -> ToolResultCallback:
     ) -> None:
         if tool_name in FILE_EDIT_TOOLS and status == "completed":
             filepath = args.get("filepath")
-            if filepath:
-                app.status_bar.add_edited_file(filepath)
-                app.update_lsp_for_file(filepath)
-
-        app.status_bar.complete_running_action(tool_name)
-        app.status_bar.update_last_action(tool_name)
+            if isinstance(filepath, str):
+                normalized_filepath = filepath.strip()
+                if normalized_filepath:
+                    app.update_lsp_for_file(normalized_filepath)
 
         # Don't show validation errors to users - they go back to model for retry
         if status == "failed" and _is_validation_error(result):
@@ -226,15 +212,6 @@ def build_tool_result_callback(app: AppForCallbacks) -> ToolResultCallback:
                 duration_ms=duration_ms,
             )
         )
-
-    return _callback
-
-
-def build_tool_start_callback(app: AppForCallbacks) -> ToolStartCallback:
-    """Build callback for tool start notifications."""
-
-    def _callback(tool_name: ToolName) -> None:
-        app.status_bar.update_running_action(tool_name)
 
     return _callback
 
