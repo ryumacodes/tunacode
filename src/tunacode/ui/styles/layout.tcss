@@ -199,7 +199,7 @@ Editor {
 
 Editor:focus-within {
     border-top: solid $border;
-    border-left: solid $border;
+    border-left: solid $primary;
     border-bottom: solid $border;
     border-right: solid $border;
 }
