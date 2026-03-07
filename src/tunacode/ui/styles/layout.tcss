@@ -190,15 +190,18 @@ Editor {
     width: 1fr;
     height: 6;
     background: $background;
-    border-top: solid $bevel-dark;
-    border-left: solid $bevel-dark;
-    border-bottom: solid $bevel-light;
-    border-right: solid $bevel-light;
+    border-top: solid $border;
+    border-left: solid $border;
+    border-bottom: solid $border;
+    border-right: solid $border;
     padding: 0 1;
 }
 
 Editor:focus-within {
-    outline: solid $primary;
+    border-top: solid $border;
+    border-left: solid $border;
+    border-bottom: solid $border;
+    border-right: solid $border;
 }
 
 Editor.bash-mode {
