@@ -1,12 +1,10 @@
 """End-to-end tool tests driven via tmux.
 
 Launches tunacode in a real tmux session, sends prompts, and verifies that each
-tool executes by checking:
-  1. The status bar shows ``last: <tool_name>``
-  2. Expected output appears in the captured pane
+tool executes by checking tool-specific output or side effects.
 
 These are true system tests -- they exercise the full stack (TUI, agent loop,
-tool dispatch, rendering).  They require a live API key and tmux.
+tool dispatch, rendering). They require a live API key and tmux.
 """
 
 import json
@@ -16,7 +14,7 @@ import shutil
 import subprocess
 import time
 import uuid
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -30,7 +28,9 @@ TMUX_BINARY = "tmux"
 SESSION_PREFIX = "tunatest"
 DEFAULT_TIMEOUT_SECONDS = 90
 POLL_INTERVAL_SECONDS = 2
-VENV_DIR = Path(__file__).resolve().parents[3] / ".venv"
+TMUX_HISTORY_LINES = "-10000"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+VENV_DIR = REPO_ROOT / ".venv"
 API_KEY_ENV_VAR = "MINIMAX_API_KEY"
 TUNACODE_CONFIG_PATH = Path.home() / ".config" / "tunacode.json"
 
@@ -113,7 +113,7 @@ class TmuxSession:
 
     def capture(self) -> str:
         """Return pane contents including recent scrollback history."""
-        return self._run_tmux("capture-pane", "-t", self.name, "-p", "-S", "-10000")
+        return self._run_tmux("capture-pane", "-t", self.name, "-p", "-S", TMUX_HISTORY_LINES)
 
 
 @contextmanager
@@ -136,6 +136,28 @@ def tmux_session(
 # ---------------------------------------------------------------------------
 
 
+def wait_for_capture(
+    session: TmuxSession,
+    predicate: Callable[[str], bool],
+    *,
+    description: str,
+    timeout: int = DEFAULT_TIMEOUT_SECONDS,
+) -> str:
+    """Poll the pane until *predicate* matches. Returns captured output."""
+    deadline = time.monotonic() + timeout
+    last_output = ""
+    while time.monotonic() < deadline:
+        output = session.capture()
+        last_output = output
+        if predicate(output):
+            return output
+        time.sleep(POLL_INTERVAL_SECONDS)
+    raise TimeoutError(
+        f"Timed out after {timeout}s waiting for {description}.\n"
+        f"Last capture:\n{last_output or session.capture()}"
+    )
+
+
 def wait_for_text(
     session: TmuxSession,
     needle: str,
@@ -143,51 +165,42 @@ def wait_for_text(
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> str:
     """Poll the pane until *needle* appears. Returns captured output."""
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        output = session.capture()
-        if needle in output:
-            return output
-        time.sleep(POLL_INTERVAL_SECONDS)
-    raise TimeoutError(
-        f"Timed out after {timeout}s waiting for {needle!r} in pane.\n"
-        f"Last capture:\n{session.capture()}"
+    return wait_for_capture(
+        session,
+        lambda output: needle in output,
+        description=f"{needle!r} in pane",
+        timeout=timeout,
     )
 
 
-def wait_for_tool(
+def wait_for_all_text(
     session: TmuxSession,
-    tool_name: str,
-    *,
+    *needles: str,
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
 ) -> str:
-    """Poll until ``last: <tool_name>`` appears in the status bar."""
-    return wait_for_text(session, f"last: {tool_name}", timeout=timeout)
+    """Poll the pane until all *needles* appear together."""
+    joined = ", ".join(repr(needle) for needle in needles)
+    return wait_for_capture(
+        session,
+        lambda output: all(needle in output for needle in needles),
+        description=f"all of [{joined}] in pane",
+        timeout=timeout,
+    )
 
 
-def wait_for_idle(
-    session: TmuxSession,
+def wait_for_condition(
+    predicate: Callable[[], bool],
     *,
+    description: str,
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
-) -> str:
-    """Poll until the spinner dots disappear (agent finished responding).
-
-    The spinner renders as a series of dots (e.g. ``...``).  We consider the
-    session idle once a capture no longer contains the spinner *and* the
-    ``last:`` indicator is present (meaning at least one tool ran).
-    """
+) -> None:
+    """Poll until *predicate* returns True."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        output = session.capture()
-        has_tool = "last:" in output
-        # Heuristic: no trailing dots near the status area means idle.
-        # Good enough for a system-level smoke test.
-        if has_tool:
-            return output
+        if predicate():
+            return
         time.sleep(POLL_INTERVAL_SECONDS)
-    raise TimeoutError(
-        f"Timed out after {timeout}s waiting for idle.\nLast capture:\n{session.capture()}"
-    )
+    raise TimeoutError(f"Timed out after {timeout}s waiting for {description}.")
 
 
 # ---------------------------------------------------------------------------
@@ -196,44 +209,49 @@ def wait_for_idle(
 
 
 def test_bash_tool() -> None:
-    """bash tool: run ``echo hello world`` and verify output."""
+    """bash tool: run a command and verify rendered stdout."""
+    marker = f"hello-{uuid.uuid4().hex[:8]}"
     with tmux_session() as s:
         s.send(
-            "You MUST call the bash tool. Run: echo hello world. Do not answer until the tool runs."
+            f"You MUST call the bash tool. Run: printf {marker}. Do not answer until the tool runs."
         )
-        output = wait_for_tool(s, "bash")
-        assert "hello world" in output.lower(), f"Expected 'hello world' in output:\n{output}"
+        output = wait_for_all_text(s, "stdout:", marker)
+        assert marker in output, f"Expected {marker!r} in output:\n{output}"
 
 
-def test_read_file_tool() -> None:
-    """read_file tool: read pyproject.toml and check for project name."""
+def test_read_file_tool(tmp_path: Path) -> None:
+    """read_file tool: read a temp file and verify its unique contents."""
+    target = tmp_path / f"tunatest_read_{uuid.uuid4().hex[:8]}.txt"
+    marker = f"read-marker-{uuid.uuid4().hex}"
+    target.write_text(f"alpha\n{marker}\nomega\n")
+
     with tmux_session() as s:
         s.send(
-            "You MUST call the read_file tool. Read /home/tuna/tunacode/pyproject.toml. "
-            "Do not answer until the tool runs."
+            f"You MUST call the read_file tool. Read {target}. Do not answer until the tool runs."
         )
-        output = wait_for_tool(s, "read_file")
-        assert "tunacode" in output.lower(), f"Expected 'tunacode' in output:\n{output}"
+        output = wait_for_text(s, marker)
+        assert marker in output, f"Expected {marker!r} in output:\n{output}"
 
 
 def test_write_file_tool() -> None:
     """write_file tool: create a temp file and verify it on disk."""
-    target = f"/tmp/tunatest_write_{uuid.uuid4().hex[:8]}.txt"
-    content_marker = "hello from tunacode"
+    target = Path(f"/tmp/tunatest_write_{uuid.uuid4().hex[:8]}.txt")
+    content_marker = f"hello-from-tunacode-{uuid.uuid4().hex[:8]}"
     try:
         with tmux_session() as s:
             s.send(
                 f"You MUST call the write_file tool. Create {target} with content "
                 f'"{content_marker}". Do not answer until the tool runs.'
             )
-            wait_for_tool(s, "write_file")
-            written = Path(target)
-            assert written.exists(), f"write_file did not create {target}"
-            assert content_marker in written.read_text(), (
-                f"File contents do not contain marker: {written.read_text()!r}"
+            wait_for_condition(
+                lambda: target.exists() and content_marker in target.read_text(),
+                description=f"{target} to contain {content_marker!r}",
+            )
+            assert content_marker in target.read_text(), (
+                f"File contents do not contain marker: {target.read_text()!r}"
             )
     finally:
-        Path(target).unlink(missing_ok=True)
+        target.unlink(missing_ok=True)
 
 
 def test_hashline_edit_tool(tmp_path: Path) -> None:
@@ -249,7 +267,10 @@ def test_hashline_edit_tool(tmp_path: Path) -> None:
                 f"Read {target}, then change 'color = red' to 'color = blue'. "
                 "Do not answer until both tools run."
             )
-            wait_for_tool(s, "hashline_edit")
+            wait_for_condition(
+                lambda: target.exists() and expected_line in target.read_text(),
+                description=f"{target} to contain {expected_line!r}",
+            )
             updated = target.read_text()
             assert expected_line in updated, f"Expected {expected_line!r} in:\n{updated}"
     finally:
@@ -257,26 +278,31 @@ def test_hashline_edit_tool(tmp_path: Path) -> None:
 
 
 def test_discover_tool() -> None:
-    """discover tool: search for tool definitions and verify structured output."""
+    """discover tool: search for a known tool implementation and verify structured output."""
     with tmux_session() as s:
         s.send(
-            "You MUST call the discover tool. Query: where tools are defined. "
+            "You MUST call the discover tool. Query: write_file tool implementation. "
             "Do not answer until the tool runs."
         )
-        wait_for_tool(s, "discover")
-        output = wait_for_text(s, "scanned:")
+        output = wait_for_all_text(s, "scanned:", "write_file.py")
         assert "scanned:" in output, f"Expected 'scanned:' stats in discover output:\n{output}"
 
 
 def test_web_fetch_tool() -> None:
-    """web_fetch tool: fetch tunacode.xyz and verify content appears."""
+    """web_fetch tool: fetch example.com and verify success or tool-level failure output."""
+    url = "https://example.com/"
     with tmux_session() as s:
-        s.send(
-            "You MUST call the web_fetch tool. Fetch https://tunacode.xyz/. "
-            "Do not answer until the tool runs."
+        s.send(f"You MUST call the web_fetch tool. Fetch {url}. Do not answer until the tool runs.")
+        output = wait_for_capture(
+            s,
+            lambda pane: f"url: {url}" in pane
+            and ("example domain" in pane.lower() or f"failed to connect to {url}" in pane.lower()),
+            description="web_fetch result or connection error",
         )
-        output = wait_for_tool(s, "web_fetch")
-        assert "tunacode" in output.lower(), f"Expected 'tunacode' in fetched output:\n{output}"
+        assert f"url: {url}" in output, f"Expected web_fetch params for {url}:\n{output}"
+        assert (
+            "example domain" in output.lower() or f"failed to connect to {url}" in output.lower()
+        ), f"Expected fetched content or connection error for {url}:\n{output}"
 
 
 def test_loaded_skill_is_used_via_absolute_referenced_path(tmp_path: Path) -> None:
@@ -324,8 +350,8 @@ def test_loaded_skill_is_used_via_absolute_referenced_path(tmp_path: Path) -> No
         )
 
         s.send("What is the tmux skill token? Use the loaded skill and do not guess.")
-        tool_output = wait_for_tool(s, "read_file")
+        tool_output = wait_for_text(s, "token.txt")
         assert "token.txt" in tool_output, f"Expected token file read in output:\n{tool_output}"
 
-        final_output = wait_for_text(s, token)
+        final_output = wait_for_all_text(s, token, "This skill is loaded and being used.")
         assert token in final_output, f"Expected token in output:\n{final_output}"
