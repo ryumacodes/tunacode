@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.89] - 2026-03-07
+
+### Changed
+- Removed the bottom status bar from the TUI and flattened the editor border to match the panel design.
+
+### Fixed
+- Removed tmux system test dependence on the status bar so the end-to-end tool coverage stays stable after the UI cleanup.
+
 ## [0.1.88] - 2026-03-06
 
 ### Added
