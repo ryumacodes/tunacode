@@ -102,21 +102,43 @@ class ModelCommand(Command):
         )
 
     def _apply_model_selection(self, app: TextualReplApp, full_model: str) -> None:
+        import copy
+
         from tunacode.core.agents.agent_components.agent_config import invalidate_agent_cache
         from tunacode.core.ui_api.configuration import get_model_context_window
         from tunacode.core.ui_api.user_configuration import record_recent_model, save_config
 
         state_manager = app.state_manager
         session = state_manager.session
+        old_model = session.current_model
+        old_default = session.user_config.get("default_model")
+        had_default = "default_model" in session.user_config
+        old_recent_models = copy.deepcopy(session.user_config.get("recent_models"))
+        had_recent_models = "recent_models" in session.user_config
+        old_max_tokens = session.conversation.max_tokens
+        new_max_tokens = get_model_context_window(full_model)
 
-        session.current_model = full_model
-        session.user_config["default_model"] = full_model
-        record_recent_model(session.user_config, full_model)
-        session.conversation.max_tokens = get_model_context_window(full_model)
-        save_config(state_manager)
-        invalidate_agent_cache(full_model, state_manager)
-        app._update_resource_bar()
-        app.notify(f"Model: {full_model}")
+        try:
+            session.current_model = full_model
+            session.user_config["default_model"] = full_model
+            record_recent_model(session.user_config, full_model)
+            session.conversation.max_tokens = new_max_tokens
+            save_config(state_manager)
+            invalidate_agent_cache(full_model, state_manager)
+            app._update_resource_bar()
+            app.notify(f"Model: {full_model}")
+        except Exception:
+            session.current_model = old_model
+            if had_default:
+                session.user_config["default_model"] = old_default
+            else:
+                session.user_config.pop("default_model", None)
+            if had_recent_models:
+                session.user_config["recent_models"] = old_recent_models
+            else:
+                session.user_config.pop("recent_models", None)
+            session.conversation.max_tokens = old_max_tokens
+            raise
 
     def _open_model_picker(self, app: TextualReplApp) -> None:
         from tunacode.core.ui_api.user_configuration import get_recent_models

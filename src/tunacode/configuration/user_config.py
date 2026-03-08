@@ -78,22 +78,28 @@ def get_recent_models(
     limit: int = MODEL_PICKER_RECENT_LIMIT,
 ) -> list[str]:
     """Return normalized recent models, optionally filtered to known entries."""
+    if limit <= 0:
+        return []
+
     raw_recent_models = user_config.get("recent_models", [])
     if not isinstance(raw_recent_models, list):
-        return []
+        raise TypeError("user_config['recent_models'] must be a list")
 
     normalized_recent_models: list[str] = []
     seen_models: set[str] = set()
 
     for raw_model in raw_recent_models:
         if not isinstance(raw_model, str):
-            continue
+            raise TypeError("recent model entries must be strings")
 
         model_name = raw_model.strip()
-        if not model_name or model_name in seen_models:
-            continue
+        if not model_name:
+            raise ValueError("recent model entries must be non-empty strings")
 
         if available_models is not None and model_name not in available_models:
+            continue
+
+        if model_name in seen_models:
             continue
 
         seen_models.add(model_name)

@@ -165,23 +165,14 @@ def rank_model_picker_entries(
     normalized_query = filter_query.strip().lower()
     has_query = bool(normalized_query)
     recent_order = {model_name: index for index, model_name in enumerate(recent_models)}
-    visible_entries: list[ModelPickerEntry] = []
-    general_matches = 0
+    matching_entries: list[ModelPickerEntry] = []
 
     for entry in entries:
         if has_query and not _matches_model_query(entry, normalized_query):
             continue
+        matching_entries.append(entry)
 
-        is_current = entry.full_model == current_model
-        is_recent = entry.full_model in recent_order
-        if not is_current and not is_recent:
-            general_matches += 1
-            if not has_query and general_matches > limit:
-                continue
-
-        visible_entries.append(entry)
-
-    visible_entries.sort(
+    matching_entries.sort(
         key=lambda entry: (
             (
                 0
@@ -197,8 +188,20 @@ def rank_model_picker_entries(
         )
     )
 
-    is_truncated = (not has_query) and (general_matches > limit)
-    return visible_entries, is_truncated
+    if has_query:
+        return matching_entries, False
+
+    pinned_entries: list[ModelPickerEntry] = []
+    general_entries: list[ModelPickerEntry] = []
+
+    for entry in matching_entries:
+        if entry.full_model == current_model or entry.full_model in recent_order:
+            pinned_entries.append(entry)
+            continue
+        general_entries.append(entry)
+
+    is_truncated = len(general_entries) > limit
+    return pinned_entries + general_entries[:limit], is_truncated
 
 
 def get_provider_env_var(provider_id: str) -> str:
