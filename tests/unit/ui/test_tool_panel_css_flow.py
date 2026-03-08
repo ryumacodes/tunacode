@@ -8,7 +8,7 @@ from rich.console import Console
 from tunacode.constants import HOOK_ARROW_PREFIX
 
 from tunacode.ui.renderers.panels import tool_panel_smart
-from tunacode.ui.renderers.tools.base import list_renderers
+from tunacode.ui.renderers.tools.base import get_renderer, list_renderers
 
 TEST_MAX_LINE_WIDTH: int = 96
 TEST_DURATION_MS: float = 42.0
@@ -29,55 +29,47 @@ def _render_text(renderable: object) -> str:
 # Minimal valid results per renderer
 # ---------------------------------------------------------------------------
 
-BASH_RESULT = "\n".join([
-    "Command: echo hello",
-    "Exit Code: 0",
-    "Working Directory: /tmp",
-    "",
-    "STDOUT:",
-    "hello",
-    "",
-    "STDERR:",
-    "(no errors)",
-])
+BASH_RESULT: str = """Command: echo hello
+Exit Code: 0
+Working Directory: /workspace
 
-GLOB_RESULT = "\n".join([
-    "[source:index]",
-    "Found 2 files matching pattern: **/*.py",
-    "",
-    "/src/a.py",
-    "/src/b.py",
-])
+STDOUT:
+hello
 
-GREP_RESULT = "\n".join([
-    "Found 1 match for pattern: hello",
-    "Strategy: smart | Candidates: 5 files | ...",
-    "\U0001f4c1 src/main.py:10",
-    "\u25b6  10\u2502before\u27e8hello\u27e9after",
-])
+STDERR:
+(no errors)"""
 
-WRITE_FILE_RESULT = "Successfully wrote to new file: /tmp/out.py"
+GLOB_RESULT: str = """[source:index]
+Found 2 files matching pattern: **/*.py
 
-WEB_FETCH_RESULT = "Example web page content\nLine two of the page."
+/src/a.py
+/src/b.py"""
 
-LIST_DIR_RESULT = "\n".join([
-    "3 files  1 dirs  0 ignored",
-    "src",
-    "\u251c\u2500\u2500 main.py",
-    "\u251c\u2500\u2500 utils.py",
-    "\u2514\u2500\u2500 lib/",
-])
+GREP_RESULT: str = """Found 1 match for pattern: hello
+Strategy: smart | Candidates: 5 files | ...
+\U0001f4c1 src/main.py:10
+\u25b6  10\u2502before\u27e8hello\u27e9after"""
 
-DISCOVER_RESULT = "\n".join([
-    "# Discovery: test query",
-    "Found relevant files.",
-    "(10 scanned \u2192 3 relevant)",
-    "",
-    "## Core",
-    "Core module files",
-    "\u2605 `src/main.py` \u2014 entry point (50L)",
-    "defines: main, run",
-])
+WRITE_FILE_PATH: str = "src/generated_out.py"
+WRITE_FILE_RESULT: str = f"Successfully wrote to new file: {WRITE_FILE_PATH}"
+
+WEB_FETCH_RESULT: str = """Example web page content
+Line two of the page."""
+
+LIST_DIR_RESULT: str = """3 files  1 dirs  0 ignored
+src
+\u251c\u2500\u2500 main.py
+\u251c\u2500\u2500 utils.py
+\u2514\u2500\u2500 lib/"""
+
+DISCOVER_RESULT: str = """# Discovery: test query
+Found relevant files.
+(10 scanned \u2192 3 relevant)
+
+## Core
+Core module files
+\u2605 `src/main.py` \u2014 entry point (50L)
+defines: main, run"""
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +297,7 @@ def test_write_file_panel_has_tool_and_completed_classes() -> None:
     _, panel_meta = tool_panel_smart(
         name="write_file",
         status="completed",
-        args={"filepath": "/tmp/out.py", "content": "print('hi')"},
+        args={"filepath": WRITE_FILE_PATH, "content": "print('hi')"},
         result=WRITE_FILE_RESULT,
         duration_ms=TEST_DURATION_MS,
         max_line_width=TEST_MAX_LINE_WIDTH,
@@ -402,10 +394,19 @@ _RENDERER_FIXTURES: dict[str, tuple[dict[str, object] | None, str]] = {
     ),
     "web_fetch": ({"url": "https://example.com"}, WEB_FETCH_RESULT),
     "write_file": (
-        {"filepath": "/tmp/out.py", "content": "x = 1"},
+        {"filepath": WRITE_FILE_PATH, "content": "x = 1"},
         WRITE_FILE_RESULT,
     ),
 }
+
+
+def _production_renderers() -> set[str]:
+    return {
+        tool_name
+        for tool_name in list_renderers()
+        if (renderer := get_renderer(tool_name)) is not None
+        and renderer.__module__.startswith("tunacode.")
+    }
 
 
 def test_all_renderers_have_fixture_entry() -> None:
@@ -414,7 +415,7 @@ def test_all_renderers_have_fixture_entry() -> None:
     This fails when a new renderer is added to the registry but not
     covered by the conformance fixtures, preventing silent class-flow gaps.
     """
-    registered = set(list_renderers())
+    registered = _production_renderers()
     covered = set(_RENDERER_FIXTURES.keys())
     missing = registered - covered
     assert not missing, (
