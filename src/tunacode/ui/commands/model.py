@@ -54,10 +54,14 @@ class ModelCommand(Command):
 
     async def execute(self, app: TextualReplApp, args: str) -> None:
         from tunacode.core.ui_api.configuration import DEFAULT_USER_CONFIG
-        from tunacode.core.ui_api.user_configuration import load_config_with_defaults
+        from tunacode.core.ui_api.user_configuration import (
+            get_recent_models,
+            load_config_with_defaults,
+        )
 
         session = app.state_manager.session
         session.user_config = load_config_with_defaults(DEFAULT_USER_CONFIG)
+        session.user_config["recent_models"] = get_recent_models(session.user_config)
 
         if args:
             self._handle_direct_model_selection(app, args.strip())
@@ -100,13 +104,14 @@ class ModelCommand(Command):
     def _apply_model_selection(self, app: TextualReplApp, full_model: str) -> None:
         from tunacode.core.agents.agent_components.agent_config import invalidate_agent_cache
         from tunacode.core.ui_api.configuration import get_model_context_window
-        from tunacode.core.ui_api.user_configuration import save_config
+        from tunacode.core.ui_api.user_configuration import record_recent_model, save_config
 
         state_manager = app.state_manager
         session = state_manager.session
 
         session.current_model = full_model
         session.user_config["default_model"] = full_model
+        record_recent_model(session.user_config, full_model)
         session.conversation.max_tokens = get_model_context_window(full_model)
         save_config(state_manager)
         invalidate_agent_cache(full_model, state_manager)
@@ -114,12 +119,15 @@ class ModelCommand(Command):
         app.notify(f"Model: {full_model}")
 
     def _open_model_picker(self, app: TextualReplApp) -> None:
+        from tunacode.core.ui_api.user_configuration import get_recent_models
+
         from tunacode.ui.screens.api_key_entry import ApiKeyEntryScreen
-        from tunacode.ui.screens.model_picker import ModelPickerScreen, ProviderPickerScreen
+        from tunacode.ui.screens.model_picker import ModelPickerScreen
 
         state_manager = app.state_manager
         session = state_manager.session
         current_model = session.current_model
+        recent_models = get_recent_models(session.user_config)
 
         def on_model_selected(full_model: str | None) -> None:
             if full_model is None:
@@ -147,16 +155,7 @@ class ModelCommand(Command):
                 on_api_key_entry_result,
             )
 
-        def on_provider_selected(provider_id: str | None) -> None:
-            if provider_id is None:
-                return
-
-            app.push_screen(
-                ModelPickerScreen(provider_id, current_model),
-                on_model_selected,
-            )
-
         app.push_screen(
-            ProviderPickerScreen(current_model),
-            on_provider_selected,
+            ModelPickerScreen(current_model, recent_models),
+            on_model_selected,
         )

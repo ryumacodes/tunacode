@@ -16,6 +16,9 @@ from tunacode.constants import (
 from tunacode.constants import MIN_TOOL_PANEL_LINE_WIDTH as MIN_TOOL_PANEL_LINE_WIDTH  # noqa: F401
 from tunacode.constants import MIN_VIEWPORT_LINES as MIN_VIEWPORT_LINES  # noqa: F401
 from tunacode.constants import (
+    MODEL_PICKER_RECENT_LIMIT as MODEL_PICKER_RECENT_LIMIT,  # noqa: F401
+)
+from tunacode.constants import (
     MODEL_PICKER_UNFILTERED_LIMIT as MODEL_PICKER_UNFILTERED_LIMIT,  # noqa: F401
 )
 from tunacode.constants import NEXTSTEP_THEME_NAME as NEXTSTEP_THEME_NAME  # noqa: F401

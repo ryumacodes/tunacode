@@ -16,7 +16,7 @@ from tunacode.core.ui_api.configuration import (
     get_provider_env_var,
     get_providers,
 )
-from tunacode.core.ui_api.user_configuration import save_config
+from tunacode.core.ui_api.user_configuration import record_recent_model, save_config
 
 if TYPE_CHECKING:
     from tunacode.core.session import StateManager
@@ -131,6 +131,7 @@ class SetupScreen(Screen[bool]):
 
         user_config = copy.deepcopy(DEFAULT_USER_CONFIG)
         user_config["default_model"] = full_model
+        record_recent_model(user_config, full_model)
         user_config["env"][env_var] = api_key
 
         self.state_manager.session.user_config = user_config

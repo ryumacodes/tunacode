@@ -4,15 +4,48 @@ Module: tunacode.configuration.models
 Configuration for loading model data from models_registry.json.
 """
 
+from dataclasses import dataclass
 from typing import Any
 
-from tunacode.constants import DEFAULT_CONTEXT_WINDOW
+from tunacode.constants import DEFAULT_CONTEXT_WINDOW, MODEL_PICKER_UNFILTERED_LIMIT
 
 from tunacode.infrastructure.cache.caches import models_registry as models_registry_cache
 
 # --- Models.dev Registry Functions ---
 
 MODELS_REGISTRY_FILE_NAME = "models_registry.json"
+
+
+@dataclass(frozen=True, slots=True)
+class ModelPickerEntry:
+    """Flattened provider/model metadata used by the model picker."""
+
+    full_model: str
+    provider_id: str
+    provider_name: str
+    model_id: str
+    model_name: str
+
+
+def _build_model_search_text(entry: ModelPickerEntry) -> str:
+    return " ".join(
+        (
+            entry.full_model,
+            entry.provider_id,
+            entry.provider_name,
+            entry.model_id,
+            entry.model_name,
+        )
+    ).lower()
+
+
+def _matches_model_query(entry: ModelPickerEntry, normalized_query: str) -> bool:
+    query_tokens = normalized_query.split()
+    if not query_tokens:
+        return True
+
+    search_text = _build_model_search_text(entry)
+    return all(token in search_text for token in query_tokens)
 
 
 def parse_model_string(model_string: str) -> tuple[str, str]:
@@ -87,6 +120,85 @@ def get_models_for_provider(provider_id: str) -> list[tuple[str, str]]:
     models = provider.get("models", {})
     result = [(m["name"], mid) for mid, m in models.items()]
     return sorted(result, key=lambda x: x[0].lower())
+
+
+def get_model_picker_entries() -> list[ModelPickerEntry]:
+    """Return flattened model picker entries across all providers."""
+    registry = load_models_registry()
+    entries: list[ModelPickerEntry] = []
+
+    for provider in registry.values():
+        provider_id = provider["id"]
+        provider_name = provider["name"]
+        provider_models = provider.get("models", {})
+
+        for model_id, model in provider_models.items():
+            entries.append(
+                ModelPickerEntry(
+                    full_model=f"{provider_id}:{model_id}",
+                    provider_id=provider_id,
+                    provider_name=provider_name,
+                    model_id=model_id,
+                    model_name=model["name"],
+                )
+            )
+
+    return sorted(
+        entries,
+        key=lambda entry: (
+            entry.model_name.lower(),
+            entry.provider_name.lower(),
+            entry.model_id.lower(),
+        ),
+    )
+
+
+def rank_model_picker_entries(
+    entries: list[ModelPickerEntry],
+    *,
+    current_model: str,
+    recent_models: list[str],
+    filter_query: str,
+    limit: int = MODEL_PICKER_UNFILTERED_LIMIT,
+) -> tuple[list[ModelPickerEntry], bool]:
+    """Rank model entries for the picker and report unfiltered truncation."""
+    normalized_query = filter_query.strip().lower()
+    has_query = bool(normalized_query)
+    recent_order = {model_name: index for index, model_name in enumerate(recent_models)}
+    visible_entries: list[ModelPickerEntry] = []
+    general_matches = 0
+
+    for entry in entries:
+        if has_query and not _matches_model_query(entry, normalized_query):
+            continue
+
+        is_current = entry.full_model == current_model
+        is_recent = entry.full_model in recent_order
+        if not is_current and not is_recent:
+            general_matches += 1
+            if not has_query and general_matches > limit:
+                continue
+
+        visible_entries.append(entry)
+
+    visible_entries.sort(
+        key=lambda entry: (
+            (
+                0
+                if entry.full_model == current_model
+                else 1
+                if entry.full_model in recent_order
+                else 2
+            ),
+            recent_order.get(entry.full_model, limit),
+            entry.model_name.lower(),
+            entry.provider_name.lower(),
+            entry.model_id.lower(),
+        )
+    )
+
+    is_truncated = (not has_query) and (general_matches > limit)
+    return visible_entries, is_truncated
 
 
 def get_provider_env_var(provider_id: str) -> str:

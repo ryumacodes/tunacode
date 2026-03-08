@@ -1,4 +1,4 @@
-"""Model picker modal screens for TunaCode."""
+"""Model picker modal screen for TunaCode."""
 
 from __future__ import annotations
 
@@ -9,31 +9,14 @@ from textual.screen import Screen
 from textual.widgets import Input, OptionList, Static
 from textual.widgets.option_list import Option
 
-from tunacode.core.ui_api.configuration import get_models_for_provider, get_providers
+from tunacode.core.ui_api.configuration import (
+    ModelPickerEntry,
+    format_pricing_display,
+    get_model_picker_entries,
+    get_model_pricing,
+    rank_model_picker_entries,
+)
 from tunacode.core.ui_api.constants import MODEL_PICKER_UNFILTERED_LIMIT
-
-
-def _filter_visible_items(
-    items: list[tuple[str, str]],
-    filter_query: str,
-    limit: int,
-) -> tuple[list[tuple[str, str]], bool]:
-    normalized_query = filter_query.strip().lower()
-    has_query = bool(normalized_query)
-    visible_items: list[tuple[str, str]] = []
-    total_matches = 0
-
-    for display_name, item_id in items:
-        display_name_lower = display_name.lower()
-        if has_query and normalized_query not in display_name_lower:
-            continue
-        total_matches += 1
-        if not has_query and len(visible_items) >= limit:
-            continue
-        visible_items.append((display_name, item_id))
-
-    is_truncated = (not has_query) and (total_matches > len(visible_items))
-    return visible_items, is_truncated
 
 
 def _choose_highlight_index(
@@ -51,130 +34,67 @@ def _choose_highlight_index(
 
 
 def _append_truncation_notice(option_list: OptionList, limit: int, label: str) -> None:
-    message = f"Showing first {limit} {label}. Type to filter to see more."
+    message = (
+        f"Showing current/recent picks plus first {limit} {label}. Type to filter to see more."
+    )
     option_list.add_option(Option(message, disabled=True))
 
 
-class ProviderPickerScreen(Screen[str | None]):
-    """Modal screen for provider selection (step 1 of model picker)."""
+def _format_model_option_label(
+    entry: ModelPickerEntry,
+    *,
+    is_current: bool,
+    is_recent: bool,
+) -> str:
+    badges: list[str] = []
+    if is_current:
+        badges.append("current")
+    elif is_recent:
+        badges.append("recent")
 
-    CSS = """
-    ProviderPickerScreen {
-        align: center middle;
-    }
+    badge_text = f"[{', '.join(badges)}] " if badges else ""
+    label = f"{badge_text}{entry.model_name}  {entry.provider_name}"
 
-    #provider-container {
-        width: 50;
-        height: auto;
-        max-height: 28;
-        border: solid $primary;
-        background: $surface;
-        padding: 1 2;
-    }
+    pricing = get_model_pricing(entry.full_model)
+    if pricing is not None:
+        label = f"{label}  {format_pricing_display(pricing)}"
 
-    #provider-title {
-        text-style: bold;
-        color: $accent;
-        text-align: center;
-        margin-bottom: 1;
-    }
+    return label
 
-    #provider-filter {
-        height: 3;
-        margin-bottom: 1;
-    }
 
-    #provider-list {
-        height: auto;
-        max-height: 18;
-    }
-    """
+def build_model_picker_option_rows(
+    entries: list[ModelPickerEntry],
+    *,
+    current_model: str,
+    recent_models: list[str],
+    filter_query: str,
+) -> tuple[list[tuple[str, str]], int | None, bool]:
+    """Build rendered picker rows plus highlight/truncation metadata."""
+    visible_entries, is_truncated = rank_model_picker_entries(
+        entries,
+        current_model=current_model,
+        recent_models=recent_models,
+        filter_query=filter_query,
+    )
 
-    BINDINGS = [
-        ("escape", "cancel", "Cancel"),
+    option_rows = [
+        (
+            _format_model_option_label(
+                entry,
+                is_current=entry.full_model == current_model,
+                is_recent=entry.full_model in recent_models,
+            ),
+            entry.full_model,
+        )
+        for entry in visible_entries
     ]
 
-    def __init__(self, current_model: str) -> None:
-        super().__init__()
-        self._current_model = current_model
-        self._current_provider = current_model.split(":")[0] if ":" in current_model else ""
-        self._all_providers: list[tuple[str, str]] = []
-        self._filter_query: str = ""
-
-    def compose(self) -> ComposeResult:
-        self._all_providers = get_providers()
-
-        with Vertical(id="provider-container"):
-            yield Static("Select Provider", id="provider-title")
-            yield Input(placeholder="Filter providers...", id="provider-filter")
-            yield OptionList(id="provider-list")
-
-        self.call_after_refresh(self._rebuild_options)
-
-    def _rebuild_options(self) -> None:
-        """Rebuild OptionList with filtered items."""
-        option_list = self.query_one("#provider-list", OptionList)
-        option_list.clear_options()
-
-        filter_query = self._filter_query
-        visible_providers, is_truncated = _filter_visible_items(
-            self._all_providers,
-            filter_query,
-            MODEL_PICKER_UNFILTERED_LIMIT,
-        )
-
-        highlight_index = _choose_highlight_index(visible_providers, self._current_provider)
-
-        for display_name, provider_id in visible_providers:
-            option_list.add_option(Option(display_name, id=provider_id))
-
-        if highlight_index is not None:
-            option_list.highlighted = highlight_index
-
-        if is_truncated:
-            _append_truncation_notice(
-                option_list,
-                MODEL_PICKER_UNFILTERED_LIMIT,
-                "providers",
-            )
-
-    def on_input_changed(self, event: Input.Changed) -> None:
-        """Filter options as user types."""
-        if event.input.id != "provider-filter":
-            return
-        self._filter_query = event.value
-        self._rebuild_options()
-
-    def on_key(self, event: events.Key) -> None:
-        """Handle focus transitions between Input and OptionList."""
-        filter_input = self.query_one("#provider-filter", Input)
-        option_list = self.query_one("#provider-list", OptionList)
-
-        if event.key == "down" and self.focused == filter_input:
-            self.set_focus(option_list)
-            event.stop()
-        elif event.key == "up" and self.focused == option_list:
-            if option_list.highlighted == 0:
-                self.set_focus(filter_input)
-                event.stop()
-        elif event.key == "escape" and self._filter_query:
-            filter_input.value = ""
-            self._filter_query = ""
-            self._rebuild_options()
-            event.stop()
-
-    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
-        """Confirm selection and dismiss with provider ID."""
-        if event.option and event.option.id:
-            self.dismiss(str(event.option.id))
-
-    def action_cancel(self) -> None:
-        """Cancel selection."""
-        self.dismiss(None)
+    highlight_index = _choose_highlight_index(option_rows, current_model)
+    return option_rows, highlight_index, is_truncated
 
 
 class ModelPickerScreen(Screen[str | None]):
-    """Modal screen for model selection (step 2 of model picker)."""
+    """Modal screen for model selection."""
 
     CSS = """
     ModelPickerScreen {
@@ -182,7 +102,7 @@ class ModelPickerScreen(Screen[str | None]):
     }
 
     #model-container {
-        width: 60;
+        width: 78;
         height: auto;
         max-height: 28;
         border: solid $primary;
@@ -212,50 +132,37 @@ class ModelPickerScreen(Screen[str | None]):
         ("escape", "cancel", "Cancel"),
     ]
 
-    def __init__(self, provider_id: str, current_model: str) -> None:
+    def __init__(self, current_model: str, recent_models: list[str]) -> None:
         super().__init__()
-        self._provider_id = provider_id
         self._current_model = current_model
-        current_model_id = current_model.split(":", 1)[1] if ":" in current_model else ""
-        self._current_model_id = current_model_id
-        self._all_models: list[tuple[str, str]] = []
-        self._filter_query: str = ""
+        self._recent_models = recent_models
+        self._all_entries: list[ModelPickerEntry] = []
+        self._filter_query = ""
 
     def compose(self) -> ComposeResult:
-        self._all_models = get_models_for_provider(self._provider_id)
+        self._all_entries = get_model_picker_entries()
 
         with Vertical(id="model-container"):
-            yield Static(f"Select Model ({self._provider_id})", id="model-title")
-            yield Input(placeholder="Filter models...", id="model-filter")
+            yield Static("Select Model", id="model-title")
+            yield Input(placeholder="Filter models or providers...", id="model-filter")
             yield OptionList(id="model-list")
 
         self.call_after_refresh(self._rebuild_options)
 
     def _rebuild_options(self) -> None:
-        """Rebuild OptionList with filtered items and pricing."""
-        from tunacode.core.ui_api.configuration import format_pricing_display, get_model_pricing
-
+        """Rebuild the OptionList with current/recent-first ordering."""
         option_list = self.query_one("#model-list", OptionList)
         option_list.clear_options()
 
-        filter_query = self._filter_query
-        visible_models, is_truncated = _filter_visible_items(
-            self._all_models,
-            filter_query,
-            MODEL_PICKER_UNFILTERED_LIMIT,
+        option_rows, highlight_index, is_truncated = build_model_picker_option_rows(
+            self._all_entries,
+            current_model=self._current_model,
+            recent_models=self._recent_models,
+            filter_query=self._filter_query,
         )
 
-        highlight_index = _choose_highlight_index(visible_models, self._current_model_id)
-
-        for display_name, model_id in visible_models:
-            full_model = f"{self._provider_id}:{model_id}"
-            pricing = get_model_pricing(full_model)
-            if pricing is not None:
-                label = f"{display_name}  {format_pricing_display(pricing)}"
-            else:
-                label = display_name
-
-            option_list.add_option(Option(label, id=model_id))
+        for label, full_model in option_rows:
+            option_list.add_option(Option(label, id=full_model))
 
         if highlight_index is not None:
             option_list.highlighted = highlight_index
@@ -268,9 +175,10 @@ class ModelPickerScreen(Screen[str | None]):
             )
 
     def on_input_changed(self, event: Input.Changed) -> None:
-        """Filter options as user types."""
+        """Filter options as the user types."""
         if event.input.id != "model-filter":
             return
+
         self._filter_query = event.value
         self._rebuild_options()
 
@@ -293,10 +201,9 @@ class ModelPickerScreen(Screen[str | None]):
             event.stop()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
-        """Confirm selection and dismiss with full model string."""
+        """Dismiss the screen with the selected full model string."""
         if event.option and event.option.id:
-            full_model = f"{self._provider_id}:{event.option.id}"
-            self.dismiss(full_model)
+            self.dismiss(str(event.option.id))
 
     def action_cancel(self) -> None:
         """Cancel selection."""

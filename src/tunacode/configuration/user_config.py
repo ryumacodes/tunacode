@@ -9,6 +9,7 @@ from json import JSONDecodeError
 from typing import Protocol
 
 from tunacode.configuration.settings import ApplicationSettings
+from tunacode.constants import MODEL_PICKER_RECENT_LIMIT
 from tunacode.exceptions import ConfigurationError
 from tunacode.types import ModelName, UserConfig
 
@@ -68,6 +69,55 @@ def load_config_with_defaults(default_config: UserConfig) -> UserConfig:
     """Load user config from file and merge with defaults."""
     user_config = load_config()
     return merge_user_config(default_config, user_config)
+
+
+def get_recent_models(
+    user_config: UserConfig,
+    *,
+    available_models: set[str] | None = None,
+    limit: int = MODEL_PICKER_RECENT_LIMIT,
+) -> list[str]:
+    """Return normalized recent models, optionally filtered to known entries."""
+    raw_recent_models = user_config.get("recent_models", [])
+    if not isinstance(raw_recent_models, list):
+        return []
+
+    normalized_recent_models: list[str] = []
+    seen_models: set[str] = set()
+
+    for raw_model in raw_recent_models:
+        if not isinstance(raw_model, str):
+            continue
+
+        model_name = raw_model.strip()
+        if not model_name or model_name in seen_models:
+            continue
+
+        if available_models is not None and model_name not in available_models:
+            continue
+
+        seen_models.add(model_name)
+        normalized_recent_models.append(model_name)
+
+        if len(normalized_recent_models) >= limit:
+            break
+
+    return normalized_recent_models
+
+
+def record_recent_model(user_config: UserConfig, model_name: ModelName) -> list[str]:
+    """Promote a model to the front of the recent-model MRU list."""
+    normalized_model_name = model_name.strip()
+    if not normalized_model_name:
+        return get_recent_models(user_config)
+
+    recent_models = get_recent_models(user_config)
+    recent_models = [
+        recent_model for recent_model in recent_models if recent_model != normalized_model_name
+    ]
+    recent_models.insert(0, normalized_model_name)
+    user_config["recent_models"] = recent_models[:MODEL_PICKER_RECENT_LIMIT]
+    return user_config["recent_models"]
 
 
 def save_config(state_manager: UserConfigStateManager) -> None:

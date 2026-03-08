@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG  # noqa: F401 (re-export)
 from tunacode.configuration.models import (
+    ModelPickerEntry as ModelPickerEntry,
+)
+from tunacode.configuration.models import (
     get_model_context_window as _get_model_context_window,
+)
+from tunacode.configuration.models import (
+    get_model_picker_entries as _get_model_picker_entries,
 )
 from tunacode.configuration.models import (
     get_models_for_provider as _get_models_for_provider,
@@ -17,6 +23,9 @@ from tunacode.configuration.models import (
 )
 from tunacode.configuration.models import (
     load_models_registry as _load_models_registry,
+)
+from tunacode.configuration.models import (
+    rank_model_picker_entries as _rank_model_picker_entries,
 )
 from tunacode.configuration.models import (
     validate_provider_api_key as _validate_provider_api_key,
@@ -34,6 +43,11 @@ from tunacode.types import ModelPricing
 def get_models_for_provider(provider_id: str) -> list[tuple[str, str]]:
     """Return (display_name, id) tuples for provider models."""
     return _get_models_for_provider(provider_id)
+
+
+def get_model_picker_entries() -> list[ModelPickerEntry]:
+    """Return flattened provider/model entries for the model picker."""
+    return _get_model_picker_entries()
 
 
 def get_providers() -> list[tuple[str, str]]:
@@ -59,6 +73,22 @@ def load_models_registry() -> dict:
 def get_model_context_window(model_string: str) -> int:
     """Return the context window size for a model."""
     return _get_model_context_window(model_string)
+
+
+def rank_model_picker_entries(
+    entries: list[ModelPickerEntry],
+    *,
+    current_model: str,
+    recent_models: list[str],
+    filter_query: str,
+) -> tuple[list[ModelPickerEntry], bool]:
+    """Rank picker entries for current/recent-first display."""
+    return _rank_model_picker_entries(
+        entries,
+        current_model=current_model,
+        recent_models=recent_models,
+        filter_query=filter_query,
+    )
 
 
 def get_model_pricing(model_string: str) -> ModelPricing | None:
