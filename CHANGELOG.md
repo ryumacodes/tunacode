@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.90] - 2026-03-09
+
+### Changed
+- Smoothed the model picker flow and hardened model selection state handling in the TUI.
+
+### Fixed
+- Stabilized tmux system startup by waiting for the editor prompt before sending end-to-end tool commands.
+- Added explicit coverage for the loaded-skills panel title so the skills UI contract is tested outside tmux.
+
 ## [0.1.89] - 2026-03-07
 
 ### Changed

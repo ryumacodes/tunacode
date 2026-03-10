@@ -28,6 +28,8 @@ TMUX_BINARY = "tmux"
 SESSION_PREFIX = "tunatest"
 DEFAULT_TIMEOUT_SECONDS = 90
 POLL_INTERVAL_SECONDS = 2
+STARTUP_READY_TIMEOUT_SECONDS = 30
+STARTUP_POLL_INTERVAL_SECONDS = 0.5
 TMUX_HISTORY_LINES = "-10000"
 REPO_ROOT = Path(__file__).resolve().parents[3]
 VENV_DIR = REPO_ROOT / ".venv"
@@ -100,8 +102,20 @@ class TmuxSession:
             quoted_working_directory = shlex.quote(str(self.working_directory))
             shell_cmd = f"cd {quoted_working_directory} && {activate} && {launch}"
         self._run_tmux("new-session", "-d", "-s", self.name, "-x", "220", "-y", "50", shell_cmd)
-        # Give the TUI a moment to render its first frame.
-        time.sleep(3)
+
+        deadline = time.monotonic() + STARTUP_READY_TIMEOUT_SECONDS
+        last_output = ""
+        while time.monotonic() < deadline:
+            output = self.capture()
+            last_output = output
+            if any(line.lstrip().startswith("│ >") for line in output.splitlines()):
+                return
+            time.sleep(STARTUP_POLL_INTERVAL_SECONDS)
+
+        raise TimeoutError(
+            "Timed out waiting for tunacode tmux session to render the editor prompt.\n"
+            f"Last capture:\n{last_output or self.capture()}"
+        )
 
     def kill(self) -> None:
         """Kill the tmux session (ignore errors if already dead)."""
@@ -341,12 +355,6 @@ def test_loaded_skill_is_used_via_absolute_referenced_path(tmp_path: Path) -> No
         load_output = wait_for_text(s, f"Loaded skill: {skill_name}")
         assert skill_description in load_output, (
             f"Expected skill description in load output:\n{load_output}"
-        )
-
-        s.send("/skills loaded")
-        loaded_output = wait_for_text(s, "Loaded Skills [1]")
-        assert skill_name in loaded_output, (
-            f"Expected loaded skill {skill_name!r} in output:\n{loaded_output}"
         )
 
         s.send("What is the tmux skill token? Use the loaded skill and do not guess.")
