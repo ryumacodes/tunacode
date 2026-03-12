@@ -1,0 +1,134 @@
+# Research – TUI Copy and Highlight Logic
+**Date:** 2026-03-09
+**Phase:** Research
+
+## Structure
+- `src/tunacode/ui/main.py:72-80,104-105,194-262` → CLI entrypoints for the Textual app (`_run_textual_app`, `_run_textual_cli`) and a separate headless `run` command with `--output-json`.
+- `src/tunacode/ui/repl_support.py:185-223` → builds tool-result callbacks and instantiates `TextualReplApp` in `run_textual_repl`.
+- `src/tunacode/ui/app.py:154-185` → composes the main Textual layout with `ChatContainer`, `Editor`, autocomplete widgets, and context panel widgets.
+- `src/tunacode/ui/widgets/chat.py:33-351` → selection-aware Rich rendering, copy-on-select widget, chat container write path.
+- `src/tunacode/ui/clipboard.py:13-65` → system clipboard backends and app fallback.
+- `src/tunacode/ui/renderers/panels.py:486-523` → tool panel routing that returns `(content, PanelMeta)` for chat rendering.
+- `src/tunacode/ui/widgets/messages.py:30-47` → `ToolResultDisplay` message carrying tool output metadata.
+- `src/tunacode/ui/commands/resume.py:38-57,114-143` → opens `SessionPickerScreen` and loads selected sessions into `ChatContainer`.
+- `src/tunacode/ui/screens/session_picker.py:21-175` → option-list highlight preview for saved sessions.
+- `src/tunacode/ui/screens/model_picker.py:22-33,65-93,96-211` → option-list highlight logic for model selection.
+- `src/tunacode/ui/screens/theme_picker.py:17-90` → option-list highlight logic for live theme preview.
+- `src/tunacode/ui/widgets/editor.py:38-399` → input widget with internal selection rendering and paste-buffer handling.
+- `src/tunacode/ui/context_panel.py:24-101` → inspector fields with `ALLOW_SELECT = False`.
+- `src/tunacode/ui/shell_runner.py:135-166,185-212` → shell output formatting path that writes renderables back into `ChatContainer`.
+- `src/tunacode/ui/widgets/__init__.py:3-13` → re-exports `ChatContainer`, `PanelMeta`, and `ToolResultDisplay`.
+- `src/tunacode/ui/screens/__init__.py:3-7` → re-exports `SessionPickerScreen`, `ModelPickerScreen`, `ThemePickerScreen`, `SetupScreen`, `UpdateConfirmScreen`.
+- `scripts/` directory scan did not find `ast-scan.sh`, `structure-map.sh`, `symbol-index.sh`, or `dependency-graph.sh` in this checkout.
+
+## Key Files
+- `src/tunacode/ui/widgets/chat.py:33-145` → `SelectableRichVisual.render_strips(...)` injects `RichStyle(meta={"offset": (x, y)})` and applies selection highlighting to overlapping Rich segments.
+- `src/tunacode/ui/widgets/chat.py:148-158` → `PanelMeta` dataclass stores `css_class`, `border_title`, and `border_subtitle`.
+- `src/tunacode/ui/widgets/chat.py:161-164` → `_COPY_DEBOUNCE_MS = 0.15`.
+- `src/tunacode/ui/widgets/chat.py:171-190` → `_coerce_panel_renderable(...)` normalizes `RenderableType` or `(RenderableType, PanelMeta)` inputs.
+- `src/tunacode/ui/widgets/chat.py:193-266` → `CopyOnSelectStatic` overrides `_render`, `get_selection`, `selection_updated`, and `_copy_current_selection`.
+- `src/tunacode/ui/widgets/chat.py:219-234` → `get_selection(...)` converts rendered strips into plain text and returns `selection.extract(text), "\n"`.
+- `src/tunacode/ui/widgets/chat.py:236-245` → `selection_updated(...)` stops any pending timer and schedules `_copy_current_selection` via `set_timer(_COPY_DEBOUNCE_MS, ...)` when a selection exists.
+- `src/tunacode/ui/widgets/chat.py:246-266` → `_copy_current_selection()` reads `self.text_selection`, trims trailing spaces from selected lines, calls `copy_to_clipboard(cleaned, app=self.app)`, and notifies `Copied`.
+- `src/tunacode/ui/widgets/chat.py:307-351` → `ChatContainer.write(...)` always wraps rendered content in `CopyOnSelectStatic`, applies `PanelMeta`, mounts the widget, and scrolls to end.
+- `src/tunacode/ui/clipboard.py:14-19` → `_SYSTEM_BACKENDS` lists `xclip`, `wl-copy`, `xsel`, `pbcopy`.
+- `src/tunacode/ui/clipboard.py:22-43` → `_try_system_copy(text: str) -> bool` probes backends with `shutil.which(...)` and `subprocess.run(..., input=text.encode("utf-8"), timeout=2)`.
+- `src/tunacode/ui/clipboard.py:46-65` → `copy_to_clipboard(text: str, *, app: object | None = None) -> bool` tries system backends first, then `app.copy_to_clipboard(text)` if the app exposes that method.
+- `src/tunacode/ui/app.py:154-185` → `compose()` constructs `self.chat_container = ChatContainer(id="chat-container", auto_scroll=True)` and yields it inside `#viewport`.
+- `src/tunacode/ui/app.py:232-295` → `_process_request(...)` clears insertion anchors, runs the request, then writes the final agent response through `self.chat_container.write(...)`.
+- `src/tunacode/ui/app.py:336-346` → `on_tool_result_display(...)` routes tool results through `tool_panel_smart(...)` and writes the returned content into `ChatContainer`.
+- `src/tunacode/ui/app.py:379-404` → `_replay_session_messages()` writes restored user and assistant content back into `ChatContainer`.
+- `src/tunacode/ui/app.py:453-454` → `write_shell_output(renderable)` forwards shell renderables into `self.chat_container.write(renderable)`.
+- `src/tunacode/ui/repl_support.py:185-214` → `build_tool_result_callback(...)` posts `ToolResultDisplay(...)` messages to the app.
+- `src/tunacode/ui/widgets/messages.py:30-47` → `ToolResultDisplay` carries `tool_name`, `status`, `args`, `result`, and `duration_ms`.
+- `src/tunacode/ui/renderers/panels.py:486-523` → `tool_panel_smart(...)` selects tool-specific renderers for completed tool results and falls back to `tool_panel(...)`.
+- `src/tunacode/ui/commands/resume.py:38-57` → `ResumeCommand._handle_list(...)` imports `SessionPickerScreen` and opens it with `app.push_screen(SessionPickerScreen(...), on_session_selected)`.
+- `src/tunacode/ui/commands/resume.py:114-143` → `ResumeCommand._load_session(...)` clears `app.chat_container`, calls `app._replay_session_messages()`, and writes a “Loaded session” message into the chat container.
+- `src/tunacode/ui/screens/session_picker.py:73-101` → `compose()` builds `OptionList(*options, id="session-list")` and sets `option_list.highlighted = highlight_index`.
+- `src/tunacode/ui/screens/session_picker.py:103-123` → `on_option_list_option_highlighted(...)` loads preview text for the highlighted session and updates `#session-preview`.
+- `src/tunacode/ui/screens/session_picker.py:125-166` → `_load_preview(...)` reads the session file JSON, extracts up to three user messages, and truncates each preview line to `PREVIEW_MAX_CHARS`.
+- `src/tunacode/ui/screens/model_picker.py:22-33` → `_choose_highlight_index(...)` returns the current-model index or `0`.
+- `src/tunacode/ui/screens/model_picker.py:65-93` → `build_model_picker_option_rows(...)` returns option rows, highlight index, and truncation flag.
+- `src/tunacode/ui/screens/model_picker.py:152-175` → `_rebuild_options()` clears and rebuilds the `OptionList`, then sets `option_list.highlighted = highlight_index` when present.
+- `src/tunacode/ui/screens/theme_picker.py:61-80` → `compose()` creates the `theme-list` `OptionList`; `on_option_list_option_highlighted(...)` updates `self.app.theme` for the highlighted item.
+- `src/tunacode/ui/widgets/editor.py:193-207` → `_watch_selection(...)` clears app-level selection and keeps the cursor visible in the input widget.
+- `src/tunacode/ui/widgets/editor.py:348-356` → `render` path applies `input--selection` style when `self.selection` is non-empty.
+- `src/tunacode/ui/context_panel.py:24-27` → `InspectorField` disables selection with `ALLOW_SELECT = False`.
+- `src/tunacode/ui/main.py:171-245` → `_build_trajectory_json(...)` and `run_headless(..., --output-json)` define a JSON trajectory export path outside the Textual UI.
+
+## Patterns Found
+- Rich selection offset metadata:
+  - `src/tunacode/ui/widgets/chat.py:70-73` → local helper `with_offset(...)` adds `meta={"offset": (x, y)}` to Rich styles.
+  - `src/tunacode/ui/widgets/chat.py:97-139` → overlapping selection spans receive `selection_style` on the selected slice only.
+- Debounced copy on selection:
+  - `src/tunacode/ui/widgets/chat.py:161-164` → `_COPY_DEBOUNCE_MS = 0.15`.
+  - `src/tunacode/ui/widgets/chat.py:236-245` → `selection_updated(...)` schedules delayed copy.
+  - `src/tunacode/ui/widgets/chat.py:246-266` → delayed callback extracts selection text, trims padding, and calls `copy_to_clipboard(...)`.
+- Chat-wide copy wrapping:
+  - `src/tunacode/ui/widgets/chat.py:307-351` → every `ChatContainer.write(...)` call returns a `CopyOnSelectStatic` widget.
+  - `src/tunacode/ui/app.py:215,264,290-291,330,334,346,377,393,403-404,453-454` → app paths that write content into `ChatContainer`.
+- Clipboard backend sequence:
+  - `src/tunacode/ui/clipboard.py:14-19` → backend order is `xclip`, `wl-copy`, `xsel`, `pbcopy`.
+  - `src/tunacode/ui/clipboard.py:58-63` → app fallback runs only after `_try_system_copy(text)` returns `False`.
+- Option-list highlight flows:
+  - `src/tunacode/ui/screens/session_picker.py:98-123` → highlight drives session preview updates.
+  - `src/tunacode/ui/screens/model_picker.py:167-175` → highlight is set during option rebuild for model selection.
+  - `src/tunacode/ui/screens/theme_picker.py:73-80` → highlight drives live theme preview.
+- Selection-disabled side panel:
+  - `src/tunacode/ui/context_panel.py:24-27` → context inspector fields are `Static` widgets with `ALLOW_SELECT = False`.
+- Adjacent non-TUI export path:
+  - `src/tunacode/ui/main.py:171-245` → headless `run --output-json` prints a JSON trajectory.
+  - Search for `download|export|save|transcript` under `src/tunacode/ui` matched this headless trajectory path and session/config save paths; no Textual UI `download` symbol was found in the scanned UI modules.
+
+## Dependencies
+- `src/tunacode/ui/main.py:72-80` → calls → `src/tunacode/ui/repl_support.py:219-223` (`run_textual_repl`).
+- `src/tunacode/ui/repl_support.py:219-223` → instantiates → `src/tunacode/ui/app.py:89-153` (`TextualReplApp`).
+- `src/tunacode/ui/repl_support.py:185-214` → posts → `src/tunacode/ui/widgets/messages.py:30-47` (`ToolResultDisplay`).
+- `src/tunacode/ui/app.py:336-346` → consumes → `src/tunacode/ui/widgets/messages.py:30-47` (`ToolResultDisplay`).
+- `src/tunacode/ui/app.py:336-346` → calls → `src/tunacode/ui/renderers/panels.py:486-523` (`tool_panel_smart`).
+- `src/tunacode/ui/renderers/panels.py:486-523` → returns `(RenderableType, PanelMeta)` → `src/tunacode/ui/widgets/chat.py:307-351` (`ChatContainer.write`).
+- `src/tunacode/ui/widgets/chat.py:307-351` → constructs → `src/tunacode/ui/widgets/chat.py:193-266` (`CopyOnSelectStatic`).
+- `src/tunacode/ui/widgets/chat.py:246-266` → calls → `src/tunacode/ui/clipboard.py:46-65` (`copy_to_clipboard`).
+- `src/tunacode/ui/clipboard.py:46-65` → falls back to → Textual app method `app.copy_to_clipboard(text)` when present.
+- `src/tunacode/ui/shell_runner.py:160-166,201-212` → sends shell renderables to → `src/tunacode/ui/app.py:453-454` (`write_shell_output`) → `src/tunacode/ui/widgets/chat.py:307-351`.
+- `src/tunacode/ui/commands/resume.py:40-57` → imports and pushes → `src/tunacode/ui/screens/session_picker.py:21-175` (`SessionPickerScreen`).
+- `src/tunacode/ui/screens/session_picker.py:164-166` → imports → `tunacode.core.ui_api.messaging.get_content` for preview text extraction.
+- `src/tunacode/ui/commands/resume.py:128-140` → reloads session state and writes restored content through → `src/tunacode/ui/app.py:379-404` and `src/tunacode/ui/widgets/chat.py:307-351`.
+- `src/tunacode/ui/app.py:154-185` → mounts → `src/tunacode/ui/context_panel.py:41-101` widgets alongside `ChatContainer`; those inspector fields are non-selectable.
+
+## Symbol Index
+- `src/tunacode/ui/main.py:194` → `run_headless`
+- `src/tunacode/ui/main.py:171` → `_build_trajectory_json`
+- `src/tunacode/ui/repl_support.py:185` → `build_tool_result_callback`
+- `src/tunacode/ui/repl_support.py:219` → `run_textual_repl`
+- `src/tunacode/ui/app.py:154` → `TextualReplApp.compose`
+- `src/tunacode/ui/app.py:232` → `TextualReplApp._process_request`
+- `src/tunacode/ui/app.py:336` → `TextualReplApp.on_tool_result_display`
+- `src/tunacode/ui/app.py:379` → `TextualReplApp._replay_session_messages`
+- `src/tunacode/ui/app.py:453` → `TextualReplApp.write_shell_output`
+- `src/tunacode/ui/clipboard.py:22` → `_try_system_copy`
+- `src/tunacode/ui/clipboard.py:46` → `copy_to_clipboard`
+- `src/tunacode/ui/widgets/chat.py:33` → `SelectableRichVisual`
+- `src/tunacode/ui/widgets/chat.py:149` → `PanelMeta`
+- `src/tunacode/ui/widgets/chat.py:171` → `_coerce_panel_renderable`
+- `src/tunacode/ui/widgets/chat.py:193` → `CopyOnSelectStatic`
+- `src/tunacode/ui/widgets/chat.py:219` → `CopyOnSelectStatic.get_selection`
+- `src/tunacode/ui/widgets/chat.py:236` → `CopyOnSelectStatic.selection_updated`
+- `src/tunacode/ui/widgets/chat.py:246` → `CopyOnSelectStatic._copy_current_selection`
+- `src/tunacode/ui/widgets/chat.py:269` → `ChatContainer`
+- `src/tunacode/ui/widgets/chat.py:307` → `ChatContainer.write`
+- `src/tunacode/ui/widgets/messages.py:30` → `ToolResultDisplay`
+- `src/tunacode/ui/commands/resume.py:14` → `ResumeCommand`
+- `src/tunacode/ui/screens/session_picker.py:21` → `SessionPickerScreen`
+- `src/tunacode/ui/screens/session_picker.py:103` → `SessionPickerScreen.on_option_list_option_highlighted`
+- `src/tunacode/ui/screens/model_picker.py:22` → `_choose_highlight_index`
+- `src/tunacode/ui/screens/model_picker.py:65` → `build_model_picker_option_rows`
+- `src/tunacode/ui/screens/model_picker.py:96` → `ModelPickerScreen`
+- `src/tunacode/ui/screens/theme_picker.py:17` → `ThemePickerScreen`
+- `src/tunacode/ui/widgets/editor.py:38` → `Editor`
+- `src/tunacode/ui/widgets/editor.py:193` → `Editor._watch_selection`
+- `src/tunacode/ui/context_panel.py:24` → `InspectorField`
+- `src/tunacode/ui/shell_runner.py:135` → `ShellRunner._format_shell_panel`
+- `src/tunacode/ui/screens/__init__.py:4` → re-export `SessionPickerScreen`
+- `src/tunacode/ui/widgets/__init__.py:3` → re-export `ChatContainer`, `PanelMeta`
+- `src/tunacode/ui/widgets/__init__.py:7-10` → re-export `EditorSubmitRequested`, `ToolResultDisplay`
