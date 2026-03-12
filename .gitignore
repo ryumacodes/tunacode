@@ -69,6 +69,7 @@ scratchpad_*.md
 llm-agent-tools/kb_synch/target/
 .researcher/
 tunacode-rs/target/
+memory-bank/
 
 # Logs
 logs/
