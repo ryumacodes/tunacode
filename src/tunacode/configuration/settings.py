@@ -21,7 +21,6 @@ class ApplicationSettings:
     def __init__(self) -> None:
         self.version = APP_VERSION
         self.name = APP_NAME
-        self.guide_file = f"{self.name.upper()}.md"
         self.paths = PathConfig()
         self.internal_tools: list[ToolName] = [
             ToolName.BASH,

@@ -40,7 +40,6 @@ from tunacode.configuration.models import (
     load_models_registry,
     parse_model_string,
 )
-from tunacode.configuration.user_config import load_config
 from tunacode.constants import ENV_OPENAI_BASE_URL
 from tunacode.prompts.versioning import (
     compute_agent_prompt_versions,
@@ -203,11 +202,7 @@ def load_tunacode_context() -> tuple[str, PromptVersion | None]:
     logger = get_logger()
 
     try:
-        config = load_config()
-        guide_file = "AGENTS.md"
-        if config and "settings" in config:
-            guide_file = config["settings"].get("guide_file", "AGENTS.md")
-        tunacode_path = Path.cwd() / guide_file
+        tunacode_path = Path.cwd() / "AGENTS.md"
 
         content = context_cache.get_context(tunacode_path)
         version = get_or_compute_prompt_version(tunacode_path)

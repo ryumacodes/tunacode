@@ -8,6 +8,29 @@ uuid: 4a225704-c3d4-4afb-9a94-17247607864e
 
 # Claude Journal
 
+## 2026-03-12: Guide File Hardcode - Remove Configurability
+
+### Change
+Removed `guide_file` configuration option. `AGENTS.md` is now hardcoded as the only valid guide file name, aligning with the emerging industry standard for AI coding assistants.
+
+### Files Modified
+- `src/tunacode/configuration/defaults.py` - Removed `guide_file` from default settings
+- `src/tunacode/configuration/settings.py` - Removed `guide_file` property from ApplicationSettings
+- `src/tunacode/core/agents/agent_components/agent_config.py` - Simplified `load_tunacode_context()` to hardcode AGENTS.md
+- `docs/modules/prompts/versioning.md` - Updated documentation to reflect non-configurability
+- `scripts/install_linux.sh` - Removed `guide_file` from default config generation
+
+### Rationale
+- `AGENTS.md` is becoming the de facto standard for AI coding assistants
+- No known users depend on custom guide file names
+- Simplifies codebase and reduces configuration surface area
+- Breaking change is acceptable (setting will be ignored, not cause errors)
+
+### Impact
+- Users with custom `guide_file` settings will have them ignored (not an error)
+- All projects should use `AGENTS.md` for project context
+- No migration path needed (backward compatible in behavior)
+
 ## 2026-01-21: pydantic-ai System Prompt Stripping Fix (Branch: resume-qa)
 
 ### Problem
