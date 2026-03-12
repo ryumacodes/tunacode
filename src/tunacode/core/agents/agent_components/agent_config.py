@@ -40,7 +40,7 @@ from tunacode.configuration.models import (
     load_models_registry,
     parse_model_string,
 )
-from tunacode.constants import ENV_OPENAI_BASE_URL
+from tunacode.constants import AGENTS_MD, ENV_OPENAI_BASE_URL
 from tunacode.prompts.versioning import (
     compute_agent_prompt_versions,
     get_or_compute_prompt_version,
@@ -202,7 +202,7 @@ def load_tunacode_context() -> tuple[str, PromptVersion | None]:
     logger = get_logger()
 
     try:
-        tunacode_path = Path.cwd() / "AGENTS.md"
+        tunacode_path = Path.cwd() / AGENTS_MD
 
         content = context_cache.get_context(tunacode_path)
         version = get_or_compute_prompt_version(tunacode_path)

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tunacode.constants import AGENTS_MD
 from tunacode.prompts.versioning import (
     AgentPromptVersions,
     compute_agent_prompt_versions,
@@ -113,7 +114,7 @@ def get_current_prompt_versions(
         )
 
     if tunacode_context_path is None:
-        tunacode_context_path = Path.cwd() / "AGENTS.md"
+        tunacode_context_path = Path.cwd() / AGENTS_MD
 
     return compute_agent_prompt_versions(
         system_prompt_path=system_prompt_path,

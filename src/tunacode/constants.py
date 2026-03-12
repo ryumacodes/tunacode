@@ -21,6 +21,7 @@ APP_NAME = "TunaCode"
 APP_VERSION = "0.1.90"
 
 
+AGENTS_MD = "AGENTS.md"
 ENV_FILE = ".env"
 CONFIG_FILE_NAME = "tunacode.json"
 ENV_OPENAI_BASE_URL = "OPENAI_BASE_URL"
