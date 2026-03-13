@@ -13,6 +13,11 @@ if TYPE_CHECKING:
 
 PACKAGE_NAME = "tunacode-cli"
 UPDATE_INSTALL_TIMEOUT_SECONDS = 120
+UV_TOOL_NOT_INSTALLED_ERROR_MARKERS = (
+    "failed to upgrade",
+    "is not installed",
+    "uv tool install",
+)
 
 
 def _is_tool_install() -> bool:
@@ -59,9 +64,13 @@ def _get_package_manager_command(package: str) -> tuple[list[str], str] | None:
 
 
 def _should_retry_uv_tool_with_active_python(stderr: str) -> bool:
-    """Return True when uv tool cannot locate the currently running install."""
-    normalized_stderr = stderr.strip()
-    return "is not installed; run `uv tool install" in normalized_stderr
+    """Return True when uv tool cannot locate the currently running install.
+
+    uv's exact stderr format is not a stable API, so match a small set of
+    lower-cased markers instead of a single full substring.
+    """
+    normalized_stderr = stderr.strip().casefold()
+    return all(marker in normalized_stderr for marker in UV_TOOL_NOT_INSTALLED_ERROR_MARKERS)
 
 
 def _get_active_python_upgrade_command(package: str) -> tuple[list[str], str] | None:
