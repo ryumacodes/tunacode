@@ -534,7 +534,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     # Compute combined prompt versions
     prompt_versions = compute_agent_prompt_versions(
         system_prompt_path=base_path / "prompts" / "system_prompt.md",
-        tunacode_context_path=Path.cwd() / "AGENTS.md",
+        tunacode_context_path=Path.cwd() / AGENTS_MD,
         tool_prompt_paths=tool_prompt_paths,
     )
     prompt_versions = _augment_prompt_versions_with_skills(
