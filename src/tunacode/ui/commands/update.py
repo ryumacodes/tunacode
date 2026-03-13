@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+import sys
 from typing import TYPE_CHECKING
 
 from tunacode.ui.commands.base import Command
@@ -19,8 +21,6 @@ def _is_tool_install() -> bool:
     Returns True when the install looks like pipx or ``uv tool`` (the
     executable lives under a path that contains a tool-managed venv).
     """
-    import sys
-
     exe = sys.executable
     # pipx venvs:   ~/.local/pipx/venvs/<pkg>/...
     # uv tool:      ~/.local/share/uv/tools/<pkg>/...
@@ -38,8 +38,6 @@ def _get_package_manager_command(package: str) -> tuple[list[str], str] | None:
     Returns:
         tuple(list[str], str) for command and manager name, or None if unavailable.
     """
-    import shutil
-
     if _is_tool_install():
         uv_path = shutil.which("uv")
         if uv_path:
@@ -60,6 +58,64 @@ def _get_package_manager_command(package: str) -> tuple[list[str], str] | None:
     return None
 
 
+def _should_retry_uv_tool_with_active_python(stderr: str) -> bool:
+    """Return True when uv tool cannot locate the currently running install."""
+    normalized_stderr = stderr.strip()
+    return "is not installed; run `uv tool install" in normalized_stderr
+
+
+def _get_active_python_upgrade_command(package: str) -> tuple[list[str], str] | None:
+    """Build a direct upgrade command against the active interpreter."""
+    uv_path = shutil.which("uv")
+    if uv_path:
+        return (
+            [uv_path, "pip", "install", "--python", sys.executable, "--upgrade", package],
+            "uv pip",
+        )
+
+    return None
+
+
+async def _run_upgrade_command(
+    app: TextualReplApp,
+    cmd: list[str],
+    pkg_mgr: str,
+    package: str,
+) -> tuple[int, str]:
+    """Run the selected upgrade command and retry against the active interpreter when needed."""
+    import asyncio
+    import subprocess
+
+    result = await asyncio.to_thread(
+        subprocess.run,
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=UPDATE_INSTALL_TIMEOUT_SECONDS,
+    )
+
+    if result.returncode == 0 or pkg_mgr != "uv tool":
+        return result.returncode, result.stderr.strip()
+
+    fallback_cmd_result = _get_active_python_upgrade_command(package)
+    if not fallback_cmd_result or not _should_retry_uv_tool_with_active_python(result.stderr):
+        return result.returncode, result.stderr.strip()
+
+    fallback_cmd, fallback_mgr = fallback_cmd_result
+    app.chat_container.write(
+        "uv tool could not locate this install; "
+        f"retrying with {fallback_mgr} against the active Python..."
+    )
+    fallback_result = await asyncio.to_thread(
+        subprocess.run,
+        fallback_cmd,
+        capture_output=True,
+        text=True,
+        timeout=UPDATE_INSTALL_TIMEOUT_SECONDS,
+    )
+    return fallback_result.returncode, fallback_result.stderr.strip()
+
+
 class UpdateCommand(Command):
     """Check for and install updates to tunacode."""
 
@@ -69,7 +125,6 @@ class UpdateCommand(Command):
 
     async def execute(self, app: TextualReplApp, _args: str) -> None:
         import asyncio
-        import subprocess
 
         from tunacode.core.ui_api.system_paths import (
             check_for_updates,
@@ -109,19 +164,18 @@ class UpdateCommand(Command):
 
             async def install_update() -> None:
                 try:
-                    result = await asyncio.to_thread(
-                        subprocess.run,
+                    returncode, stderr = await _run_upgrade_command(
+                        app,
                         cmd,
-                        capture_output=True,
-                        text=True,
-                        timeout=UPDATE_INSTALL_TIMEOUT_SECONDS,
+                        pkg_mgr,
+                        PACKAGE_NAME,
                     )
 
-                    if result.returncode == 0:
+                    if returncode == 0:
                         msg = f"Updated to {latest_version}! Restart tunacode to use it."
                         app.chat_container.write(msg)
                     else:
-                        app.chat_container.write(f"Update failed: {result.stderr.strip()}")
+                        app.chat_container.write(f"Update failed: {stderr}")
                 except Exception as e:
                     app.chat_container.write(f"Error: {e}")
 
