@@ -148,7 +148,7 @@ If you suspect a prompt-related issue:
 |-----------|------|
 | System prompt | `src/tunacode/prompts/system_prompt.md` |
 | Tool prompts | `src/tunacode/tools/prompts/{tool}_prompt.xml` |
-| Context file | `AGENTS.md` (configurable via `guide_file` setting) |
+| Context file | `AGENTS.md` (industry standard) |
 
 ## Implementation Notes
 

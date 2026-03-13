@@ -5,7 +5,7 @@ Default configuration values for the TunaCode CLI.
 Provides sensible defaults for user configuration and environment variables.
 """
 
-from tunacode.constants import ENV_OPENAI_BASE_URL, GUIDE_FILE_NAME
+from tunacode.constants import ENV_OPENAI_BASE_URL
 from tunacode.types import UserConfig
 
 DEFAULT_USER_CONFIG: UserConfig = {
@@ -25,7 +25,6 @@ DEFAULT_USER_CONFIG: UserConfig = {
         "max_iterations": 40,
         "request_delay": 0.0,
         "global_request_timeout": 600.0,
-        "guide_file": GUIDE_FILE_NAME,
         "theme": "dracula",
         "stream_agent_text": False,
         "ripgrep": {
