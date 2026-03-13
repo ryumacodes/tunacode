@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.91] - 2026-03-13
+
+### Changed
+- Hardcoded `AGENTS.md` as the guide file path and removed guide-file configurability.
+- Cleaned up obsolete docs and removed the unused `memory-bank/` directory.
+
+### Fixed
+- Retried `/update` installs against the active Python interpreter when `uv tool upgrade` cannot locate the current install.
+- Added regression coverage for the `uv tool` update fallback flow.
+
 ## [0.1.90] - 2026-03-09
 
 ### Changed
