@@ -80,11 +80,21 @@ def mock_app() -> App:
             "get_selection raises",
         ),
         (
-            [MockWidget(text_selection=SimpleNamespace(), get_selection_result=None)],
+            [
+                MockWidget(
+                    text_selection=SimpleNamespace(),
+                    get_selection_result=None,
+                )
+            ],
             "empty result",
         ),
         (
-            [MockWidget(text_selection=SimpleNamespace(), get_selection_result=("   ", None))],
+            [
+                MockWidget(
+                    text_selection=SimpleNamespace(),
+                    get_selection_result=("", None),
+                )
+            ],
             "empty text",
         ),
     ],
@@ -182,6 +192,25 @@ def test_copy_selection_to_clipboard_preview_shortening(mock_app: MagicMock) -> 
         assert len(notification_call[0][0]) < len(long_text) + 30
 
 
+@patch("tunacode.ui.clipboard._copy_to_clipboard")
+def test_copy_selection_to_clipboard_preserves_whitespace_only_selection(
+    mock_copy_to_clipboard: MagicMock, mock_app: MagicMock
+) -> None:
+    widget = MockWidget(text_selection=SimpleNamespace(), get_selection_result=("   ", None))
+    mock_app.query.return_value = [widget]
+
+    result = copy_selection_to_clipboard(mock_app)
+
+    assert result == "   "
+    mock_copy_to_clipboard.assert_called_once_with("   ")
+    mock_app.notify.assert_called_once_with(
+        '"   " copied to clipboard',
+        severity="information",
+        timeout=2,
+        markup=False,
+    )
+
+
 def test_copy_to_clipboard_stops_after_verified_copy() -> None:
     mock_first = MagicMock()
     mock_second = MagicMock()
@@ -203,6 +232,7 @@ def test_copy_to_clipboard_tries_all_when_verify_fails() -> None:
     with (
         patch("tunacode.ui.clipboard._COPY_METHODS", [mock_first, mock_second]),
         patch("tunacode.ui.clipboard._read_clipboard", return_value=None),
+        pytest.raises(RuntimeError, match="Clipboard copy could not be verified"),
     ):
         _copy_to_clipboard("hello")
 
