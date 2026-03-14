@@ -71,7 +71,9 @@ def show_welcome(log: WriteableLog) -> None:
     welcome.append("   !<cmd>", style=STYLE_PRIMARY)
     welcome.append("      - Run shell commands\n")
     welcome.append("   /thoughts", style=STYLE_PRIMARY)
-    welcome.append("   - Toggle model thinking panel\n\n")
+    welcome.append("   - Toggle model thinking panel\n")
+    welcome.append("   ctrl+y", style=STYLE_PRIMARY)
+    welcome.append("      - Copy selected text\n\n")
     welcome.append(SECTION_DIVIDER, style=STYLE_MUTED)
 
     # Slopgotchi

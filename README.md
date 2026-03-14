@@ -21,7 +21,7 @@ A terminal-based AI coding agent with a NeXTSTEP-inspired interface.
 - **Session persistence** - Resume previous conversations with `/resume`
 - **LSP diagnostics** - Real-time code errors after file writes (Python, TypeScript, Go, Rust)
 - **Themeable UI** - CSS-based theming with NeXTSTEP-inspired design
-- **Text selection** - Mouse selection works across Rich-rendered chat content
+- **Text selection + clipboard copy** - Mouse selection works across Rich-rendered chat content; copy with `ctrl+y` or `ctrl+shift+c`
 - **Agent loop** - Powered by [tinyAgent](https://github.com/alchemiststudiosDOTai/tinyAgent)
 
 ## Built With
