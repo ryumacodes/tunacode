@@ -21,7 +21,7 @@ The Textual-based terminal user interface for TunaCode. Handles all user interac
 | File | Purpose |
 |------|---------|
 | `main.py` | CLI entry point using typer. Handles `--setup`, `--model`, `--baseurl` flags, headless mode (`tunacode run`), and launches the TUI. |
-| `app.py` | `TextualReplApp` — the main Textual application. Manages request queue, streaming callbacks, tool result display, ESC handler, and composes all widgets. |
+| `app.py` | `TextualReplApp` — the main Textual application. Manages request queue, streaming callbacks, tool result display, ESC handler, clipboard copy shortcuts, and composes all widgets. |
 
 ### REPL Support & Callbacks
 
@@ -105,6 +105,7 @@ This contract is enforced in `tests/unit/ui/test_command_contracts.py`.
 | File | Purpose |
 |------|---------|
 | `model_display.py` | Model name formatting for the resource bar (truncates long model IDs). |
+| `clipboard.py` | Clipboard copy helpers for selected Textual widgets. Tries OSC 52, `pyperclip`, and platform clipboard commands with verification reads when possible. |
 | `styles.py` | Color constants for UI components (`STYLE_PRIMARY`, `STYLE_WARNING`, etc.). |
 | `welcome.py` | Welcome message rendered on fresh REPL start. |
 | `headless/output.py` | Headless mode output resolution from agent responses. |
@@ -275,6 +276,7 @@ The UI layer follows **NeXTSTEP User Interface Guidelines** (see `.claude/skills
 - Chat messages and tool panels include Rich renderables, not just plain text widgets.
 - `SelectableRichVisual` injects offset metadata that Textual's selection requires but doesn't provide by default.
 - `CopyOnSelectStatic.get_selection()` extracts text from rendered strips so selections still work.
+- `TextualReplApp` binds `ctrl+y` and `ctrl+shift+c` to `copy_selection_to_clipboard()`, which mirrors the current selection into the system clipboard via OSC 52, `pyperclip`, or platform-native commands.
 
 **Why separate renderers per tool?**
 - Generic panels are functional but lack tool-specific formatting.

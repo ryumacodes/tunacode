@@ -134,7 +134,6 @@ class Editor(Input):
         is_long_single_line = len(event.text) >= self.PASTE_BUFFER_LONG_LINE_THRESHOLD
 
         if not is_multiline and not is_long_single_line:
-            super()._on_paste(event)
             return
 
         self._was_pasted = True
@@ -144,6 +143,7 @@ class Editor(Input):
         if paste_summary := self.paste_summary:
             self.placeholder = paste_summary
 
+        event.prevent_default()
         event.stop()
 
     def watch_value(self, value: str) -> None:
