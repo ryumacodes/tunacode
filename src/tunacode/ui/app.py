@@ -154,7 +154,7 @@ class TextualReplApp(App[None]):
         self.resource_bar = ResourceBar()
         self.chat_container = ChatContainer(id="chat-container", auto_scroll=True)
         self.streaming_output = Static("", id="streaming-output")
-        self.streaming = StreamingHandler(self.streaming_output)
+        self.streaming = StreamingHandler(self.streaming_output, self.STREAM_THROTTLE_MS)
         self.loading_indicator = LoadingIndicator()
         self.editor = Editor()
         yield self.resource_bar
