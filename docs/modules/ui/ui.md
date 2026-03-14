@@ -21,7 +21,8 @@ The Textual-based terminal user interface for TunaCode. Handles all user interac
 | File | Purpose |
 |------|---------|
 | `main.py` | CLI entry point using typer. Handles `--setup`, `--model`, `--baseurl` flags, headless mode (`tunacode run`), and launches the TUI. |
-| `app.py` | `TextualReplApp` — the main Textual application. Manages request queue, streaming callbacks, tool result display, ESC handler, and composes all widgets. |
+| `app.py` | `TextualReplApp` — the main Textual application. Manages request queue, tool result display, ESC handler, and composes all widgets. |
+| `streaming.py` | `StreamingHandler` — owns streaming state and throttled UI updates for the streaming output widget. |
 
 ### REPL Support & Callbacks
 
@@ -175,7 +176,7 @@ process_request(core.agents.main)
     |
     v
 Streaming events:
-    |-- message_update → _streaming_callback → streaming_output widget
+    |-- message_update → StreamingHandler.callback() → streaming_output widget
     |-- tool_execution_start → status bar "running: tool_name"
     |-- tool_execution_end → ToolResultDisplay → ChatContainer.write()
     |-- turn_end → update iteration count
