@@ -207,7 +207,6 @@ src/tunacode/
 │   │   └── status_bar.py
 │   ├── __init__.py
 │   ├── app.py
-│   ├── clipboard.py
 │   ├── context_panel.py
 │   ├── logo_assets.py
 │   ├── main.py

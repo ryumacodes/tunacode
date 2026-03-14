@@ -44,7 +44,7 @@ The Textual-based terminal user interface for TunaCode. Handles all user interac
 
 | File | Purpose |
 |------|---------|
-| `widgets/chat.py` | `ChatContainer` — scrollable chat history with insertion point tracking. `CopyOnSelectStatic` enables mouse selection copy. `SelectableRichVisual` injects offset metadata for selection. |
+| `widgets/chat.py` | `ChatContainer` — scrollable chat history with insertion point tracking. `CopyOnSelectStatic` preserves mouse selection for Rich renderables. `SelectableRichVisual` injects offset metadata for selection. |
 | `widgets/editor.py` | `Editor` — enhanced single-line input with Enter-submit, bash-mode (`!` prefix), paste buffer for multiline input, and custom rendering. |
 | `widgets/resource_bar.py` | Top status bar displaying token usage percentage, model name, session cost, LSP server status, and compaction activity. |
 | `widgets/status_bar.py` | Bottom status bar with 3 zones: git branch/location (left), edited files (mid), last action (right). |
@@ -104,7 +104,6 @@ This contract is enforced in `tests/unit/ui/test_command_contracts.py`.
 
 | File | Purpose |
 |------|---------|
-| `clipboard.py` | System clipboard integration for copying selected text. |
 | `model_display.py` | Model name formatting for the resource bar (truncates long model IDs). |
 | `styles.py` | Color constants for UI components (`STYLE_PRIMARY`, `STYLE_WARNING`, etc.). |
 | `welcome.py` | Welcome message rendered on fresh REPL start. |
@@ -230,7 +229,7 @@ ChatContainer.write(content, panel_meta=meta)
 CopyOnSelectStatic widget
     |-- Applies CSS classes from PanelMeta
     |-- Sets border_title/border_subtitle
-    |-- Enables mouse selection copy
+    |-- Preserves mouse selection for Rich renderables
 ```
 
 ### Panel Rendering (NeXTSTEP Style)
@@ -272,10 +271,10 @@ The UI layer follows **NeXTSTEP User Interface Guidelines** (see `.claude/skills
 - Textual re-rendering is expensive. Updating on every chunk causes UI lag.
 - `STREAM_THROTTLE_MS = 100ms` batches updates while maintaining perceived responsiveness.
 
-**Why mouse selection copy integration?**
-- Terminal users expect text selection to copy without keyboard shortcuts.
+**Why Rich-selection support?**
+- Chat messages and tool panels include Rich renderables, not just plain text widgets.
 - `SelectableRichVisual` injects offset metadata that Textual's selection requires but doesn't provide by default.
-- `CopyOnSelectStatic.selection_updated()` debounces and copies on mouse release.
+- `CopyOnSelectStatic.get_selection()` extracts text from rendered strips so selections still work.
 
 **Why separate renderers per tool?**
 - Generic panels are functional but lack tool-specific formatting.

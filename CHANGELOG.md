@@ -293,7 +293,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Core Agent**: Migrated from pydantic-ai to [tinyagent](https://github.com/alchemiststudios.ai/tinyAgent) as the core agent loop
-- **Text Selection**: Copy-on-select functionality - automatically copies highlighted text to clipboard on mouse release
+- **Text Selection**: Added Rich-renderable mouse selection support in chat panels
 - **Visual Styling**: SelectableRichVisual for text selection in Rich renderables
 - **CSS-Based Theming**: Textual CSS styling system with 5 stylesheet files (panels, theme-nextstep, layout, widgets, modals)
 - **NeXTSTEP Theme**: 3D bevel borders with light top/left and dark bottom/right for raised effect

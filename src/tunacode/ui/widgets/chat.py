@@ -1,9 +1,8 @@
 """Chat container widget with insertion tracking for tool panels.
 
 This widget provides a scrollable chat history with the ability to insert
-widgets at tracked positions.  Child messages use CopyOnSelectStatic so
-that highlighting text with the mouse copies it to the system clipboard
-automatically (no keystrokes required).
+widgets at tracked positions. Child messages use CopyOnSelectStatic so
+Rich renderables remain mouse-selectable inside the chat history.
 """
 
 from __future__ import annotations
@@ -22,12 +21,9 @@ from textual.geometry import Region, Size
 from textual.selection import Selection
 from textual.strip import Strip
 from textual.style import Style
-from textual.timer import Timer
 from textual.visual import RichVisual, Visual, visualize
 from textual.widget import Widget
 from textual.widgets import Static
-
-from tunacode.ui.clipboard import copy_to_clipboard
 
 
 class SelectableRichVisual(RichVisual):
@@ -158,11 +154,6 @@ class PanelMeta:
     border_subtitle: str = ""
 
 
-# Delay after the last selection change before we copy (milliseconds).
-# Prevents copying on every intermediate drag event; fires once the
-# mouse stops / is released.
-_COPY_DEBOUNCE_MS = 0.15
-
 _DETACHED_WRITE_WARNING = (
     "ChatContainer.write() skipped mount because container is detached; returning unmounted widget."
 )
@@ -191,17 +182,13 @@ def _coerce_panel_renderable(
 
 
 class CopyOnSelectStatic(Static):
-    """Static widget that copies highlighted text to the clipboard on mouse release.
+    """Static widget that supports mouse selection for Rich renderables.
 
     Overrides ``_render`` to swap RichVisual for SelectableRichVisual (which
     injects offset metadata so Textual's selection can map mouse coordinates
-    to text positions).  Also overrides ``get_selection`` so text can be
+    to text positions). Also overrides ``get_selection`` so text can be
     extracted from Rich renderables, not just Text/Content objects.
     """
-
-    def __init__(self, content: RenderableType = "") -> None:
-        super().__init__(content)
-        self._copy_timer: Timer | None = None
 
     def _render(self) -> Visual:
         """Promote RichVisual to SelectableRichVisual for offset metadata."""
@@ -232,38 +219,6 @@ class CopyOnSelectStatic(Static):
             text = "\n".join(strip.text for strip in strips)
             return selection.extract(text), "\n"
         return super().get_selection(selection)
-
-    def selection_updated(self, selection: Selection | None) -> None:
-        """Called by Textual when the mouse selection changes on this widget."""
-        super().selection_updated(selection)
-        if self._copy_timer is not None:
-            self._copy_timer.stop()
-            self._copy_timer = None
-        if selection is None:
-            return
-        self._copy_timer = self.set_timer(_COPY_DEBOUNCE_MS, self._copy_current_selection)
-
-    def _copy_current_selection(self) -> None:
-        """Extract the current selection text and copy it to the clipboard."""
-        self._copy_timer = None
-        selection = self.text_selection
-        if selection is None:
-            return
-        result = self.get_selection(selection)
-        if result is None:
-            return
-        text, _ending = result
-        if not text:
-            return
-
-        # Rich renderables frequently include trailing spaces to align columns.
-        # Those look like "blank space" junk when pasted elsewhere.
-        cleaned = "\n".join(line.rstrip() for line in text.splitlines()).strip("\n")
-        if not cleaned:
-            return
-
-        copy_to_clipboard(cleaned, app=self.app)
-        self.app.notify("Copied", timeout=1)
 
 
 class ChatContainer(VerticalScroll):
