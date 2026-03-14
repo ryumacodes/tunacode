@@ -96,19 +96,21 @@ def _read_clipboard() -> str | None:
 
 
 def _copy_to_clipboard(text: str) -> None:
-    all_strategies_failed = True
+    any_strategy_succeeded = False
     for to_clipboard in _COPY_METHODS:
         try:
             to_clipboard(text)
         except Exception:
             pass
         else:
-            all_strategies_failed = False
+            any_strategy_succeeded = True
             if _read_clipboard() == text:
                 return
 
-    if all_strategies_failed:
+    if not any_strategy_succeeded:
         raise RuntimeError("All clipboard strategies failed")
+
+    raise RuntimeError("Clipboard copy could not be verified")
 
 
 def _shorten_preview(texts: list[str]) -> str:
@@ -136,7 +138,7 @@ def _get_selected_texts(app: App) -> list[str]:
             continue
 
         selected_text, _ = result
-        if selected_text.strip():
+        if selected_text:
             selected_texts.append(selected_text)
 
     return selected_texts
