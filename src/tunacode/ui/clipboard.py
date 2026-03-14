@@ -9,7 +9,14 @@ from collections.abc import Callable
 import pyperclip
 from textual.app import App
 
+from tunacode.core.logging import get_logger
+
 _PREVIEW_MAX_LENGTH = 40
+_logger = get_logger()
+
+
+def _callable_name(callback: Callable[..., object]) -> str:
+    return getattr(callback, "__name__", repr(callback))
 
 
 def _copy_osc52(text: str) -> None:
@@ -90,8 +97,11 @@ def _read_clipboard() -> str | None:
     for reader in _READ_CLIPBOARD_METHODS:
         try:
             return reader()
-        except Exception:
-            pass
+        except Exception as exc:
+            _logger.debug(
+                f"Clipboard read failed via {_callable_name(reader)}",
+                error=repr(exc),
+            )
     return None
 
 
@@ -100,12 +110,23 @@ def _copy_to_clipboard(text: str) -> None:
     for to_clipboard in _COPY_METHODS:
         try:
             to_clipboard(text)
-        except Exception:
-            pass
-        else:
-            any_strategy_succeeded = True
-            if _read_clipboard() == text:
-                return
+        except Exception as exc:
+            _logger.debug(
+                f"Clipboard copy failed via {_callable_name(to_clipboard)}",
+                error=repr(exc),
+            )
+            continue
+
+        any_strategy_succeeded = True
+        copied_text = _read_clipboard()
+        if copied_text is None or copied_text == text:
+            return
+
+        _logger.debug(
+            f"Clipboard verification mismatch via {_callable_name(to_clipboard)}",
+            expected_length=len(text),
+            actual_length=len(copied_text),
+        )
 
     if not any_strategy_succeeded:
         raise RuntimeError("All clipboard strategies failed")
@@ -131,7 +152,11 @@ def _get_selected_texts(app: App) -> list[str]:
 
         try:
             result = widget.get_selection(selection)
-        except Exception:  # nosec B112 - selection should skip incompatible widgets
+        except Exception as exc:  # nosec B112 - selection copy should remain best-effort
+            _logger.debug(
+                f"Clipboard selection extraction failed for {type(widget).__name__}",
+                error=repr(exc),
+            )
             continue
 
         if not result:
