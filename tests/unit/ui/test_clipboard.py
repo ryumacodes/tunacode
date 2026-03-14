@@ -225,14 +225,27 @@ def test_copy_to_clipboard_stops_after_verified_copy() -> None:
     mock_second.assert_not_called()
 
 
-def test_copy_to_clipboard_tries_all_when_verify_fails() -> None:
+def test_copy_to_clipboard_succeeds_when_verification_is_unavailable() -> None:
     mock_first = MagicMock()
     mock_second = MagicMock()
 
     with (
         patch("tunacode.ui.clipboard._COPY_METHODS", [mock_first, mock_second]),
         patch("tunacode.ui.clipboard._read_clipboard", return_value=None),
-        pytest.raises(RuntimeError, match="Clipboard copy could not be verified"),
+    ):
+        _copy_to_clipboard("hello")
+
+    mock_first.assert_called_once_with("hello")
+    mock_second.assert_not_called()
+
+
+def test_copy_to_clipboard_tries_next_strategy_when_verification_mismatches() -> None:
+    mock_first = MagicMock()
+    mock_second = MagicMock()
+
+    with (
+        patch("tunacode.ui.clipboard._COPY_METHODS", [mock_first, mock_second]),
+        patch("tunacode.ui.clipboard._read_clipboard", side_effect=["wrong", "hello"]),
     ):
         _copy_to_clipboard("hello")
 
