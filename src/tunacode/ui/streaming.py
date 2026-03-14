@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from textual.widgets import Static
 
-class StreamingHandler:
 
+class StreamingHandler:
     def __init__(self, output_widget: Static, throttle_ms: float) -> None:
         self._output = output_widget
         self._throttle_ms = throttle_ms
