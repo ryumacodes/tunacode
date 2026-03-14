@@ -44,6 +44,7 @@ from tunacode.core.ui_api.constants import (
 from tunacode.core.ui_api.messaging import estimate_messages_tokens
 from tunacode.core.ui_api.shared_types import ModelName
 
+from tunacode.ui.clipboard import copy_selection_to_clipboard
 from tunacode.ui.context_panel import (
     build_context_gauge,
     build_context_panel_widgets,
@@ -99,6 +100,8 @@ class TextualReplApp(App[None]):
     BINDINGS = [
         Binding("escape", "cancel_request", "Cancel", show=False, priority=True),
         Binding("ctrl+e", "toggle_context_panel", "Context", show=False, priority=True),
+        Binding("ctrl+y", "copy_selection", "Copy", show=False, priority=True),
+        Binding("ctrl+shift+c", "copy_selection", "Copy", show=False, priority=True),
     ]
 
     STREAM_THROTTLE_MS: float = 100.0
@@ -423,6 +426,9 @@ class TextualReplApp(App[None]):
             return
 
         self._set_context_panel_visibility(visible=should_show)
+
+    def action_copy_selection(self) -> None:
+        copy_selection_to_clipboard(self, show_toast=False)
 
     def on_resize(self, event: events.Resize) -> None:
         if not self._context_panel_visible:
