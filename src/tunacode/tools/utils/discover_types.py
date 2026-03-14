@@ -57,7 +57,8 @@ class DiscoveryReport:
         lines: list[str] = []
         lines.append(f"# Discovery: {self.query}")
         lines.append(self.summary)
-        lines.append(f"({self.total_files_scanned} scanned → {self.total_candidates} relevant)\n")
+        lines.append(f"({self.total_files_scanned} scanned → {self.total_candidates} relevant)")
+        lines.append(f"scanned: {self.total_files_scanned} | relevant: {self.total_candidates}\n")
 
         if self.file_tree:
             lines.append("```")

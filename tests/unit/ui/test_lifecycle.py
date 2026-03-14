@@ -32,6 +32,7 @@ def _build_app() -> SimpleNamespace:
         set_focus=lambda _target: None,
         run_worker=lambda _worker, **_kwargs: None,
         set_interval=lambda _interval, _callback: "timer",
+        call_after_refresh=lambda callback: callback(),
     )
 
 
@@ -72,3 +73,29 @@ def test_start_repl_does_not_write_ready_file_without_env_var(
     lifecycle._start_repl()
 
     assert not ready_file.exists()
+
+
+def test_start_repl_skips_slopgotchi_timer_when_ready_file_is_configured(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ready_file = tmp_path / "ready.txt"
+    logger = FakeLogger()
+    timer_started = False
+
+    def set_interval(_interval: float, _callback: object) -> str:
+        nonlocal timer_started
+        timer_started = True
+        return "timer"
+
+    app = _build_app()
+    app.set_interval = set_interval
+    monkeypatch.setenv(TEST_READY_FILE_ENV_VAR, str(ready_file))
+    monkeypatch.setattr("tunacode.core.logging.get_logger", lambda: logger)
+    monkeypatch.setattr("tunacode.ui.welcome.show_welcome", lambda _container: None)
+
+    lifecycle = AppLifecycle(app)
+    lifecycle._start_repl()
+
+    assert timer_started is False
+    assert app._slopgotchi_timer is None

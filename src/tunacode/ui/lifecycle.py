@@ -86,13 +86,18 @@ class AppLifecycle:
         app = self._app
         app.set_focus(app.editor)
         app.run_worker(app._request_worker, exclusive=False)
-        self._start_slopgotchi_timer()
+        if not self._is_tmux_test_mode():
+            self._start_slopgotchi_timer()
         app._update_resource_bar()
 
         from tunacode.ui.welcome import show_welcome
 
         show_welcome(app.chat_container)
-        self._emit_ready_file_if_configured()
+        app.call_after_refresh(self._emit_ready_file_if_configured)
+
+    def _is_tmux_test_mode(self) -> bool:
+        """Return True when startup is running under tmux E2E test orchestration."""
+        return bool(os.environ.get(TEST_READY_FILE_ENV_VAR))
 
     def _emit_ready_file_if_configured(self) -> None:
         """Write a test-only readiness marker after the REPL is fully initialized."""

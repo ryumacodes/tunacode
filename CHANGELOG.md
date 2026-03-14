@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.92] - 2026-03-14
+
+### Changed
+- Added clipboard copy support for selected UI text and extracted agent-text streaming into a dedicated UI module.
+
+
+### Fixed
+- Relaxed clipboard copy verification so successful copies no longer fail when verification is unavailable.
+- Stabilized tmux system tool coverage by making discover stats and skill-load confirmations explicit and by deflaking tmux wait logic around persistent evidence.
+
 ## [0.1.91] - 2026-03-13
 
 ### Changed

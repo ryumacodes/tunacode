@@ -289,17 +289,13 @@ class SkillsCommand(Command):
         content = Text()
 
         if status == "loaded":
-            content.append("▸ ", style=STYLE_SUCCESS)
+            content.append("Loaded skill: ", style=STYLE_SUCCESS)
             content.append(summary.name, style=f"bold {STYLE_PRIMARY}")
         else:
-            content.append("○ ", style=STYLE_MUTED)
+            content.append("Skill already loaded: ", style=STYLE_WARNING)
             content.append(summary.name, style=STYLE_PRIMARY)
 
         content.append(f" [{summary.source.value}]", style=f"dim {STYLE_MUTED}")
-
-        if status == "already-loaded":
-            content.append(" (already attached)", style=STYLE_WARNING)
-
         content.append(f"\n{summary.description}", style=f"dim {STYLE_MUTED}")
 
         return content

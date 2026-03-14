@@ -231,10 +231,10 @@ def wait_for_stable_capture(
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     initial_output: str | None = None,
 ) -> str:
-    """Poll until matching pane output stops changing across consecutive captures."""
+    """Poll until the matching pane evidence persists across consecutive captures."""
     deadline = time.monotonic() + timeout
     last_output = initial_output or session.capture()
-    stable_polls = 0
+    stable_polls = 1 if predicate(last_output) else 0
     while time.monotonic() < deadline:
         time.sleep(POLL_INTERVAL_SECONDS)
         output = session.capture()
@@ -242,13 +242,10 @@ def wait_for_stable_capture(
             last_output = output
             stable_polls = 0
             continue
-        if output == last_output:
-            stable_polls += 1
-            if stable_polls >= STABLE_CAPTURE_POLLS:
-                return output
-        else:
-            last_output = output
-            stable_polls = 0
+        last_output = output
+        stable_polls += 1
+        if stable_polls >= STABLE_CAPTURE_POLLS:
+            return output
     raise TimeoutError(
         f"Timed out after {timeout}s waiting for stable {description}.\n"
         f"Last capture:\n{last_output or session.capture()}"
