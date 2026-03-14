@@ -74,6 +74,7 @@ from tunacode.ui.slopgotchi import (
     SlopgotchiHandler,
     SlopgotchiPanelState,
 )
+from tunacode.ui.streaming import StreamingHandler
 from tunacode.ui.styles import STYLE_PRIMARY, STYLE_SUCCESS, STYLE_WARNING
 from tunacode.ui.widgets import (
     ChatContainer,
@@ -149,8 +150,6 @@ class TextualReplApp(App[None]):
         self._slopgotchi_handler: SlopgotchiHandler | None = None
         self._slopgotchi_timer: Timer | None = None
 
-        self._current_stream_text: str = ""
-        self._last_stream_update: float = 0.0
         self._current_thinking_text: str = ""
         self._last_thinking_update: float = 0.0
 
@@ -158,6 +157,7 @@ class TextualReplApp(App[None]):
         self.resource_bar = ResourceBar()
         self.chat_container = ChatContainer(id="chat-container", auto_scroll=True)
         self.streaming_output = Static("", id="streaming-output")
+        self.streaming = StreamingHandler(self.streaming_output, self.STREAM_THROTTLE_MS)
         self.loading_indicator = LoadingIndicator()
         self.editor = Editor()
         yield self.resource_bar
@@ -244,7 +244,7 @@ class TextualReplApp(App[None]):
         try:
             model_name = session.current_model or "openai/gpt-4o"
             should_stream_agent_text = self._should_stream_agent_text()
-            streaming_callback = self._streaming_callback if should_stream_agent_text else None
+            streaming_callback = self.streaming.callback if should_stream_agent_text else None
             self._current_request_task = asyncio.create_task(
                 process_request(
                     message=message,
@@ -270,10 +270,7 @@ class TextualReplApp(App[None]):
             self._loading_indicator_shown = False
             self.loading_indicator.remove_class("active")
             self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
-            self.streaming_output.update("")
-            self.streaming_output.remove_class("active")
-            self._current_stream_text = ""
-            self._last_stream_update = 0.0
+            self.streaming.reset()
             self._finalize_thinking_state_after_request()
             self._update_compaction_status(False)
             output_text = self._get_latest_response_text()
@@ -589,18 +586,6 @@ class TextualReplApp(App[None]):
         from tunacode.ui.thinking_state import thinking_callback
 
         await thinking_callback(self, delta)
-
-    async def _streaming_callback(self, chunk: str) -> None:
-        """Accumulate streaming chunks and throttle UI updates."""
-        self._current_stream_text += chunk
-        is_first_chunk = not self.streaming_output.has_class("active")
-        if is_first_chunk:
-            self.streaming_output.add_class("active")
-        now = time.monotonic()
-        elapsed_ms = (now - self._last_stream_update) * self.MILLISECONDS_PER_SECOND
-        if elapsed_ms >= self.STREAM_THROTTLE_MS or is_first_chunk:
-            self._last_stream_update = now
-            self.streaming_output.update(self._current_stream_text)
 
     def update_lsp_for_file(self, filepath: str) -> None:
         """Update ResourceBar LSP status based on file type."""
