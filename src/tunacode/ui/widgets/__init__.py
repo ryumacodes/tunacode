@@ -1,13 +1,26 @@
 """Textual widgets for TunaCode REPL."""
 
-from .chat import ChatContainer, PanelMeta  # noqa: F401
-from .command_autocomplete import CommandAutoComplete  # noqa: F401
-from .editor import Editor  # noqa: F401
-from .file_autocomplete import FileAutoComplete  # noqa: F401
-from .messages import (  # noqa: F401
-    EditorCompletionsAvailable,
-    EditorSubmitRequested,
-    ToolResultDisplay,
-)
-from .resource_bar import ResourceBar  # noqa: F401
-from .skills_autocomplete import SkillsAutoComplete  # noqa: F401
+from __future__ import annotations
+
+import importlib
+from typing import Any
+
+_WIDGET_EXPORTS = {
+    "ChatContainer": ".chat",
+    "PanelMeta": ".chat",
+    "CommandAutoComplete": ".command_autocomplete",
+    "Editor": ".editor",
+    "FileAutoComplete": ".file_autocomplete",
+    "EditorCompletionsAvailable": ".messages",
+    "EditorSubmitRequested": ".messages",
+    "ToolResultDisplay": ".messages",
+    "ResourceBar": ".resource_bar",
+    "SkillsAutoComplete": ".skills_autocomplete",
+}
+
+
+def __getattr__(name: str) -> Any:
+    module_name = _WIDGET_EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return getattr(importlib.import_module(module_name, __name__), name)

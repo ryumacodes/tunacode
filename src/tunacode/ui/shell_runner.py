@@ -15,8 +15,6 @@ from rich.console import RenderableType
 from rich.text import Text
 from textual.notifications import SeverityLevel
 
-from tunacode.ui.renderers.tools.bash import render_bash
-
 SHELL_COMMAND_TIMEOUT_SECONDS: float = 120.0
 SHELL_COMMAND_CANCEL_GRACE_SECONDS: float = 0.5
 SHELL_COMMAND_USAGE_TEXT = "Usage: !<command>"
@@ -143,6 +141,8 @@ class ShellRunner:
         max_line_width: int,
     ) -> RenderableType:
         """Format shell output as 4-zone NeXTSTEP panel via BashRenderer."""
+        from tunacode.ui.renderers.tools.bash import render_bash
+
         stdout_text = stdout if stdout else SHELL_OUTPUT_EMPTY
         stderr_text = stderr if stderr else SHELL_STDERR_EMPTY
 

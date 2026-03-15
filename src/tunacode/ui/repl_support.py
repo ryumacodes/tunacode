@@ -9,12 +9,11 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from rich.console import Console
 from rich.text import Text
 
-from tunacode.core.session import StateManager
 from tunacode.core.ui_api.constants import MAX_CALLBACK_CONTENT
 from tunacode.core.ui_api.shared_types import (
     StreamResultProtocol,
@@ -26,6 +25,9 @@ from tunacode.core.ui_api.shared_types import (
 )
 
 from tunacode.ui.widgets import ToolResultDisplay
+
+if TYPE_CHECKING:
+    from tunacode.core.session import StateManager
 
 COLLAPSE_THRESHOLD: int = 10
 

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from textual.widgets import Input
 from textual_autocomplete import AutoComplete, DropdownItem, DropdownItemHit, TargetState
 
-from tunacode.skills.registry import list_skill_summaries
-from tunacode.skills.search import filter_skill_summaries
+if TYPE_CHECKING:
+    from tunacode.skills.models import SkillSummary
 
 SKILLS_COMMAND_PREFIX = "/skills"
 SEARCH_SUBCOMMAND = "search"
@@ -26,6 +27,18 @@ class SkillsAutoComplete(AutoComplete):
 
     def __init__(self, target: Input) -> None:
         super().__init__(target)
+
+    def _list_skill_summaries(self) -> list[SkillSummary]:
+        from tunacode.skills.registry import list_skill_summaries
+
+        return list_skill_summaries()
+
+    def _filter_skill_summaries(
+        self, skill_summaries: list[SkillSummary], *, query: str
+    ) -> list[SkillSummary]:
+        from tunacode.skills.search import filter_skill_summaries
+
+        return filter_skill_summaries(skill_summaries, query=query)
 
     def get_search_string(self, target_state: TargetState) -> str:
         parsed_state = self._parse_skills_input(target_state)
@@ -101,7 +114,7 @@ class SkillsAutoComplete(AutoComplete):
         if parsed_state.mode == SEARCH_SUBCOMMAND:
             return any(
                 skill_summary.name.casefold() == normalized_search
-                for skill_summary in list_skill_summaries()
+                for skill_summary in self._list_skill_summaries()
             )
 
         if normalized_search in ROOT_SUBCOMMANDS:
@@ -109,7 +122,7 @@ class SkillsAutoComplete(AutoComplete):
 
         return any(
             skill_summary.name.casefold() == normalized_search
-            for skill_summary in list_skill_summaries()
+            for skill_summary in self._list_skill_summaries()
         )
 
     def _subcommand_candidates(self, search: str) -> list[DropdownItem]:
@@ -122,8 +135,8 @@ class SkillsAutoComplete(AutoComplete):
         return [DropdownItem(main=subcommand) for subcommand in matching_subcommands]
 
     def _skill_candidates(self, search: str) -> list[DropdownItem]:
-        skill_summaries = list_skill_summaries()
-        matching_summaries = filter_skill_summaries(skill_summaries, query=search)
+        skill_summaries = self._list_skill_summaries()
+        matching_summaries = self._filter_skill_summaries(skill_summaries, query=search)
         return [DropdownItem(main=skill_summary.name) for skill_summary in matching_summaries]
 
     def get_matches(

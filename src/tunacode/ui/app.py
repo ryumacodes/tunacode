@@ -9,7 +9,6 @@ import time
 from typing import TYPE_CHECKING, Never
 
 from rich.console import RenderableType
-from rich.markdown import Markdown
 from rich.text import Text
 from textual import events
 from textual.app import App, ComposeResult
@@ -17,19 +16,14 @@ from textual.binding import Binding
 from textual.containers import Container
 from textual.timer import Timer
 from textual.widgets import LoadingIndicator, Static
-from tinyagent.agent_types import AssistantMessage, TextContent, UserMessage
 
 if TYPE_CHECKING:
     from textual.theme import Theme
 
+    from tunacode.core.session import StateManager
     from tunacode.ui.lifecycle import AppLifecycle
+    from tunacode.ui.shell_runner import ShellRunner
 
-from tunacode.skills.selection import resolve_selected_skill_summaries
-
-from tunacode.core.agents.main import process_request
-from tunacode.core.debug import log_resource_bar_update
-from tunacode.core.logging import get_logger
-from tunacode.core.session import StateManager
 from tunacode.core.ui_api.constants import (
     MIN_TOOL_PANEL_LINE_WIDTH,
     RESOURCE_BAR_COST_FORMAT,
@@ -41,10 +35,6 @@ from tunacode.core.ui_api.constants import (
     build_tunacode_theme,
     wrap_builtin_themes,
 )
-from tunacode.core.ui_api.messaging import estimate_messages_tokens
-from tunacode.core.ui_api.shared_types import ModelName
-
-from tunacode.ui.clipboard import copy_selection_to_clipboard
 from tunacode.ui.context_panel import (
     build_context_gauge,
     build_context_panel_widgets,
@@ -55,9 +45,6 @@ from tunacode.ui.context_panel import (
     token_remaining_pct,
 )
 from tunacode.ui.esc.handler import EscHandler
-from tunacode.ui.model_display import format_model_for_display
-from tunacode.ui.renderers.errors import render_exception
-from tunacode.ui.renderers.panels import tool_panel_smart
 from tunacode.ui.renderers.thinking import (
     DEFAULT_THINKING_MAX_CHARS,
     DEFAULT_THINKING_MAX_LINES,
@@ -69,7 +56,6 @@ from tunacode.ui.repl_support import (
     format_user_message,
     normalize_agent_message_text,
 )
-from tunacode.ui.shell_runner import ShellRunner
 from tunacode.ui.slopgotchi import (
     SlopgotchiHandler,
     SlopgotchiPanelState,
@@ -86,6 +72,13 @@ from tunacode.ui.widgets import (
     SkillsAutoComplete,
     ToolResultDisplay,
 )
+
+
+def copy_selection_to_clipboard(app: App[None], show_toast: bool = True) -> str | None:
+    """Lazily import clipboard helpers to avoid startup cost on launch."""
+    from tunacode.ui.clipboard import copy_selection_to_clipboard as _copy_selection_to_clipboard
+
+    return _copy_selection_to_clipboard(app, show_toast=show_toast)
 
 
 class TextualReplApp(App[None]):
@@ -132,7 +125,7 @@ class TextualReplApp(App[None]):
         self._loading_indicator_shown: bool = False
         self._request_start_time: float = 0.0
         self._esc_handler: EscHandler = EscHandler()
-        self.shell_runner = ShellRunner(self)
+        self._shell_runner: ShellRunner | None = None
         self.chat_container: ChatContainer
         self.editor: Editor
         self.resource_bar: ResourceBar
@@ -195,6 +188,16 @@ class TextualReplApp(App[None]):
             if theme_name in self.available_themes
         }
 
+    @property
+    def shell_runner(self) -> ShellRunner:
+        shell_runner = self._shell_runner
+        if shell_runner is None:
+            from tunacode.ui.shell_runner import ShellRunner
+
+            shell_runner = ShellRunner(self)
+            self._shell_runner = shell_runner
+        return shell_runner
+
     def on_mount(self) -> None:
         from tunacode.ui.lifecycle import AppLifecycle
 
@@ -214,6 +217,8 @@ class TextualReplApp(App[None]):
             try:
                 await self._process_request(request)
             except Exception as e:
+                from tunacode.ui.renderers.errors import render_exception
+
                 content, meta = render_exception(e)
                 self.chat_container.write(content, panel_meta=meta)
             finally:
@@ -245,6 +250,9 @@ class TextualReplApp(App[None]):
             model_name = session.current_model or "openai/gpt-4o"
             should_stream_agent_text = self._should_stream_agent_text()
             streaming_callback = self.streaming.callback if should_stream_agent_text else None
+            from tunacode.core.agents.main import process_request
+            from tunacode.core.ui_api.shared_types import ModelName
+
             self._current_request_task = asyncio.create_task(
                 process_request(
                     message=message,
@@ -263,6 +271,8 @@ class TextualReplApp(App[None]):
         except asyncio.CancelledError:
             self.notify("Cancelled")
         except Exception as e:
+            from tunacode.ui.renderers.errors import render_exception
+
             content, meta = render_exception(e)
             self.chat_container.write(content, panel_meta=meta)
         finally:
@@ -295,6 +305,8 @@ class TextualReplApp(App[None]):
             await self.state_manager.save_session()
 
     def _get_latest_response_text(self) -> str | None:
+        from tinyagent.agent_types import AssistantMessage, TextContent
+
         messages = self.state_manager.session.conversation.messages
         for message in reversed(messages):
             if not isinstance(message, AssistantMessage):
@@ -334,6 +346,8 @@ class TextualReplApp(App[None]):
         self.chat_container.write(user_block).add_class("user-message")
 
     def on_tool_result_display(self, message: ToolResultDisplay) -> None:
+        from tunacode.ui.renderers.panels import tool_panel_smart
+
         max_line_width = self.tool_panel_max_width()
         content, panel_meta = tool_panel_smart(
             name=message.tool_name,
@@ -378,6 +392,9 @@ class TextualReplApp(App[None]):
 
     def _replay_session_messages(self) -> None:
         """Render loaded session messages to ChatContainer."""
+        from rich.markdown import Markdown
+        from tinyagent.agent_types import AssistantMessage, UserMessage
+
         from tunacode.core.ui_api.messaging import get_content
 
         conversation = self.state_manager.session.conversation
@@ -444,10 +461,9 @@ class TextualReplApp(App[None]):
         """Cancel the current request or shell command."""
         esc_handler = self._esc_handler
         current_request_task = self._current_request_task
-        shell_runner = getattr(self, "shell_runner", None)
         esc_handler.handle_escape(
             current_request_task=current_request_task,
-            shell_runner=shell_runner,
+            shell_runner=getattr(self, "_shell_runner", None),
         )
 
     def start_shell_command(self, raw_cmd: str) -> None:
@@ -474,11 +490,13 @@ class TextualReplApp(App[None]):
             or field_skills is None
         ):
             return
+        from tunacode.ui.model_display import format_model_for_display
+
         session = self.state_manager.session
         conversation = session.conversation
         raw_model = session.current_model or ""
         model_display = format_model_for_display(raw_model, max_length=30) if raw_model else "---"
-        estimated_tokens = estimate_messages_tokens(conversation.messages)
+        estimated_tokens = self._estimate_conversation_tokens(conversation.messages)
         max_tokens = conversation.max_tokens or self.DEFAULT_CONTEXT_MAX_TOKENS
         remaining_pct = token_remaining_pct(estimated_tokens, max_tokens)
         current_token_style = token_color(remaining_pct)
@@ -507,7 +525,17 @@ class TextualReplApp(App[None]):
         if handler is not None:
             handler._refresh()
 
+    def _estimate_conversation_tokens(self, messages: list[object]) -> int:
+        if not messages:
+            return 0
+
+        from tunacode.core.ui_api.messaging import estimate_messages_tokens
+
+        return estimate_messages_tokens(messages)
+
     def _build_skill_entries(self) -> list[tuple[str, str]]:
+        from tunacode.skills.selection import resolve_selected_skill_summaries
+
         skill_entries: list[tuple[str, str]] = []
         resolved_summaries = resolve_selected_skill_summaries(
             self.state_manager.session.selected_skill_names
@@ -539,10 +567,13 @@ class TextualReplApp(App[None]):
         self.resource_bar.update_compaction_status(active)
 
     def _update_resource_bar(self) -> None:
+        from tunacode.core.debug import log_resource_bar_update
+        from tunacode.core.logging import get_logger
+
         session = self.state_manager.session
         conversation = session.conversation
         # Use simplified token counter to estimate actual context window usage
-        estimated_tokens = estimate_messages_tokens(conversation.messages)
+        estimated_tokens = self._estimate_conversation_tokens(conversation.messages)
         model = session.current_model or "No model selected"
         max_tokens = conversation.max_tokens or self.DEFAULT_CONTEXT_MAX_TOKENS
         session_cost = session.usage.session_total_usage.cost.total
@@ -560,7 +591,8 @@ class TextualReplApp(App[None]):
             max_tokens=max_tokens,
             session_cost=session_cost,
         )
-        self._refresh_context_panel()
+        if self._context_panel_visible:
+            self._refresh_context_panel()
 
     def _hide_thinking_output(self) -> None:
         from tunacode.ui.thinking_state import hide_thinking_output

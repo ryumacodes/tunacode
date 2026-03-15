@@ -6,31 +6,28 @@ Handles user preferences, conversation history, and runtime state.
 CLAUDE_ANCHOR[state-module]: Central state management and session tracking
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import ValidationError
-from tinyagent.agent_types import (
-    AgentMessage,
-    AssistantMessage,
-    CustomAgentMessage,
-    ToolResultMessage,
-    UserMessage,
-)
 
 from tunacode.configuration.defaults import DEFAULT_USER_CONFIG
 from tunacode.types import InputSessions, ModelName, SessionId, UserConfig
 from tunacode.types.canonical import UsageMetrics
 
-from tunacode.core.compaction.types import CompactionRecord
 from tunacode.core.types import ConversationState, RuntimeState, TaskState, UsageState
 
-_AGENT_MESSAGE_TYPES = UserMessage, AssistantMessage, ToolResultMessage, CustomAgentMessage
+if TYPE_CHECKING:
+    from tinyagent.agent_types import AgentMessage
+
+    from tunacode.core.compaction.types import CompactionRecord
 
 
 @dataclass
@@ -74,6 +71,17 @@ class SessionState:
     # Streaming debug instrumentation (see core/agents/agent_components/streaming.py)
     _debug_events: list[str] = field(default_factory=list)
     _debug_raw_stream_accum: str = ""
+
+
+def _agent_message_types() -> tuple[type[object], ...]:
+    from tinyagent.agent_types import (
+        AssistantMessage,
+        CustomAgentMessage,
+        ToolResultMessage,
+        UserMessage,
+    )
+
+    return (UserMessage, AssistantMessage, ToolResultMessage, CustomAgentMessage)
 
 
 class StateManager:
@@ -173,16 +181,21 @@ class StateManager:
     def _serialize_messages(self) -> list[dict[str, Any]]:
         """Serialize in-memory tinyagent message models to JSON dictionaries."""
 
+        messages = self._session.conversation.messages
+        if not messages:
+            return []
+
         serialized_messages: list[dict[str, Any]] = []
-        for idx, message in enumerate(self._session.conversation.messages):
-            if not isinstance(message, _AGENT_MESSAGE_TYPES):
+        agent_message_types = _agent_message_types()
+        for idx, message in enumerate(messages):
+            if not isinstance(message, agent_message_types):
                 message_type = type(message).__name__
                 raise TypeError(
                     "Session messages must be tinyagent message models; "
                     f"found {message_type} at index {idx}"
                 )
 
-            serialized_message = message.model_dump(exclude_none=True)
+            serialized_message = cast(Any, message).model_dump(exclude_none=True)
             if not isinstance(serialized_message, dict):
                 raise TypeError(
                     "Session message model_dump(exclude_none=True) must return dict; "
@@ -194,6 +207,13 @@ class StateManager:
         return serialized_messages
 
     def _deserialize_message(self, raw_message: Any, *, index: int) -> AgentMessage:
+        from tinyagent.agent_types import (
+            AssistantMessage,
+            CustomAgentMessage,
+            ToolResultMessage,
+            UserMessage,
+        )
+
         if not isinstance(raw_message, dict):
             raise TypeError(
                 "Session messages must be tinyagent JSON objects; "
@@ -240,6 +260,8 @@ class StateManager:
         return record.to_dict()
 
     def _deserialize_compaction(self, data: Any) -> CompactionRecord | None:
+        from tunacode.core.compaction.types import CompactionRecord
+
         if data is None:
             return None
 

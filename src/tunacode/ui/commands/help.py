@@ -20,14 +20,14 @@ class HelpCommand(Command):
     async def execute(self, app: TextualReplApp, args: str) -> None:
         from rich.table import Table
 
-        from tunacode.ui.commands import COMMANDS
+        from tunacode.ui.command_registry import COMMAND_DESCRIPTIONS
 
         table = Table(title="Commands", show_header=True)
         table.add_column("Command", style=STYLE_PRIMARY)
         table.add_column("Description")
 
-        for name, cmd in COMMANDS.items():
-            table.add_row(f"/{name}", cmd.description)
+        for name, description in COMMAND_DESCRIPTIONS.items():
+            table.add_row(f"/{name}", description)
 
         table.add_row("!<cmd>", "Run shell command")
         table.add_row("exit", "Exit TunaCode (legacy bare command)")

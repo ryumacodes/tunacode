@@ -5,16 +5,14 @@ from __future__ import annotations
 from textual.widgets import Input
 from textual_autocomplete import AutoComplete, DropdownItem, TargetState
 
-from tunacode.ui.commands import COMMANDS
+from tunacode.ui.command_registry import COMMAND_DESCRIPTIONS
 
 COMMAND_PREFIX = "/"
 COMMAND_ARGUMENT_SEPARATOR = " "
 COMMAND_DESCRIPTION_SEPARATOR = " - "
 
 # Pre-compute sorted command items at module load.
-_COMMAND_ITEMS: list[tuple[str, str]] = sorted(
-    [(name, cmd.description) for name, cmd in COMMANDS.items()]
-)
+_COMMAND_ITEMS: list[tuple[str, str]] = sorted(COMMAND_DESCRIPTIONS.items())
 
 
 def _get_command_search_prefix(text: str, cursor_position: int) -> str | None:
@@ -34,7 +32,7 @@ def _is_exact_command_match(command_prefix: str) -> bool:
     if not command_prefix:
         return False
 
-    return command_prefix.lower() in COMMANDS
+    return command_prefix.lower() in COMMAND_DESCRIPTIONS
 
 
 class CommandAutoComplete(AutoComplete):

@@ -1,18 +1,30 @@
 """Rich content renderers for Textual TUI."""
 
-from .errors import render_exception, render_tool_error, render_user_abort  # noqa: F401
-from .panels import (  # noqa: F401
-    ErrorDisplayData,
-    RichPanelRenderer,
-    SearchResultData,
-    ToolDisplayData,
-    error_panel,
-    search_panel,
-    tool_panel,
-    tool_panel_smart,
-)
-from .search import (  # noqa: F401
-    CodeSearchResult,
-    FileSearchResult,
-    SearchDisplayRenderer,
-)
+from __future__ import annotations
+
+import importlib
+from typing import Any
+
+_RENDERER_EXPORTS = {
+    "render_exception": ".errors",
+    "render_tool_error": ".errors",
+    "render_user_abort": ".errors",
+    "ErrorDisplayData": ".panels",
+    "RichPanelRenderer": ".panels",
+    "SearchResultData": ".panels",
+    "ToolDisplayData": ".panels",
+    "error_panel": ".panels",
+    "search_panel": ".panels",
+    "tool_panel": ".panels",
+    "tool_panel_smart": ".panels",
+    "CodeSearchResult": ".search",
+    "FileSearchResult": ".search",
+    "SearchDisplayRenderer": ".search",
+}
+
+
+def __getattr__(name: str) -> Any:
+    module_name = _RENDERER_EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return getattr(importlib.import_module(module_name, __name__), name)

@@ -3,15 +3,31 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from tinyagent.agent_types import AgentMessage
+if TYPE_CHECKING:
+    from tinyagent.agent_types import AgentMessage
 
-from tunacode.types.canonical import UsageMetrics
+    from tunacode.types.canonical import UsageMetrics
 
-from tunacode.core.types.tool_registry import ToolCallRegistry
+    from tunacode.core.types.tool_registry import ToolCallRegistry
 
-MessageHistory = list[AgentMessage]
+    MessageHistory = list[AgentMessage]
+else:
+    MessageHistory = list[Any]
+
+
+def _build_tool_call_registry() -> ToolCallRegistry:
+    from tunacode.core.types.tool_registry import ToolCallRegistry
+
+    return ToolCallRegistry()
+
+
+def _build_usage_metrics() -> UsageMetrics:
+    from tunacode.types.canonical import UsageMetrics
+
+    return UsageMetrics()
+
 
 DEFAULT_BATCH_COUNTER = 0
 DEFAULT_CONSECUTIVE_EMPTY_RESPONSES = 0
@@ -50,7 +66,7 @@ class RuntimeState:
     request_id: str = DEFAULT_REQUEST_ID
     consecutive_empty_responses: int = DEFAULT_CONSECUTIVE_EMPTY_RESPONSES
     batch_counter: int = DEFAULT_BATCH_COUNTER
-    tool_registry: ToolCallRegistry = field(default_factory=ToolCallRegistry)
+    tool_registry: ToolCallRegistry = field(default_factory=_build_tool_call_registry)
     operation_cancelled: bool = False
     is_streaming_active: bool = False
     streaming_panel: Any | None = None
@@ -60,5 +76,5 @@ class RuntimeState:
 class UsageState:
     """Usage metrics for last call and cumulative session totals."""
 
-    last_call_usage: UsageMetrics = field(default_factory=UsageMetrics)
-    session_total_usage: UsageMetrics = field(default_factory=UsageMetrics)
+    last_call_usage: UsageMetrics = field(default_factory=_build_usage_metrics)
+    session_total_usage: UsageMetrics = field(default_factory=_build_usage_metrics)
