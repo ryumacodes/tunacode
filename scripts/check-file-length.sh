@@ -17,23 +17,14 @@ is_binary_file() {
 }
 should_skip_file() {
     local file="$1"
-    # Skip glob.py and grep.py as they contain necessary prompt injection implementation
     # Skip main.py in agents dir as it was recently refactored
     # Skip prompt files as they can be lengthy for comprehensive system instructions
-    # Skip app.tcss and code_index.py pending refactor (see issue #155)
-    # Skip test_tool_call_lifecycle.py as it contains comprehensive integration tests (issue #259)
     # Skip sanitize.py as it contains complex session resume sanitization logic
     # Paths can be passed as src/... or ./src/... depending on caller.
-    [[ "$file" == *"src/tunacode/tools/glob.py" ]] || \
-    [[ "$file" == *"src/tunacode/tools/grep.py" ]] || \
     [[ "$file" == *"src/tunacode/core/agents/main.py" ]] || \
     [[ "$file" == *"src/tunacode/core/agents/resume/sanitize.py" ]] || \
     [[ "$file" == *"src/tunacode/prompts/"*".xml" ]] || \
-    [[ "$file" == *"src/tunacode/ui/app.py" ]] || \
-    [[ "$file" == *"src/tunacode/ui/app.tcss" ]] || \
-    [[ "$file" == *"src/tunacode/indexing/code_index.py" ]] || \
-    [[ "$file" == *"tests/test_tool_call_lifecycle.py" ]] || \
-    [[ "$file" == *"tests/integration/core/test_tool_call_lifecycle.py" ]]
+    [[ "$file" == *"src/tunacode/ui/app.py" ]]
 }
 check_file_length() {
     local file="$1"
