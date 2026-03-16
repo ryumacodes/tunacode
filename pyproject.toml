@@ -230,6 +230,13 @@ check_untyped_defs = true
 disallow_untyped_decorators = false
 no_implicit_optional = true
 
+[[tool.mypy.overrides]]
+module = ["tunacode.core.agents", "tunacode.core.agents.*"]
+warn_return_any = true
+disallow_any_expr = true
+disallow_any_explicit = true
+disallow_any_generics = true
+
 [tool.pylint.messages_control]
 # Enable duplicate code detection (R0801)
 enable = ["R0801"]
