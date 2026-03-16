@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.93] - 2026-03-16
+
+### Changed
+- Reduced TUI cold-start overhead by tightening command-registry and package import loading paths.
+- Cleaned up stale project artifacts by removing outdated `.claude/` and `.tickets/` repository files.
+
 ## [0.1.92] - 2026-03-14
 
 ### Changed
