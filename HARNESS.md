@@ -11,54 +11,44 @@ Source of truth: `.pre-commit-config.yaml`
   - `.pytest_cache/`, `.mypy_cache/`, `.ruff_cache/`, `.uv-cache/`, `.uv_cache/`
   - `htmlcov/`, `.coverage`, `reports/`, `llm-agent-tools/`, `.tickets/`, `tinyAgent/`
 
-### Hooks that run on commit (current)
+### Active pre-commit hooks (organized by purpose)
 
-#### `pre-commit-hooks` (repo: `pre-commit/pre-commit-hooks`)
-- `trailing-whitespace`
-- `end-of-file-fixer` (excludes `models_registry.json`)
-- `check-yaml` (`--allow-multiple-documents`)
-- `check-added-large-files` (`--maxkb=1000`)
-- `check-case-conflict`
-- `check-merge-conflict`
-- `check-json`
-- `check-toml`
-- `check-ast`
-- `debug-statements`
-- `mixed-line-ending` (`--fix=lf`)
-- `check-docstring-first`
-- `check-executables-have-shebangs`
-- `check-shebang-scripts-are-executable`
+#### File hygiene and repo safety
+- `trailing-whitespace` (repo: `pre-commit/pre-commit-hooks`)
+- `end-of-file-fixer` (repo: `pre-commit/pre-commit-hooks`, excludes `models_registry.json`)
+- `mixed-line-ending` (repo: `pre-commit/pre-commit-hooks`, args: `--fix=lf`)
+- `check-added-large-files` (repo: `pre-commit/pre-commit-hooks`, args: `--maxkb=1000`)
+- `check-case-conflict` (repo: `pre-commit/pre-commit-hooks`)
+- `check-merge-conflict` (repo: `pre-commit/pre-commit-hooks`)
+- `check-executables-have-shebangs` (repo: `pre-commit/pre-commit-hooks`)
+- `check-shebang-scripts-are-executable` (repo: `pre-commit/pre-commit-hooks`)
 
-#### Security / lint / format repos
-- `bandit` (repo: `PyCQA/bandit`, args: `-c pyproject.toml`, dep: `bandit[toml]`)
+#### Config and syntax validity
+- `check-yaml` (repo: `pre-commit/pre-commit-hooks`, args: `--allow-multiple-documents`)
+- `check-json` (repo: `pre-commit/pre-commit-hooks`)
+- `check-toml` (repo: `pre-commit/pre-commit-hooks`)
+- `check-ast` (repo: `pre-commit/pre-commit-hooks`)
+- `check-docstring-first` (repo: `pre-commit/pre-commit-hooks`)
+- `debug-statements` (repo: `pre-commit/pre-commit-hooks`)
+
+#### Python linting, typing, and formatting
 - `ruff` (repo: `astral-sh/ruff-pre-commit`, args: `--fix --show-fixes`)
 - `ruff-format` (repo: `astral-sh/ruff-pre-commit`, excludes `models_registry.json`)
-- `doc8` (repo: `pycqa/doc8`, args: `--max-line-length=120`)
+- `mypy` (repo: `local`, entry: `uv run mypy --ignore-missing-imports --no-strict-optional`, files: `^src/.*\.py$`, exclude: `conftest.py|tests/|scripts/`, also runs at `pre-push`)
+- `dead-imports` (repo: `local`, entry: `scripts/run-dead-imports.sh`, files: `\.py$`)
+- `vulture-changed` (repo: `local`, entry: `uv run vulture --min-confidence 80 scripts/utils/vulture_whitelist.py`, files: `^src/.*\.py$`, exclude: `tests/|test_`)
+- `naming-conventions` (repo: `local`, entry: `uv run python scripts/check-naming-conventions.py`, files: `^src/.*\.py$`, exclude: `tests/|scripts/`)
+- `check-file-length` (repo: `local`, entry: `scripts/check-file-length.sh`, files: `\.py$`, exclude: `tests/benchmarks/bench_discover.py`)
 
-#### Local project hooks (repo: `local`)
-- `mypy` (`uv run mypy --ignore-missing-imports --no-strict-optional`)
-  - files: `^src/.*\.py$`
-  - exclude: `conftest.py`, `tests/`, `scripts/`
-  - stages: `pre-commit`, `pre-push`
-- `dead-imports` (`scripts/run-dead-imports.sh`)
-  - files: `\.py$`
-  - stage: `pre-commit`
-- `vulture-changed` (`uv run vulture --min-confidence 80 scripts/utils/vulture_whitelist.py`)
-  - files: `^src/.*\.py$`
-  - exclude: `tests/`, `test_`
-  - stage: `pre-commit`
-- `unused-constants` (`uv run python scripts/check-unused-constants.py`)
-  - stage: `pre-commit`
-- `security-check` (grep for `PRIVATE|SECRET|PASSWORD|TOKEN` in `src/**/*.py`)
-- `no-print-statements` (grep for `print(` in `src/**/*.py`, ignores `# noqa` / `# pragma`)
-- `check-file-length` (`scripts/check-file-length.sh`)
-  - files: `\.py$`
-  - exclude: `tests/benchmarks/bench_discover.py`
-- `naming-conventions` (`uv run python scripts/check-naming-conventions.py`)
-  - files: `^src/.*\.py$`
-  - exclude: `tests/`, `scripts/`
-- `dependency-layers` (`uv run pytest tests/test_dependency_layers.py -v`)
-  - stage: `pre-commit`
+#### Security and safeguards
+- `bandit` (repo: `PyCQA/bandit`, args: `-c pyproject.toml`, dep: `bandit[toml]`)
+- `security-check` (repo: `local`, grep for `PRIVATE|SECRET|PASSWORD|TOKEN` in `src/**/*.py`)
+- `no-print-statements` (repo: `local`, grep for `print(` in `src/**/*.py`, ignores `# noqa` and `# pragma`)
+- `unused-constants` (repo: `local`, entry: `uv run python scripts/check-unused-constants.py`)
+
+#### Architecture and docs
+- `dependency-layers` (repo: `local`, entry: `uv run pytest tests/test_dependency_layers.py -v`)
+- `doc8` (repo: `pycqa/doc8`, args: `--max-line-length=120`)
 
 ### Currently disabled in config
 - `isort` (commented out; replaced by Ruff import sorting)
