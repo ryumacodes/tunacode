@@ -19,6 +19,11 @@ Last Updated: 2026-03-17
 - The goal is to balance developer speed with reliability when programming with code agents.
 - Use it as the operational checklist for what runs locally vs what is enforced in CI.
 
+## Git Safety and Non-Destructive Defaults
+- Follow `docs/git/practices.md` for local Git workflow and safety rules.
+- Default behavior is non-destructive: never delete or clean untracked files/directories unless explicitly requested by the user.
+- If unknown files appear during checks, pause and ask before cleanup.
+
 ## Top-Level Layout
 - `src/tunacode/` — application code.
 - `tests/` — unit and architecture tests.
@@ -57,6 +62,7 @@ Last Updated: 2026-03-17
 - Primary runbook: `README.md`.
 - Architectural map: `docs/modules/index.md`.
 - Review notes for active PR triage: `docs/reviews/`.
+- Git workflow and safety practices: `docs/git/practices.md`.
 - Module-specific docs:
   - `docs/modules/core/core.md`
   - `docs/modules/ui/ui.md`
@@ -99,6 +105,7 @@ Last Updated: 2026-03-17
 - Preserve existing architecture order rules; do not add new imports across forbidden layers.
 - Treat current file-length allowlist entries as temporary debt only. Do not add any new file-specific exemptions to the `>600` line rule; fix the enforcement path or split the code instead.
 - Do not edit unrelated local changes unless scoped to the task.
+- Never delete untracked files/directories (or run destructive cleanup) without explicit user confirmation.
 - Avoid adding empty directories or `__init__.py`-only directories.
 
 ## Editing Guidance
