@@ -6,7 +6,7 @@ import asyncio
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Protocol, cast
 
 from tinyagent import Agent, extract_text
 from tinyagent.agent_types import (
@@ -101,16 +101,20 @@ class _TinyAgentStreamState:
     last_assistant_message: AssistantMessage | None = None
 
 
-def _serialize_agent_messages(messages: list[AgentMessage]) -> list[dict[str, object]]:
-    serialized_messages: list[dict[str, object]] = []
+class _ModelDumpableMessage(Protocol):
+    def model_dump(self, *, exclude_none: bool = False) -> object: ...
+
+
+def _serialize_agent_messages(messages: list[AgentMessage]) -> list[object]:
+    serialized_messages: list[object] = []
     for index, message in enumerate(messages):
-        serialized_message = cast(Any, message).model_dump(exclude_none=True)
+        serialized_message = cast(_ModelDumpableMessage, message).model_dump(exclude_none=True)
         if not isinstance(serialized_message, dict):
             raise TypeError(
                 "tinyagent message model_dump(exclude_none=True) must return dict; "
                 f"got {type(serialized_message).__name__} at index {index}"
             )
-        serialized_messages.append(serialized_message)
+        serialized_messages.append(cast(dict[str, object], serialized_message))
     return serialized_messages
 
 
@@ -122,17 +126,24 @@ def _deserialize_agent_messages(raw_messages: list[object]) -> list[AgentMessage
                 "sanitized message must be a dict, "
                 f"got {type(raw_message).__name__} at index {index}"
             )
-        role = raw_message.get("role")
+        typed_raw_message = cast(dict[str, object], raw_message)
+        role = typed_raw_message.get("role")
         if role == "user":
-            deserialized_messages.append(UserMessage.model_validate(raw_message))
+            deserialized_messages.append(cast(UserMessage, UserMessage.model_validate(typed_raw_message)))
             continue
         if role == "assistant":
-            deserialized_messages.append(AssistantMessage.model_validate(raw_message))
+            deserialized_messages.append(
+                cast(AssistantMessage, AssistantMessage.model_validate(typed_raw_message))
+            )
             continue
         if role == "tool_result":
-            deserialized_messages.append(ToolResultMessage.model_validate(raw_message))
+            deserialized_messages.append(
+                cast(ToolResultMessage, ToolResultMessage.model_validate(typed_raw_message))
+            )
             continue
-        deserialized_messages.append(CustomAgentMessage.model_validate(raw_message))
+        deserialized_messages.append(
+            cast(CustomAgentMessage, CustomAgentMessage.model_validate(typed_raw_message))
+        )
     return deserialized_messages
 
 

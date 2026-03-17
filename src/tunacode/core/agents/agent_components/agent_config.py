@@ -408,7 +408,14 @@ def _is_retryable_stream_error(exc: Exception) -> bool:
 
 
 def _compute_stream_retry_delay(attempt_number: int) -> float:
-    return min(0.5 * (2 ** (attempt_number - 1)), MAX_STREAM_RETRY_DELAY_SECONDS)
+    exponent = attempt_number - 1
+    if exponent < 0:
+        exponent = 0
+    backoff_multiplier = 1 << exponent
+    exponential_delay = 0.5 * float(backoff_multiplier)
+    if exponential_delay > MAX_STREAM_RETRY_DELAY_SECONDS:
+        return MAX_STREAM_RETRY_DELAY_SECONDS
+    return exponential_delay
 
 
 def _build_stream_fn(
