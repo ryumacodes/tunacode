@@ -61,13 +61,6 @@ from tunacode.core.types.state import SessionStateProtocol, StateManagerProtocol
 from tunacode.core.types.state_structures import RuntimeState
 
 from . import agent_components as ac
-from ._main_support import (
-    EmptyResponseHandler,
-    coerce_tool_callback_args,
-    log_tool_execution_end,
-    log_tool_execution_start,
-    normalize_tool_event_args,
-)
 from .agent_components.agent_config import _coerce_global_request_timeout
 from .helpers import (
     CONTEXT_OVERFLOW_FAILURE_NOTICE,
@@ -82,13 +75,6 @@ from .resume import sanitize
 
 REQUEST_ID_LENGTH = 8
 MILLISECONDS_PER_SECOND = 1000
-
-
-@dataclass(frozen=True, slots=True)
-class RequestContext:
-    request_id: str
-    max_iterations: int
-    debug_metrics: bool
 
 
 @dataclass(slots=True)
