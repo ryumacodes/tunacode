@@ -2,15 +2,19 @@
 
 import threading
 from dataclasses import dataclass
-from enum import Enum
 
-from tunacode.core.types import AgentState
+from tunacode.core.types.agent_state import AgentState
 
 
 class InvalidStateTransitionError(Exception):
     """Raised when an invalid state transition is attempted."""
 
-    def __init__(self, from_state: Enum, to_state: Enum, message: str | None = None):
+    def __init__(
+        self,
+        from_state: AgentState,
+        to_state: AgentState,
+        message: str | None = None,
+    ) -> None:
         self.from_state = from_state
         self.to_state = to_state
         self.message = message or f"Invalid state transition: {from_state.value} → {to_state.value}"
@@ -22,13 +26,13 @@ class StateTransitionRules:
     """Defines valid state transitions for the agent state machine."""
 
     # Valid transitions for each state
-    valid_transitions: dict[Enum, set[Enum]]
+    valid_transitions: dict[AgentState, set[AgentState]]
 
-    def is_valid_transition(self, from_state: Enum, to_state: Enum) -> bool:
+    def is_valid_transition(self, from_state: AgentState, to_state: AgentState) -> bool:
         """Check if a transition between states is valid."""
         return to_state in self.valid_transitions.get(from_state, set())
 
-    def get_valid_next_states(self, current_state: Enum) -> set[Enum]:
+    def get_valid_next_states(self, current_state: AgentState) -> set[AgentState]:
         """Get all valid next states from the current state."""
         return self.valid_transitions.get(current_state, set())
 

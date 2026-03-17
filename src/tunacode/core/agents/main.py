@@ -1,4 +1,4 @@
-"""Main agent functionality -- tinyagent event-stream orchestrator."""
+"""Main agent functionality for the tinyagent event-stream orchestrator."""
 
 from __future__ import annotations
 
@@ -6,13 +6,14 @@ import asyncio
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import cast
 
 from tinyagent import Agent, extract_text
 from tinyagent.agent_types import (
     AgentEndEvent,
     AgentEvent,
     AgentMessage,
+    AgentTool,
     AssistantMessage,
     MessageEndEvent,
     MessageUpdateEvent,
@@ -52,11 +53,13 @@ from tunacode.core.compaction.controller import (
     get_or_create_compaction_controller,
 )
 from tunacode.core.compaction.types import CompactionOutcome
-from tunacode.core.debug import log_usage_update
-from tunacode.core.logging import get_logger
-from tunacode.core.types import RuntimeState, StateManagerProtocol
+from tunacode.core.debug.usage_trace import log_usage_update
+from tunacode.core.logging.manager import LogManager, get_logger
+from tunacode.core.types.state import StateManagerProtocol
+from tunacode.core.types.state_structures import RuntimeState
 
 from . import agent_components as ac
+from .agent_components.agent_config import _coerce_global_request_timeout
 from .helpers import (
     CONTEXT_OVERFLOW_FAILURE_NOTICE,
     CONTEXT_OVERFLOW_RETRY_NOTICE,
@@ -66,22 +69,20 @@ from .helpers import (
     is_context_overflow_error,
     parse_canonical_usage,
 )
+from .main_support import (
+    EmptyResponseHandler,
+    coerce_runtime_config,
+    coerce_tool_callback_args,
+    log_tool_execution_end,
+    log_tool_execution_start,
+    normalize_tool_event_args,
+)
 
-DEFAULT_MAX_ITERATIONS: int = 15
-REQUEST_ID_LENGTH: int = 8
-MILLISECONDS_PER_SECOND: int = 1000
-TOOL_EXECUTION_LIFECYCLE_PREFIX: str = "Tool execution"
-PARALLEL_TOOL_CALLS_LIFECYCLE_PREFIX: str = "Parallel tool calls"
-DURATION_NOT_AVAILABLE_LABEL: str = "n/a"
-
-
-@dataclass
-class AgentConfig:
-    max_iterations: int = DEFAULT_MAX_ITERATIONS
-    debug_metrics: bool = False
+REQUEST_ID_LENGTH = 8
+MILLISECONDS_PER_SECOND = 1000
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class RequestContext:
     request_id: str
     max_iterations: int
@@ -95,45 +96,6 @@ class _TinyAgentStreamState:
     active_tool_call_ids: set[str]
     batch_tool_call_ids: set[str]
     last_assistant_message: AssistantMessage | None = None
-
-
-class EmptyResponseHandler:
-    """Handles tracking and intervention for empty responses."""
-
-    def __init__(
-        self,
-        state_manager: StateManagerProtocol,
-        notice_callback: NoticeCallback | None,
-    ) -> None:
-        self.state_manager = state_manager
-        self.notice_callback = notice_callback
-
-    def track(self, is_empty: bool) -> None:
-        runtime = self.state_manager.session.runtime
-        if is_empty:
-            runtime.consecutive_empty_responses += 1
-            return
-        runtime.consecutive_empty_responses = 0
-
-    def should_intervene(self) -> bool:
-        runtime = self.state_manager.session.runtime
-        return runtime.consecutive_empty_responses >= 1
-
-    async def prompt_action(self, message: str, reason: str, iteration: int) -> None:
-        logger = get_logger()
-        logger.warning(f"Empty response: {reason}", iteration=iteration)
-        show_thoughts = bool(getattr(self.state_manager.session, "show_thoughts", False))
-
-        @dataclass
-        class StateView:
-            sm: StateManagerProtocol
-            show_thoughts: bool
-
-        state_view = StateView(sm=self.state_manager, show_thoughts=show_thoughts)
-        notice = await ac.handle_empty_response(message, reason, iteration, state_view)
-        if self.notice_callback:
-            self.notice_callback(notice)
-        self.state_manager.session.runtime.consecutive_empty_responses = 0
 
 
 class RequestOrchestrator:
@@ -152,10 +114,10 @@ class RequestOrchestrator:
         notice_callback: NoticeCallback | None = None,
         compaction_status_callback: CompactionStatusCallback | None = None,
     ) -> None:
+        _ = tool_callback
         self.message = message
         self.model = model
         self.state_manager = state_manager
-        self.tool_callback = tool_callback
         self.streaming_callback = streaming_callback
         self.thinking_callback = thinking_callback
         self.tool_result_callback = tool_result_callback
@@ -163,140 +125,102 @@ class RequestOrchestrator:
         self.notice_callback = notice_callback
         self.compaction_status_callback = compaction_status_callback
         self.compaction_controller = get_or_create_compaction_controller(state_manager)
-        user_config = getattr(state_manager.session, "user_config", {}) or {}
-        settings = user_config.get("settings", {})
-        self.config = AgentConfig(
-            max_iterations=int(settings.get("max_iterations", DEFAULT_MAX_ITERATIONS)),
-            debug_metrics=bool(settings.get("debug_metrics", False)),
-        )
+        self.config = coerce_runtime_config(state_manager.session)
         self.empty_handler = EmptyResponseHandler(state_manager, notice_callback)
 
     async def run(self) -> Agent:
-        from tunacode.core.agents.agent_components.agent_config import (
-            _coerce_global_request_timeout,
-        )
-
         timeout = _coerce_global_request_timeout(self.state_manager.session)
         if timeout is None:
             return await self._run_impl()
         try:
             return await asyncio.wait_for(self._run_impl(), timeout=timeout)
-        except TimeoutError as e:
-            logger = get_logger()
-            invalidated = ac.invalidate_agent_cache(self.model, self.state_manager)
-            if invalidated:
-                logger.lifecycle("Agent cache invalidated after timeout")
-            raise GlobalRequestTimeoutError(timeout) from e
+        except TimeoutError as exc:
+            self._invalidate_agent_cache_after_timeout(timeout)
+            raise GlobalRequestTimeoutError(timeout) from exc
+
+    def _invalidate_agent_cache_after_timeout(self, timeout: float) -> None:
+        _ = timeout
+        logger = get_logger()
+        if ac.invalidate_agent_cache(self.model, self.state_manager):
+            logger.lifecycle("Agent cache invalidated after timeout")
 
     async def _run_impl(self) -> Agent:
-        ctx = self._initialize_request()
+        request_context = self._initialize_request()
         logger = get_logger()
-        logger.info("Request started", request_id=ctx.request_id)
-        agent = ac.get_or_create_agent(self.model, self.state_manager)
+        logger.info("Request started", request_id=request_context.request_id)
+
         session = self.state_manager.session
         conversation = session.conversation
+        agent = ac.get_or_create_agent(self.model, self.state_manager)
         history = coerce_tinyagent_history(conversation.messages)
-        self._configure_compaction_callbacks()
+        self.compaction_controller.set_status_callback(self.compaction_status_callback)
         compacted_history = await self._compact_history_for_request(history)
         baseline_message_count = len(conversation.messages)
         pre_request_history = list(conversation.messages)
         agent.replace_messages(compacted_history)
         session._debug_raw_stream_accum = ""
+
         try:
             await self._run_stream(
                 agent=agent,
-                request_context=ctx,
+                request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
             await self._retry_after_context_overflow_if_needed(
                 agent=agent,
-                request_context=ctx,
+                request_context=request_context,
                 pre_request_history=pre_request_history,
             )
             return agent
-        except UserAbortError:
-            self._handle_abort_cleanup(logger, invalidate_cache=False)
-            raise
-        except asyncio.CancelledError:
-            # ESC cancellation should preserve agent cache
+        except (UserAbortError, asyncio.CancelledError):
             self._handle_abort_cleanup(logger, invalidate_cache=False)
             raise
 
     def _initialize_request(self) -> RequestContext:
-        ctx = self._create_request_context()
-        self._reset_session_state()
-        self._set_original_query_once()
-        return ctx
-
-    def _create_request_context(self) -> RequestContext:
-        req_id = str(uuid.uuid4())[:REQUEST_ID_LENGTH]
-        self.state_manager.session.runtime.request_id = req_id
-        return RequestContext(
-            request_id=req_id,
-            max_iterations=self.config.max_iterations,
-            debug_metrics=self.config.debug_metrics,
-        )
-
-    def _reset_session_state(self) -> None:
+        request_id = str(uuid.uuid4())[:REQUEST_ID_LENGTH]
         session = self.state_manager.session
         runtime = session.runtime
+        runtime.request_id = request_id
         runtime.current_iteration = 0
         runtime.iteration_count = 0
         runtime.tool_registry.clear()
         runtime.batch_counter = 0
         runtime.consecutive_empty_responses = 0
         session.usage.last_call_usage = UsageMetrics()
-
-    def _set_original_query_once(self) -> None:
-        task_state = self.state_manager.session.task
-        if task_state.original_query:
-            return
-        task_state.original_query = self.message
-
-    def _configure_compaction_callbacks(self) -> None:
-        self.compaction_controller.set_status_callback(self.compaction_status_callback)
+        if not session.task.original_query:
+            session.task.original_query = self.message
+        return RequestContext(
+            request_id=request_id,
+            max_iterations=self.config.max_iterations,
+            debug_metrics=self.config.debug_metrics,
+        )
 
     def _maybe_emit_compaction_notice(self, outcome: CompactionOutcome) -> None:
         if self.notice_callback is None:
             return
         notice = build_compaction_notice(outcome)
-        if notice is None:
-            return
-        self.notice_callback(notice)
+        if notice is not None:
+            self.notice_callback(notice)
 
-    async def _compact_history_for_request(
-        self,
-        history: list[AgentMessage],
-    ) -> list[AgentMessage]:
+    async def _compact_history_for_request(self, history: list[AgentMessage]) -> list[AgentMessage]:
         self.compaction_controller.reset_request_state()
-        max_tokens = self.state_manager.session.conversation.max_tokens
-        compaction_outcome = await self.compaction_controller.check_and_compact(
+        outcome = await self.compaction_controller.check_and_compact(
             history,
-            max_tokens=max_tokens,
+            max_tokens=self.state_manager.session.conversation.max_tokens,
             signal=None,
             allow_threshold=True,
         )
-        self._maybe_emit_compaction_notice(compaction_outcome)
-        return apply_compaction_messages(
-            self.state_manager,
-            compaction_outcome.messages,
-        )
+        self._maybe_emit_compaction_notice(outcome)
+        return apply_compaction_messages(self.state_manager, outcome.messages)
 
-    async def _force_compact_history(
-        self,
-        history: list[AgentMessage],
-    ) -> list[AgentMessage]:
-        max_tokens = self.state_manager.session.conversation.max_tokens
-        compaction_outcome = await self.compaction_controller.force_compact(
+    async def _force_compact_history(self, history: list[AgentMessage]) -> list[AgentMessage]:
+        outcome = await self.compaction_controller.force_compact(
             history,
-            max_tokens=max_tokens,
+            max_tokens=self.state_manager.session.conversation.max_tokens,
             signal=None,
         )
-        self._maybe_emit_compaction_notice(compaction_outcome)
-        return apply_compaction_messages(
-            self.state_manager,
-            compaction_outcome.messages,
-        )
+        self._maybe_emit_compaction_notice(outcome)
+        return apply_compaction_messages(self.state_manager, outcome.messages)
 
     async def _retry_after_context_overflow_if_needed(
         self,
@@ -308,126 +232,49 @@ class RequestOrchestrator:
         error_text = self._agent_error_text(agent)
         if not is_context_overflow_error(error_text):
             return
-        if self.notice_callback is not None:
-            self.notice_callback(CONTEXT_OVERFLOW_RETRY_NOTICE)
+
         logger = get_logger()
         logger.warning("Context overflow detected; forcing compaction and retrying")
+        if self.notice_callback is not None:
+            self.notice_callback(CONTEXT_OVERFLOW_RETRY_NOTICE)
+
         conversation = self.state_manager.session.conversation
         apply_compaction_messages(self.state_manager, pre_request_history)
         forced_history = await self._force_compact_history(pre_request_history)
         agent.replace_messages(forced_history)
         self.state_manager.session._debug_raw_stream_accum = ""
-        retry_baseline = len(conversation.messages)
         await self._run_stream(
             agent=agent,
             request_context=request_context,
-            baseline_message_count=retry_baseline,
+            baseline_message_count=len(conversation.messages),
         )
+
         retry_error_text = self._agent_error_text(agent)
         if not is_context_overflow_error(retry_error_text):
             return
+
         if self.notice_callback is not None:
             self.notice_callback(CONTEXT_OVERFLOW_FAILURE_NOTICE)
-        estimated_tokens = estimate_messages_tokens(conversation.messages)
-        max_tokens = conversation.max_tokens or DEFAULT_CONTEXT_WINDOW
         raise ContextOverflowError(
-            estimated_tokens=estimated_tokens,
-            max_tokens=max_tokens,
+            estimated_tokens=estimate_messages_tokens(conversation.messages),
+            max_tokens=conversation.max_tokens or DEFAULT_CONTEXT_WINDOW,
             model=self.model,
         )
 
     def _agent_error_text(self, agent: Agent) -> str:
         return coerce_error_text(agent.state.error)
 
-    def _normalize_tool_event_args(
-        self,
-        raw_args: object,
-        *,
-        event_name: str,
-        tool_call_id: str,
-    ) -> dict[str, Any]:
-        if raw_args is None:
-            return {}
-
-        if isinstance(raw_args, dict):
-            return raw_args
-
-        raise TypeError(
-            f"{event_name} args must be an object for tool_call_id='{tool_call_id}', "
-            f"got {type(raw_args).__name__}"
-        )
-
     def _mark_tool_start_batch_state(
-        self,
-        state: _TinyAgentStreamState,
-        *,
-        tool_call_id: str,
+        self, state: _TinyAgentStreamState, *, tool_call_id: str
     ) -> None:
-        active_tool_call_ids = state.active_tool_call_ids
-        if active_tool_call_ids:
-            state.batch_tool_call_ids.update(active_tool_call_ids)
+        if state.active_tool_call_ids:
+            state.batch_tool_call_ids.update(state.active_tool_call_ids)
             state.batch_tool_call_ids.add(tool_call_id)
-        active_tool_call_ids.add(tool_call_id)
+        state.active_tool_call_ids.add(tool_call_id)
 
     def _clear_tool_batch_state_if_idle(self, state: _TinyAgentStreamState) -> None:
-        if state.active_tool_call_ids:
-            return
-        state.batch_tool_call_ids.clear()
-
-    def _format_duration_ms(self, duration_ms: float | None) -> str:
-        if duration_ms is None:
-            return DURATION_NOT_AVAILABLE_LABEL
-        return f"{duration_ms:.1f}"
-
-    def _log_tool_execution_start_lifecycle(
-        self,
-        *,
-        state: _TinyAgentStreamState,
-        tool_call_id: str,
-        tool_name: str,
-    ) -> None:
-        logger = get_logger()
-        in_flight = len(state.active_tool_call_ids)
-        logger.lifecycle(
-            f"{TOOL_EXECUTION_LIFECYCLE_PREFIX} start: "
-            f"name={tool_name} tool_call_id={tool_call_id} in_flight={in_flight}"
-        )
-        if in_flight <= 1:
-            return
-        batch_size = len(state.batch_tool_call_ids)
-        logger.lifecycle(
-            f"{PARALLEL_TOOL_CALLS_LIFECYCLE_PREFIX} active: "
-            f"in_flight={in_flight} batch_size={batch_size}"
-        )
-
-    def _log_tool_execution_end_lifecycle(
-        self,
-        *,
-        state: _TinyAgentStreamState,
-        tool_call_id: str,
-        tool_name: str,
-        status: str,
-        duration_ms: float | None,
-        was_parallel_batch_member: bool,
-    ) -> None:
-        logger = get_logger()
-        in_flight = len(state.active_tool_call_ids)
-        duration_text = self._format_duration_ms(duration_ms)
-        logger.lifecycle(
-            f"{TOOL_EXECUTION_LIFECYCLE_PREFIX} end: "
-            f"name={tool_name} tool_call_id={tool_call_id} status={status} "
-            f"in_flight={in_flight} duration_ms={duration_text}"
-        )
-        if not was_parallel_batch_member:
-            return
-        batch_size = len(state.batch_tool_call_ids)
-        logger.lifecycle(
-            f"{PARALLEL_TOOL_CALLS_LIFECYCLE_PREFIX} update: "
-            f"in_flight={in_flight} batch_size={batch_size}"
-        )
-        if in_flight != 0:
-            return
-        logger.lifecycle(f"{PARALLEL_TOOL_CALLS_LIFECYCLE_PREFIX} complete")
+        if not state.active_tool_call_ids:
+            state.batch_tool_call_ids.clear()
 
     def _resolve_tool_duration_ms(
         self,
@@ -436,24 +283,14 @@ class RequestOrchestrator:
         tool_call_id: str,
     ) -> float | None:
         start_time = state.tool_start_times.pop(tool_call_id, None)
-        if start_time is None:
+        if start_time is None or tool_call_id in state.batch_tool_call_ids:
             return None
-
-        if tool_call_id in state.batch_tool_call_ids:
-            # tinyagent emits end events only after all tools in the batch finish.
-            # Start->end deltas in this mode represent batch latency, not per-tool latency.
-            return None
-
-        elapsed_seconds = time.perf_counter() - start_time
-        return elapsed_seconds * MILLISECONDS_PER_SECOND
+        return (time.perf_counter() - start_time) * MILLISECONDS_PER_SECOND
 
     def _persist_agent_messages(self, agent: Agent, baseline_message_count: int) -> None:
-        session = self.state_manager.session
-        conversation = session.conversation
-        # Preserve anything that might have been appended externally during the run.
+        conversation = self.state_manager.session.conversation
         external_messages = list(conversation.messages[baseline_message_count:])
-        agent_messages = list(agent.state.messages)
-        conversation.messages = [*agent_messages, *external_messages]
+        conversation.messages = [*list(agent.state.messages), *external_messages]
 
     async def _handle_stream_turn_end(
         self,
@@ -495,18 +332,15 @@ class RequestOrchestrator:
         baseline_message_count: int,
     ) -> bool:
         _ = (agent, baseline_message_count)
-        message = event_obj.message
-        if not isinstance(message, AssistantMessage):
+        if not isinstance(event_obj.message, AssistantMessage):
             return False
-
-        state.last_assistant_message = message
-        usage = parse_canonical_usage(message.usage)
+        state.last_assistant_message = event_obj.message
+        usage = parse_canonical_usage(event_obj.message.usage)
         session = self.state_manager.session
         session.usage.last_call_usage = usage
         session.usage.session_total_usage.add(usage)
-        logger = get_logger()
         log_usage_update(
-            logger=logger,
+            logger=get_logger(),
             request_id=request_context.request_id,
             event_name="message_end",
             last_call_usage=session.usage.last_call_usage,
@@ -526,16 +360,21 @@ class RequestOrchestrator:
         _ = (agent, request_context, baseline_message_count)
         tool_call_id = event_obj.tool_call_id
         tool_name = event_obj.tool_name
-        args = self._normalize_tool_event_args(
+        args = normalize_tool_event_args(
             event_obj.args,
             event_name="tool_execution_start",
             tool_call_id=tool_call_id,
         )
         state.tool_start_times[tool_call_id] = time.perf_counter()
         self._mark_tool_start_batch_state(state, tool_call_id=tool_call_id)
-        state.runtime.tool_registry.register(tool_call_id, tool_name, args)
+        state.runtime.tool_registry.register(
+            tool_call_id,
+            tool_name,
+            cast(dict[str, object], args),
+        )
         state.runtime.tool_registry.start(tool_call_id)
-        self._log_tool_execution_start_lifecycle(
+        log_tool_execution_start(
+            get_logger(),
             state=state,
             tool_call_id=tool_call_id,
             tool_name=tool_name,
@@ -556,18 +395,20 @@ class RequestOrchestrator:
         _ = (agent, request_context, baseline_message_count)
         tool_call_id = event_obj.tool_call_id
         tool_name = event_obj.tool_name
-        is_error = event_obj.is_error
         duration_ms = self._resolve_tool_duration_ms(state, tool_call_id=tool_call_id)
         result_text = extract_tool_result_text(event_obj.result)
-        status = "failed" if is_error else "completed"
+        status = "failed" if event_obj.is_error else "completed"
         was_parallel_batch_member = tool_call_id in state.batch_tool_call_ids
-        if is_error:
+
+        if event_obj.is_error:
             state.runtime.tool_registry.fail(tool_call_id, error=result_text)
         else:
             state.runtime.tool_registry.complete(tool_call_id, result=result_text)
+
         state.active_tool_call_ids.discard(tool_call_id)
         self._clear_tool_batch_state_if_idle(state)
-        self._log_tool_execution_end_lifecycle(
+        log_tool_execution_end(
+            get_logger(),
             state=state,
             tool_call_id=tool_call_id,
             tool_name=tool_name,
@@ -575,16 +416,15 @@ class RequestOrchestrator:
             duration_ms=duration_ms,
             was_parallel_batch_member=was_parallel_batch_member,
         )
+
         if self.tool_result_callback is None:
             return False
 
-        args = state.runtime.tool_registry.get_args(tool_call_id)
-        if args is None:
-            args = {}
+        callback_args = state.runtime.tool_registry.get_args(tool_call_id)
         self.tool_result_callback(
             tool_name,
             status,
-            args,
+            coerce_tool_callback_args(callback_args),
             result_text,
             duration_ms,
         )
@@ -620,7 +460,6 @@ class RequestOrchestrator:
                 request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
-
         if isinstance(event, MessageUpdateEvent):
             return await self._handle_stream_message_update(
                 event,
@@ -629,7 +468,6 @@ class RequestOrchestrator:
                 request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
-
         if is_message_end_event(event):
             return await self._handle_stream_message_end(
                 event,
@@ -638,7 +476,6 @@ class RequestOrchestrator:
                 request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
-
         if is_tool_execution_start_event(event):
             return await self._handle_stream_tool_execution_start(
                 event,
@@ -647,7 +484,6 @@ class RequestOrchestrator:
                 request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
-
         if is_tool_execution_end_event(event):
             return await self._handle_stream_tool_execution_end(
                 event,
@@ -656,7 +492,6 @@ class RequestOrchestrator:
                 request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
-
         if is_agent_end_event(event):
             return await self._handle_stream_agent_end(
                 event,
@@ -665,7 +500,6 @@ class RequestOrchestrator:
                 request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
-
         return False
 
     async def _run_stream(
@@ -702,7 +536,11 @@ class RequestOrchestrator:
         if error_text and not is_context_overflow_error(error_text):
             raise AgentError(error_text)
 
-        assistant_text = extract_text(state.last_assistant_message)
+        assistant_text = (
+            extract_text(state.last_assistant_message)
+            if state.last_assistant_message is not None
+            else ""
+        )
         is_empty = not assistant_text.strip()
         self.empty_handler.track(is_empty)
         if is_empty and self.empty_handler.should_intervene():
@@ -715,55 +553,40 @@ class RequestOrchestrator:
 
     async def _handle_message_update(self, event: MessageUpdateEvent) -> None:
         assistant_event = event.assistant_message_event
-        if assistant_event is None:
+        if (
+            assistant_event is None
+            or not isinstance(assistant_event.delta, str)
+            or not assistant_event.delta
+        ):
             return
 
-        event_type = assistant_event.type
-        delta = assistant_event.delta
-        if not isinstance(delta, str) or not delta:
+        if assistant_event.type == "text_delta":
+            self.state_manager.session._debug_raw_stream_accum += assistant_event.delta
+            if self.streaming_callback is not None:
+                await self.streaming_callback(assistant_event.delta)
             return
 
-        if event_type == "text_delta":
-            # Keep legacy debug accumulator for abort handling.
-            session = self.state_manager.session
-            session._debug_raw_stream_accum += delta
-            if self.streaming_callback is None:
-                return
-            # Streaming callback is a UI hook; keep it best-effort.
-            await self.streaming_callback(delta)
-            return
+        if assistant_event.type == "thinking_delta" and self.thinking_callback is not None:
+            await self.thinking_callback(assistant_event.delta)
 
-        if event_type == "thinking_delta":
-            if self.thinking_callback is None:
-                return
-            await self.thinking_callback(delta)
-            return
-
-    def _handle_abort_cleanup(self, logger: Any, *, invalidate_cache: bool = False) -> None:
+    def _handle_abort_cleanup(self, logger: LogManager, *, invalidate_cache: bool = False) -> None:
         session = self.state_manager.session
-        conversation = session.conversation
         partial_text = session._debug_raw_stream_accum
         if partial_text.strip():
-            interrupted_text = f"[INTERRUPTED]\n\n{partial_text}"
-            conversation.messages.append(
+            session.conversation.messages.append(
                 AssistantMessage(
-                    content=[TextContent(text=interrupted_text)],
+                    content=[TextContent(text=f"[INTERRUPTED]\n\n{partial_text}")],
                     stop_reason="aborted",
-                    timestamp=int(time.time() * 1000),
+                    timestamp=int(time.time() * MILLISECONDS_PER_SECOND),
                 )
             )
-        if invalidate_cache:
-            invalidated = ac.invalidate_agent_cache(self.model, self.state_manager)
-            if invalidated:
-                logger.lifecycle("Agent cache invalidated after abort")
+        if invalidate_cache and ac.invalidate_agent_cache(self.model, self.state_manager):
+            logger.lifecycle("Agent cache invalidated after abort")
 
 
-def get_agent_tool() -> tuple[type[Any], type[Any]]:
+def get_agent_tool() -> tuple[type[Agent], type[object]]:
     """Return the (Agent, AgentTool) classes."""
-    from tinyagent import Agent as AgentCls
-    from tinyagent.agent_types import AgentTool as ToolCls
-
-    return AgentCls, ToolCls
+    return Agent, cast(type[object], AgentTool)
 
 
 async def process_request(
