@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+# ruff: noqa: I001
+
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import cast
 
-from tunacode.core.types.state import SessionStateProtocol
-
 from tunacode.skills.models import SelectedSkill
+from tunacode.core.types.state import SessionStateProtocol
 
 
 @dataclass(frozen=True, slots=True)
