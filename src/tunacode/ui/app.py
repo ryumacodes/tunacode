@@ -51,7 +51,6 @@ from tunacode.ui.renderers.thinking import (
 )
 from tunacode.ui.repl_support import (
     FILE_EDIT_TOOLS,
-    build_textual_tool_callback,
     build_tool_result_callback,
     format_user_message,
     normalize_agent_message_text,
@@ -258,7 +257,6 @@ class TextualReplApp(App[None]):
                     message=message,
                     model=ModelName(model_name),
                     state_manager=self.state_manager,
-                    tool_callback=build_textual_tool_callback(),
                     streaming_callback=streaming_callback,
                     thinking_callback=self._thinking_callback,
                     tool_result_callback=build_tool_result_callback(self),

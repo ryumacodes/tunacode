@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
+import httpx
 from tinyagent import Agent, AgentOptions
 from tinyagent.agent_types import (
     AgentMessage,
@@ -73,6 +74,8 @@ OPENAI_CHAT_COMPLETIONS_PATH = "/chat/completions"
 OPENROUTER_PROVIDER_ID = "openrouter"
 MAX_PARALLEL_TOOL_CALLS = 3
 MIN_PARALLEL_TOOL_CALLS = 1
+MAX_STREAM_RETRY_DELAY_SECONDS = 8.0
+STREAM_RETRYABLE_STATUS_CODES = frozenset({408, 409, 425, 429})
 
 ToolExecute = Callable[
     [str, JsonObject, asyncio.Event | None, AgentToolUpdateCallback],
@@ -175,7 +178,15 @@ def _normalize_session_config(session: SessionStateProtocol) -> SessionConfig:
             False,
         ),
     )
+    if settings.max_retries < 1:
+        raise ValueError(f"max_retries must be >= 1, got {settings.max_retries}")
     return SessionConfig(settings=settings, env=env_config)
+
+
+def _coerce_session_config(config: SessionConfig | SessionStateProtocol) -> SessionConfig:
+    if isinstance(config, SessionConfig):
+        return config
+    return _normalize_session_config(config)
 
 
 def _coerce_request_delay(session: SessionStateProtocol) -> float:
@@ -285,7 +296,7 @@ def _apply_tool_concurrency_limit(
     return [_wrap_tool_with_concurrency_limit(tool, limiter=limiter) for tool in tools]
 
 
-def _build_tools() -> list[AgentTool]:
+def _build_tools(*, strict_validation: bool = False) -> list[AgentTool]:
     tool_functions: tuple[object, ...] = (
         cast(object, bash),
         cast(object, discover),
@@ -294,12 +305,14 @@ def _build_tools() -> list[AgentTool]:
         cast(object, web_fetch),
         cast(object, write_file),
     )
-    tools = [_to_agent_tool(tool_fn) for tool_fn in tool_functions]
+    tools = [
+        _to_agent_tool(tool_fn, strict_validation=strict_validation) for tool_fn in tool_functions
+    ]
     return _apply_tool_concurrency_limit(tools)
 
 
-def _to_agent_tool(tool_fn: object) -> AgentTool:
-    return to_tinyagent_tool(tool_fn)  # type: ignore[arg-type]
+def _to_agent_tool(tool_fn: object, *, strict_validation: bool = False) -> AgentTool:
+    return to_tinyagent_tool(tool_fn, strict_validation=strict_validation)  # type: ignore[arg-type]
 
 
 def _normalize_chat_completions_url(base_url: str | None) -> str | None:
@@ -313,8 +326,11 @@ def _normalize_chat_completions_url(base_url: str | None) -> str | None:
     return f"{stripped.rstrip('/')}{OPENAI_CHAT_COMPLETIONS_PATH}"
 
 
-def _resolve_base_url(config: SessionConfig, provider_id: str) -> str | None:
-    configured_base_url = _normalize_chat_completions_url(config.env.get(ENV_OPENAI_BASE_URL))
+def _resolve_base_url(config: SessionConfig | SessionStateProtocol, provider_id: str) -> str | None:
+    session_config = _coerce_session_config(config)
+    configured_base_url = _normalize_chat_completions_url(
+        session_config.env.get(ENV_OPENAI_BASE_URL)
+    )
     if configured_base_url is not None:
         return configured_base_url
     load_models_registry()
@@ -330,9 +346,30 @@ def _require_provider_base_url(provider_id: str, base_url: str | None) -> str | 
     )
 
 
-def _build_api_key_resolver(env_config: Mapping[str, str]) -> Callable[[str], str | None]:
+def _build_api_key_resolver(
+    env_config: Mapping[str, str] | SessionStateProtocol,
+) -> Callable[[str], str | None]:
+    if isinstance(env_config, Mapping):
+
+        def env_getter() -> Mapping[str, str]:
+            return env_config
+    else:
+        session = env_config
+
+        def env_getter() -> Mapping[str, str]:
+            raw_user_config = _coerce_mapping(
+                cast(object, session.user_config),
+                field_name="user_config",
+            )
+            raw_env = _coerce_mapping(raw_user_config.get("env", {}), field_name="env")
+            return {
+                key: value.strip()
+                for key, value in raw_env.items()
+                if isinstance(value, str) and value.strip()
+            }
+
     def _read_api_key(env_var: str) -> str | None:
-        configured = env_config.get(env_var)
+        configured = env_getter().get(env_var)
         if isinstance(configured, str) and configured.strip():
             return configured.strip()
         os_value = os.environ.get(env_var, "")
@@ -361,16 +398,47 @@ def _merge_stream_options(
     return options.model_copy(update=update_values)
 
 
-def _build_stream_fn(*, request_delay: float, max_tokens: int | None) -> StreamFn:
+def _is_retryable_stream_error(exc: Exception) -> bool:
+    if isinstance(exc, httpx.HTTPStatusError):
+        response = exc.response
+        if response is None:
+            return False
+        return response.status_code in STREAM_RETRYABLE_STATUS_CODES or response.status_code >= 500
+    return isinstance(exc, (httpx.RequestError, TimeoutError))
+
+
+def _compute_stream_retry_delay(attempt_number: int) -> float:
+    return min(0.5 * (2 ** (attempt_number - 1)), MAX_STREAM_RETRY_DELAY_SECONDS)
+
+
+def _build_stream_fn(
+    *,
+    request_delay: float,
+    max_tokens: int | None,
+    max_retries: int = 1,
+) -> StreamFn:
     async def _stream(
         model: Model,
         context: Context,
         options: SimpleStreamOptions,
     ) -> StreamResponse:
-        if request_delay > 0:
-            await _sleep_with_delay(request_delay)
         stream_options = _merge_stream_options(options=options, max_tokens=max_tokens)
-        return await stream_alchemy_openai_completions(model, context, stream_options)
+
+        for attempt in range(1, max_retries + 1):
+            if request_delay > 0:
+                await _sleep_with_delay(request_delay)
+            try:
+                return await stream_alchemy_openai_completions(model, context, stream_options)
+            except Exception as exc:  # noqa: BLE001
+                if attempt >= max_retries or not _is_retryable_stream_error(exc):
+                    raise
+                get_logger().warning(
+                    "Retrying provider stream request after transient error: "
+                    f"attempt={attempt}/{max_retries}, error={type(exc).__name__}"
+                )
+                await _sleep_with_delay(_compute_stream_retry_delay(attempt))
+
+        raise RuntimeError("Unreachable stream retry exhaustion")
 
     return _stream
 
@@ -395,9 +463,16 @@ def _build_transform_context(
     return _transform_context
 
 
-def _build_tinyagent_model(model: ModelName, config: SessionConfig) -> OpenAICompatModel:
+def _build_tinyagent_model(
+    model: ModelName,
+    config: SessionConfig | SessionStateProtocol,
+) -> OpenAICompatModel:
+    session_config = _coerce_session_config(config)
     provider_id, model_id = parse_model_string(model)
-    base_url = _require_provider_base_url(provider_id, _resolve_base_url(config, provider_id))
+    base_url = _require_provider_base_url(
+        provider_id,
+        _resolve_base_url(session_config, provider_id),
+    )
     alchemy_api = get_provider_alchemy_api(provider_id)
     if base_url is not None and alchemy_api is not None:
         return OpenAICompatModel(
@@ -479,6 +554,7 @@ def _build_agent_options(
         stream_fn=_build_stream_fn(
             request_delay=config.settings.request_delay,
             max_tokens=max_tokens,
+            max_retries=config.settings.max_retries,
         ),
         session_id=session.session_id,
         get_api_key=_build_api_key_resolver(config.env),
@@ -528,13 +604,6 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
         del session_agents[model]
         session.agent_versions.pop(model, None)
 
-    cached_agent = agents_cache.get_agent(model, expected_version=agent_version)
-    if cached_agent is not None:
-        logger.debug(f"Agent cache hit (module): {model}")
-        session_agents[model] = cached_agent
-        session.agent_versions[model] = agent_version
-        return cached_agent
-
     base_path = Path(__file__).parent.parent.parent.parent
     system_prompt_content, system_version = load_system_prompt(base_path, model=model)
     tunacode_context_content, context_version = load_tunacode_context()
@@ -545,7 +614,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
         + skills_state.available_block
     )
 
-    tools = _build_tools()
+    tools = _build_tools(strict_validation=config.settings.tool_strict_validation)
     prompt_versions = compute_agent_prompt_versions(
         system_prompt_path=base_path / "prompts" / "system_prompt.md",
         tunacode_context_path=Path.cwd() / AGENTS_MD,
@@ -569,7 +638,6 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     agent.set_tools(tools)
     agent.prompt_versions = prompt_versions  # type: ignore[attr-defined]
 
-    agents_cache.set_agent(model, agent=agent, version=agent_version)
     session.agent_versions[model] = agent_version
     session_agents[model] = agent
 

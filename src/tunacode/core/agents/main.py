@@ -6,7 +6,7 @@ import asyncio
 import time
 import uuid
 from dataclasses import dataclass
-from typing import cast
+from typing import Any, cast
 
 from tinyagent import Agent, extract_text
 from tinyagent.agent_types import (
@@ -15,12 +15,15 @@ from tinyagent.agent_types import (
     AgentMessage,
     AgentTool,
     AssistantMessage,
+    CustomAgentMessage,
     MessageEndEvent,
     MessageUpdateEvent,
     TextContent,
     ToolExecutionEndEvent,
     ToolExecutionStartEvent,
+    ToolResultMessage,
     TurnEndEvent,
+    UserMessage,
     is_agent_end_event,
     is_message_end_event,
     is_tool_execution_end_event,
@@ -39,7 +42,6 @@ from tunacode.types import (
     ModelName,
     NoticeCallback,
     StreamingCallback,
-    ToolCallback,
     ToolResultCallback,
     ToolStartCallback,
     UsageMetrics,
@@ -77,6 +79,7 @@ from .main_support import (
     log_tool_execution_start,
     normalize_tool_event_args,
 )
+from .resume import sanitize
 
 REQUEST_ID_LENGTH = 8
 MILLISECONDS_PER_SECOND = 1000
@@ -98,6 +101,41 @@ class _TinyAgentStreamState:
     last_assistant_message: AssistantMessage | None = None
 
 
+def _serialize_agent_messages(messages: list[AgentMessage]) -> list[dict[str, object]]:
+    serialized_messages: list[dict[str, object]] = []
+    for index, message in enumerate(messages):
+        serialized_message = cast(Any, message).model_dump(exclude_none=True)
+        if not isinstance(serialized_message, dict):
+            raise TypeError(
+                "tinyagent message model_dump(exclude_none=True) must return dict; "
+                f"got {type(serialized_message).__name__} at index {index}"
+            )
+        serialized_messages.append(serialized_message)
+    return serialized_messages
+
+
+def _deserialize_agent_messages(raw_messages: list[object]) -> list[AgentMessage]:
+    deserialized_messages: list[AgentMessage] = []
+    for index, raw_message in enumerate(raw_messages):
+        if not isinstance(raw_message, dict):
+            raise TypeError(
+                "sanitized message must be a dict, "
+                f"got {type(raw_message).__name__} at index {index}"
+            )
+        role = raw_message.get("role")
+        if role == "user":
+            deserialized_messages.append(UserMessage.model_validate(raw_message))
+            continue
+        if role == "assistant":
+            deserialized_messages.append(AssistantMessage.model_validate(raw_message))
+            continue
+        if role == "tool_result":
+            deserialized_messages.append(ToolResultMessage.model_validate(raw_message))
+            continue
+        deserialized_messages.append(CustomAgentMessage.model_validate(raw_message))
+    return deserialized_messages
+
+
 class RequestOrchestrator:
     """Orchestrates the request processing loop using tinyagent events."""
 
@@ -106,7 +144,6 @@ class RequestOrchestrator:
         message: str,
         model: ModelName,
         state_manager: StateManagerProtocol,
-        tool_callback: ToolCallback | None,
         streaming_callback: StreamingCallback | None,
         thinking_callback: StreamingCallback | None = None,
         tool_result_callback: ToolResultCallback | None = None,
@@ -114,7 +151,6 @@ class RequestOrchestrator:
         notice_callback: NoticeCallback | None = None,
         compaction_status_callback: CompactionStatusCallback | None = None,
     ) -> None:
-        _ = tool_callback
         self.message = message
         self.model = model
         self.state_manager = state_manager
@@ -127,6 +163,7 @@ class RequestOrchestrator:
         self.compaction_controller = get_or_create_compaction_controller(state_manager)
         self.config = coerce_runtime_config(state_manager.session)
         self.empty_handler = EmptyResponseHandler(state_manager, notice_callback)
+        self._active_stream_state: _TinyAgentStreamState | None = None
 
     async def run(self) -> Agent:
         timeout = _coerce_global_request_timeout(self.state_manager.session)
@@ -173,7 +210,12 @@ class RequestOrchestrator:
             )
             return agent
         except (UserAbortError, asyncio.CancelledError):
-            self._handle_abort_cleanup(logger, invalidate_cache=False)
+            self._handle_abort_cleanup(
+                logger,
+                agent=agent,
+                baseline_message_count=baseline_message_count,
+                invalidate_cache=False,
+            )
             raise
 
     def _initialize_request(self) -> RequestContext:
@@ -291,6 +333,57 @@ class RequestOrchestrator:
         conversation = self.state_manager.session.conversation
         external_messages = list(conversation.messages[baseline_message_count:])
         conversation.messages = [*list(agent.state.messages), *external_messages]
+
+    def _remove_in_flight_tool_registry_entries(self, logger: LogManager) -> None:
+        active_stream_state = self._active_stream_state
+        if active_stream_state is None:
+            return
+
+        unresolved_tool_call_ids = set(active_stream_state.active_tool_call_ids)
+        if not unresolved_tool_call_ids:
+            return
+
+        removed_count = self.state_manager.session.runtime.tool_registry.remove_many(
+            unresolved_tool_call_ids
+        )
+        if removed_count > 0:
+            logger.lifecycle(f"Removed {removed_count} in-flight tool call(s) after abort")
+
+    def _sanitize_conversation_after_abort(self, logger: LogManager) -> None:
+        session = self.state_manager.session
+        serialized_messages = _serialize_agent_messages(session.conversation.messages)
+        cleanup_applied, dangling_tool_call_ids = sanitize.run_cleanup_loop(
+            serialized_messages,
+            session.runtime.tool_registry,
+        )
+        if cleanup_applied:
+            session.conversation.messages = _deserialize_agent_messages(serialized_messages)
+        if cleanup_applied and dangling_tool_call_ids:
+            logger.lifecycle(
+                f"Cleaned up {len(dangling_tool_call_ids)} dangling tool call(s) after abort"
+            )
+
+    def _append_interrupted_partial_message(self) -> None:
+        session = self.state_manager.session
+        partial_text = session._debug_raw_stream_accum
+        if not partial_text.strip():
+            return
+
+        latest_assistant_text = ""
+        for message in reversed(session.conversation.messages):
+            if isinstance(message, AssistantMessage):
+                latest_assistant_text = extract_text(message)
+                break
+        if latest_assistant_text.strip() == partial_text.strip():
+            return
+
+        session.conversation.messages.append(
+            AssistantMessage(
+                content=[TextContent(text=f"[INTERRUPTED]\n\n{partial_text}")],
+                stop_reason="aborted",
+                timestamp=int(time.time() * MILLISECONDS_PER_SECOND),
+            )
+        )
 
     async def _handle_stream_turn_end(
         self,
@@ -517,17 +610,21 @@ class RequestOrchestrator:
             active_tool_call_ids=set(),
             batch_tool_call_ids=set(),
         )
+        self._active_stream_state = state
         started_at = time.perf_counter()
-        async for event in agent.stream(self.message):
-            should_stop = await self._dispatch_stream_event(
-                event=event,
-                agent=agent,
-                state=state,
-                request_context=request_context,
-                baseline_message_count=baseline_message_count,
-            )
-            if should_stop:
-                break
+        try:
+            async for event in agent.stream(self.message):
+                should_stop = await self._dispatch_stream_event(
+                    event=event,
+                    agent=agent,
+                    state=state,
+                    request_context=request_context,
+                    baseline_message_count=baseline_message_count,
+                )
+                if should_stop:
+                    break
+        finally:
+            self._active_stream_state = None
 
         elapsed_ms = (time.perf_counter() - started_at) * MILLISECONDS_PER_SECOND
         logger.lifecycle(f"Request complete ({elapsed_ms:.0f}ms)")
@@ -569,17 +666,20 @@ class RequestOrchestrator:
         if assistant_event.type == "thinking_delta" and self.thinking_callback is not None:
             await self.thinking_callback(assistant_event.delta)
 
-    def _handle_abort_cleanup(self, logger: LogManager, *, invalidate_cache: bool = False) -> None:
-        session = self.state_manager.session
-        partial_text = session._debug_raw_stream_accum
-        if partial_text.strip():
-            session.conversation.messages.append(
-                AssistantMessage(
-                    content=[TextContent(text=f"[INTERRUPTED]\n\n{partial_text}")],
-                    stop_reason="aborted",
-                    timestamp=int(time.time() * MILLISECONDS_PER_SECOND),
-                )
-            )
+    def _handle_abort_cleanup(
+        self,
+        logger: LogManager,
+        *,
+        agent: Agent | None = None,
+        baseline_message_count: int | None = None,
+        invalidate_cache: bool = False,
+    ) -> None:
+        if agent is not None and baseline_message_count is not None:
+            self._persist_agent_messages(agent, baseline_message_count)
+
+        self._remove_in_flight_tool_registry_entries(logger)
+        self._sanitize_conversation_after_abort(logger)
+        self._append_interrupted_partial_message()
         if invalidate_cache and ac.invalidate_agent_cache(self.model, self.state_manager):
             logger.lifecycle("Agent cache invalidated after abort")
 
@@ -593,7 +693,6 @@ async def process_request(
     message: str,
     model: ModelName,
     state_manager: StateManagerProtocol,
-    tool_callback: ToolCallback | None = None,
     streaming_callback: StreamingCallback | None = None,
     thinking_callback: StreamingCallback | None = None,
     tool_result_callback: ToolResultCallback | None = None,
@@ -605,7 +704,6 @@ async def process_request(
         message,
         model,
         state_manager,
-        tool_callback,
         streaming_callback,
         thinking_callback,
         tool_result_callback,

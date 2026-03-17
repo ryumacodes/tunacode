@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 from tinyagent.agent_types import (
     AgentToolResult,
+    AssistantMessage,
     TextContent,
+    ToolCallContent,
     ToolExecutionEndEvent,
     ToolExecutionStartEvent,
 )
@@ -14,6 +18,7 @@ from tunacode.types.canonical import ToolCallStatus
 
 from tunacode.core.agents import main as agent_main
 from tunacode.core.agents.main import RequestContext, RequestOrchestrator, _TinyAgentStreamState
+from tunacode.core.logging.manager import get_logger
 from tunacode.core.session import StateManager
 
 
@@ -42,7 +47,6 @@ def _build_orchestrator_harness(
         message="test",
         model="openai/gpt-4o",
         state_manager=state_manager,
-        tool_callback=None,
         streaming_callback=None,
         tool_result_callback=_on_tool_result if result_events is not None else None,
         tool_start_callback=_on_tool_start if start_events is not None else None,
@@ -195,3 +199,53 @@ async def test_single_tool_duration_is_reported_when_not_in_parallel_batch(
     assert result_events[0][0] == "read_file"
     assert result_events[0][1] == "completed"
     assert result_events[0][4] == pytest.approx(500.0)
+
+
+def test_abort_cleanup_reconciles_in_flight_tool_state_and_dangling_messages() -> None:
+    orchestrator, state, _request_context, state_manager = _build_orchestrator_harness(
+        start_events=[],
+        result_events=[],
+    )
+    state.active_tool_call_ids.add("tool-a")
+    orchestrator._active_stream_state = state
+
+    registry = state_manager.session.runtime.tool_registry
+    registry.register("tool-a", "read_file", {"filepath": "a.py"})
+    registry.start("tool-a")
+    state_manager.session._debug_raw_stream_accum = "partial output"
+
+    fake_agent = SimpleNamespace(
+        state=SimpleNamespace(
+            messages=[
+                AssistantMessage(
+                    content=[
+                        ToolCallContent(
+                            id="tool-a",
+                            name="read_file",
+                            arguments={"filepath": "a.py"},
+                        )
+                    ],
+                    stop_reason="tool_calls",
+                    timestamp=None,
+                )
+            ]
+        )
+    )
+
+    orchestrator._handle_abort_cleanup(
+        get_logger(),
+        agent=fake_agent,
+        baseline_message_count=0,
+        invalidate_cache=False,
+    )
+
+    assert registry.get("tool-a") is None
+    assert len(state_manager.session.conversation.messages) == 1
+
+    message = state_manager.session.conversation.messages[0]
+    assert isinstance(message, AssistantMessage)
+    assert len(message.content) == 1
+
+    content_item = message.content[0]
+    assert isinstance(content_item, TextContent)
+    assert content_item.text == "[INTERRUPTED]\n\npartial output"

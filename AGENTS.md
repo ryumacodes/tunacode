@@ -50,6 +50,7 @@ Last Updated: 2026-03-16
 ## Documentation Sources to Trust
 - Primary runbook: `README.md`.
 - Architectural map: `docs/modules/index.md`.
+- Review notes for active PR triage: `docs/reviews/`.
 - Module-specific docs:
   - `docs/modules/core/core.md`
   - `docs/modules/ui/ui.md`

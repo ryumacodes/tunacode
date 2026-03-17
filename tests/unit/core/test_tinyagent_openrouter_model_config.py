@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
 from tinyagent.agent_types import Context, Model, SimpleStreamOptions
 
@@ -182,6 +183,41 @@ async def test_build_stream_fn_uses_alchemy_stream_and_overrides_max_tokens(
     assert captured_options[0].api_key == "sk-test"
     assert captured_options[0].max_tokens == 128
     assert original_options.max_tokens is None
+
+
+@pytest.mark.asyncio
+async def test_build_stream_fn_retries_transient_http_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts: list[int] = []
+    sleep_delays: list[float] = []
+    request = httpx.Request("POST", "https://example.test/v1/chat/completions")
+    response = httpx.Response(status_code=429, request=request)
+
+    async def _fake_stream(
+        model: Model,
+        context: Context,
+        options: SimpleStreamOptions,
+    ) -> object:
+        _ = (model, context, options)
+        attempts.append(len(attempts) + 1)
+        if len(attempts) < 3:
+            raise httpx.HTTPStatusError("rate limited", request=request, response=response)
+        return {"ok": True}
+
+    async def _fake_sleep(delay: float) -> None:
+        sleep_delays.append(delay)
+
+    monkeypatch.setattr(agent_config, "stream_alchemy_openai_completions", _fake_stream)
+    monkeypatch.setattr(agent_config, "_sleep_with_delay", _fake_sleep)
+
+    stream_fn = agent_config._build_stream_fn(request_delay=0.0, max_tokens=None, max_retries=3)
+
+    result = await stream_fn(Model(), Context(), SimpleStreamOptions(api_key="sk-test"))
+
+    assert result == {"ok": True}
+    assert attempts == [1, 2, 3]
+    assert sleep_delays == [0.5, 1.0]
 
 
 def test_compaction_controller_model_and_api_key_support_non_openrouter_provider(

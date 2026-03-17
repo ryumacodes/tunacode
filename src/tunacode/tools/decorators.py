@@ -26,6 +26,8 @@ from collections.abc import Callable, Coroutine
 from functools import wraps
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast, get_args, get_origin
 
+from pydantic import TypeAdapter, ValidationError
+
 from tunacode.exceptions import (
     FileOperationError,
     ToolExecutionError,
@@ -136,6 +138,7 @@ def to_tinyagent_tool(
     *,
     name: str | None = None,
     label: str | None = None,
+    strict_validation: bool = False,
 ) -> AgentTool:
     """Convert a TunaCode async tool function to a tinyAgent ``AgentTool``.
 
@@ -149,6 +152,8 @@ def to_tinyagent_tool(
             :func:`file_tool`).
         name: Optional override for the tool name (defaults to ``func.__name__``).
         label: Optional human label (defaults to ``name``).
+        strict_validation: When True, validate bound arguments against the tool's
+            Python annotations using pydantic strict mode before execution.
 
     Returns:
         A tinyAgent ``AgentTool``.
@@ -190,6 +195,11 @@ def to_tinyagent_tool(
             bound.apply_defaults()
         except TypeError as exc:
             raise ToolRetryError(f"Invalid arguments for tool '{tool_name}': {exc}") from exc
+        if strict_validation:
+            try:
+                _validate_strict_bound_arguments(sig, bound)
+            except TypeError as exc:
+                raise ToolRetryError(f"Invalid arguments for tool '{tool_name}': {exc}") from exc
 
         result = await func(**cast(dict[str, Any], bound.arguments))
         if not isinstance(result, str):
@@ -214,6 +224,23 @@ def to_tinyagent_tool(
     agent_tool.prompt_version = prompt_version  # type: ignore[attr-defined]
 
     return agent_tool
+
+
+def _validate_strict_bound_arguments(
+    sig: inspect.Signature,
+    bound: inspect.BoundArguments,
+) -> None:
+    for param_name, value in list(bound.arguments.items()):
+        param = sig.parameters.get(param_name)
+        if param is None or param.annotation is inspect.Parameter.empty:
+            continue
+        try:
+            validated = TypeAdapter(param.annotation).validate_python(value, strict=True)
+        except ValidationError as exc:
+            raise TypeError(f"parameter '{param_name}' failed strict validation: {exc}") from exc
+        except Exception:
+            continue
+        bound.arguments[param_name] = validated
 
 
 def _build_openai_parameters_schema(func: Callable[..., object]) -> dict[str, object]:

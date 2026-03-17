@@ -27,7 +27,6 @@ def _build_orchestrator(
         message="test",
         model="openai/gpt-4o",
         state_manager=state_manager,
-        tool_callback=None,
         streaming_callback=_streaming_callback if streaming_chunks is not None else None,
         thinking_callback=_thinking_callback if thinking_chunks is not None else None,
     )

@@ -46,6 +46,42 @@ class TestToTinyagentTool:
                 lambda _update: None,
             )
 
+    async def test_execute_strict_validation_rejects_type_mismatches(self, mock_no_xml_prompt):
+        @base_tool
+        async def describe_count(count: int) -> str:
+            return f"{type(count).__name__}:{count}"
+
+        tool = to_tinyagent_tool(describe_count, strict_validation=True)
+
+        with pytest.raises(ToolRetryError, match="failed strict validation"):
+            await tool.execute(  # type: ignore[union-attr]
+                "call-1",
+                {"count": "7"},
+                None,
+                lambda _update: None,
+            )
+
+    async def test_execute_non_strict_validation_preserves_existing_behavior(
+        self,
+        mock_no_xml_prompt,
+    ):
+        @base_tool
+        async def describe_count(count: int) -> str:
+            return f"{type(count).__name__}:{count}"
+
+        tool = to_tinyagent_tool(describe_count, strict_validation=False)
+
+        result = await tool.execute(  # type: ignore[union-attr]
+            "call-1",
+            {"count": "7"},
+            None,
+            lambda _update: None,
+        )
+
+        first_item = result.content[0]
+        assert isinstance(first_item, TextContent)
+        assert first_item.text == "str:7"
+
     async def test_execute_aborts_on_signal(self, mock_no_xml_prompt):
         @base_tool
         async def slow() -> str:
