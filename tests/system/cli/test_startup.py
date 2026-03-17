@@ -6,6 +6,7 @@ These tests verify that both execution modes initialize correctly:
 3. Mock tests for headless response handling
 """
 
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -93,6 +94,81 @@ class TestHeadlessModeStartup:
         )
         assert result.returncode == 0
         assert "TunaCode" in result.stdout
+
+    def test_headless_output_json_serializes_tinyagent_messages(self) -> None:
+        """Verify --output-json serializes the in-memory tinyagent message models."""
+        from tunacode.core.session import StateManager
+
+        from tunacode.ui.main import app
+
+        runner = CliRunner()
+        isolated_state_manager = StateManager()
+
+        async def _mock_process_request(*, state_manager: StateManager, **_: object) -> MagicMock:
+            state_manager.session.conversation.messages = [
+                UserMessage(content=[TextContent(text="say gm")]),
+                AssistantMessage(content=[TextContent(text="gm!")]),
+            ]
+            state_manager.session.runtime.tool_registry.register(
+                "call_1",
+                "bash",
+                {"cmd": "pwd"},
+            )
+            usage = state_manager.session.usage.session_total_usage
+            usage.input = 11
+            usage.output = 7
+            usage.total_tokens = 18
+            usage.cost.input = 0.11
+            usage.cost.output = 0.07
+            usage.cost.total = 0.18
+
+            mock_agent_run = MagicMock()
+            mock_agent_run.result = "ignored in JSON mode"
+            return mock_agent_run
+
+        with (
+            patch("tunacode.ui.main.state_manager", isolated_state_manager),
+            patch(
+                "tunacode.core.agents.main.process_request",
+                new_callable=AsyncMock,
+                side_effect=_mock_process_request,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["run", "say gm", "--auto-approve", "--output-json", "--timeout", "30"],
+            )
+
+        assert result.exit_code == 0, f"stderr: {result.output}"
+        payload = json.loads(result.output)
+
+        assert payload["success"] is True
+        assert payload["messages"] == [
+            {"role": "user", "content": [{"type": "text", "text": "say gm"}]},
+            {"role": "assistant", "content": [{"type": "text", "text": "gm!"}]},
+        ]
+        assert payload["tool_calls"] == [
+            {
+                "tool": "bash",
+                "args": {"cmd": "pwd"},
+                "timestamp": None,
+                "tool_call_id": "call_1",
+            }
+        ]
+        assert payload["usage"] == {
+            "input": 11,
+            "output": 7,
+            "cache_read": 0,
+            "cache_write": 0,
+            "total_tokens": 18,
+            "cost": {
+                "input": 0.11,
+                "output": 0.07,
+                "cache_read": 0.0,
+                "cache_write": 0.0,
+                "total": 0.18,
+            },
+        }
 
 
 class TestTUIInitialization:

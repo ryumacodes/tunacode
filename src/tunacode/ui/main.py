@@ -6,12 +6,7 @@ import os
 import sys
 
 import typer
-from tinyagent.agent_types import (
-    AssistantMessage,
-    CustomAgentMessage,
-    ToolResultMessage,
-    UserMessage,
-)
+from tinyagent.agent_types import dump_model_dumpable
 
 from tunacode.core import ConfigurationError, UserAbortError
 from tunacode.core.session import StateManager
@@ -175,7 +170,10 @@ def _build_trajectory_json(sm: StateManager) -> str:
     usage = sm.session.usage
     tool_records = runtime.tool_registry.to_legacy_records()
     trajectory = {
-        "messages": [_serialize_message(msg) for msg in conversation.messages],
+        "messages": [
+            dump_model_dumpable(message, where=f"headless trajectory message[{index}]")
+            for index, message in enumerate(conversation.messages)
+        ],
         "tool_calls": tool_records,
         "usage": usage.session_total_usage.to_dict(),
         "success": True,
@@ -260,22 +258,6 @@ def run_headless(
 
     exit_code = asyncio.run(async_run())
     raise typer.Exit(code=exit_code)
-
-
-def _serialize_message(msg: object) -> dict[str, object]:
-    """Serialize an in-memory tinyagent message model to JSON-compatible dict."""
-
-    if not isinstance(msg, UserMessage | AssistantMessage | ToolResultMessage | CustomAgentMessage):
-        raise TypeError(f"Expected tinyagent message model, got {type(msg).__name__}")
-
-    serialized_message = msg.model_dump(exclude_none=True)
-    if not isinstance(serialized_message, dict):
-        raise TypeError(
-            "tinyagent message model_dump(exclude_none=True) must return dict; "
-            f"got {type(serialized_message).__name__}"
-        )
-
-    return serialized_message
 
 
 if __name__ == "__main__":
