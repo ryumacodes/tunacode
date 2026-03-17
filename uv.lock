@@ -2038,16 +2038,13 @@ wheels = [
 
 [[package]]
 name = "tiny-agent-os"
-version = "1.2.9"
+version = "1.2.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/5b/3126b8dfa82884b71f51554547d70229cf06ce341fe9d1f62bf89302199a/tiny_agent_os-1.2.9.tar.gz", hash = "sha256:c40311d4bba7695a5789d385853c2704553259132f7f4299e03cf20d580ed68f", size = 41403, upload-time = "2026-03-16T19:03:25.759Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/46/74f6ad7a828ec638859f5f730699fce8902a54eb5c6b810b0b56911ba536/tiny_agent_os-1.2.9-py3-none-any.whl", hash = "sha256:18d14ded4b3966ec6820cfa43298c1c4ce204bdf51d0bbe523b57ff48f6c3e39", size = 30739, upload-time = "2026-03-16T19:03:24.274Z" },
-]
+sdist = { url = "https://files.pythonhosted.org/packages/a4/f4/1cedaf522fd7fcfa82f12ae76c140a139d47f296123ef1e11dc8c19d1414/tiny_agent_os-1.2.10.tar.gz", hash = "sha256:c1baeb228055ac43026d572a0bcffe7181bfc81245449d7ea06d5c5df9b5d980", size = 4222161, upload-time = "2026-03-17T16:55:26.391Z" }
 
 [[package]]
 name = "toml"
@@ -2210,7 +2207,7 @@ requires-dist = [
     { name = "textual", specifier = ">=4.0.0,<5.0.0" },
     { name = "textual-autocomplete", specifier = ">=4.0.6" },
     { name = "textual-dev", marker = "extra == 'dev'" },
-    { name = "tiny-agent-os", specifier = ">=1.2.9" },
+    { name = "tiny-agent-os" },
     { name = "twine", marker = "extra == 'dev'" },
     { name = "typer", specifier = ">=0.15.0" },
     { name = "unimport", marker = "extra == 'dev'", specifier = ">=1.0.0" },

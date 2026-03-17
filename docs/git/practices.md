@@ -28,6 +28,14 @@ When this happens:
 3. Do not remove untracked files/directories without confirmation.
 4. Re-run checks after any requested revert.
 
+## Commit-Time Failure Handling (Agent Rule)
+When a commit attempt triggers failing checks (pre-commit, lint, type checks, tests):
+1. Do **not** make architectural or refactor decisions on your own to "get green".
+2. Do **not** expand scope beyond the requested task.
+3. Only apply trivial, mechanical lint fixes if they are clearly local and non-architectural (e.g., formatting, import order, whitespace).
+4. If the failure is not a trivial lint blocker, stop and report the exact blocker to the user.
+5. Wait for explicit user instruction before making broader code changes.
+
 ## Safe Cleanup Policy
 Cleanup is allowed only when one of the following is true:
 - the user explicitly requested cleanup, or

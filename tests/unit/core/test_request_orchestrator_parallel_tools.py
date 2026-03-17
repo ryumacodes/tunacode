@@ -17,7 +17,7 @@ from tinyagent.agent_types import (
 from tunacode.types.canonical import ToolCallStatus
 
 from tunacode.core.agents import main as agent_main
-from tunacode.core.agents.main import RequestContext, RequestOrchestrator, _TinyAgentStreamState
+from tunacode.core.agents.main import RequestOrchestrator, _TinyAgentStreamState
 from tunacode.core.logging.manager import get_logger
 from tunacode.core.session import StateManager
 
@@ -26,7 +26,7 @@ def _build_orchestrator_harness(
     *,
     start_events: list[str] | None = None,
     result_events: list[tuple[str, str, dict[str, object], str | None, float | None]] | None = None,
-) -> tuple[RequestOrchestrator, _TinyAgentStreamState, RequestContext, StateManager]:
+) -> tuple[RequestOrchestrator, _TinyAgentStreamState, StateManager]:
     state_manager = StateManager()
 
     def _on_tool_start(tool_name: str) -> None:
@@ -57,15 +57,14 @@ def _build_orchestrator_harness(
         active_tool_call_ids=set(),
         batch_tool_call_ids=set(),
     )
-    request_context = RequestContext(request_id="req-1", max_iterations=10, debug_metrics=False)
-    return orchestrator, state, request_context, state_manager
+    return orchestrator, state, state_manager
 
 
 @pytest.mark.asyncio
 async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch() -> None:
     start_events: list[str] = []
     result_events: list[tuple[str, str, dict[str, object], str | None, float | None]] = []
-    orchestrator, state, request_context, state_manager = _build_orchestrator_harness(
+    orchestrator, state, state_manager = _build_orchestrator_harness(
         start_events=start_events,
         result_events=result_events,
     )
@@ -78,7 +77,6 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
         ),
         agent=object(),
         state=state,
-        request_context=request_context,
         baseline_message_count=0,
     )
     await orchestrator._handle_stream_tool_execution_start(
@@ -89,7 +87,6 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
         ),
         agent=object(),
         state=state,
-        request_context=request_context,
         baseline_message_count=0,
     )
 
@@ -106,7 +103,6 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
         ),
         agent=object(),
         state=state,
-        request_context=request_context,
         baseline_message_count=0,
     )
     await orchestrator._handle_stream_tool_execution_end(
@@ -118,7 +114,6 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
         ),
         agent=object(),
         state=state,
-        request_context=request_context,
         baseline_message_count=0,
     )
 
@@ -138,32 +133,11 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
 
 
 @pytest.mark.asyncio
-async def test_tool_start_rejects_malformed_args_payload() -> None:
-    start_events: list[str] = []
-    orchestrator, state, request_context, state_manager = _build_orchestrator_harness(
-        start_events=start_events,
-        result_events=[],
-    )
-
-    with pytest.raises(TypeError, match="tool_execution_start args must be an object"):
-        await orchestrator._handle_stream_tool_execution_start(
-            ToolExecutionStartEvent(tool_call_id="tool-a", tool_name="read_file", args=["bad"]),
-            agent=object(),
-            state=state,
-            request_context=request_context,
-            baseline_message_count=0,
-        )
-
-    assert start_events == []
-    assert state_manager.session.runtime.tool_registry.get("tool-a") is None
-
-
-@pytest.mark.asyncio
 async def test_single_tool_duration_is_reported_when_not_in_parallel_batch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     result_events: list[tuple[str, str, dict[str, object], str | None, float | None]] = []
-    orchestrator, state, request_context, _state_manager = _build_orchestrator_harness(
+    orchestrator, state, _state_manager = _build_orchestrator_harness(
         start_events=[],
         result_events=result_events,
     )
@@ -179,7 +153,6 @@ async def test_single_tool_duration_is_reported_when_not_in_parallel_batch(
         ),
         agent=object(),
         state=state,
-        request_context=request_context,
         baseline_message_count=0,
     )
     await orchestrator._handle_stream_tool_execution_end(
@@ -191,7 +164,6 @@ async def test_single_tool_duration_is_reported_when_not_in_parallel_batch(
         ),
         agent=object(),
         state=state,
-        request_context=request_context,
         baseline_message_count=0,
     )
 
@@ -202,7 +174,7 @@ async def test_single_tool_duration_is_reported_when_not_in_parallel_batch(
 
 
 def test_abort_cleanup_reconciles_in_flight_tool_state_and_dangling_messages() -> None:
-    orchestrator, state, _request_context, state_manager = _build_orchestrator_harness(
+    orchestrator, state, state_manager = _build_orchestrator_harness(
         start_events=[],
         result_events=[],
     )

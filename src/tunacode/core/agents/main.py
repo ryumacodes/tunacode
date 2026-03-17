@@ -93,7 +93,9 @@ class _ModelDumpableMessage(Protocol):
 
 
 def _coerce_max_iterations(session: SessionStateProtocol) -> int:
-    return int(session.user_config["settings"]["max_iterations"])
+    user_config = cast(dict[str, object], cast(object, session.user_config))
+    settings = cast(dict[str, object], user_config["settings"])
+    return int(settings["max_iterations"])
 
 
 def _serialize_agent_messages(messages: list[AgentMessage]) -> list[object]:
@@ -184,9 +186,9 @@ class RequestOrchestrator:
             logger.lifecycle("Agent cache invalidated after timeout")
 
     async def _run_impl(self) -> Agent:
-        request_context = self._initialize_request()
+        max_iterations = self._initialize_request()
         logger = get_logger()
-        logger.info("Request started", request_id=request_context.request_id)
+        logger.info("Request started", request_id=self.state_manager.session.runtime.request_id)
 
         session = self.state_manager.session
         conversation = session.conversation
@@ -202,12 +204,12 @@ class RequestOrchestrator:
         try:
             await self._run_stream(
                 agent=agent,
-                request_context=request_context,
+                max_iterations=max_iterations,
                 baseline_message_count=baseline_message_count,
             )
             await self._retry_after_context_overflow_if_needed(
                 agent=agent,
-                request_context=request_context,
+                max_iterations=max_iterations,
                 pre_request_history=pre_request_history,
             )
             return agent
@@ -220,7 +222,7 @@ class RequestOrchestrator:
             )
             raise
 
-    def _initialize_request(self) -> RequestContext:
+    def _initialize_request(self) -> int:
         request_id = str(uuid.uuid4())[:REQUEST_ID_LENGTH]
         session = self.state_manager.session
         runtime = session.runtime
@@ -232,11 +234,7 @@ class RequestOrchestrator:
         session.usage.last_call_usage = UsageMetrics()
         if not session.task.original_query:
             session.task.original_query = self.message
-        return RequestContext(
-            request_id=request_id,
-            max_iterations=_coerce_max_iterations(session),
-            debug_metrics=False,
-        )
+        return _coerce_max_iterations(session)
 
     def _maybe_emit_compaction_notice(self, outcome: CompactionOutcome) -> None:
         if self.notice_callback is None:
@@ -269,7 +267,7 @@ class RequestOrchestrator:
         self,
         *,
         agent: Agent,
-        request_context: RequestContext,
+        max_iterations: int,
         pre_request_history: list[AgentMessage],
     ) -> None:
         error_text = self._agent_error_text(agent)
@@ -288,7 +286,7 @@ class RequestOrchestrator:
         self.state_manager.session._debug_raw_stream_accum = ""
         await self._run_stream(
             agent=agent,
-            request_context=request_context,
+            max_iterations=max_iterations,
             baseline_message_count=len(conversation.messages),
         )
 
@@ -392,16 +390,16 @@ class RequestOrchestrator:
         *,
         agent: Agent,
         state: _TinyAgentStreamState,
-        request_context: RequestContext,
+        max_iterations: int,
         baseline_message_count: int,
     ) -> bool:
         _ = (event_obj, baseline_message_count)
         state.runtime.iteration_count += 1
         state.runtime.current_iteration = state.runtime.iteration_count
-        if state.runtime.iteration_count <= request_context.max_iterations:
+        if state.runtime.iteration_count <= max_iterations:
             return False
         agent.abort()
-        raise RuntimeError(f"Max iterations exceeded ({request_context.max_iterations}); aborted")
+        raise RuntimeError(f"Max iterations exceeded ({max_iterations}); aborted")
 
     async def _handle_stream_message_update(
         self,
@@ -409,10 +407,9 @@ class RequestOrchestrator:
         *,
         agent: Agent,
         state: _TinyAgentStreamState,
-        request_context: RequestContext,
         baseline_message_count: int,
     ) -> bool:
-        _ = (agent, state, request_context, baseline_message_count)
+        _ = (agent, state, baseline_message_count)
         await self._handle_message_update(event_obj)
         return False
 
@@ -422,7 +419,6 @@ class RequestOrchestrator:
         *,
         agent: Agent,
         state: _TinyAgentStreamState,
-        request_context: RequestContext,
         baseline_message_count: int,
     ) -> bool:
         _ = (agent, baseline_message_count)
@@ -435,7 +431,7 @@ class RequestOrchestrator:
         session.usage.session_total_usage.add(usage)
         log_usage_update(
             logger=get_logger(),
-            request_id=request_context.request_id,
+            request_id=session.runtime.request_id,
             event_name="message_end",
             last_call_usage=session.usage.last_call_usage,
             session_total_usage=session.usage.session_total_usage,
@@ -448,17 +444,12 @@ class RequestOrchestrator:
         *,
         agent: Agent,
         state: _TinyAgentStreamState,
-        request_context: RequestContext,
         baseline_message_count: int,
     ) -> bool:
-        _ = (agent, request_context, baseline_message_count)
+        _ = (agent, baseline_message_count)
         tool_call_id = event_obj.tool_call_id
         tool_name = event_obj.tool_name
-        args = normalize_tool_event_args(
-            event_obj.args,
-            event_name="tool_execution_start",
-            tool_call_id=tool_call_id,
-        )
+        args = event_obj.args or {}
         state.tool_start_times[tool_call_id] = time.perf_counter()
         self._mark_tool_start_batch_state(state, tool_call_id=tool_call_id)
         state.runtime.tool_registry.register(
@@ -467,12 +458,6 @@ class RequestOrchestrator:
             cast(dict[str, object], args),
         )
         state.runtime.tool_registry.start(tool_call_id)
-        log_tool_execution_start(
-            get_logger(),
-            state=state,
-            tool_call_id=tool_call_id,
-            tool_name=tool_name,
-        )
         if self.tool_start_callback is not None:
             self.tool_start_callback(tool_name)
         return False
@@ -483,16 +468,14 @@ class RequestOrchestrator:
         *,
         agent: Agent,
         state: _TinyAgentStreamState,
-        request_context: RequestContext,
         baseline_message_count: int,
     ) -> bool:
-        _ = (agent, request_context, baseline_message_count)
+        _ = (agent, baseline_message_count)
         tool_call_id = event_obj.tool_call_id
         tool_name = event_obj.tool_name
         duration_ms = self._resolve_tool_duration_ms(state, tool_call_id=tool_call_id)
         result_text = extract_tool_result_text(event_obj.result)
         status = "failed" if event_obj.is_error else "completed"
-        was_parallel_batch_member = tool_call_id in state.batch_tool_call_ids
 
         if event_obj.is_error:
             state.runtime.tool_registry.fail(tool_call_id, error=result_text)
@@ -501,24 +484,16 @@ class RequestOrchestrator:
 
         state.active_tool_call_ids.discard(tool_call_id)
         self._clear_tool_batch_state_if_idle(state)
-        log_tool_execution_end(
-            get_logger(),
-            state=state,
-            tool_call_id=tool_call_id,
-            tool_name=tool_name,
-            status=status,
-            duration_ms=duration_ms,
-            was_parallel_batch_member=was_parallel_batch_member,
-        )
 
         if self.tool_result_callback is None:
             return False
 
-        callback_args = state.runtime.tool_registry.get_args(tool_call_id)
+        raw_callback_args = cast(object, state.runtime.tool_registry.get_args(tool_call_id))
+        callback_args = cast(dict[str, object], raw_callback_args or {})
         self.tool_result_callback(
             tool_name,
             status,
-            coerce_tool_callback_args(callback_args),
+            callback_args,
             result_text,
             duration_ms,
         )
@@ -530,10 +505,9 @@ class RequestOrchestrator:
         *,
         agent: Agent,
         state: _TinyAgentStreamState,
-        request_context: RequestContext,
         baseline_message_count: int,
     ) -> bool:
-        _ = (event_obj, state, request_context)
+        _ = (event_obj, state)
         self._persist_agent_messages(agent, baseline_message_count)
         return True
 
@@ -543,7 +517,7 @@ class RequestOrchestrator:
         event: AgentEvent,
         agent: Agent,
         state: _TinyAgentStreamState,
-        request_context: RequestContext,
+        max_iterations: int,
         baseline_message_count: int,
     ) -> bool:
         if is_turn_end_event(event):
@@ -551,7 +525,7 @@ class RequestOrchestrator:
                 event,
                 agent=agent,
                 state=state,
-                request_context=request_context,
+                max_iterations=max_iterations,
                 baseline_message_count=baseline_message_count,
             )
         if isinstance(event, MessageUpdateEvent):
@@ -559,7 +533,6 @@ class RequestOrchestrator:
                 event,
                 agent=agent,
                 state=state,
-                request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
         if is_message_end_event(event):
@@ -567,7 +540,6 @@ class RequestOrchestrator:
                 event,
                 agent=agent,
                 state=state,
-                request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
         if is_tool_execution_start_event(event):
@@ -575,7 +547,6 @@ class RequestOrchestrator:
                 event,
                 agent=agent,
                 state=state,
-                request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
         if is_tool_execution_end_event(event):
@@ -583,7 +554,6 @@ class RequestOrchestrator:
                 event,
                 agent=agent,
                 state=state,
-                request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
         if is_agent_end_event(event):
@@ -591,7 +561,6 @@ class RequestOrchestrator:
                 event,
                 agent=agent,
                 state=state,
-                request_context=request_context,
                 baseline_message_count=baseline_message_count,
             )
         return False
@@ -600,7 +569,7 @@ class RequestOrchestrator:
         self,
         *,
         agent: Agent,
-        request_context: RequestContext,
+        max_iterations: int,
         baseline_message_count: int,
     ) -> Agent:
         logger = get_logger()
@@ -619,7 +588,7 @@ class RequestOrchestrator:
                     event=event,
                     agent=agent,
                     state=state,
-                    request_context=request_context,
+                    max_iterations=max_iterations,
                     baseline_message_count=baseline_message_count,
                 )
                 if should_stop:

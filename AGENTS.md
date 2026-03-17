@@ -23,8 +23,10 @@ Last Updated: 2026-03-17
 
 ## Git Safety and Non-Destructive Defaults
 - Follow `docs/git/practices.md` for local Git workflow and safety rules.
+- Before performing any Git operation (`git status`, `git add`, `git commit`, etc.), read `docs/git/practices.md` in that session.
 - Default behavior is non-destructive: never delete or clean untracked files/directories unless explicitly requested by the user.
 - If unknown files appear during checks, pause and ask before cleanup.
+- During commit-time check failures, do not make architectural/refactor decisions to force a green commit; only apply trivial lint-only fixes, otherwise stop and ask for user instruction.
 
 ## Top-Level Layout
 - `src/tunacode/` — application code.
