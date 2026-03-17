@@ -13,6 +13,12 @@ Last Updated: 2026-03-17
 - `docs/modules/ui/commands.md` — command model and command registration notes.
 - `scripts/check_agents_freshness.py` — validates this file is current.
 
+## Harness Documentation Purpose
+- `HARNESS.md` documents the code-quality harness for this repository.
+- It captures pre-commit, pre-push, repository rules, and CI/CD checks in one place.
+- The goal is to balance developer speed with reliability when programming with code agents.
+- Use it as the operational checklist for what runs locally vs what is enforced in CI.
+
 ## Top-Level Layout
 - `src/tunacode/` — application code.
 - `tests/` — unit and architecture tests.
