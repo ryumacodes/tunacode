@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from collections.abc import Iterable
+from typing import cast
 
 from tinyagent.agent_types import (
     AgentMessage,
@@ -55,12 +56,13 @@ def is_tinyagent_message(value: object) -> bool:
     return isinstance(value, _AGENT_MESSAGE_TYPES)
 
 
-def coerce_tinyagent_history(messages: list[Any]) -> list[AgentMessage]:
-    if not messages:
+def coerce_tinyagent_history(messages: Iterable[object]) -> list[AgentMessage]:
+    message_list = list(messages)
+    if not message_list:
         return []
 
-    if all(is_tinyagent_message(message) for message in messages):
-        return [cast(AgentMessage, message) for message in messages]
+    if all(is_tinyagent_message(message) for message in message_list):
+        return [cast(AgentMessage, message) for message in message_list]
 
     raise TypeError(
         "Session history contains non-tinyagent message models. "

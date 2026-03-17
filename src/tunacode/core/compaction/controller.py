@@ -371,17 +371,18 @@ class CompactionController:
         base_url = self._require_provider_base_url(provider_id, resolved_base_url)
 
         resolved_alchemy_api = get_provider_alchemy_api(provider_id)
-
-        model_kwargs: dict[str, str] = {}
-        if base_url:
-            model_kwargs["base_url"] = base_url
-        if resolved_alchemy_api:
-            model_kwargs["api"] = resolved_alchemy_api
-        return OpenAICompatModel(
-            provider=provider_id,
-            id=model_id,
-            **model_kwargs,
-        )
+        if base_url is not None and resolved_alchemy_api is not None:
+            return OpenAICompatModel(
+                provider=provider_id,
+                id=model_id,
+                api=resolved_alchemy_api,
+                base_url=base_url,
+            )
+        if base_url is not None:
+            return OpenAICompatModel(provider=provider_id, id=model_id, base_url=base_url)
+        if resolved_alchemy_api is not None:
+            return OpenAICompatModel(provider=provider_id, id=model_id, api=resolved_alchemy_api)
+        return OpenAICompatModel(provider=provider_id, id=model_id)
 
     def _resolve_base_url(self, provider_id: str) -> str | None:
         """Resolve model base URL with explicit override-first precedence."""
@@ -526,8 +527,8 @@ def _is_compaction_summary_message(message: AgentMessage) -> bool:
 
 def _build_summary_user_message(summary_text: str) -> AgentMessage:
     payload_text = f"{COMPACTION_SUMMARY_HEADER}\n\n{summary_text}"
-    return UserMessage(
+    summary_message = UserMessage(
         content=[TextContent(text=payload_text)],
         timestamp=None,
-        compaction_summary=True,
     )
+    return summary_message.model_copy(update={COMPACTION_SUMMARY_KEY: True})

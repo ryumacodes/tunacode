@@ -26,6 +26,8 @@ from collections.abc import Callable, Coroutine
 from functools import wraps
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast, get_args, get_origin
 
+from pydantic import TypeAdapter, ValidationError
+
 from tunacode.exceptions import (
     FileOperationError,
     ToolExecutionError,
@@ -37,6 +39,7 @@ from tunacode.tools.xml_helper import get_xml_prompt_path, load_prompt_from_xml
 
 if TYPE_CHECKING:
     from tinyagent import AgentTool
+    from tinyagent.agent_types import JsonObject, JsonValue
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -136,6 +139,7 @@ def to_tinyagent_tool(
     *,
     name: str | None = None,
     label: str | None = None,
+    strict_validation: bool = False,
 ) -> AgentTool:
     """Convert a TunaCode async tool function to a tinyAgent ``AgentTool``.
 
@@ -149,6 +153,8 @@ def to_tinyagent_tool(
             :func:`file_tool`).
         name: Optional override for the tool name (defaults to ``func.__name__``).
         label: Optional human label (defaults to ``name``).
+        strict_validation: When True, validate bound arguments against the tool's
+            Python annotations using pydantic strict mode before execution.
 
     Returns:
         A tinyAgent ``AgentTool``.
@@ -190,6 +196,11 @@ def to_tinyagent_tool(
             bound.apply_defaults()
         except TypeError as exc:
             raise ToolRetryError(f"Invalid arguments for tool '{tool_name}': {exc}") from exc
+        if strict_validation:
+            try:
+                _validate_strict_bound_arguments(sig, bound)
+            except TypeError as exc:
+                raise ToolRetryError(f"Invalid arguments for tool '{tool_name}': {exc}") from exc
 
         result = await func(**cast(dict[str, Any], bound.arguments))
         if not isinstance(result, str):
@@ -216,12 +227,29 @@ def to_tinyagent_tool(
     return agent_tool
 
 
-def _build_openai_parameters_schema(func: Callable[..., object]) -> dict[str, object]:
+def _validate_strict_bound_arguments(
+    sig: inspect.Signature,
+    bound: inspect.BoundArguments,
+) -> None:
+    for param_name, value in list(bound.arguments.items()):
+        param = sig.parameters.get(param_name)
+        if param is None or param.annotation is inspect.Parameter.empty:
+            continue
+        try:
+            validated = TypeAdapter(param.annotation).validate_python(value, strict=True)
+        except ValidationError as exc:
+            raise TypeError(f"parameter '{param_name}' failed strict validation: {exc}") from exc
+        except Exception:
+            continue
+        bound.arguments[param_name] = validated
+
+
+def _build_openai_parameters_schema(func: Callable[..., object]) -> JsonObject:
     """Build a minimal OpenAI-function JSON schema from a function signature."""
 
     sig = inspect.signature(func)
 
-    properties: dict[str, object] = {}
+    properties: dict[str, JsonValue] = {}
     required: list[str] = []
 
     for param_name, param in sig.parameters.items():
@@ -247,13 +275,13 @@ def _build_openai_parameters_schema(func: Callable[..., object]) -> dict[str, ob
 
         properties[param_name] = schema
 
-    parameters: dict[str, object] = {"type": "object", "properties": properties}
+    parameters: JsonObject = {"type": "object", "properties": properties}
     if required:
-        parameters["required"] = required
+        parameters["required"] = [param_name for param_name in required]
     return parameters
 
 
-_PRIMITIVE_JSON_SCHEMAS: dict[object, dict[str, object]] = {
+_PRIMITIVE_JSON_SCHEMAS: dict[object, JsonObject] = {
     str: {"type": "string"},
     int: {"type": "integer"},
     float: {"type": "number"},
@@ -261,14 +289,14 @@ _PRIMITIVE_JSON_SCHEMAS: dict[object, dict[str, object]] = {
 }
 
 
-def _schema_for_list_args(args: tuple[object, ...]) -> dict[str, object]:
+def _schema_for_list_args(args: tuple[object, ...]) -> JsonObject:
     if len(args) != 1:
         return {"type": "array"}
     return {"type": "array", "items": _python_type_to_json_schema(args[0])}
 
 
-def _schema_for_dict_args(args: tuple[object, ...]) -> dict[str, object]:
-    schema: dict[str, object] = {"type": "object"}
+def _schema_for_dict_args(args: tuple[object, ...]) -> JsonObject:
+    schema: JsonObject = {"type": "object"}
     if len(args) != 2:
         return schema
 
@@ -282,22 +310,29 @@ def _schema_for_dict_args(args: tuple[object, ...]) -> dict[str, object]:
     return schema
 
 
-def _schema_for_union_args(args: tuple[object, ...]) -> dict[str, object]:
+def _schema_for_union_args(args: tuple[object, ...]) -> JsonObject:
     non_none = [a for a in args if a is not type(None)]  # noqa: E721
     if len(non_none) == 1:
         return _python_type_to_json_schema(non_none[0])
-    return {"anyOf": [_python_type_to_json_schema(a) for a in non_none]}
+    any_of: list[JsonValue] = [_python_type_to_json_schema(annotation) for annotation in non_none]
+    return {"anyOf": any_of}
 
 
-def _schema_for_literal_args(args: tuple[object, ...]) -> dict[str, object]:
-    literals = list(args)
-    schema: dict[str, object] = {"enum": literals}
+def _schema_for_literal_args(args: tuple[object, ...]) -> JsonObject:
+    literals: list[JsonValue] = []
+    for value in args:
+        if value is None or isinstance(value, str | int | float | bool):
+            literals.append(value)
+            continue
+        return {}
+
+    schema: JsonObject = {"enum": literals}
     if literals and all(isinstance(v, str) for v in literals):
         schema["type"] = "string"
     return schema
 
 
-def _python_type_to_json_schema(annotation: object) -> dict[str, object]:
+def _python_type_to_json_schema(annotation: object) -> JsonObject:
     """Best-effort conversion of a Python type annotation to JSON schema.
 
     We intentionally keep this conservative: if we don't recognize a type, we

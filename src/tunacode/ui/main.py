@@ -224,7 +224,6 @@ def run_headless(
                 message=prompt,
                 model=state_manager.session.current_model,
                 state_manager=state_manager,
-                tool_callback=None,
                 streaming_callback=None,
                 tool_result_callback=None,
                 tool_start_callback=None,
