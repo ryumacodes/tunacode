@@ -3,6 +3,19 @@
 ## Purpose
 This document defines coding standards for TunaCode to avoid unnecessary defensive complexity in an already complex codebase.
 
+
+ - minimal changes
+ - no extra abstractions
+ - no defensive layers
+ - one scoped step at a time
+
+abstractions must be earned
+complexity must be ground down to its ultimate truth
+never allows the "it passess" to beat common sense
+legacy logic must be destroyed when refactoring, half cutovers cuase chaos, if you can cut it overclean in a few files you have a project not an issue
+
+
+
 ## Case Study: Defensive Slop (What went wrong)
 A recent change introduced duplicate and fallback logic for `max_iterations`:
 - hardcoded fallback values were added in code (`15`, `40`)

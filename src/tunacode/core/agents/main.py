@@ -165,7 +165,6 @@ class RequestOrchestrator:
         self.notice_callback = notice_callback
         self.compaction_status_callback = compaction_status_callback
         self.compaction_controller = get_or_create_compaction_controller(state_manager)
-        self.empty_handler = EmptyResponseHandler(state_manager, notice_callback)
         self._active_stream_state: _TinyAgentStreamState | None = None
 
     async def run(self) -> Agent:
@@ -230,7 +229,6 @@ class RequestOrchestrator:
         runtime.iteration_count = 0
         runtime.tool_registry.clear()
         runtime.batch_counter = 0
-        runtime.consecutive_empty_responses = 0
         session.usage.last_call_usage = UsageMetrics()
         if not session.task.original_query:
             session.task.original_query = self.message
@@ -636,19 +634,6 @@ class RequestOrchestrator:
         if error_text and not is_context_overflow_error(error_text):
             raise AgentError(error_text)
 
-        assistant_text = (
-            extract_text(state.last_assistant_message)
-            if state.last_assistant_message is not None
-            else ""
-        )
-        is_empty = not assistant_text.strip()
-        self.empty_handler.track(is_empty)
-        if is_empty and self.empty_handler.should_intervene():
-            await self.empty_handler.prompt_action(
-                self.message,
-                "empty",
-                runtime.iteration_count or 1,
-            )
         return agent
 
     async def _handle_message_update(self, event: MessageUpdateEvent) -> None:
