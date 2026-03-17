@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import cast
 
 from tinyagent.agent_types import (
@@ -17,6 +18,8 @@ from tinyagent.agent_types import (
 
 from tunacode.types import UsageMetrics
 
+from tunacode.core.types.state_structures import RuntimeState
+
 CONTEXT_OVERFLOW_PATTERNS: tuple[str, ...] = (
     "context_length_exceeded",
     "maximum context length",
@@ -27,6 +30,15 @@ CONTEXT_OVERFLOW_FAILURE_NOTICE = (
 )
 
 _AGENT_MESSAGE_TYPES = UserMessage, AssistantMessage, ToolResultMessage, CustomAgentMessage
+
+
+@dataclass(slots=True)
+class _TinyAgentStreamState:
+    runtime: RuntimeState
+    tool_start_times: dict[str, float]
+    active_tool_call_ids: set[str]
+    batch_tool_call_ids: set[str]
+    last_assistant_message: AssistantMessage | None = None
 
 
 def coerce_error_text(value: object) -> str:

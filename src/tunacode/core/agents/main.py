@@ -5,8 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
-from dataclasses import dataclass
-from typing import Protocol, cast
+from typing import cast
 
 from tinyagent.agent import Agent, extract_text
 from tinyagent.agent_types import (
@@ -58,13 +57,13 @@ from tunacode.core.compaction.types import CompactionOutcome
 from tunacode.core.debug.usage_trace import log_usage_update
 from tunacode.core.logging.manager import LogManager, get_logger
 from tunacode.core.types.state import SessionStateProtocol, StateManagerProtocol
-from tunacode.core.types.state_structures import RuntimeState
 
 from . import agent_components as ac
 from .agent_components.agent_config import _coerce_global_request_timeout
 from .helpers import (
     CONTEXT_OVERFLOW_FAILURE_NOTICE,
     CONTEXT_OVERFLOW_RETRY_NOTICE,
+    _TinyAgentStreamState,
     coerce_error_text,
     coerce_tinyagent_history,
     extract_tool_result_text,
@@ -77,21 +76,6 @@ REQUEST_ID_LENGTH = 8
 MILLISECONDS_PER_SECOND = 1000
 
 
-@dataclass(slots=True)
-class _TinyAgentStreamState:
-    runtime: RuntimeState
-    tool_start_times: dict[str, float]
-    active_tool_call_ids: set[str]
-    batch_tool_call_ids: set[str]
-    last_assistant_message: AssistantMessage | None = None
-
-
-class _ModelDumpableMessage(Protocol):
-    def model_dump(self, *, exclude_none: bool = False) -> object:
-        del exclude_none
-        raise NotImplementedError
-
-
 def _coerce_max_iterations(session: SessionStateProtocol) -> int:
     user_config = cast(dict[str, object], cast(object, session.user_config))
     settings = cast(dict[str, object], user_config["settings"])
@@ -100,14 +84,8 @@ def _coerce_max_iterations(session: SessionStateProtocol) -> int:
 
 def _serialize_agent_messages(messages: list[AgentMessage]) -> list[object]:
     serialized_messages: list[object] = []
-    for index, message in enumerate(messages):
-        serialized_message = cast(_ModelDumpableMessage, message).model_dump(exclude_none=True)
-        if not isinstance(serialized_message, dict):
-            raise TypeError(
-                "tinyagent message model_dump(exclude_none=True) must return dict; "
-                f"got {type(serialized_message).__name__} at index {index}"
-            )
-        serialized_messages.append(cast(dict[str, object], serialized_message))
+    for message in messages:
+        serialized_messages.append(cast(dict[str, object], message.model_dump(exclude_none=True)))
     return serialized_messages
 
 

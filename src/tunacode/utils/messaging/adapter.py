@@ -257,14 +257,7 @@ def _coerce_agent_message_dict(message: Any) -> dict[str, Any]:
     ):
         raise TypeError(f"Unsupported message type: {type(message).__name__}")
 
-    serialized_message = message.model_dump(exclude_none=True)
-    if not isinstance(serialized_message, dict):
-        raise TypeError(
-            "tinyagent message model_dump(exclude_none=True) must return dict; "
-            f"got {type(serialized_message).__name__}"
-        )
-
-    return cast(dict[str, Any], serialized_message)
+    return cast(dict[str, Any], message.model_dump(exclude_none=True))
 
 
 def to_canonical(message: Any) -> CanonicalMessage:

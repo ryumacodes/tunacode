@@ -73,17 +73,6 @@ class SessionState:
     _debug_raw_stream_accum: str = ""
 
 
-def _agent_message_types() -> tuple[type[object], ...]:
-    from tinyagent.agent_types import (
-        AssistantMessage,
-        CustomAgentMessage,
-        ToolResultMessage,
-        UserMessage,
-    )
-
-    return (UserMessage, AssistantMessage, ToolResultMessage, CustomAgentMessage)
-
-
 class StateManager:
     """CLAUDE_ANCHOR[state-manager]: Main state manager singleton"""
 
@@ -182,29 +171,7 @@ class StateManager:
         """Serialize in-memory tinyagent message models to JSON dictionaries."""
 
         messages = self._session.conversation.messages
-        if not messages:
-            return []
-
-        serialized_messages: list[dict[str, Any]] = []
-        agent_message_types = _agent_message_types()
-        for idx, message in enumerate(messages):
-            if not isinstance(message, agent_message_types):
-                message_type = type(message).__name__
-                raise TypeError(
-                    "Session messages must be tinyagent message models; "
-                    f"found {message_type} at index {idx}"
-                )
-
-            serialized_message = cast(Any, message).model_dump(exclude_none=True)
-            if not isinstance(serialized_message, dict):
-                raise TypeError(
-                    "Session message model_dump(exclude_none=True) must return dict; "
-                    f"got {type(serialized_message).__name__} at index {idx}"
-                )
-
-            serialized_messages.append(serialized_message)
-
-        return serialized_messages
+        return [cast(dict[str, Any], message.model_dump(exclude_none=True)) for message in messages]
 
     def _deserialize_message(self, raw_message: Any, *, index: int) -> AgentMessage:
         from tinyagent.agent_types import (

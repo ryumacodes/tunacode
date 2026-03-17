@@ -70,10 +70,30 @@ Do not add abstraction unless it clearly reduces complexity.
 Heuristic:
 - If the code gets longer, more indirect, and harder to trace, it is probably wrong.
 
+## Rule 6: No Interface Stubs for Concrete Internal Models
+If a runtime value is already a concrete internal model type, do not add local protocol/stub layers just to call methods it already owns.
+
+Examples of what to avoid in internal typed paths:
+- local `Protocol` wrappers for `model_dump()`
+- stub bodies like `raise NotImplementedError` for methods that are never real implementations in this module
+
+Use the concrete type directly.
+
+## Rule 7: No Runtime Re-validation After Internal Typing
+Once data is typed and validated at a boundary, do not repeatedly re-check method return shape in core flow.
+
+Examples to avoid in internal typed paths:
+- repeated `isinstance(..., dict)` checks after `model_dump(exclude_none=True)`
+- extra guard rails around established internal message models
+
+Boundary validation is required. Internal re-validation is not.
+
 ## Practical Checklist (Required before merge)
 - [ ] Is this value read from its canonical source?
 - [ ] Did I avoid introducing duplicate defaults?
 - [ ] Did I avoid adding redundant coercion/parsing in internal paths?
+- [ ] Did I avoid protocol/stub indirection for concrete internal model types?
+- [ ] Did I avoid repeated runtime shape checks after boundary validation?
 - [ ] Is this abstraction necessary, or is it just defensive layering?
 - [ ] Can another developer trace this path in under 60 seconds?
 

@@ -2038,13 +2038,13 @@ wheels = [
 
 [[package]]
 name = "tiny-agent-os"
-version = "1.2.10"
+version = "1.2.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a4/f4/1cedaf522fd7fcfa82f12ae76c140a139d47f296123ef1e11dc8c19d1414/tiny_agent_os-1.2.10.tar.gz", hash = "sha256:c1baeb228055ac43026d572a0bcffe7181bfc81245449d7ea06d5c5df9b5d980", size = 4222161, upload-time = "2026-03-17T16:55:26.391Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/f0/2e6740dab09de0b9dccb744aaa20d9ac5a95dd32a39ab03222ae45d1ecfb/tiny_agent_os-1.2.11.tar.gz", hash = "sha256:32b61a7e8fdca2b2b02417a4e0eb4ce77745c37f7f0ef1f5d46fc50f87a88ca3", size = 4221353, upload-time = "2026-03-17T18:31:46.247Z" }
 
 [[package]]
 name = "toml"

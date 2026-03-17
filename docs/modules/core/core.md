@@ -21,6 +21,7 @@ The engine. Takes a user message, routes it through a tinyagent `Agent`, handles
 | File | Purpose |
 |------|---------|
 | `main.py` | `RequestOrchestrator` -- the main request lifecycle. `process_request()` is the public entry point. Handles: history coercion, pre-request compaction, streaming event dispatch, abort cleanup, empty-response intervention, context-overflow retry. |
+| `helpers.py` | Pure helpers for `main.py`: history coercion/validation, usage parsing, context-overflow detection, tool-result text extraction, and `_TinyAgentStreamState` (per-stream mutable orchestration state). |
 | `agent_components/__init__.py` | Re-exports from sub-modules. |
 | `agent_components/agent_config.py` | `get_or_create_agent()` -- builds or retrieves a cached tinyagent `Agent`. Configures: system prompt, tools, model, stream function, API key resolver, compaction transform, and skill prompt injection. `invalidate_agent_cache()` clears both module and session caches after abort/timeout. `_build_tools()` constructs the tool list (bash, discover, read_file, hashline_edit, web_fetch, write_file). `_build_skills_prompt_state()` renders active and available skill blocks, `_augment_prompt_versions_with_skills()` folds the skills fingerprint into prompt observability, and validation helpers include `_coerce_request_delay()`, `_coerce_global_request_timeout()`, `_compute_agent_version()`. |
 | `agent_components/agent_helpers.py` | Human-readable tool descriptions for UI panels. `create_empty_response_message()` builds the intervention prompt when the model returns nothing. |
@@ -85,7 +86,7 @@ process_request(message, model, state_manager, callbacks...)
 RequestOrchestrator.run()
     |-- _initialize_request()      reset counters, generate request_id
     |-- get_or_create_agent()      build/cache tinyagent Agent
-    |-- _coerce_tinyagent_history() validate session messages are dicts
+    |-- coerce_tinyagent_history() validate session history as tinyagent message models
     |-- _compact_history_for_request() threshold check + summarize if needed
     |-- agent.replace_messages()    load compacted history into agent
     |-- _run_stream(agent, ...)     main event loop
