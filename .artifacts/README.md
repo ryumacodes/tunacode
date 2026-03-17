@@ -7,7 +7,7 @@ All markdown files in these directories must use the same YAML frontmatter patte
 - `plans/`
 - `research/`
 
-## Required frontmatter 
+## Required frontmatter
 
 ```yaml
 ---
