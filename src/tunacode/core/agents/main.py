@@ -57,7 +57,7 @@ from tunacode.core.compaction.controller import (
 from tunacode.core.compaction.types import CompactionOutcome
 from tunacode.core.debug.usage_trace import log_usage_update
 from tunacode.core.logging.manager import LogManager, get_logger
-from tunacode.core.types.state import StateManagerProtocol
+from tunacode.core.types.state import SessionStateProtocol, StateManagerProtocol
 from tunacode.core.types.state_structures import RuntimeState
 
 from . import agent_components as ac
@@ -71,9 +71,8 @@ from .helpers import (
     is_context_overflow_error,
     parse_canonical_usage,
 )
-from .main_support import (
+from ._main_support import (
     EmptyResponseHandler,
-    coerce_runtime_config,
     coerce_tool_callback_args,
     log_tool_execution_end,
     log_tool_execution_start,
@@ -105,6 +104,10 @@ class _ModelDumpableMessage(Protocol):
     def model_dump(self, *, exclude_none: bool = False) -> object:
         del exclude_none
         raise NotImplementedError
+
+
+def _coerce_max_iterations(session: SessionStateProtocol) -> int:
+    return int(session.user_config["settings"]["max_iterations"])
 
 
 def _serialize_agent_messages(messages: list[AgentMessage]) -> list[object]:
@@ -176,7 +179,6 @@ class RequestOrchestrator:
         self.notice_callback = notice_callback
         self.compaction_status_callback = compaction_status_callback
         self.compaction_controller = get_or_create_compaction_controller(state_manager)
-        self.config = coerce_runtime_config(state_manager.session)
         self.empty_handler = EmptyResponseHandler(state_manager, notice_callback)
         self._active_stream_state: _TinyAgentStreamState | None = None
 
@@ -248,8 +250,8 @@ class RequestOrchestrator:
             session.task.original_query = self.message
         return RequestContext(
             request_id=request_id,
-            max_iterations=self.config.max_iterations,
-            debug_metrics=self.config.debug_metrics,
+            max_iterations=_coerce_max_iterations(session),
+            debug_metrics=False,
         )
 
     def _maybe_emit_compaction_notice(self, outcome: CompactionOutcome) -> None:

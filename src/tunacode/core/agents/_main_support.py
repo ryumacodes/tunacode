@@ -1,18 +1,17 @@
-"""Support types and helpers for the main tinyagent orchestrator."""
+"""Private support helpers for the main tinyagent orchestrator."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol, cast
+from typing import Protocol
 
 from tunacode.types import NoticeCallback
 
 from tunacode.core.logging.manager import LogManager, get_logger
-from tunacode.core.types.state import SessionStateProtocol, StateManagerProtocol
+from tunacode.core.types.state import StateManagerProtocol
 
 from . import agent_components as ac
 
-DEFAULT_MAX_ITERATIONS = 15
 TOOL_EXECUTION_LIFECYCLE_PREFIX = "Tool execution"
 PARALLEL_TOOL_CALLS_LIFECYCLE_PREFIX = "Parallel tool calls"
 DURATION_NOT_AVAILABLE_LABEL = "n/a"
@@ -23,45 +22,10 @@ class StreamLifecycleState(Protocol):
     batch_tool_call_ids: set[str]
 
 
-@dataclass(frozen=True, slots=True)
-class AgentConfig:
-    max_iterations: int = DEFAULT_MAX_ITERATIONS
-    debug_metrics: bool = False
-
-
 @dataclass(slots=True)
 class _EmptyResponseStateView:
     sm: StateManagerProtocol
     show_thoughts: bool
-
-
-def _coerce_mapping(value: object, *, field_name: str) -> dict[str, object]:
-    if not isinstance(value, dict):
-        raise TypeError(f"{field_name} must be a dict, got {type(value).__name__}")
-    if not all(isinstance(key, str) for key in value):
-        raise TypeError(f"{field_name} keys must be strings")
-    return {key: raw_value for key, raw_value in value.items() if isinstance(key, str)}
-
-
-def coerce_runtime_config(session: SessionStateProtocol) -> AgentConfig:
-    raw_user_config = _coerce_mapping(cast(object, session.user_config), field_name="user_config")
-    settings = _coerce_mapping(raw_user_config.get("settings", {}), field_name="settings")
-    max_iterations_raw = settings.get("max_iterations", DEFAULT_MAX_ITERATIONS)
-    debug_metrics_raw = settings.get("debug_metrics", False)
-
-    if isinstance(max_iterations_raw, bool):
-        raise TypeError("max_iterations must be an integer, got bool")
-    if not isinstance(max_iterations_raw, (int, str, float)):
-        raise TypeError(
-            f"max_iterations must be an integer-like value, got {type(max_iterations_raw).__name__}"
-        )
-    if not isinstance(debug_metrics_raw, bool):
-        raise TypeError(f"debug_metrics must be a bool, got {type(debug_metrics_raw).__name__}")
-
-    max_iterations = int(max_iterations_raw)
-    if max_iterations < 1:
-        raise ValueError(f"max_iterations must be >= 1, got {max_iterations}")
-    return AgentConfig(max_iterations=max_iterations, debug_metrics=debug_metrics_raw)
 
 
 def normalize_tool_event_args(
@@ -92,7 +56,7 @@ def coerce_tool_callback_args(raw_args: object) -> dict[str, object]:
     return {key: value for key, value in raw_args.items() if isinstance(key, str)}
 
 
-def format_duration_ms(duration_ms: float | None) -> str:
+def _format_duration_ms(duration_ms: float | None) -> str:
     if duration_ms is None:
         return DURATION_NOT_AVAILABLE_LABEL
     return f"{duration_ms:.1f}"
@@ -131,7 +95,7 @@ def log_tool_execution_end(
     logger.lifecycle(
         f"{TOOL_EXECUTION_LIFECYCLE_PREFIX} end: "
         f"name={tool_name} tool_call_id={tool_call_id} status={status} "
-        f"in_flight={in_flight} duration_ms={format_duration_ms(duration_ms)}"
+        f"in_flight={in_flight} duration_ms={_format_duration_ms(duration_ms)}"
     )
     if not was_parallel_batch_member:
         return

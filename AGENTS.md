@@ -5,6 +5,8 @@ Last Updated: 2026-03-17
 - This is `tunacode-cli`, a terminal AI coding agent with a Textual UI and tiny-agent tool loop.
 - Primary source package: `src/tunacode/`.
 - Python requirement: 3.11+ (`pyproject.toml`).
+- We use UV and .venv
+
 
 ## Start Here
 - `README.md` — user-facing setup, supported features, and command usage.
@@ -33,7 +35,7 @@ Last Updated: 2026-03-17
 - `Makefile` — developer-facing command shortcuts.
 - `pyproject.toml` — package metadata, deps, lint/type/security settings.
 
-## Entry Points
+## Entry Pointis
 - App entry: `src/tunacode/ui/main.py` (Typer app at `tunacode` script).
 - `pyproject.toml:[project.scripts]` -> `tunacode = "tunacode.ui.main:app"`.
 - Developer entry: `Makefile` target `make run` -> `uv run tunacode`.
