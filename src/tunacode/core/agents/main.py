@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Protocol, cast
 
-from tinyagent import Agent, extract_text
+from tinyagent.agent import Agent, extract_text
 from tinyagent.agent_types import (
     AgentEndEvent,
     AgentEvent,
@@ -102,7 +102,9 @@ class _TinyAgentStreamState:
 
 
 class _ModelDumpableMessage(Protocol):
-    def model_dump(self, *, exclude_none: bool = False) -> object: ...
+    def model_dump(self, *, exclude_none: bool = False) -> object:
+        del exclude_none
+        raise NotImplementedError
 
 
 def _serialize_agent_messages(messages: list[AgentMessage]) -> list[object]:
@@ -129,7 +131,9 @@ def _deserialize_agent_messages(raw_messages: list[object]) -> list[AgentMessage
         typed_raw_message = cast(dict[str, object], raw_message)
         role = typed_raw_message.get("role")
         if role == "user":
-            deserialized_messages.append(cast(UserMessage, UserMessage.model_validate(typed_raw_message)))
+            deserialized_messages.append(
+                cast(UserMessage, UserMessage.model_validate(typed_raw_message))
+            )
             continue
         if role == "assistant":
             deserialized_messages.append(

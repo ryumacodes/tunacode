@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from tinyagent import Agent
+from tinyagent.agent import Agent
 
 from tunacode.types.canonical import AgentPromptVersions
 

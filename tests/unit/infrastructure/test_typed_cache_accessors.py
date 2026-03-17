@@ -4,7 +4,7 @@ import os
 import time
 from pathlib import Path
 
-from tinyagent import Agent
+from tinyagent.agent import Agent
 
 from tunacode.tools.cache_accessors.ignore_manager_cache import (
     clear_ignore_manager_cache,

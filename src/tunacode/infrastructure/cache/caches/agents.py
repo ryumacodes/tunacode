@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from tinyagent import Agent
+from tinyagent.agent import Agent
 
 from tunacode.types import ModelName
 

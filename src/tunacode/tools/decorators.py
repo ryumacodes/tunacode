@@ -27,6 +27,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast, get_args, get_origin
 
 from pydantic import TypeAdapter, ValidationError
+from pydantic.errors import PydanticUndefinedAnnotation, PydanticUserError
 
 from tunacode.exceptions import (
     FileOperationError,
@@ -38,8 +39,7 @@ from tunacode.exceptions import (
 from tunacode.tools.xml_helper import get_xml_prompt_path, load_prompt_from_xml
 
 if TYPE_CHECKING:
-    from tinyagent import AgentTool
-    from tinyagent.agent_types import JsonObject, JsonValue
+    from tinyagent.agent_types import AgentTool, JsonObject, JsonValue
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -160,8 +160,12 @@ def to_tinyagent_tool(
         A tinyAgent ``AgentTool``.
     """
 
-    from tinyagent import AgentTool, AgentToolResult, TextContent
-    from tinyagent.agent_types import AgentToolUpdateCallback, JsonObject
+    from tinyagent.agent_types import (
+        AgentTool,
+        AgentToolResult,
+        AgentToolUpdateCallback,
+        TextContent,
+    )
 
     from tunacode.prompts.versioning import get_or_compute_prompt_version
     from tunacode.types.canonical import PromptVersion
@@ -239,7 +243,7 @@ def _validate_strict_bound_arguments(
             validated = TypeAdapter(param.annotation).validate_python(value, strict=True)
         except ValidationError as exc:
             raise TypeError(f"parameter '{param_name}' failed strict validation: {exc}") from exc
-        except Exception:
+        except (PydanticUserError, PydanticUndefinedAnnotation, TypeError):
             continue
         bound.arguments[param_name] = validated
 

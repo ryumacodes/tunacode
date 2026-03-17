@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from tinyagent import execute_tool_calls
+from tinyagent.agent_tool_execution import execute_tool_calls
 from tinyagent.agent_types import (
     AgentEvent,
     AgentToolResult,

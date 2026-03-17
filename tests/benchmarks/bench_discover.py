@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from tinyagent import AgentTool
+from tinyagent.agent_types import AgentTool
 
 from tunacode.tools.cache_accessors.ignore_manager_cache import clear_ignore_manager_cache
 from tunacode.tools.cache_accessors.ripgrep_cache import clear_ripgrep_cache
