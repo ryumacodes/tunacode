@@ -56,10 +56,10 @@ from tunacode.core.compaction.controller import (
 from tunacode.core.compaction.types import CompactionOutcome
 from tunacode.core.debug.usage_trace import log_usage_update
 from tunacode.core.logging.manager import LogManager, get_logger
-from tunacode.core.types.state import SessionStateProtocol, StateManagerProtocol
+from tunacode.core.types.state import StateManagerProtocol
 
 from . import agent_components as ac
-from .agent_components.agent_config import _coerce_global_request_timeout
+from .agent_components.agent_config import _coerce_global_request_timeout, _coerce_max_iterations
 from .helpers import (
     CONTEXT_OVERFLOW_FAILURE_NOTICE,
     CONTEXT_OVERFLOW_RETRY_NOTICE,
@@ -74,12 +74,6 @@ from .resume import sanitize
 
 REQUEST_ID_LENGTH = 8
 MILLISECONDS_PER_SECOND = 1000
-
-
-def _coerce_max_iterations(session: SessionStateProtocol) -> int:
-    user_config = cast(dict[str, object], cast(object, session.user_config))
-    settings = cast(dict[str, object], user_config["settings"])
-    return int(settings["max_iterations"])
 
 
 def _serialize_agent_messages(messages: list[AgentMessage]) -> list[object]:
@@ -433,7 +427,7 @@ class RequestOrchestrator:
         state.runtime.tool_registry.register(
             tool_call_id,
             tool_name,
-            cast(dict[str, object], args),
+            args,
         )
         state.runtime.tool_registry.start(tool_call_id)
         if self.tool_start_callback is not None:
@@ -466,8 +460,7 @@ class RequestOrchestrator:
         if self.tool_result_callback is None:
             return False
 
-        raw_callback_args = cast(object, state.runtime.tool_registry.get_args(tool_call_id))
-        callback_args = cast(dict[str, object], raw_callback_args or {})
+        callback_args = state.runtime.tool_registry.get_args(tool_call_id)
         self.tool_result_callback(
             tool_name,
             status,

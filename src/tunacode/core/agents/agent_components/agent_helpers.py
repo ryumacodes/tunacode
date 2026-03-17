@@ -27,16 +27,12 @@ def _describe_read_file(tool_args: ToolArgsView) -> str:
 
 def _coerce_tool_args(value: object) -> ToolArgsView:
     if not isinstance(value, dict):
-        raise TypeError(
-            f"tool args must be a dict[str, object], got {type(value).__name__}"
-        )
+        raise TypeError(f"tool args must be a dict[str, object], got {type(value).__name__}")
 
     coerced_args: dict[str, object] = {}
     for key, raw_value in value.items():
         if not isinstance(key, str):
-            raise TypeError(
-                f"tool args keys must be strings, got key of type {type(key).__name__}"
-            )
+            raise TypeError(f"tool args keys must be strings, got key of type {type(key).__name__}")
         coerced_args[key] = raw_value
     return coerced_args
 

@@ -63,7 +63,6 @@ dev = [
     "mypy",
     "bandit",
     "pylint>=4.0.4",
-    "radon>=6.0.1",             # Cyclomatic complexity analysis
     "deptry>=0.12.0",           # Unused dependencies detection
     "grimp>=3.14",
 
@@ -248,17 +247,6 @@ ignore-patterns = ["test_.*", ".*_test.py", "conftest.py"]
 reports = false
 score = false
 
-[tool.radon]
-# Cyclomatic complexity thresholds
-# A: 1-5 (low risk)
-# B: 6-10 (moderate)
-# C: 11-20 (complex)
-# D: 21-30 (alarming)
-# E: 31-40 (high risk)
-# F: 41+ (very high risk)
-cc_min = "C"  # Report functions with complexity >= C (11+)
-exclude = "tests/*,build/*,dist/*,.venv/*"
-
 [tool.deptry]
 # Unused dependencies detection
 extend_exclude = ["tests", "scripts", "docs"]
@@ -284,7 +272,6 @@ DEP002 = [
     "mypy",
     "bandit",
     "pylint",
-    "radon",
     "deptry",
     "grimp",
     "vulture",
@@ -368,7 +355,6 @@ dev = [
     "mypy",
     "bandit",
     "pylint>=4.0.4",
-    "radon>=6.0.1",             # Cyclomatic complexity analysis
     "deptry>=0.12.0",           # Unused dependencies detection
     "grimp>=3.14",
 

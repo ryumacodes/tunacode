@@ -71,6 +71,7 @@ from .agent_session_config import (
     SkillsPromptState,
     _coerce_global_request_timeout,
     _coerce_mapping,
+    _coerce_max_iterations,
     _coerce_session_config,
     _compute_agent_version,
     _normalize_session_config,
@@ -86,6 +87,7 @@ __all__ = [
     "_build_stream_fn",
     "_build_tinyagent_model",
     "_coerce_global_request_timeout",
+    "_coerce_max_iterations",
 ]
 
 ENV_OPENAI_API_KEY = "OPENAI_API_KEY"

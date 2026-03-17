@@ -1,7 +1,7 @@
 # Tunacode Development Makefile
 # Provides convenient shortcuts for common development tasks
 
-.PHONY: all help dev-setup install run test test-tmux lint clean
+.PHONY: all help dev-setup install run test test-tmux lint check clean
 
 # Default target shows help
 help:
@@ -13,6 +13,7 @@ help:
 	@echo "  make test       - Run test suite"
 	@echo "  make test-tmux  - Run the tmux system test suite"
 	@echo "  make lint       - Run linters and formatters"
+	@echo "  make check      - Run harness checks (pre-commit + pre-push stages)"
 	@echo "  make clean      - Clean build artifacts"
 	@echo ""
 
@@ -39,6 +40,11 @@ test-tmux:
 # Run linters
 lint:
 	uv run ruff check --fix .
+
+# Run full harness checks locally (without commit/push)
+check:
+	uv run pre-commit run --all-files --hook-stage pre-commit
+	uv run pre-commit run --all-files --hook-stage pre-push
 
 # Clean build artifacts
 clean:

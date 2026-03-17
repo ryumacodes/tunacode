@@ -118,11 +118,11 @@ class ToolCallRegistry:
         """Return a tool call by ID."""
         return self._calls.get(tool_call_id)
 
-    def get_args(self, tool_call_id: ToolCallId) -> ToolArgs | None:
+    def get_args(self, tool_call_id: ToolCallId) -> ToolArgs:
         """Return stored args for a tool call."""
         call = self._calls.get(tool_call_id)
         if call is None:
-            return None
+            raise ValueError(ERROR_TOOL_CALL_NOT_FOUND.format(tool_call_id=tool_call_id))
         return call.args
 
     def list_calls(self) -> list[CanonicalToolCall]:

@@ -22,6 +22,7 @@ DEFAULT_USER_CONFIG: UserConfig = {
     },
     "settings": {
         "max_retries": 3,
+        "max_iterations": 40,
         "request_delay": 0.0,
         "global_request_timeout": 600.0,
         "theme": "dracula",

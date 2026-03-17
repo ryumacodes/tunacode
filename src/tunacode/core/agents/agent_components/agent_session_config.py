@@ -18,6 +18,7 @@ class AgentSettings:
     global_request_timeout: float | None
     max_retries: int
     tool_strict_validation: bool
+    max_iterations: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +94,9 @@ def _normalize_session_config(session: SessionStateProtocol) -> SessionConfig:
         for key, value in raw_env.items()
         if isinstance(value, str) and value.strip()
     }
+    if "max_iterations" not in raw_settings:
+        raise TypeError("settings.max_iterations is required")
+
     settings = AgentSettings(
         request_delay=request_delay,
         global_request_timeout=None if timeout == 0.0 else timeout,
@@ -102,9 +106,12 @@ def _normalize_session_config(session: SessionStateProtocol) -> SessionConfig:
             "tool_strict_validation",
             False,
         ),
+        max_iterations=_coerce_int_setting(raw_settings, "max_iterations", 0),
     )
     if settings.max_retries < 1:
         raise ValueError(f"max_retries must be >= 1, got {settings.max_retries}")
+    if settings.max_iterations < 1:
+        raise ValueError(f"max_iterations must be >= 1, got {settings.max_iterations}")
     return SessionConfig(settings=settings, env=env_config)
 
 
@@ -120,6 +127,10 @@ def _coerce_request_delay(session: SessionStateProtocol) -> float:
 
 def _coerce_global_request_timeout(session: SessionStateProtocol) -> float | None:
     return _normalize_session_config(session).settings.global_request_timeout
+
+
+def _coerce_max_iterations(session: SessionStateProtocol) -> int:
+    return _normalize_session_config(session).settings.max_iterations
 
 
 def _compute_agent_version(

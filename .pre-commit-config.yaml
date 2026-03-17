@@ -53,12 +53,12 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: uv run mypy --ignore-missing-imports --no-strict-optional
+        entry: uv run mypy --ignore-missing-imports --no-strict-optional src/tunacode/
         language: system
         files: ^src/.*\.py$
         exclude: '(conftest\.py|^tests/|^scripts/)'
-        pass_filenames: true
-        stages: [pre-commit, pre-push]
+        pass_filenames: false
+        stages: [pre-push]
 
       # UV-managed tools
       - id: dead-imports
@@ -114,6 +114,15 @@ repos:
         language: system
         files: ^src/.*\.py$
         exclude: ^(tests/|scripts/)
+
+      # Ban defensive slop patterns in internal typed message paths
+      - id: defensive-slop
+        name: Check defensive slop patterns
+        entry: uv run python scripts/check-defensive-slop.py
+        language: system
+        files: ^src/.*\.py$
+        pass_filenames: true
+        stages: [pre-commit, pre-push]
 
       # Check for duplicate code (runs on push - pylint is slow)
       - id: pylint-duplicates

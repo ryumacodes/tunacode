@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import pytest
 
+from tunacode.types.canonical import CanonicalToolCall, ToolCallStatus
+
 from tunacode.core.agents.agent_components.agent_helpers import (
     _coerce_tool_args,
     get_recent_tools_context,
 )
-from tunacode.types.canonical import CanonicalToolCall, ToolCallStatus
 
 
 def test_coerce_tool_args_rejects_non_dict_payload() -> None:

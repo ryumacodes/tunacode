@@ -34,10 +34,10 @@ Source of truth: `.pre-commit-config.yaml`
 #### Python linting, typing, and formatting
 - `ruff` (repo: `astral-sh/ruff-pre-commit`, args: `--fix --show-fixes`)
 - `ruff-format` (repo: `astral-sh/ruff-pre-commit`, excludes `models_registry.json`)
-- `mypy` (repo: `local`, entry: `uv run mypy --ignore-missing-imports --no-strict-optional`, files: `^src/.*\.py$`, exclude: `conftest.py|tests/|scripts/`, also runs at `pre-push`)
 - `dead-imports` (repo: `local`, entry: `scripts/run-dead-imports.sh`, files: `\.py$`)
 - `vulture-changed` (repo: `local`, entry: `uv run vulture --min-confidence 80 scripts/utils/vulture_whitelist.py`, files: `^src/.*\.py$`, exclude: `tests/|test_`)
 - `naming-conventions` (repo: `local`, entry: `uv run python scripts/check-naming-conventions.py`, files: `^src/.*\.py$`, exclude: `tests/|scripts/`)
+- `defensive-slop` (repo: `local`, entry: `uv run python scripts/check-defensive-slop.py`, files: `^src/.*\.py$`, stages: `pre-commit`, `pre-push`)
 - `check-file-length` (repo: `local`, entry: `scripts/check-file-length.sh`, files: `\.py$`, exclude: `tests/benchmarks/bench_discover.py`)
 
 #### Security and safeguards
@@ -56,6 +56,27 @@ Source of truth: `.pre-commit-config.yaml`
 
 ## Pre-push
 
+Pre-push hooks run from `.pre-commit-config.yaml` with stage `pre-push`.
+
+### Active pre-push hooks
+- `mypy` (local, `uv run mypy --ignore-missing-imports --no-strict-optional`, scoped to `src/**/*.py`)
+- `defensive-slop` (local, `uv run python scripts/check-defensive-slop.py`, scoped to `src/**/*.py`)
+- `pylint-duplicates` (local, duplicate-code check)
+- `pytest` (local, `uv run pytest -x -q`)
+
+### Run hooks manually
+- Pre-commit stage: `uv run pre-commit run --hook-stage pre-commit --all-files`
+- Pre-push stage: `uv run pre-commit run --hook-stage pre-push --all-files`
+- Combined shortcut: `make check`
+
 ## Rules
 
+- Internal typed paths must stay direct.
+- Do not add Protocol+stub indirection for concrete runtime model methods.
+- Do not add runtime re-validation after boundary validation (e.g., post-`model_dump` dict shape checks).
+- `scripts/check-defensive-slop.py` is a blocking guard for these patterns.
+
 ## CI/CD
+
+- Use `uv run python scripts/run_gates.py` for local parity with quality gates.
+- Pre-commit and pre-push remain the first enforcement line before CI.

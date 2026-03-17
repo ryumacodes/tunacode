@@ -1,6 +1,6 @@
 # Postmortem: Defensive message typing slop around `model_dump`
 
-**Date:** 2026-03-17  
+**Date:** 2026-03-17
 **Scope:** Internal tinyagent message serialization paths
 
 ## Summary
@@ -70,5 +70,5 @@ Defensive layers were removed from internal typed serialization paths:
 4. If strict typing friction appears, solve at the type boundary (narrow type aliases/annotations), not via extra runtime defensive code.
 
 ## Rule restatement
-For this codebase: **no defensive slop in internal typed paths**.  
+For this codebase: **no defensive slop in internal typed paths**.
 Validate at boundaries once; keep core runtime code direct and traceable.
