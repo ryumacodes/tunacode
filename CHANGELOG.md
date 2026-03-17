@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.94] - 2026-03-17
+
+### Changed
+- Enforced strict config source validation and updated quality harness documentation.
+- Added git safety practices documentation and updated agent guidance.
+- Removed stale worktree metadata and unused state machine infrastructure.
+- Cleaned up defensive logic and tightened TUI cold-start paths.
+
+### Fixed
+- Fixed remaining typing issues and tool argument validation.
+- Corrected tinyagent imports and split agent configuration for better modularity.
+- Fixed CodeRabbit agent feedback issues.
+- Stabilized headless tinyagent serialization.
+
 ## [0.1.93] - 2026-03-16
 
 ### Changed
