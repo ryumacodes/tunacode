@@ -52,14 +52,26 @@ def _read_dotenv_value(key: str) -> str | None:
     return None
 
 
+def _has_working_alchemy_binding() -> bool:
+    try:
+        import tinyagent._alchemy  # noqa: F401
+    except Exception:
+        return False
+    return True
+
+
 CHUTES_API_KEY = os.environ.get(CHUTES_API_KEY_ENV) or _read_dotenv_value(CHUTES_API_KEY_ENV)
+HAS_ALCHEMY_BINDING = _has_working_alchemy_binding()
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.skipif(
-    not CHUTES_API_KEY,
-    reason="Requires CHUTES_API_KEY in env or .env for live alchemy usage contract test",
+    not CHUTES_API_KEY or not HAS_ALCHEMY_BINDING,
+    reason=(
+        "Requires CHUTES_API_KEY in env or .env and a working tinyagent._alchemy binding "
+        "for live alchemy usage contract test"
+    ),
 )
 async def test_tinyagent_alchemy_result_includes_canonical_usage_contract() -> None:
     model = OpenAICompatModel(
