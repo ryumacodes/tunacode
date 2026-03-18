@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.95] - 2026-03-18
+
+### Changed
+- Bumped `tiny-agent-os` from 1.2.9 to 1.2.11.
+- Added the v0.1.94 release run artifact to capture the full publication workflow.
+
+### Fixed
+- Skipped the live alchemy integration test when the binding is unavailable.
+- Applied small `isinstance(..., X | Y)` cleanups required by the current Ruff rules.
+
 ## [0.1.94] - 2026-03-17
 
 ### Changed

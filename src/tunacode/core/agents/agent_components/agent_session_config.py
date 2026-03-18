@@ -49,7 +49,7 @@ def _coerce_int_setting(settings: Mapping[str, object], key: str, default: int) 
         raise TypeError(f"{key} must be an integer, got bool")
     if isinstance(value, int):
         return value
-    if not isinstance(value, (str, float)):
+    if not isinstance(value, str | float):
         raise TypeError(f"{key} must be an integer-like value")
     try:
         return int(value)
@@ -59,7 +59,7 @@ def _coerce_int_setting(settings: Mapping[str, object], key: str, default: int) 
 
 def _coerce_float_setting(settings: Mapping[str, object], key: str, default: float) -> float:
     value = settings.get(key, default)
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if isinstance(value, int | float) and not isinstance(value, bool):
         return float(value)
     if not isinstance(value, str):
         raise TypeError(f"{key} must be a float-like value")

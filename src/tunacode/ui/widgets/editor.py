@@ -26,7 +26,7 @@ class _WrappedEditorState:
 
 def _require_style_type(style: object, *, component_name: str) -> StyleType:
     """Validate and narrow a style object to Rich StyleType."""
-    if isinstance(style, (str, Style)):
+    if isinstance(style, str | Style):
         return style
 
     message = (

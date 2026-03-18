@@ -44,7 +44,7 @@ def get_all_imports(src_dir: Path) -> Set[str]:
             tree = ast.parse(content, filename=str(py_file))
 
             for node in ast.walk(tree):
-                if isinstance(node, (ast.Import, ast.ImportFrom)):
+                if isinstance(node, ast.Import | ast.ImportFrom):
                     imports.update(get_import_names(node))
 
         except (SyntaxError, ValueError):

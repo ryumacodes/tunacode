@@ -296,7 +296,7 @@ def _is_retryable_stream_error(exc: Exception) -> bool:
         if response is None:
             return False
         return response.status_code in STREAM_RETRYABLE_STATUS_CODES or response.status_code >= 500
-    return isinstance(exc, (httpx.RequestError, TimeoutError))
+    return isinstance(exc, httpx.RequestError | TimeoutError)
 
 
 def _compute_stream_retry_delay(attempt_number: int) -> float:
