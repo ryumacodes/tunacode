@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.96] - 2026-03-21
+
+### Changed
+- Added models registry workflow guide documentation.
+- Added tmux suite validation artifact for release validation.
+
+### Fixed
+- Fixed MiniMax registry normalization after upstream refresh.
+- Cleaned up documentation inconsistencies and added empty dir prevention.
+
 ## [0.1.95] - 2026-03-18
 
 ### Changed
