@@ -1,15 +1,26 @@
 # Docs
 
-This directory is the home for project documentation, including architecture governance artifacts added during the refactor.
+This directory contains project documentation, architecture artifacts, and reference materials for TunaCode.
 
 ## Folders
 
-- `architecture/` — architecture design and structure docs.
-- `boundaries/` — module boundaries and dependency direction docs.
-- `contracts/` — design-by-contract specifications per boundary.
-- `tests/` — architecture and boundary test strategy docs.
-- `exceptions/` — quarantined allowlists with owner and expiry.
-- `quality-gates/` — gate definitions and ratchet policy.
-- `migration/` — parity harness plan and cutover phases.
-- `runbooks/` — operational guides for violations and boundary-safe changes.
-- `adr/` — architecture decision records.
+- `architecture/dependencies/` — generated dependency layer diagrams and reports.
+- `codebase-map/structure/` — auto-generated codebase structure tree.
+- `git/` — Git workflow practices and safety guidelines.
+- `images/` — screenshots, diagrams, and UI assets.
+- `modules/` — per-layer documentation (types, utils, infrastructure, configuration, tools, core, ui, skills).
+- `reviews/` — PR review notes and code quality feedback.
+- `ui/` — CSS architecture and theming guidelines.
+
+## Key Documents
+
+| Document | Purpose |
+|----------|---------|
+| `modules/index.md` | Module layer map and reading order (start here for architecture orientation) |
+| `git/practices.md` | Git safety rules and non-destructive workflow practices |
+| `ui/css-architecture.md` | CSS theming and NeXTSTEP-inspired design system |
+| `codebase-map/structure/tree-structure.txt` | Auto-generated source tree structure |
+
+## Generated Artifacts
+
+- `docs_audit.html` — documentation consistency audit report (review before cleanup)

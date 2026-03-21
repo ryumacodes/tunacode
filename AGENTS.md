@@ -37,7 +37,7 @@ Last Updated: 2026-03-18
 - `Makefile` — developer-facing command shortcuts.
 - `pyproject.toml` — package metadata, deps, lint/type/security settings.
 
-## Entry Pointis
+## Entry Points
 - App entry: `src/tunacode/ui/main.py` (Typer app at `tunacode` script).
 - `pyproject.toml:[project.scripts]` -> `tunacode = "tunacode.ui.main:app"`.
 - Developer entry: `Makefile` target `make run` -> `uv run tunacode`.
@@ -51,14 +51,14 @@ Last Updated: 2026-03-18
 - `src/tunacode/utils/` — adapters, messaging helpers, token counting, gitignore, system utilities.
 - `src/tunacode/types/` — canonical data models, callbacks, protocol types.
 - Shared packages: `src/tunacode/constants.py`, `src/tunacode/exceptions.py`, `src/tunacode/skills/`, `src/tunacode/prompts/`.
-- Additional packages: `src/tunacode/lsp/`, `src/tunacode/indexing/`, `src/tunacode/core/ui_api/`.
+- Notable sub-packages: `src/tunacode/core/ui_api/` (core→UI bridge), `src/tunacode/tools/lsp/` (LSP client integration).
 
 ## Architecture Boundaries
 - Documented conceptual stack (bottom-up): `types -> utils -> infrastructure -> configuration -> tools -> core -> ui`.
 - Architectural enforcement test: `tests/test_dependency_layers.py`.
-  - Allowed import direction: `ui -> core -> tools -> lsp`, with shared-layer imports from `utils`, `types`, `configuration`, `constants`, `exceptions`.
+  - Allowed import direction: `ui -> core -> tools`, with shared-layer imports from `utils`, `types`, `configuration`, `constants`, `exceptions`.
 - Import ordering test: `tests/architecture/test_import_order.py`.
-  - Layer order constant includes shared modules (`configuration, constants, exceptions, lsp, prompts, skills, types, utils`) then layered modules (`tools, infrastructure, core, ui`).
+  - Layer order constant includes shared modules (`configuration, constants, exceptions, prompts, skills, types, utils`) then layered modules (`tools, infrastructure, core, ui`).
 - Public-init constraint: `tests/architecture/test_init_bloat.py`.
 - Dependency map regeneration pipeline: `scripts/grimp_layers_report.py`, committed to `docs/architecture/dependencies/` by workflow.
 
