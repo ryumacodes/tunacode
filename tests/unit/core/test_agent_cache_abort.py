@@ -12,8 +12,6 @@ from unittest.mock import MagicMock
 import pytest
 from tinyagent.agent import Agent
 
-from tunacode.types.canonical import AgentPromptVersions
-
 from tunacode.infrastructure.cache.caches.agents import clear_agents, get_agent, set_agent
 
 from tunacode.core.agents.agent_components import agent_config
@@ -92,7 +90,6 @@ def test_get_or_create_agent_does_not_reuse_module_cached_agent_across_sessions(
         def __init__(self, options):
             self.options = options
             self._state = SimpleNamespace(system_prompt=None)
-            self.prompt_versions = None
             created_session_ids.append(options.session_id)
 
         def set_system_prompt(self, system_prompt: str) -> None:
@@ -108,24 +105,13 @@ def test_get_or_create_agent_does_not_reuse_module_cached_agent_across_sessions(
     monkeypatch.setattr(
         agent_config,
         "load_system_prompt",
-        lambda _base_path, model=None: ("SYSTEM", None),
+        lambda _base_path, model=None: "SYSTEM",
     )
-    monkeypatch.setattr(agent_config, "load_tunacode_context", lambda: ("CONTEXT", None))
+    monkeypatch.setattr(agent_config, "load_tunacode_context", lambda: "CONTEXT")
     monkeypatch.setattr(agent_config, "load_models_registry", lambda: None)
     monkeypatch.setattr(agent_config, "get_max_tokens", lambda: 4096)
     monkeypatch.setattr(agent_config, "_build_tools", lambda **kwargs: [])
     monkeypatch.setattr(agent_config, "_build_tinyagent_model", lambda model, config: object())
-    monkeypatch.setattr(
-        agent_config,
-        "compute_agent_prompt_versions",
-        lambda **kwargs: AgentPromptVersions(
-            system_prompt=None,
-            tunacode_context=None,
-            tool_prompts={},
-            fingerprint="test-fingerprint",
-            computed_at=0.0,
-        ),
-    )
 
     first_state_manager = StateManager()
     first_state_manager.session.session_id = "session-1"

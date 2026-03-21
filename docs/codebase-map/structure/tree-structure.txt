@@ -1,7 +1,7 @@
 TunaCode Source Code Structure Tree
 ===================================
 
-Generated: 2026-02-15
+Generated: 2026-03-21
 Source: <repo_root>/src/tunacode
 Output: <repo_root>/docs/codebase-map/structure/tree-structure.txt
 
@@ -24,11 +24,13 @@ src/tunacode/
 │   │   │   ├── __init__.py
 │   │   │   ├── agent_config.py
 │   │   │   ├── agent_helpers.py
+│   │   │   └── agent_session_config.py
 │   │   ├── resume/
 │   │   │   ├── __init__.py
 │   │   │   ├── sanitize.py
 │   │   │   └── sanitize_debug.py
 │   │   ├── __init__.py
+│   │   ├── helpers.py
 │   │   └── main.py
 │   ├── compaction/
 │   │   ├── __init__.py
@@ -45,7 +47,6 @@ src/tunacode/
 │   │   ├── levels.py
 │   │   ├── manager.py
 │   │   └── records.py
-│   ├── prompting/
 │   ├── session/
 │   │   ├── __init__.py
 │   │   └── state.py
@@ -67,7 +68,6 @@ src/tunacode/
 │   │   ├── system_paths.py
 │   │   └── user_configuration.py
 │   └── __init__.py
-├── indexing/
 ├── infrastructure/
 │   ├── cache/
 │   │   ├── caches/
@@ -75,6 +75,7 @@ src/tunacode/
 │   │   │   ├── agents.py
 │   │   │   ├── limits_settings.py
 │   │   │   ├── models_registry.py
+│   │   │   ├── skills.py
 │   │   │   └── tunacode_context.py
 │   │   ├── __init__.py
 │   │   ├── manager.py
@@ -82,52 +83,53 @@ src/tunacode/
 │   │   └── strategies.py
 │   ├── __init__.py
 │   └── file_filter.py
-├── lsp/
 ├── prompts/
 │   └── system_prompt.md
+├── skills/
+│   ├── __init__.py
+│   ├── discovery.py
+│   ├── loader.py
+│   ├── models.py
+│   ├── prompting.py
+│   ├── registry.py
+│   ├── search.py
+│   └── selection.py
 ├── tools/
-│   ├── authorization/
 │   ├── cache_accessors/
 │   │   ├── __init__.py
 │   │   ├── ignore_manager_cache.py
 │   │   ├── ripgrep_cache.py
 │   │   └── xml_prompts_cache.py
 │   ├── grep_components/
-│   │   ├── __init__.py
-│   │   ├── file_filter.py
-│   │   ├── pattern_matcher.py
-│   │   ├── result_formatter.py
-│   │   └── search_result.py
 │   ├── lsp/
 │   │   ├── __init__.py
 │   │   ├── client.py
 │   │   ├── diagnostics.py
 │   │   └── servers.py
-│   ├── messaging/
 │   ├── prompts/
 │   │   ├── bash_prompt.xml
-│   │   ├── glob_prompt.xml
-│   │   ├── grep_prompt.xml
-│   │   ├── list_dir_prompt.xml
+│   │   ├── discover_prompt.xml
+│   │   ├── hashline_edit_prompt.xml
 │   │   ├── read_file_prompt.xml
-│   │   ├── update_file_prompt.xml
 │   │   ├── web_fetch_prompt.xml
 │   │   └── write_file_prompt.xml
 │   ├── utils/
 │   │   ├── __init__.py
+│   │   ├── discover_pipeline.py
+│   │   ├── discover_terms.py
+│   │   ├── discover_types.py
 │   │   ├── formatting.py
-│   │   ├── ripgrep.py
-│   │   └── text_match.py
+│   │   └── ripgrep.py
 │   ├── __init__.py
 │   ├── bash.py
 │   ├── decorators.py
-│   ├── glob.py
-│   ├── grep.py
+│   ├── discover.py
+│   ├── hashline.py
+│   ├── hashline_edit.py
 │   ├── ignore.py
 │   ├── ignore_manager.py
-│   ├── list_dir.py
+│   ├── line_cache.py
 │   ├── read_file.py
-│   ├── update_file.py
 │   ├── web_fetch.py
 │   ├── write_file.py
 │   └── xml_helper.py
@@ -151,7 +153,9 @@ src/tunacode/
 │   │   ├── help.py
 │   │   ├── model.py
 │   │   ├── resume.py
+│   │   ├── skills.py
 │   │   ├── theme.py
+│   │   ├── thoughts.py
 │   │   └── update.py
 │   ├── esc/
 │   │   ├── __init__.py
@@ -160,21 +164,16 @@ src/tunacode/
 │   ├── headless/
 │   │   ├── __init__.py
 │   │   └── output.py
-│   ├── slopgotchi/
-│   │   ├── __init__.py
-│   │   └── panel.py
 │   ├── renderers/
 │   │   ├── tools/
 │   │   │   ├── __init__.py
 │   │   │   ├── base.py
 │   │   │   ├── bash.py
 │   │   │   ├── diagnostics.py
-│   │   │   ├── glob.py
-│   │   │   ├── grep.py
-│   │   │   ├── list_dir.py
+│   │   │   ├── discover.py
+│   │   │   ├── hashline_edit.py
 │   │   │   ├── read_file.py
 │   │   │   ├── syntax_utils.py
-│   │   │   ├── update_file.py
 │   │   │   ├── web_fetch.py
 │   │   │   └── write_file.py
 │   │   ├── __init__.py
@@ -182,14 +181,19 @@ src/tunacode/
 │   │   ├── errors.py
 │   │   ├── panel_widths.py
 │   │   ├── panels.py
-│   │   └── search.py
+│   │   ├── search.py
+│   │   └── thinking.py
 │   ├── screens/
 │   │   ├── __init__.py
+│   │   ├── api_key_entry.py
 │   │   ├── model_picker.py
 │   │   ├── session_picker.py
 │   │   ├── setup.py
 │   │   ├── theme_picker.py
 │   │   └── update_confirm.py
+│   ├── slopgotchi/
+│   │   ├── __init__.py
+│   │   └── panel.py
 │   ├── styles/
 │   │   ├── layout.tcss
 │   │   ├── modals.tcss
@@ -203,19 +207,23 @@ src/tunacode/
 │   │   ├── file_autocomplete.py
 │   │   ├── messages.py
 │   │   ├── resource_bar.py
-│   │   └── status_bar.py
+│   │   └── skills_autocomplete.py
 │   ├── __init__.py
 │   ├── app.py
+│   ├── clipboard.py
+│   ├── command_registry.py
 │   ├── context_panel.py
+│   ├── lifecycle.py
 │   ├── logo_assets.py
 │   ├── main.py
 │   ├── model_display.py
 │   ├── repl_support.py
 │   ├── shell_runner.py
+│   ├── streaming.py
 │   ├── styles.py
+│   ├── thinking_state.py
 │   └── welcome.py
 ├── utils/
-│   ├── config/
 │   ├── messaging/
 │   │   ├── __init__.py
 │   │   ├── adapter.py
@@ -223,7 +231,6 @@ src/tunacode/
 │   ├── system/
 │   │   ├── __init__.py
 │   │   └── gitignore.py
-│   ├── ui/
 │   └── __init__.py
 ├── __init__.py
 ├── constants.py

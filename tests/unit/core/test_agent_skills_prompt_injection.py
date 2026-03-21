@@ -59,12 +59,12 @@ def test_get_or_create_agent_injects_loaded_skill_prompt_with_canonical_paths(
     monkeypatch.setattr(
         agent_config,
         "load_system_prompt",
-        lambda _base_path, model=None: (SYSTEM_PROMPT_STUB, None),
+        lambda _base_path, model=None: SYSTEM_PROMPT_STUB,
     )
     monkeypatch.setattr(
         agent_config,
         "load_tunacode_context",
-        lambda: (CONTEXT_PROMPT_STUB, None),
+        lambda: CONTEXT_PROMPT_STUB,
     )
 
     state_manager = StateManager()

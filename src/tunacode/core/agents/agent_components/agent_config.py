@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-# ruff: noqa: I001
-
 import asyncio
-import hashlib
 import os
-import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from pathlib import Path
 from typing import cast
@@ -37,19 +33,7 @@ from tunacode.configuration.models import (
     parse_model_string,
 )
 from tunacode.constants import AGENTS_MD, ENV_OPENAI_BASE_URL
-from tunacode.prompts.versioning import (
-    compute_agent_prompt_versions,
-    get_or_compute_prompt_version,
-)
-from tunacode.skills.prompting import (
-    compute_skills_prompt_fingerprint,
-    render_available_skills_block,
-    render_selected_skills_block,
-)
-from tunacode.skills.registry import list_skill_summaries
-from tunacode.skills.selection import resolve_selected_skills
 from tunacode.types import ModelName
-from tunacode.types.canonical import AgentPromptVersions, PromptVersion
 
 from tunacode.tools.bash import bash
 from tunacode.tools.decorators import to_tinyagent_tool
@@ -58,14 +42,22 @@ from tunacode.tools.hashline_edit import hashline_edit
 from tunacode.tools.read_file import read_file
 from tunacode.tools.web_fetch import web_fetch
 from tunacode.tools.write_file import write_file
-from tunacode.tools.xml_helper import get_xml_prompt_path
 
 from tunacode.infrastructure.cache.caches import agents as agents_cache
 from tunacode.infrastructure.cache.caches import tunacode_context as context_cache
 
 from tunacode.core.compaction.controller import get_or_create_compaction_controller
-from tunacode.core.logging.manager import LogManager, get_logger
+from tunacode.core.logging.manager import get_logger
 from tunacode.core.types.state import SessionStateProtocol, StateManagerProtocol
+
+from tunacode.skills.prompting import (
+    compute_skills_prompt_fingerprint,
+    render_available_skills_block,
+    render_selected_skills_block,
+)
+from tunacode.skills.registry import list_skill_summaries
+from tunacode.skills.selection import resolve_selected_skills
+
 from .agent_session_config import (
     SessionConfig,
     SkillsPromptState,
@@ -132,21 +124,19 @@ def invalidate_agent_cache(model: str, state_manager: StateManagerProtocol) -> b
 def load_system_prompt(
     base_path: Path,
     model: str | None = None,
-) -> tuple[str, PromptVersion | None]:
+) -> str:
     _ = model
     prompt_file = base_path / "prompts" / "system_prompt.md"
     if not prompt_file.exists():
         raise FileNotFoundError(f"Required prompt file not found: {prompt_file}")
-    return prompt_file.read_text(encoding="utf-8"), get_or_compute_prompt_version(prompt_file)
+    return prompt_file.read_text(encoding="utf-8")
 
 
-def load_tunacode_context() -> tuple[str, PromptVersion | None]:
+def load_tunacode_context() -> str:
     logger = get_logger()
     try:
         tunacode_path = Path.cwd() / AGENTS_MD
-        return context_cache.get_context(tunacode_path), get_or_compute_prompt_version(
-            tunacode_path
-        )
+        return context_cache.get_context(tunacode_path)
     except Exception as exc:  # noqa: BLE001
         logger.error(f"Unexpected error loading guide file: {exc}")
         raise
@@ -398,23 +388,6 @@ def _build_skills_prompt_state(session: SessionStateProtocol) -> SkillsPromptSta
     )
 
 
-def _augment_prompt_versions_with_skills(
-    prompt_versions: AgentPromptVersions,
-    *,
-    skills_prompt_fingerprint: str,
-) -> AgentPromptVersions:
-    combined_fingerprint = hashlib.sha256(
-        f"{prompt_versions.fingerprint}|skills:{skills_prompt_fingerprint}".encode()
-    ).hexdigest()
-    return AgentPromptVersions(
-        system_prompt=prompt_versions.system_prompt,
-        tunacode_context=prompt_versions.tunacode_context,
-        tool_prompts=prompt_versions.tool_prompts,
-        fingerprint=combined_fingerprint,
-        computed_at=time.time(),
-    )
-
-
 def _get_session_cached_agent(session: SessionStateProtocol, model: ModelName) -> Agent | None:
     cached_agent = _session_agents_dict(session).get(model)
     if isinstance(cached_agent, Agent):
@@ -433,15 +406,6 @@ def _session_agents_dict(session: SessionStateProtocol) -> dict[str, object]:
     return cast(dict[str, object], agents)
 
 
-def _collect_tool_prompt_paths(tools: Sequence[AgentTool]) -> dict[str, Path | str]:
-    tool_prompt_paths: dict[str, Path | str] = {}
-    for tool in tools:
-        xml_path = get_xml_prompt_path(tool.name)
-        if xml_path is not None:
-            tool_prompt_paths[tool.name] = xml_path
-    return tool_prompt_paths
-
-
 def _build_agent_options(
     *,
     session: SessionStateProtocol,
@@ -458,22 +422,6 @@ def _build_agent_options(
         session_id=session.session_id,
         get_api_key=_build_api_key_resolver(config.env),
         transform_context=_build_transform_context(state_manager),
-    )
-
-
-def _log_agent_created(
-    logger: LogManager,
-    *,
-    model: ModelName,
-    system_version: PromptVersion | None,
-    context_version: PromptVersion | None,
-    prompt_versions: AgentPromptVersions,
-) -> None:
-    logger.info(
-        f"Agent created: {model}, "
-        f"system_prompt={system_version.content_hash[:12] if system_version else 'N/A'}, "
-        f"context={context_version.content_hash[:12] if context_version else 'N/A'}, "
-        f"fingerprint={prompt_versions.fingerprint[:12]}"
     )
 
 
@@ -504,8 +452,8 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
         session.agent_versions.pop(model, None)
 
     base_path = Path(__file__).parent.parent.parent.parent
-    system_prompt_content, system_version = load_system_prompt(base_path, model=model)
-    tunacode_context_content, context_version = load_tunacode_context()
+    system_prompt_content = load_system_prompt(base_path, model=model)
+    tunacode_context_content = load_tunacode_context()
     system_prompt = (
         system_prompt_content
         + tunacode_context_content
@@ -514,15 +462,6 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     )
 
     tools = _build_tools(strict_validation=config.settings.tool_strict_validation)
-    prompt_versions = compute_agent_prompt_versions(
-        system_prompt_path=base_path / "prompts" / "system_prompt.md",
-        tunacode_context_path=Path.cwd() / AGENTS_MD,
-        tool_prompt_paths=_collect_tool_prompt_paths(tools),
-    )
-    prompt_versions = _augment_prompt_versions_with_skills(
-        prompt_versions,
-        skills_prompt_fingerprint=skills_state.fingerprint,
-    )
 
     agent = Agent(
         _build_agent_options(
@@ -535,16 +474,9 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     agent.set_system_prompt(system_prompt)
     agent.set_model(_build_tinyagent_model(model, config))
     agent.set_tools(tools)
-    agent.prompt_versions = prompt_versions  # type: ignore[attr-defined]
 
     session.agent_versions[model] = agent_version
     session_agents[model] = agent
 
-    _log_agent_created(
-        logger,
-        model=model,
-        system_version=system_version,
-        context_version=context_version,
-        prompt_versions=prompt_versions,
-    )
+    logger.info(f"Agent created: {model}")
     return agent
