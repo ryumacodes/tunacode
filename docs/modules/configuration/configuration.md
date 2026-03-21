@@ -28,6 +28,10 @@ Everything that can be configured by the user or the project. This layer reads `
 | `feature_flags.py` | Boolean feature toggles (e.g., experimental features). |
 | `ignore_patterns.py` | Default file patterns excluded from grep/glob (`.git`, `node_modules`, etc.). |
 
+## Related Docs
+
+- [`models-registry.md`](models-registry.md) -- contributor workflow for refreshing `models_registry.json` from models.dev and applying TunaCode-specific normalization rules.
+
 ## How
 
 At startup, `StateManager.__init__()` calls `load_config_with_defaults()` to build the merged user config. This config dict is stored on `SessionState.user_config` and read by every other layer.
