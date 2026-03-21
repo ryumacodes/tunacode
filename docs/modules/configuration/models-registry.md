@@ -44,7 +44,7 @@ The script requires:
 1. Download the latest registry JSON from models.dev.
 2. Apply explicit `api` base URL overrides for providers with stable OpenAI-compatible endpoints.
 3. Remove `api` values for deployment-specific providers where the endpoint depends on a user's account, region, or cloud resource.
-4. Normalize MiniMax provider contracts by setting the expected environment variables and `alchemy_api` value.
+4. Normalize MiniMax provider contracts by setting the expected environment variables, `alchemy_api` value, and OpenAI-compatible `api` base URL.
 
 The script also fails fast if required providers are missing from the upstream registry. That protects TunaCode from silently shipping a broken or incomplete registry update.
 
@@ -54,7 +54,7 @@ The update script currently maintains three contract groups:
 
 - `API_OVERRIDES`: providers that must always carry an explicit `api` value in the bundled registry.
 - `OMIT_API_PROVIDERS`: providers whose endpoint must stay unset in the bundled registry because deployment details are user-specific.
-- `MINIMAX_PROVIDER_CONTRACTS`: MiniMax variants that must be normalized to TunaCode's expected env-var and `alchemy_api` contract.
+- `MINIMAX_PROVIDER_CONTRACTS`: MiniMax variants that must be normalized to TunaCode's expected env-var, `alchemy_api`, and OpenAI-compatible `api` contract.
 
 If you add support for a new provider or change how provider routing works, update both the refresh script and any code in `src/tunacode/configuration/models.py` that relies on the resulting fields.
 

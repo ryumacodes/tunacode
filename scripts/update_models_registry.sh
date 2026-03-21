@@ -57,18 +57,22 @@ MINIMAX_PROVIDER_CONTRACTS: dict[str, dict[str, object]] = {
     "minimax": {
         "env": ["MINIMAX_API_KEY"],
         "alchemy_api": MINIMAX_ALCHEMY_API,
+        "api": "https://api.minimax.io/v1",
     },
     "minimax-coding-plan": {
         "env": ["MINIMAX_API_KEY"],
         "alchemy_api": MINIMAX_ALCHEMY_API,
+        "api": "https://api.minimax.io/v1",
     },
     "minimax-cn": {
         "env": ["MINIMAX_CN_API_KEY"],
         "alchemy_api": MINIMAX_ALCHEMY_API,
+        "api": "https://api.minimaxi.com/v1",
     },
     "minimax-cn-coding-plan": {
         "env": ["MINIMAX_CN_API_KEY"],
         "alchemy_api": MINIMAX_ALCHEMY_API,
+        "api": "https://api.minimaxi.com/v1",
     },
 }
 
@@ -117,8 +121,13 @@ for provider_id, provider_contract in MINIMAX_PROVIDER_CONTRACTS.items():
     if not isinstance(alchemy_api, str):
         raise TypeError(f"MiniMax alchemy_api contract must be a string for '{provider_id}'")
 
+    api_url = provider_contract["api"]
+    if not isinstance(api_url, str):
+        raise TypeError(f"MiniMax api contract must be a string for '{provider_id}'")
+
     provider_data["env"] = list(env_vars)
     provider_data["alchemy_api"] = alchemy_api
+    provider_data["api"] = api_url
 
 registry_path.write_text(f"{json.dumps(registry, indent=2)}\n", encoding="utf-8")
 
