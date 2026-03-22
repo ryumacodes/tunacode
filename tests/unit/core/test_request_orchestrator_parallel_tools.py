@@ -25,9 +25,7 @@ from tunacode.core.session import StateManager
 def _build_orchestrator_harness(
     *,
     start_events: list[str] | None = None,
-    result_events: list[
-        tuple[str, str, dict[str, object], AgentToolResult | None, float | None]
-    ]
+    result_events: list[tuple[str, str, dict[str, object], AgentToolResult | None, float | None]]
     | None = None,
 ) -> tuple[RequestOrchestrator, _TinyAgentStreamState, StateManager]:
     state_manager = StateManager()

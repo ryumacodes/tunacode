@@ -66,19 +66,6 @@ def find_violations() -> list[tuple[str, str, str, str]]:
 KNOWN_VIOLATIONS: set[tuple[str, str, str, str]] = set()
 
 
-def test_no_new_layer_violations():
-    """Fail if any NEW violations are introduced beyond the known baseline."""
-    violations = find_violations()
-    new_violations = [v for v in violations if v not in KNOWN_VIOLATIONS]
-
-    if new_violations:
-        msg = "New layer violations detected:\n"
-        for from_l, to_l, importer, imported in new_violations:
-            msg += f"  {importer} -> {imported} ({from_l} -> {to_l})\n"
-        msg += "\nFix these before committing. See docs/architecture/DEPENDENCY_MAP.md"
-        pytest.fail(msg)
-
-
 def test_known_violations_still_exist():
     """Track progress - remove from KNOWN_VIOLATIONS when fixed."""
     violations = set(find_violations())

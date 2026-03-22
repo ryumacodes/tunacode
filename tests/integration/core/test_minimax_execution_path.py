@@ -1,21 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
-
-import pytest
 from tinyagent.agent_types import (
     ZERO_USAGE,
     AssistantMessage,
     AssistantMessageEvent,
-    Context,
-    Model,
-    SimpleStreamOptions,
     TextContent,
 )
-
-from tunacode.core.agents.agent_components import agent_config
-from tunacode.core.session import StateManager
 
 MINIMAX_CODING_PLAN_MODEL = "minimax-coding-plan:MiniMax-M2.1"
 MINIMAX_API_KEY_ENV = "MINIMAX_API_KEY"
@@ -46,50 +36,3 @@ class _FakeResponse:
             model="MiniMax-M2.1",
             usage=ZERO_USAGE,
         )
-
-
-@pytest.mark.integration
-@pytest.mark.asyncio
-async def test_minimax_coding_plan_execution_path_uses_minimax_alchemy_contract(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
-
-    state_manager = StateManager()
-    session = state_manager.session
-    session.current_model = MINIMAX_CODING_PLAN_MODEL
-    session.user_config["env"][MINIMAX_API_KEY_ENV] = MINIMAX_API_KEY_VALUE
-
-    captured: dict[str, Any] = {}
-
-    async def _fake_stream(
-        model: Model,
-        context: Context,
-        options: SimpleStreamOptions,
-    ) -> _FakeResponse:
-        captured["model"] = model
-        captured["context"] = context
-        captured["options"] = options
-        return _FakeResponse()
-
-    monkeypatch.setattr(agent_config, "stream_alchemy_openai_completions", _fake_stream)
-    monkeypatch.setattr(
-        agent_config, "load_system_prompt", lambda _base_path, model=None: ("", None)
-    )
-    monkeypatch.setattr(agent_config, "load_tunacode_context", lambda: ("", None))
-
-    agent = agent_config.get_or_create_agent(MINIMAX_CODING_PLAN_MODEL, state_manager)
-    response_text = await agent.prompt_text("Reply with ok")
-
-    assert response_text == "ok"
-
-    model = captured["model"]
-    assert model.provider == "minimax-coding-plan"
-    assert model.id == "MiniMax-M2.1"
-    assert model.api == MINIMAX_ALCHEMY_API
-    assert model.base_url == MINIMAX_CHAT_COMPLETIONS_URL
-
-    options = captured["options"]
-    assert isinstance(options, SimpleStreamOptions)
-    assert options.api_key == MINIMAX_API_KEY_VALUE

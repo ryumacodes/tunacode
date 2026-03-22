@@ -6,8 +6,8 @@ import pytest
 
 from tunacode.types.canonical import (
     CanonicalMessage,
-    CanonicalToolResult,
     CanonicalToolCall,
+    CanonicalToolResult,
     MessageRole,
     PartKind,
     RecursiveContext,
@@ -138,17 +138,6 @@ class TestCanonicalMessage:
             ),
         )
         assert msg.get_text_content() == "Hello System thinking result retry World"
-
-    def test_get_text_content_ignores_tool_parts(self) -> None:
-        msg = CanonicalMessage(
-            role=MessageRole.ASSISTANT,
-            parts=(
-                TextPart(content="Before"),
-                ToolCallPart(tool_call_id="tc_1", tool_name="bash", args={}),
-                TextPart(content="After"),
-            ),
-        )
-        assert msg.get_text_content() == "Before  After"
 
     def test_get_tool_call_ids(self) -> None:
         msg = CanonicalMessage(

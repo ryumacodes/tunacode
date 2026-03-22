@@ -64,9 +64,7 @@ async def _execute_discover(
     if not isinstance(query, str):
         raise ToolRetryError("Invalid arguments for tool 'discover': 'query' must be a string.")
     if not isinstance(directory, str):
-        raise ToolRetryError(
-            "Invalid arguments for tool 'discover': 'directory' must be a string."
-        )
+        raise ToolRetryError("Invalid arguments for tool 'discover': 'directory' must be a string.")
 
     try:
         result = await _run_discover(query=query, directory=directory)

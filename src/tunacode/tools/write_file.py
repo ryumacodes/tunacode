@@ -75,9 +75,7 @@ async def _execute_write_file(
             "Invalid arguments for tool 'write_file': 'filepath' must be a string."
         )
     if not isinstance(content, str):
-        raise ToolRetryError(
-            "Invalid arguments for tool 'write_file': 'content' must be a string."
-        )
+        raise ToolRetryError("Invalid arguments for tool 'write_file': 'content' must be a string.")
 
     try:
         result = await _run_write_file(filepath=filepath, content=content)

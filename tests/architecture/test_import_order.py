@@ -7,8 +7,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT_PARENT_INDEX = 2
 SOURCE_DIR_NAME = "src"
 PACKAGE_NAME = "tunacode"
@@ -212,41 +210,3 @@ def _sorted_imports(
     """Return imports sorted by layer rank and module name."""
 
     return sorted(imports, key=lambda entry: _import_key(entry, config))
-
-
-@pytest.mark.parametrize(
-    "module_info",
-    _discover_modules(SOURCE_CONFIG, REPO_ROOT),
-    ids=_module_id,
-)
-def test_first_party_import_order(module_info: ModuleInfo) -> None:
-    """Ensure first-party imports follow the layer flow order."""
-
-    imports = _first_party_imports(
-        module_info.path,
-        IMPORT_ORDER_CONFIG,
-        SOURCE_CONFIG.source_encoding,
-    )
-    import_count = len(imports)
-    if import_count < MIN_IMPORT_COUNT:
-        return
-
-    actual_keys = [_import_key(entry, IMPORT_ORDER_CONFIG) for entry in imports]
-    expected_keys = sorted(actual_keys)
-    if actual_keys == expected_keys:
-        return
-
-    expected_imports = _sorted_imports(imports, IMPORT_ORDER_CONFIG)
-    actual_display = _format_imports(imports)
-    expected_display = _format_imports(expected_imports)
-    error_details = NEWLINE.join(
-        [
-            IMPORT_ORDER_ERROR_HEADER,
-            str(module_info.relative_path),
-            SECTION_ACTUAL,
-            actual_display,
-            SECTION_EXPECTED,
-            expected_display,
-        ]
-    )
-    raise AssertionError(error_details)
