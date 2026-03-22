@@ -14,12 +14,14 @@ from tinyagent.agent_types import AssistantMessage, TextContent, UserMessage
 
 from tunacode.types.canonical import (
     CanonicalMessage,
+    CanonicalToolResult,
     MessageRole,
     RetryPromptPart,
     SystemPromptPart,
     TextPart,
     ThoughtPart,
     ToolCallPart,
+    ToolResultTextPart,
     ToolReturnPart,
 )
 from tunacode.utils.messaging.adapter import (
@@ -134,7 +136,10 @@ class TestToCanonical:
         assert len(result.parts) == 1
         assert isinstance(result.parts[0], ToolReturnPart)
         assert result.parts[0].tool_call_id == "tc_123"
-        assert result.parts[0].content == "file contents"
+        assert result.parts[0].result.tool_name == "read_file"
+        assert result.parts[0].result.get_text_content() == "file contents"
+        assert result.parts[0].result.details == {}
+        assert result.parts[0].result.is_error is False
 
     def test_system_message_to_canonical(self) -> None:
         msg = _system_message("You are helpful")
@@ -173,14 +178,27 @@ class TestFromCanonical:
     def test_tool_result_from_canonical(self) -> None:
         msg = CanonicalMessage(
             role=MessageRole.TOOL,
-            parts=(ToolReturnPart(tool_call_id="tc_1", content="ok"),),
+            parts=(
+                ToolReturnPart(
+                    tool_call_id="tc_1",
+                    result=CanonicalToolResult(
+                        tool_name="bash",
+                        content=(ToolResultTextPart(text="ok"),),
+                        details={"cwd": "/tmp"},
+                        is_error=True,
+                    ),
+                ),
+            ),
         )
         restored = from_canonical(msg)
 
         assert restored["role"] == "tool_result"
         assert restored["tool_call_id"] == "tc_1"
+        assert restored["tool_name"] == "bash"
         assert restored["content"][0]["type"] == "text"
         assert restored["content"][0]["text"] == "ok"
+        assert restored["details"] == {"cwd": "/tmp"}
+        assert restored["is_error"] is True
 
     def test_retry_prompt_part_is_text(self) -> None:
         msg = CanonicalMessage(

@@ -9,6 +9,7 @@ from tunacode.types import (  # noqa: F401
     ToolCallback,
     ToolCallPartProtocol,
     ToolName,
+    ToolResult,
     ToolResultCallback,
     ToolStartCallback,
     UserConfig,

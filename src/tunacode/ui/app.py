@@ -352,6 +352,7 @@ class TextualReplApp(App[None]):
             status=message.status,
             args=message.args,
             result=message.result,
+            result_text=message.result_text,
             duration_ms=message.duration_ms,
             max_line_width=max_line_width,
         )

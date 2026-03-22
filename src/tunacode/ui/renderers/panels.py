@@ -11,6 +11,8 @@ from rich.console import Group, RenderableType
 from rich.table import Table
 from rich.text import Text
 
+from tunacode.types import ToolResult
+
 from tunacode.core.ui_api.constants import (
     MAX_PANEL_LINES,
     MAX_SEARCH_RESULTS_DISPLAY,
@@ -87,7 +89,8 @@ class ToolDisplayData:
     tool_name: str
     status: str
     arguments: dict[str, Any]
-    result: str | None = None
+    result: ToolResult | None = None
+    result_text: str | None = None
     duration_ms: float | None = None
     timestamp: datetime | None = None
 
@@ -140,9 +143,10 @@ class RichPanelRenderer:
                 args_table.add_row(f"{key}:", display_value)
             content_parts.append(args_table)
 
-        if data.result:
+        resolved_result = data.result_text or _extract_tool_result_text(data.result)
+        if resolved_result:
             truncated_result, shown, total = _truncate_content(
-                data.result,
+                resolved_result,
                 max_line_width=max_line_width,
             )
             result_text = Text()
@@ -153,6 +157,10 @@ class RichPanelRenderer:
             # Add line count to footer if truncated
             if shown < total:
                 footer_parts.append(f"{shown}/{total} lines")
+
+        details_block = _render_tool_result_details(data.result)
+        if details_block is not None:
+            content_parts.append(details_block)
 
         if data.duration_ms is not None:
             footer_parts.append(f"{data.duration_ms:.0f}ms")
@@ -363,6 +371,37 @@ def _truncate_content(
     return "\n".join(truncated), max_lines, total
 
 
+def _extract_tool_result_text(result: ToolResult | None) -> str | None:
+    if result is None:
+        return None
+
+    parts: list[str] = []
+    for item in result.content:
+        if getattr(item, "type", None) != "text":
+            continue
+        text_value = getattr(item, "text", None)
+        if isinstance(text_value, str):
+            parts.append(text_value)
+
+    return "".join(parts) if parts else None
+
+
+def _render_tool_result_details(result: ToolResult | None) -> RenderableType | None:
+    if result is None or not result.details:
+        return None
+
+    details_table = Table.grid(padding=(0, 1))
+    details_table.add_column(style="dim")
+    details_table.add_column()
+
+    for key, value in result.details.items():
+        details_table.add_row(f"{key}:", _truncate_value(value, max_length=120))
+
+    block = Text()
+    block.append("\nDetails\n", style="bold dim")
+    return Group(block, details_table)
+
+
 def _truncate_search_results(
     results: list[dict[str, Any]],
     max_display: int = MAX_SEARCH_RESULTS_DISPLAY,
@@ -433,7 +472,8 @@ def tool_panel(
     name: str,
     status: str,
     args: dict[str, Any] | None = None,
-    result: str | None = None,
+    result: ToolResult | None = None,
+    result_text: str | None = None,
     *,
     duration_ms: float | None,
     max_line_width: int,
@@ -443,6 +483,7 @@ def tool_panel(
         status=status,
         arguments=args or {},
         result=result,
+        result_text=result_text,
         duration_ms=duration_ms,
         timestamp=datetime.now(),
     )
@@ -487,7 +528,8 @@ def tool_panel_smart(
     name: str,
     status: str,
     args: dict[str, Any] | None = None,
-    result: str | None = None,
+    result: ToolResult | None = None,
+    result_text: str | None = None,
     *,
     duration_ms: float | None,
     max_line_width: int,
@@ -500,12 +542,14 @@ def tool_panel_smart(
     panel_result: tuple[RenderableType, PanelMeta] | None = None
 
     # Only apply custom renderers for completed tools with results
-    if status == "completed" and result:
+    display_result = result_text or _extract_tool_result_text(result)
+
+    if status == "completed" and display_result:
         from tunacode.ui.renderers.tools import get_renderer
 
         renderer = get_renderer(name.lower())
         if renderer is not None:
-            render_result = renderer(args, result, duration_ms, max_line_width)
+            render_result = renderer(args, display_result, duration_ms, max_line_width)
             if render_result is not None:
                 panel_result = render_result
 
@@ -515,6 +559,7 @@ def tool_panel_smart(
             status,
             args,
             result,
+            result_text,
             duration_ms=duration_ms,
             max_line_width=max_line_width,
         )

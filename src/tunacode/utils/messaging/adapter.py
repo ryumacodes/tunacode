@@ -25,12 +25,15 @@ from tinyagent.agent_types import (
 from tunacode.types.canonical import (
     CanonicalMessage,
     CanonicalPart,
+    CanonicalToolResult,
     MessageRole,
     RetryPromptPart,
     SystemPromptPart,
     TextPart,
     ThoughtPart,
     ToolCallPart,
+    ToolResultImagePart,
+    ToolResultTextPart,
     ToolReturnPart,
 )
 
@@ -61,8 +64,11 @@ KEY_ID: str = "id"
 KEY_NAME: str = "name"
 KEY_ARGUMENTS: str = "arguments"
 KEY_URL: str = "url"
+KEY_MIME_TYPE: str = "mime_type"
 
 KEY_TOOL_CALL_ID: str = "tool_call_id"
+KEY_DETAILS: str = "details"
+KEY_IS_ERROR: str = "is_error"
 
 TEXT_SIGNATURE_KEY: str = "text_signature"
 THINKING_SIGNATURE_KEY: str = "thinking_signature"
@@ -190,9 +196,58 @@ def _to_canonical_tool_message(message: dict[str, Any]) -> CanonicalMessage:
     if not isinstance(tool_call_id, str) or not tool_call_id:
         raise TypeError("tool_result message is missing non-empty 'tool_call_id'")
 
-    content_text = _content_items_to_text(_coerce_content_items(message))
+    tool_name = message.get(KEY_NAME)
+    if not isinstance(tool_name, str):
+        tool_name = None
+
+    details = message.get(KEY_DETAILS, {})
+    if not isinstance(details, dict):
+        raise TypeError("tool_result message 'details' must be a dict")
+
+    is_error = message.get(KEY_IS_ERROR, False)
+    if not isinstance(is_error, bool):
+        raise TypeError("tool_result message 'is_error' must be a bool")
+
+    content_parts: list[ToolResultTextPart | ToolResultImagePart] = []
+    for raw_item in _coerce_content_items(message):
+        item = _coerce_content_item(raw_item)
+        item_type = item.get(KEY_TYPE)
+        if item_type == CONTENT_TYPE_TEXT:
+            content_parts.append(
+                ToolResultTextPart(
+                    text=item.get(KEY_TEXT) if isinstance(item.get(KEY_TEXT), str) else None,
+                    text_signature=(
+                        item.get(TEXT_SIGNATURE_KEY)
+                        if isinstance(item.get(TEXT_SIGNATURE_KEY), str)
+                        else None
+                    ),
+                )
+            )
+            continue
+        if item_type == CONTENT_TYPE_IMAGE:
+            content_parts.append(
+                ToolResultImagePart(
+                    url=item.get(KEY_URL) if isinstance(item.get(KEY_URL), str) else None,
+                    mime_type=(
+                        item.get(KEY_MIME_TYPE)
+                        if isinstance(item.get(KEY_MIME_TYPE), str)
+                        else None
+                    ),
+                )
+            )
+            continue
+        raise ValueError(f"Unsupported tool_result content item type: {item_type!r}")
+
     parts: tuple[CanonicalPart, ...] = (
-        ToolReturnPart(tool_call_id=tool_call_id, content=content_text),
+        ToolReturnPart(
+            tool_call_id=tool_call_id,
+            result=CanonicalToolResult(
+                tool_name=tool_name,
+                content=tuple(content_parts),
+                details=cast(dict[str, Any], details),
+                is_error=is_error,
+            ),
+        ),
     )
     return CanonicalMessage(role=MessageRole.TOOL, parts=parts, timestamp=None)
 
@@ -300,18 +355,35 @@ def _tool_message_from_canonical(message: CanonicalMessage) -> dict[str, Any]:
         )
 
     part = tool_return_parts[0]
+    content_items: list[dict[str, Any]] = []
+    for content_part in part.result.content:
+        if isinstance(content_part, ToolResultTextPart):
+            content_items.append(
+                {
+                    KEY_TYPE: CONTENT_TYPE_TEXT,
+                    KEY_TEXT: content_part.text,
+                    TEXT_SIGNATURE_KEY: content_part.text_signature,
+                }
+            )
+            continue
+        if isinstance(content_part, ToolResultImagePart):
+            content_items.append(
+                {
+                    KEY_TYPE: CONTENT_TYPE_IMAGE,
+                    KEY_URL: content_part.url,
+                    KEY_MIME_TYPE: content_part.mime_type,
+                }
+            )
+            continue
+        raise TypeError(f"Unsupported tool result content part: {type(content_part).__name__}")
+
     return {
         KEY_ROLE: ROLE_TOOL_RESULT,
         KEY_TOOL_CALL_ID: part.tool_call_id,
-        KEY_CONTENT: [
-            {
-                KEY_TYPE: CONTENT_TYPE_TEXT,
-                KEY_TEXT: part.content,
-                TEXT_SIGNATURE_KEY: None,
-            }
-        ],
-        "details": {},
-        "is_error": False,
+        KEY_NAME: part.result.tool_name,
+        KEY_CONTENT: content_items,
+        KEY_DETAILS: part.result.details,
+        KEY_IS_ERROR: part.result.is_error,
     }
 
 

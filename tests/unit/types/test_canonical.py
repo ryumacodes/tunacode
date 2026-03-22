@@ -6,6 +6,7 @@ import pytest
 
 from tunacode.types.canonical import (
     CanonicalMessage,
+    CanonicalToolResult,
     CanonicalToolCall,
     MessageRole,
     PartKind,
@@ -16,6 +17,8 @@ from tunacode.types.canonical import (
     ThoughtPart,
     ToolCallPart,
     ToolCallStatus,
+    ToolResultImagePart,
+    ToolResultTextPart,
     ToolReturnPart,
     UsageMetrics,
 )
@@ -53,11 +56,30 @@ class TestMessageParts:
     def test_tool_return_part_creation(self) -> None:
         part = ToolReturnPart(
             tool_call_id="tc_123",
-            content="file contents here",
+            result=CanonicalToolResult(
+                tool_name="read_file",
+                content=(ToolResultTextPart(text="file contents here"),),
+                details={"path": "/tmp/test.txt"},
+                is_error=False,
+            ),
         )
         assert part.tool_call_id == "tc_123"
-        assert part.content == "file contents here"
+        assert part.result.tool_name == "read_file"
+        assert part.result.get_text_content() == "file contents here"
         assert part.kind == PartKind.TOOL_RETURN
+
+    def test_canonical_tool_result_preserves_text_and_image_content(self) -> None:
+        result = CanonicalToolResult(
+            tool_name="web_fetch",
+            content=(
+                ToolResultTextPart(text="summary"),
+                ToolResultImagePart(url="https://example.com/a.png", mime_type="image/png"),
+            ),
+            details={"source": "web"},
+            is_error=False,
+        )
+        assert result.get_text_content() == "summary"
+        assert result.details == {"source": "web"}
 
     def test_retry_prompt_part_creation(self) -> None:
         part = RetryPromptPart(
@@ -104,7 +126,13 @@ class TestCanonicalMessage:
                 TextPart(content="Hello"),
                 SystemPromptPart(content="System"),
                 ThoughtPart(content="thinking"),
-                ToolReturnPart(tool_call_id="tc_1", content="result"),
+                ToolReturnPart(
+                    tool_call_id="tc_1",
+                    result=CanonicalToolResult(
+                        tool_name="bash",
+                        content=(ToolResultTextPart(text="result"),),
+                    ),
+                ),
                 RetryPromptPart(tool_call_id="tc_2", tool_name="bash", content="retry"),
                 TextPart(content="World"),
             ),
@@ -136,8 +164,20 @@ class TestCanonicalMessage:
         msg = CanonicalMessage(
             role=MessageRole.TOOL,
             parts=(
-                ToolReturnPart(tool_call_id="tc_1", content="result 1"),
-                ToolReturnPart(tool_call_id="tc_2", content="result 2"),
+                ToolReturnPart(
+                    tool_call_id="tc_1",
+                    result=CanonicalToolResult(
+                        tool_name="bash",
+                        content=(ToolResultTextPart(text="result 1"),),
+                    ),
+                ),
+                ToolReturnPart(
+                    tool_call_id="tc_2",
+                    result=CanonicalToolResult(
+                        tool_name="bash",
+                        content=(ToolResultTextPart(text="result 2"),),
+                    ),
+                ),
             ),
         )
         assert msg.get_tool_return_ids() == {"tc_1", "tc_2"}
@@ -188,7 +228,10 @@ class TestCanonicalToolCall:
             tool_name="bash",
             args={},
             status=ToolCallStatus.COMPLETED,
-            result="done",
+            result=CanonicalToolResult(
+                tool_name="bash",
+                content=(ToolResultTextPart(text="done"),),
+            ),
         )
         assert completed.is_complete
 

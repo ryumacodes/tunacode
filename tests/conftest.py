@@ -1,12 +1,10 @@
-"""Shared test fixtures for tools tests."""
+"""Shared test fixtures."""
 
 import json
 import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch
-
 import pytest
 
 # =============================================================================
@@ -58,25 +56,6 @@ def pytest_terminal_summary(
         terminalreporter.write_sep("=", "Slow Test Summary (>0.5s)")
         for nodeid, duration in sorted(slow_tests, key=lambda x: -x[1])[:10]:
             terminalreporter.write_line(f"  {duration:.2f}s {nodeid}")
-
-
-@pytest.fixture
-def mock_no_xml_prompt():
-    """Patch XML loading to return None."""
-    with patch("tunacode.tools.decorators.load_prompt_from_xml", return_value=None):
-        yield
-
-
-@pytest.fixture
-def mock_xml_prompt():
-    """Patch XML loading to return a test prompt."""
-    with patch("tunacode.tools.decorators.load_prompt_from_xml", return_value="Test XML prompt"):
-        yield
-
-
-# =============================================================================
-# Test Isolation Fixtures
-# =============================================================================
 
 
 @pytest.fixture(autouse=True)

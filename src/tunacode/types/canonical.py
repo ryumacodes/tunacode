@@ -11,7 +11,7 @@ See docs/refactoring/architecture-refactor-plan.md for migration strategy.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, TypeAlias
 
 # =============================================================================
 # Message Types
@@ -38,6 +38,13 @@ class PartKind(Enum):
     RETRY_PROMPT = "retry-prompt"
     SYSTEM_PROMPT = "system-prompt"
     THOUGHT = "thought"
+
+
+class ToolResultContentKind(Enum):
+    """Discriminator for tool-result content items."""
+
+    TEXT = "text"
+    IMAGE = "image"
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,11 +82,51 @@ class ToolCallPart:
 
 
 @dataclass(frozen=True, slots=True)
+class ToolResultTextPart:
+    """Text content preserved from a native tool result."""
+
+    text: str | None
+    text_signature: str | None = None
+    kind: ToolResultContentKind = field(default=ToolResultContentKind.TEXT, repr=False)
+
+
+@dataclass(frozen=True, slots=True)
+class ToolResultImagePart:
+    """Image content preserved from a native tool result."""
+
+    url: str | None
+    mime_type: str | None = None
+    kind: ToolResultContentKind = field(default=ToolResultContentKind.IMAGE, repr=False)
+
+
+ToolResultContentPart: TypeAlias = ToolResultTextPart | ToolResultImagePart
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalToolResult:
+    """Structured tool result payload preserved across internal layers."""
+
+    tool_name: str | None
+    content: tuple[ToolResultContentPart, ...]
+    details: dict[str, Any] = field(default_factory=dict)
+    is_error: bool = False
+
+    def get_text_content(self) -> str | None:
+        """Return concatenated text content from the structured payload."""
+        parts = [
+            item.text
+            for item in self.content
+            if isinstance(item, ToolResultTextPart) and isinstance(item.text, str)
+        ]
+        return "".join(parts) if parts else None
+
+
+@dataclass(frozen=True, slots=True)
 class ToolReturnPart:
     """Result returned from a tool execution."""
 
     tool_call_id: str
-    content: str
+    result: CanonicalToolResult
     kind: PartKind = field(default=PartKind.TOOL_RETURN, repr=False)
 
 
@@ -116,9 +163,15 @@ class CanonicalMessage:
         """Extract concatenated text content, preserving part boundaries."""
         text_segments: list[str] = []
         for part in self.parts:
-            content_value = getattr(part, "content", "")
-            content_text = "" if content_value is None else str(content_value)
-            text_segments.append(content_text)
+            if isinstance(part, TextPart | ThoughtPart | SystemPromptPart | RetryPromptPart):
+                content_text = "" if part.content is None else str(part.content)
+                text_segments.append(content_text)
+                continue
+
+            if isinstance(part, ToolReturnPart):
+                result_text = part.result.get_text_content()
+                text_segments.append("" if result_text is None else result_text)
+
         return " ".join(text_segments)
 
     def get_tool_call_ids(self) -> set[str]:
@@ -159,7 +212,7 @@ class CanonicalToolCall:
     tool_name: str
     args: dict[str, Any]
     status: ToolCallStatus = ToolCallStatus.PENDING
-    result: str | None = None
+    result: CanonicalToolResult | None = None
     error: str | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None

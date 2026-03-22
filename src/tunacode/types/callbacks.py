@@ -14,7 +14,7 @@ Callback contracts (preconditions/postconditions):
 from collections.abc import Awaitable, Callable
 from typing import Any, Protocol, TypeAlias, runtime_checkable
 
-from tunacode.types.base import ToolArgs, ToolName
+from tunacode.types.base import ToolArgs, ToolName, ToolResult
 
 # =============================================================================
 # Protocol Types (Framework-Agnostic)
@@ -61,7 +61,7 @@ ToolCallback: TypeAlias = Callable[
 ]
 ToolStartCallback: TypeAlias = Callable[[str], None]
 ToolResultCallback: TypeAlias = Callable[
-    [ToolName, str, ToolArgs, str | None, float | None],
+    [ToolName, str, ToolArgs, ToolResult | None, float | None],
     None,
 ]
 NoticeCallback: TypeAlias = Callable[[str], None]
@@ -73,5 +73,5 @@ UIInputCallback: TypeAlias = Callable[[str, str], Awaitable[str]]
 
 # Async function types
 AsyncFunc: TypeAlias = Callable[..., Awaitable[Any]]
-AsyncToolFunc: TypeAlias = Callable[..., Awaitable[str]]
+AsyncToolFunc: TypeAlias = Callable[..., Awaitable[ToolResult]]
 AsyncVoidFunc: TypeAlias = Callable[..., Awaitable[None]]

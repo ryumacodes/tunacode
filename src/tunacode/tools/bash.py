@@ -1,14 +1,22 @@
-"""Bash command execution tool for agent operations."""
+"""Native tinyagent bash tool."""
+
+from __future__ import annotations
 
 import asyncio
 import os
 import subprocess
 from asyncio.subprocess import Process
 
-from tunacode.configuration.limits import get_command_limit
-from tunacode.exceptions import ToolRetryError
+from tinyagent.agent_types import (
+    AgentTool,
+    AgentToolResult,
+    AgentToolUpdateCallback,
+    JsonObject,
+    TextContent,
+)
 
-from tunacode.tools.decorators import base_tool
+from tunacode.configuration.limits import get_command_limit
+from tunacode.exceptions import ToolExecutionError, ToolRetryError, UserAbortError
 
 COMMAND_OUTPUT_THRESHOLD = 3500
 COMMAND_OUTPUT_START_INDEX = 2500
@@ -18,38 +26,116 @@ MIN_TIMEOUT_SECONDS = 1
 MAX_TIMEOUT_SECONDS = 600
 DEFAULT_TIMEOUT_SECONDS = 120
 
+_BASH_DESCRIPTION = """Execute a bash command with enhanced features.
 
-@base_tool
-async def bash(
+Args:
+    command: The bash command to execute.
+    cwd: Working directory for the command.
+    env: Additional environment variables to set.
+    timeout: Command timeout in seconds (1-600, default 120).
+    capture_output: Whether to capture stdout/stderr.
+
+Returns:
+    Formatted output with exit code, stdout, and stderr.
+"""
+
+_BASH_PARAMETERS: JsonObject = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "command": {
+            "type": "string",
+            "description": "The bash command to execute.",
+        },
+        "cwd": {
+            "type": "string",
+            "description": "Optional working directory.",
+        },
+        "env": {
+            "type": "object",
+            "description": "Optional environment variable overrides.",
+            "additionalProperties": {"type": "string"},
+        },
+        "timeout": {
+            "type": "integer",
+            "description": "Command timeout in seconds between 1 and 600.",
+        },
+        "capture_output": {
+            "type": "boolean",
+            "description": "Whether to capture stdout and stderr.",
+        },
+    },
+    "required": ["command"],
+}
+
+
+def _text_result(text: str) -> AgentToolResult:
+    return AgentToolResult(content=[TextContent(text=text)], details={})
+
+
+def _require_string_arg(args: JsonObject, key: str) -> str:
+    value = args.get(key)
+    if not isinstance(value, str):
+        raise ToolRetryError(f"Invalid arguments for tool 'bash': '{key}' must be a string.")
+    return value
+
+
+def _optional_string_arg(args: JsonObject, key: str) -> str | None:
+    value = args.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ToolRetryError(f"Invalid arguments for tool 'bash': '{key}' must be a string.")
+    return value
+
+
+def _optional_int_arg(args: JsonObject, key: str, default: int | None) -> int | None:
+    value = args.get(key, default)
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ToolRetryError(f"Invalid arguments for tool 'bash': '{key}' must be an integer.")
+    return value
+
+
+def _optional_bool_arg(args: JsonObject, key: str, default: bool) -> bool:
+    value = args.get(key, default)
+    if not isinstance(value, bool):
+        raise ToolRetryError(f"Invalid arguments for tool 'bash': '{key}' must be a boolean.")
+    return value
+
+
+def _optional_env_arg(args: JsonObject) -> dict[str, str] | None:
+    value = args.get("env")
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ToolRetryError("Invalid arguments for tool 'bash': 'env' must be an object.")
+    env: dict[str, str] = {}
+    for env_key, env_value in value.items():
+        if not isinstance(env_key, str) or not isinstance(env_value, str):
+            raise ToolRetryError(
+                "Invalid arguments for tool 'bash': 'env' must only contain string pairs."
+            )
+        env[env_key] = env_value
+    return env
+
+
+async def _run_bash(
     command: str,
     cwd: str | None = None,
     env: dict[str, str] | None = None,
     timeout: int | None = DEFAULT_TIMEOUT_SECONDS,
     capture_output: bool = True,
 ) -> str:
-    """Execute a bash command with enhanced features.
-
-    Args:
-        command: The bash command to execute.
-        cwd: Working directory for the command.
-        env: Additional environment variables to set.
-        timeout: Command timeout in seconds (1-600, default 120).
-        capture_output: Whether to capture stdout/stderr.
-
-    Returns:
-        Formatted output with exit code, stdout, and stderr.
-    """
     _validate_inputs(command, cwd, timeout)
 
     exec_env = os.environ.copy()
     if env:
-        for key, value in env.items():
-            if isinstance(key, str) and isinstance(value, str):
-                exec_env[key] = value
+        exec_env.update(env)
 
     exec_cwd = cwd or os.getcwd()
-
-    process = None
+    process: Process | None = None
     try:
         process = await asyncio.create_subprocess_shell(
             command,
@@ -74,11 +160,8 @@ async def bash(
 
         return_code = process.returncode
         assert return_code is not None
-
         _check_common_errors(command, return_code, stderr_text)
-
         return _format_output(command, return_code, stdout_text, stderr_text, exec_cwd)
-
     except FileNotFoundError as err:
         raise ToolRetryError(
             f"Shell not found. Cannot execute command: {command}\n"
@@ -88,8 +171,42 @@ async def bash(
         await _cleanup_process(process)
 
 
+async def _execute_bash(
+    tool_call_id: str,
+    args: JsonObject,
+    signal: asyncio.Event | None,
+    on_update: AgentToolUpdateCallback,
+) -> AgentToolResult:
+    _ = (tool_call_id, on_update)
+    if signal is not None and signal.is_set():
+        raise UserAbortError("Tool execution aborted: bash")
+
+    try:
+        result = await _run_bash(
+            command=_require_string_arg(args, "command"),
+            cwd=_optional_string_arg(args, "cwd"),
+            env=_optional_env_arg(args),
+            timeout=_optional_int_arg(args, "timeout", DEFAULT_TIMEOUT_SECONDS),
+            capture_output=_optional_bool_arg(args, "capture_output", True),
+        )
+    except (ToolRetryError, ToolExecutionError):
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise ToolExecutionError(tool_name="bash", message=str(exc), original_error=exc) from exc
+
+    return _text_result(result)
+
+
+bash = AgentTool(
+    name="bash",
+    label="bash",
+    description=_BASH_DESCRIPTION,
+    parameters=_BASH_PARAMETERS,
+    execute=_execute_bash,
+)
+
+
 def _validate_inputs(command: str, cwd: str | None, timeout: int | None) -> None:
-    """Validate command inputs."""
     if not command.strip():
         raise ToolRetryError("Empty command not allowed")
 
@@ -107,13 +224,12 @@ def _validate_inputs(command: str, cwd: str | None, timeout: int | None) -> None
 
 
 def _check_common_errors(command: str, returncode: int, stderr: str) -> None:
-    """Check for common error patterns and provide guidance."""
+    _ = command
     if returncode == 0 or not stderr:
         return
 
 
 async def _cleanup_process(process: Process | None) -> None:
-    """Ensure process cleanup."""
     if process is None or process.returncode is not None:
         return
 
@@ -129,7 +245,6 @@ async def _cleanup_process(process: Process | None) -> None:
 
 
 def _format_output(command: str, exit_code: int, stdout: str, stderr: str, cwd: str) -> str:
-    """Format command output."""
     lines = [
         f"Command: {command}",
         f"Exit Code: {exit_code}",
@@ -143,14 +258,14 @@ def _format_output(command: str, exit_code: int, stdout: str, stderr: str, cwd: 
     ]
 
     result = "\n".join(lines)
-
     max_output = get_command_limit()
     if len(result) > max_output:
         start_part = result[:COMMAND_OUTPUT_START_INDEX]
-        if len(result) > COMMAND_OUTPUT_THRESHOLD:
-            end_part = result[-COMMAND_OUTPUT_END_SIZE:]
-        else:
-            end_part = result[COMMAND_OUTPUT_START_INDEX:]
+        end_part = (
+            result[-COMMAND_OUTPUT_END_SIZE:]
+            if len(result) > COMMAND_OUTPUT_THRESHOLD
+            else result[COMMAND_OUTPUT_START_INDEX:]
+        )
         result = start_part + CMD_OUTPUT_TRUNCATED + end_part
 
     return result

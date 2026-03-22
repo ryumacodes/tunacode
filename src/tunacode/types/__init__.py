@@ -62,6 +62,7 @@ from tunacode.types.canonical import (  # noqa: F401
     CanonicalMessage,
     CanonicalPart,
     CanonicalToolCall,
+    CanonicalToolResult,
     MessageRole,
     PartKind,
     RecursiveContext,
@@ -70,6 +71,9 @@ from tunacode.types.canonical import (  # noqa: F401
     TextPart,
     ThoughtPart,
     ToolCallStatus,
+    ToolResultContentKind,
+    ToolResultImagePart,
+    ToolResultTextPart,
     UsageMetrics,
 )
 from tunacode.types.canonical import (  # noqa: F401

@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from tunacode.types.base import ToolArgs, ToolCallId, ToolName
-from tunacode.types.canonical import CanonicalToolCall, ToolCallStatus
+from tunacode.types.canonical import CanonicalToolCall, CanonicalToolResult, ToolCallStatus
 
 ERROR_TOOL_CALL_ID_REQUIRED = "tool_call_id is required"
 ERROR_TOOL_CALL_NOT_FOUND = "Tool call not registered: {tool_call_id}"
@@ -72,7 +72,7 @@ class ToolCallRegistry:
     def complete(
         self,
         tool_call_id: ToolCallId,
-        result: str | None = None,
+        result: CanonicalToolResult | None = None,
         completed_at: datetime | None = None,
     ) -> CanonicalToolCall:
         """Mark a tool call as completed."""
@@ -88,6 +88,7 @@ class ToolCallRegistry:
         self,
         tool_call_id: ToolCallId,
         error: str | None,
+        result: CanonicalToolResult | None = None,
         completed_at: datetime | None = None,
     ) -> CanonicalToolCall:
         """Mark a tool call as failed."""
@@ -96,6 +97,7 @@ class ToolCallRegistry:
             tool_call_id,
             status=ToolCallStatus.FAILED,
             error=error,
+            result=result,
             completed_at=resolved_completed_at,
         )
 

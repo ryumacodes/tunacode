@@ -16,7 +16,7 @@ git_commit_at_plan: "4cf456d4"
 ## Goal
 
 - Remove the current TunaCode tools layer and tool helper/facade utilities, then rebuild the supported tool surface directly on native tinyagent contracts.
-- Execution outcome: there is no `to_tinyagent_tool(...)` wrapper path, no decorator-based tool facade, supported tools are registered as native `AgentTool` definitions, and runtime/canonical/UI paths preserve structured `content` and `details` from native `AgentToolResult`.
+- Execution outcome: this is a hard cutover. There is no `to_tinyagent_tool(...)` wrapper path, no decorator-based tool facade, supported tools are registered as native `AgentTool` definitions, and runtime/canonical/UI paths preserve structured `content` and `details` from native `AgentToolResult`.
 - Out of scope:
   - adding new tools beyond the current supported set
   - changing provider configuration or MiniMax-specific request plumbing
@@ -68,6 +68,7 @@ git_commit_at_plan: "4cf456d4"
   - execute the removal work first: delete the legacy tool surface and wrapper utilities before adding replacement native tools
   - do not introduce a compatibility facade, bridge, or adapter function that converts old-style tool functions into tinyagent tools
   - if reusable logic from the deleted tools must survive, move that logic into non-facade helper modules with domain-specific names; do not preserve the decorator/prompt-loader wrapper architecture
+  - use the tinyagent MiniMax contract example as the implementation reference for direct `AgentTool` definitions, typed JSON-schema parameters, `execute(tool_call_id, args, signal, on_update)`, and `AgentToolResult(content, details)`
 
 ## Milestones
 
@@ -319,6 +320,8 @@ git_commit_at_plan: "4cf456d4"
   - `.artifacts/research/2026-03-22_09-45-29_tools-data-inputs-contracts.md`
   - `.artifacts/research/2026-03-22_09-53-07_tool-result-adapter-runtime.md`
   - `.artifacts/research/2026-03-22_09-53-52_minimax-tinyagent-contract-shape-vs-runtime.md`
+- External reference:
+  - `tinyAgent/examples/minimax_tool_contract_examples.py` — https://github.com/alchemiststudiosDOTai/tinyAgent/blob/master/examples/minimax_tool_contract_examples.py
 - Key code references:
   - `src/tunacode/tools/decorators.py:177`
   - `src/tunacode/core/agents/main.py:439`

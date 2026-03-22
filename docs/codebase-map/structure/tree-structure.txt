@@ -1,7 +1,7 @@
 TunaCode Source Code Structure Tree
 ===================================
 
-Generated: 2026-03-21
+Generated: 2026-03-22
 Source: <repo_root>/src/tunacode
 Output: <repo_root>/docs/codebase-map/structure/tree-structure.txt
 
@@ -98,21 +98,12 @@ src/tunacode/
 │   ├── cache_accessors/
 │   │   ├── __init__.py
 │   │   ├── ignore_manager_cache.py
-│   │   ├── ripgrep_cache.py
-│   │   └── xml_prompts_cache.py
-│   ├── grep_components/
+│   │   └── ripgrep_cache.py
 │   ├── lsp/
 │   │   ├── __init__.py
 │   │   ├── client.py
 │   │   ├── diagnostics.py
 │   │   └── servers.py
-│   ├── prompts/
-│   │   ├── bash_prompt.xml
-│   │   ├── discover_prompt.xml
-│   │   ├── hashline_edit_prompt.xml
-│   │   ├── read_file_prompt.xml
-│   │   ├── web_fetch_prompt.xml
-│   │   └── write_file_prompt.xml
 │   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── discover_pipeline.py
@@ -122,7 +113,6 @@ src/tunacode/
 │   │   └── ripgrep.py
 │   ├── __init__.py
 │   ├── bash.py
-│   ├── decorators.py
 │   ├── discover.py
 │   ├── hashline.py
 │   ├── hashline_edit.py
@@ -131,8 +121,7 @@ src/tunacode/
 │   ├── line_cache.py
 │   ├── read_file.py
 │   ├── web_fetch.py
-│   ├── write_file.py
-│   └── xml_helper.py
+│   └── write_file.py
 ├── types/
 │   ├── __init__.py
 │   ├── base.py

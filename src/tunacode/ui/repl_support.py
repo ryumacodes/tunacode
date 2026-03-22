@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from rich.console import Console
 from rich.text import Text
+from tinyagent.agent_types import TextContent
 
 from tunacode.core.ui_api.constants import MAX_CALLBACK_CONTENT
 from tunacode.core.ui_api.shared_types import (
@@ -21,6 +22,7 @@ from tunacode.core.ui_api.shared_types import (
     ToolCallback,
     ToolCallPartProtocol,
     ToolName,
+    ToolResult,
     ToolResultCallback,
 )
 
@@ -177,6 +179,20 @@ def _truncate_for_safety(content: str | None) -> str | None:
     return truncated_result
 
 
+def _extract_tool_result_text(result: ToolResult | None) -> str | None:
+    if result is None:
+        return None
+
+    parts: list[str] = []
+    for item in result.content:
+        if not isinstance(item, TextContent):
+            continue
+        if isinstance(item.text, str):
+            parts.append(item.text)
+
+    return "".join(parts) if parts else None
+
+
 def _is_validation_error(result: str | None) -> bool:
     """Check if result is a validation error that should go to model, not user."""
     if result is None:
@@ -189,7 +205,7 @@ def build_tool_result_callback(app: AppForCallbacks) -> ToolResultCallback:
         tool_name: ToolName,
         status: str,
         args: ToolArgs,
-        result: str | None = None,
+        result: ToolResult | None = None,
         duration_ms: float | None = None,
     ) -> None:
         if tool_name in FILE_EDIT_TOOLS and status == "completed":
@@ -200,17 +216,20 @@ def build_tool_result_callback(app: AppForCallbacks) -> ToolResultCallback:
                     app.update_lsp_for_file(normalized_filepath)
 
         # Don't show validation errors to users - they go back to model for retry
-        if status == "failed" and _is_validation_error(result):
+        result_text = _extract_tool_result_text(result)
+
+        if status == "failed" and _is_validation_error(result_text):
             return
 
-        safe_result = _truncate_for_safety(result)
+        safe_result = _truncate_for_safety(result_text)
 
         app.post_message(
             ToolResultDisplay(
                 tool_name=tool_name,
                 status=status,
                 args=args,
-                result=safe_result,
+                result=result,
+                result_text=safe_result,
                 duration_ms=duration_ms,
             )
         )

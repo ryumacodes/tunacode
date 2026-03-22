@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from tinyagent.agent_types import AgentToolResult, TextContent
+
 from tunacode.constants import MAX_CALLBACK_CONTENT
 
 from tunacode.ui import repl_support
@@ -48,7 +50,7 @@ def test_tool_result_callback_updates_lsp_and_posts_message_for_completed_file_e
         "write_file",
         "completed",
         {"filepath": " src/example.py "},
-        "ok",
+        AgentToolResult(content=[TextContent(text="ok")], details={}),
         12.0,
     )
 

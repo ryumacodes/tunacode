@@ -11,12 +11,18 @@ from tinyagent.agent_types import (
     AgentToolResult,
     AssistantMessage,
     CustomAgentMessage,
+    ImageContent,
     TextContent,
     ToolResultMessage,
     UserMessage,
 )
 
 from tunacode.types import UsageMetrics
+from tunacode.types.canonical import (
+    CanonicalToolResult,
+    ToolResultImagePart,
+    ToolResultTextPart,
+)
 
 from tunacode.core.types.state_structures import RuntimeState
 
@@ -94,3 +100,40 @@ def extract_tool_result_text(result: AgentToolResult | None) -> str | None:
             parts.append(item.text)
 
     return "".join(parts) if parts else None
+
+
+def canonicalize_tool_result(
+    result: AgentToolResult | None,
+    *,
+    tool_name: str | None,
+    is_error: bool,
+) -> CanonicalToolResult | None:
+    """Convert a native tinyagent tool result into TunaCode's canonical shape."""
+    if result is None:
+        return None
+
+    content_parts: list[ToolResultTextPart | ToolResultImagePart] = []
+    for item in result.content:
+        if isinstance(item, TextContent):
+            content_parts.append(
+                ToolResultTextPart(
+                    text=item.text,
+                    text_signature=item.text_signature,
+                )
+            )
+            continue
+
+        if isinstance(item, ImageContent):
+            content_parts.append(
+                ToolResultImagePart(
+                    url=item.url,
+                    mime_type=item.mime_type,
+                )
+            )
+
+    return CanonicalToolResult(
+        tool_name=tool_name,
+        content=tuple(content_parts),
+        details=dict(result.details),
+        is_error=is_error,
+    )

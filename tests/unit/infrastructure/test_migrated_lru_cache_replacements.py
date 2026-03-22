@@ -8,9 +8,7 @@ import pytest
 from tunacode.configuration import limits
 from tunacode.configuration.models import get_cached_models_registry, load_models_registry
 
-from tunacode.tools.cache_accessors import xml_prompts_cache
 from tunacode.tools.utils.ripgrep import get_ripgrep_binary_path
-from tunacode.tools.xml_helper import load_prompt_from_xml
 
 from tunacode.infrastructure.cache import clear_all
 
@@ -84,17 +82,3 @@ def test_limits_settings_cache_requires_explicit_clear(
     limits.clear_cache()
 
     assert limits.get_max_tokens() == 222
-
-
-def test_xml_prompt_none_is_cached_and_cleared(clean_caches: None) -> None:
-    tool_name = "definitely-not-a-real-tool"
-
-    assert xml_prompts_cache.try_get_prompt(tool_name) == (False, None)
-
-    assert load_prompt_from_xml(tool_name) is None
-
-    assert xml_prompts_cache.try_get_prompt(tool_name) == (True, None)
-
-    clear_all()
-
-    assert xml_prompts_cache.try_get_prompt(tool_name) == (False, None)

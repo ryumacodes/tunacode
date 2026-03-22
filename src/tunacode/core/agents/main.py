@@ -20,6 +20,7 @@ from tinyagent.agent_types import (
     TextContent,
     ToolExecutionEndEvent,
     ToolExecutionStartEvent,
+    ToolExecutionUpdateEvent,
     ToolResultMessage,
     TurnEndEvent,
     UserMessage,
@@ -64,6 +65,7 @@ from .helpers import (
     CONTEXT_OVERFLOW_FAILURE_NOTICE,
     CONTEXT_OVERFLOW_RETRY_NOTICE,
     _TinyAgentStreamState,
+    canonicalize_tool_result,
     coerce_error_text,
     coerce_tinyagent_history,
     extract_tool_result_text,
@@ -446,13 +448,22 @@ class RequestOrchestrator:
         tool_call_id = event_obj.tool_call_id
         tool_name = event_obj.tool_name
         duration_ms = self._resolve_tool_duration_ms(state, tool_call_id=tool_call_id)
+        canonical_result = canonicalize_tool_result(
+            event_obj.result,
+            tool_name=tool_name,
+            is_error=event_obj.is_error,
+        )
         result_text = extract_tool_result_text(event_obj.result)
         status = "failed" if event_obj.is_error else "completed"
 
         if event_obj.is_error:
-            state.runtime.tool_registry.fail(tool_call_id, error=result_text)
+            state.runtime.tool_registry.fail(
+                tool_call_id,
+                error=result_text,
+                result=canonical_result,
+            )
         else:
-            state.runtime.tool_registry.complete(tool_call_id, result=result_text)
+            state.runtime.tool_registry.complete(tool_call_id, result=canonical_result)
 
         state.active_tool_call_ids.discard(tool_call_id)
         self._clear_tool_batch_state_if_idle(state)
@@ -465,8 +476,37 @@ class RequestOrchestrator:
             tool_name,
             status,
             callback_args,
-            result_text,
+            event_obj.result,
             duration_ms,
+        )
+        return False
+
+    async def _handle_stream_tool_execution_update(
+        self,
+        event_obj: ToolExecutionUpdateEvent,
+        *,
+        agent: Agent,
+        state: _TinyAgentStreamState,
+        baseline_message_count: int,
+    ) -> bool:
+        _ = (agent, baseline_message_count)
+        if self.tool_result_callback is None:
+            return False
+
+        tool_call_id = event_obj.tool_call_id
+        if event_obj.args is not None:
+            callback_args = event_obj.args
+        else:
+            try:
+                callback_args = state.runtime.tool_registry.get_args(tool_call_id)
+            except ValueError:
+                callback_args = {}
+        self.tool_result_callback(
+            event_obj.tool_name,
+            "running",
+            callback_args,
+            event_obj.partial_result,
+            None,
         )
         return False
 
@@ -515,6 +555,13 @@ class RequestOrchestrator:
             )
         if is_tool_execution_start_event(event):
             return await self._handle_stream_tool_execution_start(
+                event,
+                agent=agent,
+                state=state,
+                baseline_message_count=baseline_message_count,
+            )
+        if isinstance(event, ToolExecutionUpdateEvent):
+            return await self._handle_stream_tool_execution_update(
                 event,
                 agent=agent,
                 state=state,

@@ -6,7 +6,7 @@ from collections.abc import Iterable
 
 from textual.message import Message
 
-from tunacode.core.ui_api.shared_types import ToolArgs, ToolName
+from tunacode.core.ui_api.shared_types import ToolArgs, ToolName, ToolResult
 
 
 class EditorCompletionsAvailable(Message):
@@ -36,7 +36,8 @@ class ToolResultDisplay(Message):
         tool_name: ToolName,
         status: str,
         args: ToolArgs,
-        result: str | None = None,
+        result: ToolResult | None = None,
+        result_text: str | None = None,
         duration_ms: float | None = None,
     ) -> None:
         super().__init__()
@@ -44,4 +45,5 @@ class ToolResultDisplay(Message):
         self.status = status
         self.args = args
         self.result = result
+        self.result_text = result_text
         self.duration_ms = duration_ms

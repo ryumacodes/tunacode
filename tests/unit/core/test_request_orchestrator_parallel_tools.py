@@ -25,7 +25,10 @@ from tunacode.core.session import StateManager
 def _build_orchestrator_harness(
     *,
     start_events: list[str] | None = None,
-    result_events: list[tuple[str, str, dict[str, object], str | None, float | None]] | None = None,
+    result_events: list[
+        tuple[str, str, dict[str, object], AgentToolResult | None, float | None]
+    ]
+    | None = None,
 ) -> tuple[RequestOrchestrator, _TinyAgentStreamState, StateManager]:
     state_manager = StateManager()
 
@@ -37,7 +40,7 @@ def _build_orchestrator_harness(
         tool_name: str,
         status: str,
         args: dict[str, object],
-        result: str | None,
+        result: AgentToolResult | None,
         duration_ms: float | None,
     ) -> None:
         if result_events is not None:
@@ -63,7 +66,9 @@ def _build_orchestrator_harness(
 @pytest.mark.asyncio
 async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch() -> None:
     start_events: list[str] = []
-    result_events: list[tuple[str, str, dict[str, object], str | None, float | None]] = []
+    result_events: list[
+        tuple[str, str, dict[str, object], AgentToolResult | None, float | None]
+    ] = []
     orchestrator, state, state_manager = _build_orchestrator_harness(
         start_events=start_events,
         result_events=result_events,
@@ -122,6 +127,8 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
         ("grep", "completed"),
     ]
     assert all(duration_ms is None for *_, duration_ms in result_events)
+    assert result_events[0][3] is not None
+    assert result_events[0][3].content[0].text == "read complete"  # type: ignore[union-attr]
 
     registry = state_manager.session.runtime.tool_registry
     tool_a = registry.get("tool-a")
@@ -130,13 +137,19 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
     assert tool_b is not None
     assert tool_a.status is ToolCallStatus.COMPLETED
     assert tool_b.status is ToolCallStatus.COMPLETED
+    assert tool_a.result is not None
+    assert tool_a.result.get_text_content() == "read complete"
+    assert tool_b.result is not None
+    assert tool_b.result.get_text_content() == "found"
 
 
 @pytest.mark.asyncio
 async def test_single_tool_duration_is_reported_when_not_in_parallel_batch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    result_events: list[tuple[str, str, dict[str, object], str | None, float | None]] = []
+    result_events: list[
+        tuple[str, str, dict[str, object], AgentToolResult | None, float | None]
+    ] = []
     orchestrator, state, _state_manager = _build_orchestrator_harness(
         start_events=[],
         result_events=result_events,

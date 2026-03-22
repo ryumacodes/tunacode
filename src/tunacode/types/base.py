@@ -1,12 +1,10 @@
-"""Base type aliases for TunaCode CLI.
-
-Contains fundamental type definitions that have no external dependencies
-beyond Python stdlib.
-"""
+"""Base type aliases for TunaCode CLI."""
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
+
+from tinyagent.agent_types import AgentToolResult
 
 # Identity types - string wrappers for semantic clarity
 ModelName = str
@@ -33,7 +31,7 @@ AgentConfig = dict[str, Any]
 
 # Tool types
 ToolArgs = dict[str, Any]
-ToolResult = str
+ToolResult: TypeAlias = AgentToolResult
 
 # Error handling types
 ErrorContext = dict[str, Any]

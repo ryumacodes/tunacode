@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<tool_prompt>
-    <description>
-Write content to a file. Creates or overwrites.
-Requires absolute filepath. Read existing files first before overwriting.
-    </description>
-</tool_prompt>

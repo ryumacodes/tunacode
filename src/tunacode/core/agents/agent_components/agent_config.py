@@ -42,7 +42,6 @@ from tunacode.skills.selection import resolve_selected_skills
 from tunacode.types import ModelName
 
 from tunacode.tools.bash import bash
-from tunacode.tools.decorators import to_tinyagent_tool
 from tunacode.tools.discover import discover
 from tunacode.tools.hashline_edit import hashline_edit
 from tunacode.tools.read_file import read_file
@@ -179,22 +178,16 @@ def _apply_tool_concurrency_limit(
 
 
 def _build_tools(*, strict_validation: bool = False) -> list[AgentTool]:
-    tool_functions: tuple[object, ...] = (
-        cast(object, bash),
-        cast(object, discover),
-        cast(object, read_file),
-        cast(object, hashline_edit),
-        cast(object, web_fetch),
-        cast(object, write_file),
-    )
-    tools = [
-        _to_agent_tool(tool_fn, strict_validation=strict_validation) for tool_fn in tool_functions
+    _ = strict_validation
+    tools: list[AgentTool] = [
+        bash,
+        discover,
+        read_file,
+        hashline_edit,
+        web_fetch,
+        write_file,
     ]
     return _apply_tool_concurrency_limit(tools)
-
-
-def _to_agent_tool(tool_fn: object, *, strict_validation: bool = False) -> AgentTool:
-    return to_tinyagent_tool(tool_fn, strict_validation=strict_validation)  # type: ignore[arg-type]
 
 
 def _normalize_chat_completions_url(base_url: str | None) -> str | None:

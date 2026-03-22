@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from tunacode.types.canonical import ToolCallStatus
+from tunacode.types.canonical import CanonicalToolResult, ToolCallStatus, ToolResultTextPart
 
 from tunacode.core.types import ToolCallRegistry
 
@@ -26,11 +26,22 @@ def test_tool_registry_tracks_lifecycle() -> None:
     assert started_call.status == ToolCallStatus.RUNNING
     assert started_call.started_at == STARTED_AT
 
-    registry.complete(TOOL_CALL_ID, result="ok", completed_at=COMPLETED_AT)
+    registry.complete(
+        TOOL_CALL_ID,
+        result=CanonicalToolResult(
+            tool_name=TOOL_NAME,
+            content=(ToolResultTextPart(text="ok"),),
+            details={"path": "README.md"},
+            is_error=False,
+        ),
+        completed_at=COMPLETED_AT,
+    )
     completed_call = registry.get(TOOL_CALL_ID)
     assert completed_call is not None
     assert completed_call.status == ToolCallStatus.COMPLETED
-    assert completed_call.result == "ok"
+    assert completed_call.result is not None
+    assert completed_call.result.get_text_content() == "ok"
+    assert completed_call.result.details == {"path": "README.md"}
     assert completed_call.completed_at == COMPLETED_AT
 
 
@@ -38,11 +49,24 @@ def test_tool_registry_fail_and_cancel() -> None:
     registry = ToolCallRegistry()
     registry.register(TOOL_CALL_ID, TOOL_NAME, TOOL_ARGS)
 
-    registry.fail(TOOL_CALL_ID, error=FAILURE_MESSAGE, completed_at=COMPLETED_AT)
+    registry.fail(
+        TOOL_CALL_ID,
+        error=FAILURE_MESSAGE,
+        result=CanonicalToolResult(
+            tool_name=TOOL_NAME,
+            content=(ToolResultTextPart(text=FAILURE_MESSAGE),),
+            details={"code": "boom"},
+            is_error=True,
+        ),
+        completed_at=COMPLETED_AT,
+    )
     failed_call = registry.get(TOOL_CALL_ID)
     assert failed_call is not None
     assert failed_call.status == ToolCallStatus.FAILED
     assert failed_call.error == FAILURE_MESSAGE
+    assert failed_call.result is not None
+    assert failed_call.result.is_error is True
+    assert failed_call.result.details == {"code": "boom"}
     assert failed_call.completed_at == COMPLETED_AT
 
     registry.cancel(TOOL_CALL_ID, reason="user", completed_at=COMPLETED_AT)
