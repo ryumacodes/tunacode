@@ -70,6 +70,17 @@ def _text_result(text: str) -> AgentToolResult:
     return AgentToolResult(content=[TextContent(text=text)], details={})
 
 
+def _optional_string_arg(args: JsonObject, key: str) -> str | None:
+    value = args.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ToolRetryError(
+            f"Invalid arguments for tool 'hashline_edit': '{key}' must be a string."
+        )
+    return value
+
+
 def _validate_ref(filepath: str, ref: str) -> int:
     try:
         line_number, expected_hash = parse_line_ref(ref)
@@ -265,10 +276,10 @@ async def _execute_hashline_edit(  # noqa: C901
 
     filepath = args.get("filepath")
     operation = args.get("operation")
-    line = args.get("line")
-    start = args.get("start")
-    end = args.get("end")
-    after = args.get("after")
+    line = _optional_string_arg(args, "line")
+    start = _optional_string_arg(args, "start")
+    end = _optional_string_arg(args, "end")
+    after = _optional_string_arg(args, "after")
     new = args.get("new", "")
 
     if not isinstance(filepath, str):
@@ -279,11 +290,6 @@ async def _execute_hashline_edit(  # noqa: C901
         raise ToolRetryError(
             "Invalid arguments for tool 'hashline_edit': 'operation' must be a string."
         )
-    for key, value in (("line", line), ("start", start), ("end", end), ("after", after)):
-        if value is not None and not isinstance(value, str):
-            raise ToolRetryError(
-                f"Invalid arguments for tool 'hashline_edit': '{key}' must be a string."
-            )
     if not isinstance(new, str):
         raise ToolRetryError("Invalid arguments for tool 'hashline_edit': 'new' must be a string.")
 

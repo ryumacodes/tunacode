@@ -92,6 +92,8 @@ ToolExecute = Callable[
     [str, JsonObject, asyncio.Event | None, AgentToolUpdateCallback],
     Awaitable[AgentToolResult],
 ]
+StreamExecute = Callable[[Model, Context, SimpleStreamOptions], Awaitable[StreamResponse]]
+STREAM_ALCHEMY_OPENAI_COMPLETIONS: StreamExecute = stream_alchemy_openai_completions
 
 
 async def _sleep_with_delay(total_delay: float) -> None:
@@ -309,7 +311,7 @@ def _build_stream_fn(
             if request_delay > 0:
                 await _sleep_with_delay(request_delay)
             try:
-                return await stream_alchemy_openai_completions(model, context, stream_options)
+                return await STREAM_ALCHEMY_OPENAI_COMPLETIONS(model, context, stream_options)
             except Exception as exc:  # noqa: BLE001
                 if attempt >= max_retries or not _is_retryable_stream_error(exc):
                     raise

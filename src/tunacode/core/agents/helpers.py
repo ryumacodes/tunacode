@@ -12,6 +12,8 @@ from tinyagent.agent_types import (
     AssistantMessage,
     CustomAgentMessage,
     ImageContent,
+    JsonObject,
+    JsonValue,
     TextContent,
     ToolResultMessage,
     UserMessage,
@@ -102,6 +104,35 @@ def extract_tool_result_text(result: AgentToolResult | None) -> str | None:
     return "".join(parts) if parts else None
 
 
+def _coerce_json_value(value: object) -> JsonValue:
+    if value is None or isinstance(value, str | int | float | bool):
+        return value
+    if isinstance(value, list):
+        return [_coerce_json_value(item) for item in value]
+    if isinstance(value, dict):
+        coerced: JsonObject = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise RuntimeError("Tool result details contract violation: non-string detail key")
+            coerced[key] = _coerce_json_value(item)
+        return coerced
+    raise RuntimeError(
+        "Tool result details contract violation: details must contain JSON-serializable values"
+    )
+
+
+def _coerce_tool_result_details(raw_details: object) -> JsonObject:
+    if not isinstance(raw_details, dict):
+        raise RuntimeError("Tool result details contract violation: details must be an object")
+
+    details: JsonObject = {}
+    for key, value in raw_details.items():
+        if not isinstance(key, str):
+            raise RuntimeError("Tool result details contract violation: non-string detail key")
+        details[key] = _coerce_json_value(value)
+    return details
+
+
 def canonicalize_tool_result(
     result: AgentToolResult | None,
     *,
@@ -134,6 +165,6 @@ def canonicalize_tool_result(
     return CanonicalToolResult(
         tool_name=tool_name,
         content=tuple(content_parts),
-        details=dict(result.details),
+        details=_coerce_tool_result_details(result.details),
         is_error=is_error,
     )
