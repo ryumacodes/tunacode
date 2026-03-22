@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from tunacode.infrastructure.cache import clear_all
-
 from tunacode.skills.models import SkillSource
 from tunacode.skills.registry import get_skill_summary, load_skill_by_name, resolve_discovered_skill
+
+from tunacode.infrastructure.cache import clear_all
 
 
 @pytest.fixture

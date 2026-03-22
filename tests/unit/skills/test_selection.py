@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from tunacode.infrastructure.cache import clear_all
-
 from tunacode.skills.selection import (
     attach_skill,
     resolve_selected_skill_summaries,
     resolve_selected_skills,
 )
+
+from tunacode.infrastructure.cache import clear_all
 
 
 @pytest.fixture
