@@ -34,6 +34,7 @@ venv/
 ENV/
 .env
 .deploy_venv/
+.kb-venv/
 
 # IDE files
 .idea/
