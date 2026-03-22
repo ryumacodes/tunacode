@@ -24,10 +24,9 @@ class ApplicationSettings:
         self.paths = PathConfig()
         self.internal_tools: list[ToolName] = [
             ToolName.BASH,
-            ToolName.GLOB,
-            ToolName.GREP,
-            ToolName.LIST_DIR,
+            ToolName.DISCOVER,
             ToolName.READ_FILE,
             ToolName.HASHLINE_EDIT,
+            ToolName.WEB_FETCH,
             ToolName.WRITE_FILE,
         ]

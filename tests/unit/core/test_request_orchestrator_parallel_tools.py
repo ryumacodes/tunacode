@@ -85,17 +85,17 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
     await orchestrator._handle_stream_tool_execution_start(
         ToolExecutionStartEvent(
             tool_call_id="tool-b",
-            tool_name="grep",
-            args={"pattern": "TODO"},
+            tool_name="discover",
+            args={"query": "TODO"},
         ),
         agent=object(),
         state=state,
         baseline_message_count=0,
     )
 
-    assert start_events == ["read_file", "grep"]
+    assert start_events == ["read_file", "discover"]
     assert state_manager.session.runtime.tool_registry.get_args("tool-a") == {"filepath": "a.py"}
-    assert state_manager.session.runtime.tool_registry.get_args("tool-b") == {"pattern": "TODO"}
+    assert state_manager.session.runtime.tool_registry.get_args("tool-b") == {"query": "TODO"}
 
     await orchestrator._handle_stream_tool_execution_end(
         ToolExecutionEndEvent(
@@ -111,7 +111,7 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
     await orchestrator._handle_stream_tool_execution_end(
         ToolExecutionEndEvent(
             tool_call_id="tool-b",
-            tool_name="grep",
+            tool_name="discover",
             is_error=False,
             result=AgentToolResult(content=[TextContent(text="found")], details={}),
         ),
@@ -122,7 +122,7 @@ async def test_tool_handlers_preserve_registry_and_callbacks_for_parallel_batch(
 
     assert [(name, status) for name, status, *_ in result_events] == [
         ("read_file", "completed"),
-        ("grep", "completed"),
+        ("discover", "completed"),
     ]
     assert all(duration_ms is None for *_, duration_ms in result_events)
     assert result_events[0][3] is not None

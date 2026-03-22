@@ -80,8 +80,6 @@ STATUS_TO_TOOL_PANEL_CLASS: dict[str, str] = {
     "error": "failed",
     "running": "running",
 }
-HASHLINE_EDIT_CSS_TOKEN: str = "hashline-edit"
-UPDATE_FILE_CSS_CLASS: str = "tool-update-file"
 
 
 @dataclass
@@ -113,7 +111,7 @@ class SearchResultData:
     current_page: int = 1
     page_size: int = 10
     search_time_ms: float | None = None
-    source: str | None = None  # "index" or "filesystem" for glob cache status
+    source: str | None = None
 
 
 class RichPanelRenderer:
@@ -429,10 +427,7 @@ def _tool_identity_css_classes(tool_name: str) -> str:
     if not normalized_name:
         return ""
 
-    classes = [f"tool-{normalized_name}"]
-    if normalized_name == HASHLINE_EDIT_CSS_TOKEN:
-        classes.append(UPDATE_FILE_CSS_CLASS)
-    return " ".join(classes)
+    return f"tool-{normalized_name}"
 
 
 def _status_css_class(status: str) -> str:
@@ -566,22 +561,3 @@ def tool_panel_smart(
 
     content, panel_meta = panel_result
     return content, _augment_tool_panel_meta(panel_meta, tool_name=name, status=status)
-
-
-def _try_parse_search_result(
-    tool_name: str,
-    args: dict[str, Any] | None,
-    result: str,
-) -> SearchResultData | None:
-    from tunacode.ui.renderers.search import SearchDisplayRenderer
-
-    query = None
-    if args:
-        query = args.get("pattern") or args.get("query")
-
-    if tool_name.lower() == "grep":
-        return SearchDisplayRenderer.parse_grep_output(result, query)
-    elif tool_name.lower() == "glob":
-        return SearchDisplayRenderer.parse_glob_output(result, query)
-
-    return None

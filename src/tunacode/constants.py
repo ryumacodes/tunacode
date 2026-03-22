@@ -57,13 +57,11 @@ AUTOCOMPLETE_RESULT_LIMIT = 50
 class ToolName(str, Enum):
     """Enumeration of tool names."""
 
+    DISCOVER = "discover"
     READ_FILE = "read_file"
     WRITE_FILE = "write_file"
     HASHLINE_EDIT = "hashline_edit"
     BASH = "bash"
-    GREP = "grep"
-    LIST_DIR = "list_dir"
-    GLOB = "glob"
     WEB_FETCH = "web_fetch"
 
 

@@ -45,7 +45,7 @@ Last Updated: 2026-03-22
 ## Source Structure (high-level)
 - `src/tunacode/ui/` — terminal UI, widgets, screens, CSS, command shell.
 - `src/tunacode/core/` — agents, compaction, session, prompting, logging.
-- `src/tunacode/tools/` — tool implementations exposed to the model (bash, glob, read/write, web fetch, etc.).
+- `src/tunacode/tools/` — native tinyagent tool implementations (`bash`, `discover`, `read_file`, `hashline_edit`, `web_fetch`, `write_file`) plus supporting helpers.
 - `src/tunacode/configuration/` — settings, model registry, API paths, limits, pricing, feature flags.
 - `src/tunacode/infrastructure/` — caches and managers.
 - `src/tunacode/utils/` — adapters, messaging helpers, token counting, gitignore, system utilities.

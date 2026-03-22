@@ -60,7 +60,7 @@ The Textual-based terminal user interface for TunaCode. Handles all user interac
 | `renderers/agent_response.py` | Renders finalized agent responses as NeXTSTEP-style panels with markdown content and throughput stats. |
 | `renderers/errors.py` | Renders exceptions with severity mapping, suggested fixes, recovery commands, and extracted context fields. |
 | `renderers/search.py` | Renders file/code search results with pagination and indexing status. |
-| `renderers/tools/` | Tool-specific renderers for bash, grep, glob, list_dir, read_file, update_file, web_fetch, diagnostics. Apply syntax highlighting and truncation. |
+| `renderers/tools/` | Tool-specific renderers for bash, discover, read_file, hashline_edit, write_file, web_fetch, and diagnostics helpers. Apply syntax highlighting and truncation. |
 
 ### Command System
 All slash commands are implemented as `Command` subclasses and registered in `COMMANDS`. `handle_command()` also routes shell commands (`!<cmd>`), legacy `exit`, and slash `/exit`.

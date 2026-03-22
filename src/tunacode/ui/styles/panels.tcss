@@ -94,19 +94,19 @@
     outline: solid $error;
 }
 
-/* File tools follow explicit read/update state flow */
+/* File tools follow explicit read/edit state flow */
 .tool-panel.tool-read-file,
-.tool-panel.tool-update-file {
+.tool-panel.tool-hashline-edit {
     tint: $primary 4%;
 }
 
 .tool-panel.tool-read-file.completed,
-.tool-panel.tool-update-file.completed {
+.tool-panel.tool-hashline-edit.completed {
     tint: $success 6%;
 }
 
 .tool-panel.tool-read-file.failed,
-.tool-panel.tool-update-file.failed {
+.tool-panel.tool-hashline-edit.failed {
     tint: $error 8%;
 }
 
@@ -120,22 +120,6 @@
 }
 
 .tool-panel.tool-bash.failed {
-    tint: $error 8%;
-}
-
-/* Search tools share a subtle accent tint */
-.tool-panel.tool-glob,
-.tool-panel.tool-grep {
-    tint: $accent 4%;
-}
-
-.tool-panel.tool-glob.completed,
-.tool-panel.tool-grep.completed {
-    tint: $success 6%;
-}
-
-.tool-panel.tool-glob.failed,
-.tool-panel.tool-grep.failed {
     tint: $error 8%;
 }
 
@@ -162,19 +146,6 @@
 }
 
 .tool-panel.tool-web-fetch.failed {
-    tint: $error 8%;
-}
-
-/* Directory listing */
-.tool-panel.tool-list-dir {
-    tint: $accent 4%;
-}
-
-.tool-panel.tool-list-dir.completed {
-    tint: $success 6%;
-}
-
-.tool-panel.tool-list-dir.failed {
     tint: $error 8%;
 }
 
