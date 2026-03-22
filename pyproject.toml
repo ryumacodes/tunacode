@@ -163,6 +163,7 @@ section-order = [
     "tunacode.indexing*",
     "tunacode.lsp*",
     "tunacode.prompts*",
+    "tunacode.skills*",
     "tunacode.templates*",
     "tunacode.types*",
     "tunacode.utils*",

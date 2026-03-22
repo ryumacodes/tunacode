@@ -33,6 +33,13 @@ from tunacode.configuration.models import (
     parse_model_string,
 )
 from tunacode.constants import AGENTS_MD, ENV_OPENAI_BASE_URL
+from tunacode.skills.prompting import (
+    compute_skills_prompt_fingerprint,
+    render_available_skills_block,
+    render_selected_skills_block,
+)
+from tunacode.skills.registry import list_skill_summaries
+from tunacode.skills.selection import resolve_selected_skills
 from tunacode.types import ModelName
 
 from tunacode.tools.bash import bash
@@ -49,14 +56,6 @@ from tunacode.infrastructure.cache.caches import tunacode_context as context_cac
 from tunacode.core.compaction.controller import get_or_create_compaction_controller
 from tunacode.core.logging.manager import get_logger
 from tunacode.core.types.state import SessionStateProtocol, StateManagerProtocol
-
-from tunacode.skills.prompting import (
-    compute_skills_prompt_fingerprint,
-    render_available_skills_block,
-    render_selected_skills_block,
-)
-from tunacode.skills.registry import list_skill_summaries
-from tunacode.skills.selection import resolve_selected_skills
 
 from .agent_session_config import (
     SessionConfig,
