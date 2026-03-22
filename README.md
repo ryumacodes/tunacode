@@ -147,6 +147,15 @@ The agent has access to:
 
 TunaCode now uses the native tinyagent tool surface directly. Legacy wrapper-based tools such as `update_file`, `glob`, `grep`, and `list_dir` are removed rather than translated through a compatibility layer.
 
+Important tool rules:
+
+- `bash` accepts optional `cwd`, `env`, `timeout`, and `capture_output` arguments in addition to the required `command`.
+- `discover` is the semantic repository mapper; use it to find code related to a concept or feature instead of manually chaining search tools.
+- `read_file` supports paging with `offset` and `limit`, wraps results in `<file>...</file>`, and each read replaces the editable cache window for that file.
+- `hashline_edit` only supports `replace`, `replace_range`, and `insert_after` using `<line>:<hash>` refs from the current `read_file` output.
+- `write_file` is create-only: it creates missing parent directories but refuses to overwrite an existing file.
+- `web_fetch` only fetches public `http` or `https` URLs and blocks localhost, private, and reserved addresses.
+
 <img src="assets/hashline-edit.png" alt="hashline-edit tool in tunacode" width="600"/>
 
 ## LSP Integration

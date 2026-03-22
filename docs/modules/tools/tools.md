@@ -14,7 +14,7 @@ feeds_into: [core]
 
 This layer exposes TunaCode's active native tinyagent tool surface directly. The supported tools are `bash`, `discover`, `read_file`, `hashline_edit`, `web_fetch`, and `write_file`.
 
-Legacy decorator-based wrapping, XML prompt loading, and compatibility-path tool aliasing are removed. The runtime and UI preserve the native tinyagent tool contract end to end.
+Each tool module exports a native `AgentTool` with inline JSON-schema parameters plus an `execute(tool_call_id, args, signal, on_update)` implementation. Legacy decorator-based wrapping, XML prompt loading, and compatibility-path tool aliasing are removed, so the runtime and UI preserve the same contract end to end.
 
 ## Current Modules
 
@@ -34,13 +34,29 @@ Legacy decorator-based wrapping, XML prompt loading, and compatibility-path tool
 | `cache_accessors/` | Typed cache accessors still used by active tool helpers. |
 | `lsp/` | LSP integration used for diagnostics and post-edit refresh behavior. |
 
+## Tool Contract Highlights
+
+| Tool | Parameters | Runtime behavior |
+|------|------------|------------------|
+| `bash` | Required: `command`. Optional: `cwd`, `env`, `timeout`, `capture_output`. | Runs a shell command, validates `timeout` in the `1-600` second range, merges string-only env overrides, and returns formatted command/exit-code/stdout/stderr output with truncation when output exceeds the configured command limit. |
+| `discover` | Required: `query`. Optional: `directory`. | Runs the semantic discovery pipeline and returns structured repository context from `DiscoveryReport.to_context()` instead of raw grep-style matches. |
+| `read_file` | Required: `filepath`. Optional: `offset`, `limit`. | Reads up to `2000` lines by default, rejects files over `100KB`, truncates displayed lines at `2000` characters, wraps output in `<file>...</file>`, and replaces the per-file hashline cache with only the returned window. |
+| `hashline_edit` | Required: `filepath`, `operation`. Operation-specific refs: `line`, `start` and `end`, or `after`. Optional: `new`. | Only edits lines present in the current `read_file` cache window, validates `<line>:<hash>` refs, preserves trailing newline state, updates the cache after writes, returns a unified diff, and prepends LSP diagnostics when available. |
+| `web_fetch` | Required: `url`. Optional: `timeout`. | Fetches public `http` or `https` content only, blocks localhost/private/reserved targets, re-validates redirect destinations, converts HTML to readable text, caps fetched content at `5MB`, truncates returned text near `100KB`, and returns retryable messages for common HTTP failures. |
+| `write_file` | Required: `filepath`, `content`. | Creates a new file only, auto-creates missing parent directories, refuses to overwrite existing files, and prepends LSP diagnostics when available. |
+
+Deep dive: [`hashline-subsystem.md`](hashline-subsystem.md) covers the `read_file` to `hashline_edit` cache contract in detail.
+
 ## How
 
 Tool registration is direct:
 1. `agent_config.py::_build_tools()` imports native tool objects directly.
-2. Each tool module defines its own parameter schema and `execute(tool_call_id, args, signal, on_update)` behavior.
-3. Tool implementations construct `AgentToolResult` directly and return structured `content` and `details`.
+2. `agent_config.py::_apply_tool_concurrency_limit()` wraps those native tools with a shared semaphore before they are handed to tinyagent.
+3. Each tool module validates its own arguments, checks the abort signal, and implements its own `execute(tool_call_id, args, signal, on_update)` behavior.
+4. Tool implementations construct `AgentToolResult` directly and return structured `content` and JSON-serializable `details`.
 
 ## Why
 
 The tool layer is intentionally direct so TunaCode can preserve native tinyagent tool contracts end to end instead of flattening them through wrappers or alias translation.
+
+That matters most for the safe-edit path: `read_file` establishes the editable cache window, and `hashline_edit` enforces that the model only mutates lines it just read.

@@ -71,6 +71,7 @@ Last Updated: 2026-03-22
   - `docs/modules/core/core.md`
   - `docs/modules/ui/ui.md`
   - `docs/modules/tools/tools.md`
+  - `docs/modules/tools/hashline-subsystem.md`
   - `docs/modules/configuration/configuration.md`
   - `docs/modules/configuration/models-registry.md`
   - `docs/modules/infrastructure/infrastructure.md`

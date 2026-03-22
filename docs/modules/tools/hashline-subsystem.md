@@ -7,11 +7,11 @@ read_when:
   - Debugging hash mismatch errors in file edits
   - Working on the read_file → hashline_edit workflow
 depends_on:
-  - docs/modules/tools/index.md
-  - docs/modules/core/ui_api.md
+  - docs/modules/tools/tools.md
+  - docs/modules/ui/ui.md
 feeds_into:
-  - docs/modules/tools/read_file.md
-  - docs/modules/tools/file_editing.md
+  - docs/modules/core/core.md
+  - README.md
 ---
 
 # Hashline Edit Subsystem
@@ -28,7 +28,9 @@ Each line read by the agent is tagged with a short MD5 content hash (2 hex chara
 - **Three edit operations**: `replace`, `replace_range`, `insert_after`
 - **Side-by-side diff visualization**: NeXTSTEP-style panel with before/after view
 - **Automatic cache updates**: Cache stays synchronized after every edit
+- **Trailing newline preservation**: File newline state is retained after writes
 - **Unified diff output**: Standard diff format for review and verification
+- **Optional LSP diagnostics**: Edit results can prepend diagnostics after a write
 
 ### Workflow Flow Diagram
 
@@ -70,23 +72,23 @@ Each line read by the agent is tagged with a short MD5 content hash (2 hex chara
 read_file.py
     │
     ├──▶ hashline.py
-    │       ├── tag_lines()
     │       ├── content_hash()
-    │       └── format_hashline()
+    │       ├── format_hashline()
+    │       └── parse_line_ref()
     │
     └──▶ line_cache.py (store)
             │
             │    ▲
-            │    │ (validate & update)
+            │    │ (get / update / replace_range)
             ▼    │
     hashline_edit.py
             │
-            ├── _validate_ref() ──▶ line_cache.py (get_line, validate_ref)
-            ├── _apply_replace()
-            ├── _apply_replace_range()
-            ├── _apply_insert_after()
+            ├── _validate_ref() ──▶ line_cache.py (get)
+            ├── _apply_replace() ──▶ line_cache.py (update_lines)
+            ├── _apply_replace_range() ──▶ line_cache.py (replace_range)
+            ├── _apply_insert_after() ──▶ line_cache.py (replace_range)
             │
-            └──▶ UI renderer ────▶ hashline_edit_renderer.py
+            └──▶ UI renderer ────▶ ui/renderers/tools/hashline_edit.py
 ```
 
 ## How
@@ -135,7 +137,7 @@ Stores `{path: {line_number: HashedLine}}` as a module-level singleton. The cach
 
 ### 3. Edit Tool (`hashline_edit.py`)
 
-Three edit operations validate against the cache before applying changes.
+Three edit operations validate against the current cache window before applying changes.
 
 **Validation Flow:**
 
@@ -181,6 +183,14 @@ Three edit operations validate against the cache before applying changes.
 | `replace_range` | `start`, `end`, `new` | Replace contiguous range of lines |
 | `insert_after` | `after`, `new` | Insert new lines after a referenced line |
 
+**Post-write behavior:**
+
+- Preserves the file's existing trailing newline state
+- Uses `new.splitlines()` for multi-line replacements and insertions
+- Updates the in-memory cache immediately after writing
+- Returns a unified diff string for the renderer and review flow
+- Prepends LSP diagnostics when any are available for the edited file
+
 **Error Messages:**
 
 ```python
@@ -202,22 +212,30 @@ LINE_NOT_CACHED_MESSAGE = (
 
 `read_file` populates the line cache with every read, enabling `hashline_edit` to validate references.
 
-```python
-# Format: line:hash|content
-# Example output:
+```text
+# Output shape:
+<file>
 1:a3|def main():
 2:f1|    pass
 3:0e|
+
+(End of file - total 3 lines)
+</file>
 ```
 
 **Key Points:**
 
+- Files over `100KB` are rejected
+- `limit` defaults to `2000` lines, and `offset` is a 0-based line offset
+- Displayed line text is truncated at `2000` characters, but cached hashes use the full line content
+- Output is always wrapped in `<file>...</file>`
 - Each `read_file` call **replaces** the cache for that file
 - Paginated reads do not merge prior cache windows
 - `hashline_edit` can only edit lines present in the current cache
-- Missing lines cause `ToolRetryError` with offset hints
+- The footer is either a continuation hint (`Use 'offset' to read beyond line N`) or an end-of-file marker
+- Missing lines cause `ToolRetryError` instructing the model to re-read the file to include that line
 
-### 5. UI Renderer (`hashline_edit_renderer.py`)
+### 5. UI Renderer (`src/tunacode/ui/renderers/tools/hashline_edit.py`)
 
 NeXTSTEP-style panel with four zones:
 
@@ -239,11 +257,12 @@ NeXTSTEP-style panel with four zones:
 **Rendering Pipeline:**
 
 ```
-hashline_edit result (unified diff text)
+hashline_edit result (optional diagnostics + unified diff text)
          │
          ▼
     parse_result()
          │
+         ├──▶ Extract optional diagnostics block
          ├──▶ Extract filepath
          ├──▶ Count additions (+)
          ├──▶ Count deletions (-)
@@ -324,6 +343,7 @@ result = await hashline_edit(
 
 ## Related Documentation
 
-- `docs/modules/tools/read_file.md` - File reading and cache population
-- `docs/modules/tools/file_editing.md` - General file editing patterns
-- `docs/modules/core/ui_api.md` - Panel rendering and UI constants
+- `docs/modules/tools/tools.md` - Active native tool surface and contract summary
+- `docs/modules/core/core.md` - Agent assembly and tool registration flow
+- `docs/modules/ui/ui.md` - Tool renderer inventory and rendering pipeline
+- `README.md` - User-facing tool overview
