@@ -2004,13 +2004,17 @@ wheels = [
 
 [[package]]
 name = "tiny-agent-os"
-version = "1.2.11"
+version = "1.2.15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d7/f0/2e6740dab09de0b9dccb744aaa20d9ac5a95dd32a39ab03222ae45d1ecfb/tiny_agent_os-1.2.11.tar.gz", hash = "sha256:32b61a7e8fdca2b2b02417a4e0eb4ce77745c37f7f0ef1f5d46fc50f87a88ca3", size = 4221353, upload-time = "2026-03-17T18:31:46.247Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/21/53/b757ae380a4fbd5f51771bd5b49cb3ba132eda732f7ddc97023115e912db/tiny_agent_os-1.2.15.tar.gz", hash = "sha256:1f4fa771ce4fe448cad42e2a55be5fc01e9d21ec59474639181889a7c133c79d", size = 44814, upload-time = "2026-03-22T21:53:40.854Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f2/fc/0aaa9415d33b8ce0a7d2e9046f1ba8843c518638f40acd1c7f9a937c25e8/tiny_agent_os-1.2.15-cp310-abi3-macosx_11_0_universal2.whl", hash = "sha256:bd27ca4faad464a8c8cdad2f25f2c76e69eb17155fa9ab17762ae2e70d8cb27e", size = 1811909, upload-time = "2026-03-22T21:53:38.098Z" },
+    { url = "https://files.pythonhosted.org/packages/69/91/87b49a5c41490d0d8ff53e97ef7a3aa131ee13571126e1087a092565ecb5/tiny_agent_os-1.2.15-cp310-abi3-win_amd64.whl", hash = "sha256:e7d860ff8fe564341158abcf8fdc5047ac7688423aa0a7d646bf147923264697", size = 1602492, upload-time = "2026-03-22T21:53:39.512Z" },
+]
 
 [[package]]
 name = "toml"
@@ -2170,7 +2174,7 @@ requires-dist = [
     { name = "textual", specifier = ">=4.0.0,<5.0.0" },
     { name = "textual-autocomplete", specifier = ">=4.0.6" },
     { name = "textual-dev", marker = "extra == 'dev'" },
-    { name = "tiny-agent-os", specifier = ">=1.2.11" },
+    { name = "tiny-agent-os", specifier = ">=1.2.15" },
     { name = "twine", marker = "extra == 'dev'" },
     { name = "typer", specifier = ">=0.15.0" },
     { name = "unimport", marker = "extra == 'dev'", specifier = ">=1.0.0" },
