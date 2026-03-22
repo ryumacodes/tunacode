@@ -14,7 +14,6 @@ from tinyagent.agent_types import (
     TextContent,
     UserMessage,
 )
-from tinyagent.alchemy_provider import OpenAICompatModel, stream_alchemy_openai_completions
 
 from tunacode.configuration.limits import get_max_tokens
 from tunacode.configuration.models import (
@@ -47,6 +46,8 @@ from tunacode.core.compaction.types import (
 )
 from tunacode.core.logging import get_logger
 from tunacode.core.types import StateManagerProtocol
+
+from tunacode._alchemy_provider import OpenAICompatModel, stream_alchemy_openai_completions
 
 DEFAULT_KEEP_RECENT_TOKENS = 20_000
 DEFAULT_RESERVE_TOKENS = 16_384

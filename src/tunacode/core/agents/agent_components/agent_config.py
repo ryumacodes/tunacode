@@ -22,7 +22,6 @@ from tinyagent.agent_types import (
     StreamFn,
     StreamResponse,
 )
-from tinyagent.alchemy_provider import OpenAICompatModel, stream_alchemy_openai_completions
 
 from tunacode.configuration.limits import get_max_tokens
 from tunacode.configuration.models import (
@@ -56,6 +55,8 @@ from tunacode.infrastructure.cache.caches import tunacode_context as context_cac
 from tunacode.core.compaction.controller import get_or_create_compaction_controller
 from tunacode.core.logging.manager import get_logger
 from tunacode.core.types.state import SessionStateProtocol, StateManagerProtocol
+
+from tunacode._alchemy_provider import OpenAICompatModel, stream_alchemy_openai_completions
 
 from .agent_session_config import (
     SessionConfig,
