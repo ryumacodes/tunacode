@@ -1,6 +1,6 @@
 ---
 title: Tools Layer
-summary: Native tinyagent tool implementations and the helper modules they still depend on during the hard cutover.
+summary: Native tinyagent tool implementations and the helper modules they depend on.
 read_when: Adding a tool, changing native tinyagent tool contracts, or tracing helper modules used by the active tools.
 depends_on: [types, infrastructure, configuration]
 feeds_into: [core]
@@ -14,7 +14,7 @@ feeds_into: [core]
 
 This layer exposes TunaCode's active native tinyagent tool surface directly. The supported tools are `bash`, `discover`, `read_file`, `hashline_edit`, `web_fetch`, and `write_file`.
 
-Legacy decorator-based wrapping and XML prompt loading are intentionally removed during the hard cutover to native tinyagent tools.
+Legacy decorator-based wrapping, XML prompt loading, and compatibility-path tool aliasing are removed. The runtime and UI preserve the native tinyagent tool contract end to end.
 
 ## Current Modules
 
@@ -43,4 +43,4 @@ Tool registration is direct:
 
 ## Why
 
-The hard cutover removes the wrapper layer so the runtime and UI can preserve native tinyagent tool contracts end to end instead of flattening everything through a compatibility path.
+The tool layer is intentionally direct so TunaCode can preserve native tinyagent tool contracts end to end instead of flattening them through wrappers or alias translation.

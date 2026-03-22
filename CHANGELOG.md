@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Completed the move to the native tinyagent tool surface by keeping only `bash`, `discover`, `read_file`, `hashline_edit`, `web_fetch`, and `write_file` in active runtime and UI documentation.
+- Removed remaining legacy tool-surface references from the UI/tool docs and README.
+
+### Removed
+- Removed the leftover legacy compatibility surface for retired tool names such as `update_file`, `glob`, `grep`, and `list_dir` instead of translating them through a normalizer.
+
 ## [0.1.96] - 2026-03-21
 
 ### Changed

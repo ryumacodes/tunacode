@@ -15,9 +15,10 @@ A terminal-based AI coding agent with a NeXTSTEP-inspired interface.
 ## Features
 
 - **Any model** - Works with any OpenAI-compatible API (Anthropic, OpenAI, Google, Ollama, vLLM, etc.)
-- **File operations** - Read, write, update files with fuzzy matching for edits
+- **Native tinyagent tools** - Direct tinyagent tool contracts with no legacy wrapper compatibility layer
+- **File operations** - Read files with hash-tagged lines, create files, and edit existing files with hash-validated references
 - **Shell access** - Run bash commands with output capture
-- **Code search** - Glob patterns and grep with ripgrep integration
+- **Repository discovery** - Use `discover` for natural-language code search and repository exploration
 - **Session persistence** - Resume previous conversations with `/resume`
 - **LSP diagnostics** - Real-time code errors after file writes (Python, TypeScript, Go, Rust)
 - **Themeable UI** - CSS-based theming with NeXTSTEP-inspired design
@@ -133,20 +134,18 @@ Run `/debug` to enable lifecycle logs. During agent execution, parallel batches 
 If no `Parallel tool calls` lifecycle lines appear, that request did not execute a parallel tool batch.
 ## Tools
 
-
-
 The agent has access to:
 
 | Tool | Description |
 |------|-------------|
-| `read_file` | Read file contents with line ranges |
-| `write_file` | Create new files |
-| `update_file` | Edit existing files with fuzzy matching |
 | `bash` | Execute shell commands |
-| `glob` | Find files by pattern |
-| `grep` | Search file contents |
-| `list_dir` | List directory tree |
+| `discover` | Search and explore the repository with a natural-language query |
+| `read_file` | Read file contents with content-hash tagged lines |
+| `hashline_edit` | Edit existing files using hash-validated line references from `read_file` |
 | `web_fetch` | Fetch web page content |
+| `write_file` | Create new files |
+
+TunaCode now uses the native tinyagent tool surface directly. Legacy wrapper-based tools such as `update_file`, `glob`, `grep`, and `list_dir` are removed rather than translated through a compatibility layer.
 
 <img src="assets/hashline-edit.png" alt="hashline-edit tool in tunacode" width="600"/>
 
