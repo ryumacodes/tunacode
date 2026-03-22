@@ -18,3 +18,8 @@ global-exclude *.pyc
 global-exclude __pycache__
 global-exclude *.so
 global-exclude *.egg-info
+
+# Exclude virtual environments
+prune .kb-venv
+prune .venv
+prune venv
