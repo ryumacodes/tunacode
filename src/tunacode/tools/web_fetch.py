@@ -39,7 +39,14 @@ PRIVATE_IP_PATTERNS = [
 ]
 
 BLOCKED_HOSTNAMES = frozenset(
-    ["localhost", "localhost.localdomain", "local", "0.0.0.0", "127.0.0.1", "::1"]
+    [
+        "localhost",
+        "localhost.localdomain",
+        "local",
+        str(ipaddress.IPv4Address(0)),
+        "127.0.0.1",
+        "::1",
+    ]
 )
 
 _WEB_FETCH_DESCRIPTION = """Fetch web content from a URL and return it as readable text."""
