@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Sequence
+from typing import TypeAlias
 
+from tinyagent.agent_types import AgentMessage, JsonObject
+
+from tunacode.types.canonical import CanonicalMessage
 from tunacode.utils.messaging import estimate_messages_tokens as _estimate_messages_tokens
 from tunacode.utils.messaging import get_content as _get_content
 
+MessageLike: TypeAlias = CanonicalMessage | AgentMessage | JsonObject
 
-def get_content(message: Any) -> str:
+
+def get_content(message: MessageLike) -> str:
     """Extract content from a message payload.
 
     Args:
@@ -20,7 +26,7 @@ def get_content(message: Any) -> str:
     return _get_content(message)
 
 
-def estimate_messages_tokens(messages: list[Any]) -> int:
+def estimate_messages_tokens(messages: Sequence[MessageLike]) -> int:
     """Estimate total tokens for a list of messages.
 
     UI is not allowed to import from ``tunacode.utils`` directly.

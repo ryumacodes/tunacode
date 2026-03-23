@@ -108,6 +108,7 @@ Last Updated: 2026-03-22
 ## Quality Constraints (Do not break)
 - `README.md` and docs should stay consistent with implementation.
 - Keep `AGENTS.md` updated with `Last Updated: YYYY-MM-DD` whenever `src/` or `docs/` changes.
+- Do not add TunaCode-owned message-contract wrappers around tinyagent message types; use tinyagent models directly in memory and keep dict payloads at real boundaries.
 - Preserve existing architecture order rules; do not add new imports across forbidden layers.
 - Treat current file-length allowlist entries as temporary debt only. Do not add any new file-specific exemptions to the `>600` line rule; fix the enforcement path or split the code instead.
 - Do not edit unrelated local changes unless scoped to the task.

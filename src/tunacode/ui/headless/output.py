@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Sequence
 
-from tinyagent.agent_types import AssistantMessage
+from tinyagent.agent_types import AgentMessage, AssistantMessage
 
 from tunacode.core.ui_api.messaging import get_content
 
@@ -43,7 +43,7 @@ def _extract_from_result(agent_run: object) -> str | None:
     return _extract_from_attributes(result)
 
 
-def _extract_from_messages(messages: list[Any]) -> str | None:
+def _extract_from_messages(messages: Sequence[AgentMessage]) -> str | None:
     """Extract text from the latest assistant message in messages."""
     for message in reversed(messages):
         if not isinstance(message, AssistantMessage):
@@ -57,7 +57,7 @@ def _extract_from_messages(messages: list[Any]) -> str | None:
     return None
 
 
-def resolve_output(agent_run: object, messages: list[Any]) -> str | None:
+def resolve_output(agent_run: object, messages: Sequence[AgentMessage]) -> str | None:
     """Resolve headless output from agent run or messages.
 
     Priority:

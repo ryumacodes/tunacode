@@ -14,7 +14,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 
@@ -171,7 +171,7 @@ class StateManager:
         """Serialize in-memory tinyagent message models to JSON dictionaries."""
 
         messages = self._session.conversation.messages
-        return [cast(dict[str, Any], message.model_dump(exclude_none=True)) for message in messages]
+        return [message.model_dump(exclude_none=True) for message in messages]
 
     def _deserialize_message(self, raw_message: Any, *, index: int) -> AgentMessage:
         from tinyagent.agent_types import (

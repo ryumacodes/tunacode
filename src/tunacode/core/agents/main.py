@@ -15,6 +15,7 @@ from tinyagent.agent_types import (
     AgentTool,
     AssistantMessage,
     CustomAgentMessage,
+    JsonObject,
     MessageEndEvent,
     MessageUpdateEvent,
     TextContent,
@@ -67,7 +68,6 @@ from .helpers import (
     _TinyAgentStreamState,
     canonicalize_tool_result,
     coerce_error_text,
-    coerce_tinyagent_history,
     extract_tool_result_text,
     is_context_overflow_error,
     parse_canonical_usage,
@@ -81,7 +81,7 @@ MILLISECONDS_PER_SECOND = 1000
 def _serialize_agent_messages(messages: list[AgentMessage]) -> list[object]:
     serialized_messages: list[object] = []
     for message in messages:
-        serialized_messages.append(cast(dict[str, object], message.model_dump(exclude_none=True)))
+        serialized_messages.append(cast(JsonObject, message.model_dump(exclude_none=True)))
     return serialized_messages
 
 
@@ -93,26 +93,18 @@ def _deserialize_agent_messages(raw_messages: list[object]) -> list[AgentMessage
                 "sanitized message must be a dict, "
                 f"got {type(raw_message).__name__} at index {index}"
             )
-        typed_raw_message = cast(dict[str, object], raw_message)
+        typed_raw_message = cast(JsonObject, raw_message)
         role = typed_raw_message.get("role")
         if role == "user":
-            deserialized_messages.append(
-                cast(UserMessage, UserMessage.model_validate(typed_raw_message))
-            )
+            deserialized_messages.append(UserMessage.model_validate(typed_raw_message))
             continue
         if role == "assistant":
-            deserialized_messages.append(
-                cast(AssistantMessage, AssistantMessage.model_validate(typed_raw_message))
-            )
+            deserialized_messages.append(AssistantMessage.model_validate(typed_raw_message))
             continue
         if role == "tool_result":
-            deserialized_messages.append(
-                cast(ToolResultMessage, ToolResultMessage.model_validate(typed_raw_message))
-            )
+            deserialized_messages.append(ToolResultMessage.model_validate(typed_raw_message))
             continue
-        deserialized_messages.append(
-            cast(CustomAgentMessage, CustomAgentMessage.model_validate(typed_raw_message))
-        )
+        deserialized_messages.append(CustomAgentMessage.model_validate(typed_raw_message))
     return deserialized_messages
 
 
@@ -167,9 +159,8 @@ class RequestOrchestrator:
         session = self.state_manager.session
         conversation = session.conversation
         agent = ac.get_or_create_agent(self.model, self.state_manager)
-        history = coerce_tinyagent_history(conversation.messages)
         self.compaction_controller.set_status_callback(self.compaction_status_callback)
-        compacted_history = await self._compact_history_for_request(history)
+        compacted_history = await self._compact_history_for_request(conversation.messages)
         baseline_message_count = len(conversation.messages)
         pre_request_history = list(conversation.messages)
         agent.replace_messages(compacted_history)
