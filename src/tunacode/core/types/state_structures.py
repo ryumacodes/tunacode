@@ -12,10 +12,6 @@ if TYPE_CHECKING:
 
     from tunacode.core.types.tool_registry import ToolCallRegistry
 
-    MessageHistory = list[AgentMessage]
-else:
-    MessageHistory = list[Any]
-
 
 def _build_tool_call_registry() -> ToolCallRegistry:
     from tunacode.core.types.tool_registry import ToolCallRegistry
@@ -43,7 +39,7 @@ DEFAULT_ORIGINAL_QUERY = ""
 class ConversationState:
     """Conversation history and token tracking."""
 
-    messages: MessageHistory = field(default_factory=list)
+    messages: list[AgentMessage] = field(default_factory=list)
     thoughts: list[str] = field(default_factory=list)
     total_tokens: int = DEFAULT_TOTAL_TOKENS
     max_tokens: int = DEFAULT_MAX_TOKENS

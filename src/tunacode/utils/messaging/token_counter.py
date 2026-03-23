@@ -13,12 +13,16 @@ Legacy pydantic-ai message objects are not supported.
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Sequence
+from typing import TypeAlias
+
+from tinyagent.agent_types import AgentMessage, JsonObject
 
 from tunacode.types.canonical import CanonicalMessage, ToolCallPart
 from tunacode.utils.messaging.adapter import to_canonical
 
 CHARS_PER_TOKEN: int = 4
+MessageInput: TypeAlias = CanonicalMessage | AgentMessage | JsonObject
 
 
 def estimate_tokens(text: str) -> int:
@@ -28,7 +32,7 @@ def estimate_tokens(text: str) -> int:
     return len(text) // CHARS_PER_TOKEN
 
 
-def estimate_message_tokens(message: Any) -> int:
+def estimate_message_tokens(message: MessageInput) -> int:
     """Estimate token count for a single message.
 
     This uses a rough chars-per-token heuristic. It is intended for UI
@@ -53,7 +57,7 @@ def estimate_message_tokens(message: Any) -> int:
     return total_chars // CHARS_PER_TOKEN
 
 
-def estimate_messages_tokens(messages: list[Any]) -> int:
+def estimate_messages_tokens(messages: Sequence[MessageInput]) -> int:
     """Estimate total token count for a list of messages."""
 
     total = 0
