@@ -41,6 +41,17 @@ class CommandAutoComplete(AutoComplete):
     def __init__(self, target: Input) -> None:
         super().__init__(target)
 
+    def _align_to_target(self) -> None:
+        """Align dropdown above the input bar instead of below."""
+        from textual.geometry import Offset
+
+        x, y = self.target.cursor_screen_offset
+        dropdown = self.option_list
+        _width, height = dropdown.outer_size
+
+        # Position above the cursor (y - height - 1)
+        self.absolute_offset = Offset(x - 1, y - height - 1)
+
     def get_search_string(self, target_state: TargetState) -> str:
         """Extract text after / symbol at start of input."""
         command_prefix = _get_command_search_prefix(
