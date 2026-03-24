@@ -75,11 +75,11 @@ Fix the CommandAutoComplete dropdown positioning by always displaying it **above
 def _align_to_target(self) -> None:
     """Align dropdown above the input bar instead of below."""
     from textual.geometry import Offset
-    
+
     x, y = self.target.cursor_screen_offset
     dropdown = self.option_list
     _width, height = dropdown.outer_size
-    
+
     # Position above the cursor (y - height - 1)
     self.absolute_offset = Offset(x - 1, y - height - 1)
 ```

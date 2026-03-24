@@ -50,7 +50,7 @@ Screen
 ```python
 class CommandAutoComplete(AutoComplete):
     """Real-time / command autocomplete dropdown."""
-    
+
     def __init__(self, target: Input) -> None:
         super().__init__(target)
 ```
@@ -181,7 +181,7 @@ def _align_to_target(self) -> None:
     x, y = self.target.cursor_screen_offset
     dropdown = self.option_list
     width, height = dropdown.outer_size
-    
+
     # Check if there's room below
     screen_height = self.screen.scrollable_content_region.height
     if y + 1 + height > screen_height:
@@ -189,7 +189,7 @@ def _align_to_target(self) -> None:
         y = y - height - 1
     else:
         y = y + 1
-    
+
     self.absolute_offset = Offset(x - 1, max(0, y))
 ```
 
