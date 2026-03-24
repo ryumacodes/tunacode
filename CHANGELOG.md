@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.98] - 2026-03-24
+
+### Fixed
+- Show the loading indicator immediately after submit so the TUI provides prompt feedback while requests are in flight.
+
 ## [0.1.97] - 2026-03-24
 
 ### Added
