@@ -237,14 +237,28 @@ class TextualReplApp(App[None]):
             return stream_setting
         return self.STREAM_AGENT_TEXT_DEFAULT
 
+    def _show_loading_indicator(self) -> None:
+        if self._loading_indicator_shown:
+            return
+        self._loading_indicator_shown = True
+        self.loading_indicator.add_class("active")
+
+    def _hide_loading_indicator(self) -> None:
+        if not self._loading_indicator_shown:
+            return
+        self._loading_indicator_shown = False
+        self.loading_indicator.remove_class("active")
+
+    def _queue_request_after_refresh(self, message: str) -> None:
+        self.call_after_refresh(lambda: self.request_queue.put_nowait(message))
+
     async def _process_request(self, message: str) -> None:
         session = self.state_manager.session
         self._request_start_time = time.monotonic()
         self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
         self.chat_container.clear_insertion_anchor()
         self._update_compaction_status(False)
-        self._loading_indicator_shown = True
-        self.loading_indicator.add_class("active")
+        self._show_loading_indicator()
         self._clear_thinking_state()
         try:
             model_name = session.current_model or "openai/gpt-4o"
@@ -276,8 +290,7 @@ class TextualReplApp(App[None]):
             self.chat_container.write(content, panel_meta=meta)
         finally:
             self._current_request_task = None
-            self._loading_indicator_shown = False
-            self.loading_indicator.remove_class("active")
+            self._hide_loading_indicator()
             self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
             self.streaming.reset()
             self._finalize_thinking_state_after_request()
@@ -334,7 +347,7 @@ class TextualReplApp(App[None]):
         if await handle_command(self, message.text):
             return
         normalized_message = normalize_agent_message_text(message.text)
-        await self.request_queue.put(normalized_message)
+        self._show_loading_indicator()
         from datetime import datetime
 
         timestamp = datetime.now().strftime("%I:%M %p").lstrip("0")
@@ -343,6 +356,7 @@ class TextualReplApp(App[None]):
         user_block = format_user_message(message.text, STYLE_PRIMARY, width=render_width)
         user_block.append(f"│ you {timestamp}", style=f"dim {STYLE_PRIMARY}")
         self.chat_container.write(user_block).add_class("user-message")
+        self._queue_request_after_refresh(normalized_message)
 
     def on_tool_result_display(self, message: ToolResultDisplay) -> None:
         from tunacode.ui.renderers.panels import tool_panel_smart
