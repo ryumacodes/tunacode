@@ -54,7 +54,7 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 
 ### T003 – Introduce RequestUiBridge for thread→UI callback adaptation and delta batching
 - Status: completed
-- Commit: pending
+- Commit: 0de0452c
 - Files:
   - src/tunacode/ui/request_bridge.py
   - tests/unit/ui/test_request_threading.py
@@ -64,6 +64,19 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Added a per-request bridge that queues streaming and thinking deltas and routes notices/compaction updates through app messages.
+
+### T004 – Add a UI-thread delta flush timer that applies bridge deltas to widgets
+- Status: completed
+- Commit: pending
+- Files:
+  - src/tunacode/ui/app.py
+  - tests/unit/ui/test_request_threading.py
+- Commands:
+  - `uv run pytest tests/unit/ui/test_request_threading.py::test_flush_timer_applies_queued_deltas_to_streaming_handler -q` → pass
+  - `uv run ruff check src/tunacode/ui/app.py tests/unit/ui/test_request_threading.py` → pass
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added timer lifecycle helpers and a UI-thread flush method that drains queued streaming and thinking deltas.
 
 ## Gate Results
 - Tests: not run yet
@@ -87,4 +100,4 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 - [x] Execution log saved
 
 ## Next Steps
-- Execute T004.
+- Execute T007.

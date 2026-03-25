@@ -41,6 +41,14 @@ class _FakeBridgeApp:
         return True
 
 
+class _FakeStreamingHandler:
+    def __init__(self) -> None:
+        self.chunks: list[str] = []
+
+    async def callback(self, chunk: str) -> None:
+        self.chunks.append(chunk)
+
+
 def test_tui_log_display_is_written_via_message_handler() -> None:
     app = TextualReplApp(state_manager=StateManager())
     app.chat_container = _FakeChatContainer()  # type: ignore[assignment]
@@ -87,3 +95,24 @@ async def test_request_ui_bridge_drains_all_chunks_in_order() -> None:
     assert bridge.drain_streaming() == ""
     assert bridge.drain_thinking() == "thinking..."
     assert bridge.drain_thinking() == ""
+
+
+async def test_flush_timer_applies_queued_deltas_to_streaming_handler() -> None:
+    app = TextualReplApp(state_manager=StateManager())
+    app._request_bridge = RequestUiBridge(_FakeBridgeApp())
+    app.streaming = _FakeStreamingHandler()  # type: ignore[assignment]
+    thinking_chunks: list[str] = []
+
+    async def _fake_thinking_callback(chunk: str) -> None:
+        thinking_chunks.append(chunk)
+
+    app._thinking_callback = _fake_thinking_callback  # type: ignore[method-assign]
+
+    await app._request_bridge.streaming_callback("hello")
+    await app._request_bridge.streaming_callback(" world")
+    await app._request_bridge.thinking_callback("trace")
+    await app._request_bridge.thinking_callback(" data")
+    await app._flush_request_deltas()
+
+    assert app.streaming.chunks == ["hello world"]
+    assert thinking_chunks == ["trace data"]

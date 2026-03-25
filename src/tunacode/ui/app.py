@@ -56,6 +56,7 @@ from tunacode.ui.repl_support import (
     format_user_message,
     normalize_agent_message_text,
 )
+from tunacode.ui.request_bridge import RequestUiBridge
 from tunacode.ui.slopgotchi import (
     SlopgotchiHandler,
     SlopgotchiPanelState,
@@ -145,6 +146,8 @@ class TextualReplApp(App[None]):
         self._field_slopgotchi: Static | None = None
         self._slopgotchi_handler: SlopgotchiHandler | None = None
         self._slopgotchi_timer: Timer | None = None
+        self._request_bridge: RequestUiBridge | None = None
+        self._delta_flush_timer: Timer | None = None
 
         self._current_thinking_text: str = ""
         self._last_thinking_update: float = 0.0
@@ -254,6 +257,32 @@ class TextualReplApp(App[None]):
 
     def _queue_request_after_refresh(self, message: str) -> None:
         self.call_after_refresh(lambda: self.request_queue.put_nowait(message))
+
+    def _start_delta_flush_timer(self) -> None:
+        self._delta_flush_timer = self.set_interval(
+            self.STREAM_THROTTLE_MS / self.MILLISECONDS_PER_SECOND,
+            self._flush_request_deltas,
+        )
+
+    def _stop_delta_flush_timer(self) -> None:
+        timer = self._delta_flush_timer
+        if timer is None:
+            return
+        timer.stop()
+        self._delta_flush_timer = None
+
+    async def _flush_request_deltas(self) -> None:
+        bridge = self._request_bridge
+        if bridge is None:
+            return
+
+        stream_chunk = bridge.drain_streaming()
+        if stream_chunk:
+            await self.streaming.callback(stream_chunk)
+
+        thinking_chunk = bridge.drain_thinking()
+        if thinking_chunk:
+            await self._thinking_callback(thinking_chunk)
 
     async def _process_request(self, message: str) -> None:
         session = self.state_manager.session
