@@ -27,6 +27,11 @@ LIFECYCLE_PREFIX_RETRY = "Retry:"
 LIFECYCLE_PREFIX_FALLBACK = "Fallback"
 LIFECYCLE_PREFIX_USAGE = "Usage:"
 LIFECYCLE_PREFIX_RESOURCE = "Resource:"
+LIFECYCLE_PREFIX_INPUT = "Input:"
+LIFECYCLE_PREFIX_QUEUE = "Queue:"
+LIFECYCLE_PREFIX_BRIDGE = "Bridge:"
+LIFECYCLE_PREFIX_UI = "UI:"
+LIFECYCLE_PREFIX_INIT = "Init:"
 
 # Table-driven lifecycle formatting: (prefix, prefix_style, body_style)
 _LIFECYCLE_SPLIT_STYLES: list[tuple[str, str, str]] = [
@@ -39,6 +44,11 @@ _LIFECYCLE_SPLIT_STYLES: list[tuple[str, str, str]] = [
     (LIFECYCLE_PREFIX_RETRY, "yellow bold", "yellow"),
     (LIFECYCLE_PREFIX_USAGE, "cyan bold", "cyan"),
     (LIFECYCLE_PREFIX_RESOURCE, "blue bold", "blue"),
+    (LIFECYCLE_PREFIX_INPUT, "cyan bold", "cyan"),
+    (LIFECYCLE_PREFIX_QUEUE, "yellow bold", "yellow"),
+    (LIFECYCLE_PREFIX_BRIDGE, "magenta bold", "magenta"),
+    (LIFECYCLE_PREFIX_UI, "white bold", "white"),
+    (LIFECYCLE_PREFIX_INIT, "green bold", "green"),
 ]
 
 # Full-style lifecycle entries: (prefix, style)

@@ -40,6 +40,10 @@ class DebugCommand(Command):
                 "[dim]Parallel tool-call traces appear as lifecycle lines "
                 "prefixed with 'Parallel tool calls'.[/dim]"
             )
+            app.chat_container.write(
+                "[dim]Input/request latency traces use lifecycle prefixes "
+                "'Input:', 'Queue:', 'Bridge:', 'UI:', and 'Init:'.[/dim]"
+            )
             logger.info(debug_message)
             logger.info("Lifecycle logging enabled")
             log_usage_update(

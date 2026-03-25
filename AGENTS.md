@@ -66,6 +66,7 @@ Last Updated: 2026-03-25
 - Primary runbook: `README.md`.
 - Architectural map: `docs/modules/index.md`.
 - Review notes for active PR triage: `docs/reviews/`.
+- Debugging and investigation artifacts: `docs/reviews/*-artifact.md`.
 - Git workflow and safety practices: `docs/git/practices.md`.
 - Module-specific docs:
   - `docs/modules/core/core.md`

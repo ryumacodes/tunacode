@@ -166,10 +166,15 @@ async def test_request_ui_bridge_drains_all_chunks_in_order() -> None:
     await bridge.thinking_callback("thinking")
     await bridge.thinking_callback("...")
 
-    assert bridge.drain_streaming() == "hello world"
-    assert bridge.drain_streaming() == ""
-    assert bridge.drain_thinking() == "thinking..."
-    assert bridge.drain_thinking() == ""
+    streaming_batch = bridge.drain_streaming()
+    assert streaming_batch.text == "hello world"
+    assert streaming_batch.chunk_count == 3
+    assert bridge.drain_streaming().has_data is False
+
+    thinking_batch = bridge.drain_thinking()
+    assert thinking_batch.text == "thinking..."
+    assert thinking_batch.chunk_count == 2
+    assert bridge.drain_thinking().has_data is False
 
 
 async def test_flush_timer_applies_queued_deltas_to_streaming_handler() -> None:
@@ -243,6 +248,7 @@ async def test_process_request_runs_in_worker_and_sets_current_request_handle() 
     worker_call = worker_calls[0]
     assert worker_call["exit_on_error"] is False
     assert worker_call["name"] == "process_request"
+    assert worker_call["thread"] is True
     assert len(process_request_calls) == 1
     process_request_call = process_request_calls[0]
     assert process_request_call["message"] == "hello"

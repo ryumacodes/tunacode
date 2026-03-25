@@ -83,6 +83,9 @@ class Editor(Input):
             app = getattr(self, "app", None)
             if app is not None:
                 app._last_editor_keypress_at = time.monotonic()
+                tracer = getattr(app, "_request_debug", None)
+                if tracer is not None:
+                    tracer.note_editor_keypress(key_label=event.character or event.key)
 
         has_paste_buffer = bool(getattr(self, "has_paste_buffer", False))
         if has_paste_buffer and not self.value and event.key == "backspace":

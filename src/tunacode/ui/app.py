@@ -57,6 +57,7 @@ from tunacode.ui.repl_support import (
     format_user_message,
     normalize_agent_message_text,
 )
+from tunacode.ui.request_debug import RequestDebugTracer, SubmissionTrace
 from tunacode.ui.request_bridge import RequestUiBridge
 from tunacode.ui.slopgotchi import (
     SlopgotchiHandler,
@@ -155,6 +156,7 @@ class TextualReplApp(App[None]):
         self._current_thinking_text: str = ""
         self._last_thinking_update: float = 0.0
         self._last_editor_keypress_at: float = 0.0
+        self._request_debug = RequestDebugTracer(self)
 
     def compose(self) -> ComposeResult:
         self.resource_bar = ResourceBar()
@@ -226,8 +228,9 @@ class TextualReplApp(App[None]):
     async def _request_worker(self) -> Never:
         while True:
             request = await self.request_queue.get()
+            submission_trace = self._request_debug.pop_next_submission_trace()
             try:
-                await self._process_request(request)
+                await self._process_request(request, submission_trace)
             except Exception as e:
                 from tunacode.ui.renderers.errors import render_exception
 
@@ -261,14 +264,23 @@ class TextualReplApp(App[None]):
         self._loading_indicator_shown = False
         self.loading_indicator.remove_class("active")
 
-    def _queue_request_after_refresh(self, message: str) -> None:
-        self.call_after_refresh(lambda: self.request_queue.put_nowait(message))
+    def _queue_request_after_refresh(
+        self,
+        message: str,
+        submission_trace: SubmissionTrace | None = None,
+    ) -> None:
+        def _enqueue() -> None:
+            self.request_queue.put_nowait(message)
+            self._request_debug.request_enqueued_after_refresh(submission_trace)
+
+        self.call_after_refresh(_enqueue)
 
     def _start_delta_flush_timer(self) -> None:
         self._delta_flush_timer = self.set_interval(
             self.STREAM_THROTTLE_MS / self.MILLISECONDS_PER_SECOND,
             self._flush_request_deltas,
         )
+        self._request_debug.note_delta_timer_started()
 
     def _stop_delta_flush_timer(self) -> None:
         timer = self._delta_flush_timer
@@ -276,26 +288,56 @@ class TextualReplApp(App[None]):
             return
         timer.stop()
         self._delta_flush_timer = None
+        self._request_debug.note_delta_timer_stopped()
 
     async def _flush_request_deltas(self) -> None:
         bridge = self._request_bridge
         if bridge is None:
             return
 
-        stream_chunk = bridge.drain_streaming()
-        if stream_chunk:
-            await self.streaming.callback(stream_chunk)
+        self._request_debug.note_delta_timer_tick()
+        flush_started_at = time.monotonic()
+        stream_batch = bridge.drain_streaming()
+        thinking_batch = bridge.drain_thinking()
 
-        thinking_chunk = bridge.drain_thinking()
-        if thinking_chunk:
-            await self._thinking_callback(thinking_chunk)
+        stream_callback_ms = 0.0
+        if stream_batch.has_data:
+            stream_started_at = time.monotonic()
+            await self.streaming.callback(stream_batch.text)
+            stream_callback_ms = (
+                time.monotonic() - stream_started_at
+            ) * self.MILLISECONDS_PER_SECOND
 
-    async def _process_request(self, message: str) -> None:
+        thinking_callback_ms = 0.0
+        if thinking_batch.has_data:
+            thinking_started_at = time.monotonic()
+            await self._thinking_callback(thinking_batch.text)
+            thinking_callback_ms = (
+                time.monotonic() - thinking_started_at
+            ) * self.MILLISECONDS_PER_SECOND
+
+        flush_duration_ms = (time.monotonic() - flush_started_at) * self.MILLISECONDS_PER_SECOND
+        self._request_debug.note_delta_flush(
+            stream_batch=stream_batch,
+            thinking_batch=thinking_batch,
+            flush_duration_ms=flush_duration_ms,
+            stream_callback_ms=stream_callback_ms,
+            thinking_callback_ms=thinking_callback_ms,
+        )
+
+    async def _process_request(
+        self,
+        message: str,
+        submission_trace: SubmissionTrace | None = None,
+    ) -> None:
         session = self.state_manager.session
         self._request_start_time = time.monotonic()
         self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
         self.chat_container.clear_insertion_anchor()
         self._update_compaction_status(False)
+        self._request_debug.request_started(submission_trace)
+        if not self._loading_indicator_shown:
+            self._request_debug.loading_shown(reason="request_start")
         self._show_loading_indicator()
         self._clear_thinking_state()
         bridge = RequestUiBridge(self)
@@ -325,6 +367,7 @@ class TextualReplApp(App[None]):
                 ),
                 exit_on_error=False,
                 name="process_request",
+                thread=True,
             )
             self._current_request_task = worker
             await worker.wait()
@@ -348,6 +391,8 @@ class TextualReplApp(App[None]):
             self._stop_delta_flush_timer()
             self._request_bridge = None
             self._current_request_task = None
+            if self._loading_indicator_shown:
+                self._request_debug.loading_hidden(reason="request_complete")
             self._hide_loading_indicator()
             self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
             self.streaming.reset()
@@ -373,6 +418,10 @@ class TextualReplApp(App[None]):
             self._update_resource_bar()
             # Auto-save session after processing
             await self.state_manager.save_session()
+            total_request_ms = (
+                time.monotonic() - self._request_start_time
+            ) * self.MILLISECONDS_PER_SECOND
+            self._request_debug.request_finished(total_request_ms=total_request_ms)
 
     def _get_latest_response_text(self) -> str | None:
         from tinyagent.agent_types import AssistantMessage, TextContent
@@ -405,6 +454,12 @@ class TextualReplApp(App[None]):
         if await handle_command(self, message.text):
             return
         normalized_message = normalize_agent_message_text(message.text)
+        submission_trace = self._request_debug.submit_received(
+            raw_text=message.text,
+            normalized_text=normalized_message,
+        )
+        if not self._loading_indicator_shown:
+            self._request_debug.loading_shown(reason="submit")
         self._show_loading_indicator()
         from datetime import datetime
 
@@ -414,7 +469,7 @@ class TextualReplApp(App[None]):
         user_block = format_user_message(message.text, STYLE_PRIMARY, width=render_width)
         user_block.append(f"│ you {timestamp}", style=f"dim {STYLE_PRIMARY}")
         self.chat_container.write(user_block).add_class("user-message")
-        self._queue_request_after_refresh(normalized_message)
+        self._queue_request_after_refresh(normalized_message, submission_trace)
 
     def on_tui_log_display(self, message: TuiLogDisplay) -> None:
         self.chat_container.write(message.renderable)

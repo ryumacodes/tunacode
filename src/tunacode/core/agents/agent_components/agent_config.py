@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import os
+import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from pathlib import Path
-from typing import cast
+from typing import Protocol, cast
 
 import httpx
 from tinyagent.agent import Agent, AgentOptions
@@ -15,6 +16,8 @@ from tinyagent.agent_types import (
     AgentTool,
     AgentToolResult,
     AgentToolUpdateCallback,
+    AssistantMessage,
+    AssistantMessageEvent,
     Context,
     JsonObject,
     Model,
@@ -26,6 +29,7 @@ from tinyagent.alchemy_provider import OpenAICompatModel, stream_alchemy_openai_
 
 from tunacode.configuration.limits import get_max_tokens
 from tunacode.configuration.models import (
+    get_cached_models_registry,
     get_provider_alchemy_api,
     get_provider_base_url,
     get_provider_env_var,
@@ -83,15 +87,77 @@ __all__ = [
 ENV_OPENAI_API_KEY = "OPENAI_API_KEY"
 OPENAI_CHAT_COMPLETIONS_PATH = "/chat/completions"
 OPENROUTER_PROVIDER_ID = "openrouter"
-MAX_PARALLEL_TOOL_CALLS = 3
-MIN_PARALLEL_TOOL_CALLS = 1
+MAX_PARALLEL_TOOL_CALLS, MIN_PARALLEL_TOOL_CALLS = 3, 1
 MAX_STREAM_RETRY_DELAY_SECONDS = 8.0
 STREAM_RETRYABLE_STATUS_CODES = frozenset({408, 409, 425, 429})
+STREAM_RAW_EVENT_GAP_WARN_MS = 250.0
 
 ToolExecute = Callable[
     [str, JsonObject, asyncio.Event | None, AgentToolUpdateCallback],
     Awaitable[AgentToolResult],
 ]
+
+
+class _LifecycleTraceLogger(Protocol):
+    debug_mode: bool
+
+    def lifecycle(self, message: str) -> None: ...
+    def warning(self, message: str, **kwargs: object) -> None: ...
+
+
+class _TracedStreamResponse:
+    """Wrap provider StreamResponse with timing logs for /debug sessions."""
+
+    def __init__(
+        self,
+        response: StreamResponse,
+        *,
+        logger: _LifecycleTraceLogger,
+        opened_at: float,
+        response_ready_at: float,
+    ) -> None:
+        self._response = response
+        self._logger = logger
+        self._opened_at = opened_at
+        self._response_ready_at = response_ready_at
+        self._event_count = 0
+        self._last_event_at = response_ready_at
+
+    def __aiter__(self) -> _TracedStreamResponse:
+        return self
+
+    async def __anext__(self) -> AssistantMessageEvent:
+        event = await self._response.__anext__()
+        now = time.perf_counter()
+        self._event_count += 1
+        event_type = event.type or "unknown"
+
+        if self._event_count == 1:
+            self._logger.lifecycle(
+                "Stream: "
+                f"provider_first_raw type={event_type} "
+                f"since_open={(now - self._opened_at) * 1000.0:.1f}ms "
+                f"since_response={(now - self._response_ready_at) * 1000.0:.1f}ms"
+            )
+        else:
+            gap_ms = (now - self._last_event_at) * 1000.0
+            if gap_ms >= STREAM_RAW_EVENT_GAP_WARN_MS:
+                self._logger.lifecycle(
+                    "Stream: "
+                    f"provider_raw_gap type={event_type} "
+                    f"gap={gap_ms:.1f}ms "
+                    f"count={self._event_count}"
+                )
+
+        self._last_event_at = now
+        return event
+
+    async def result(self) -> AssistantMessage:
+        started_at = time.perf_counter()
+        result = await self._response.result()
+        duration_ms = (time.perf_counter() - started_at) * 1000.0
+        self._logger.lifecycle(f"Stream: provider_result dur={duration_ms:.1f}ms")
+        return result
 
 
 async def _sleep_with_delay(total_delay: float) -> None:
@@ -304,16 +370,32 @@ def _build_stream_fn(
         options: SimpleStreamOptions,
     ) -> StreamResponse:
         stream_options = _merge_stream_options(options=options, max_tokens=max_tokens)
+        logger = get_logger()
 
         for attempt in range(1, max_retries + 1):
             if request_delay > 0:
                 await _sleep_with_delay(request_delay)
             try:
-                return await stream_alchemy_openai_completions(model, context, stream_options)
+                opened_at = time.perf_counter()
+                response = await stream_alchemy_openai_completions(model, context, stream_options)
+                response_ready_at = time.perf_counter()
+                logger.lifecycle(
+                    "Stream: "
+                    f"provider_open attempt={attempt}/{max_retries} "
+                    f"dur={(response_ready_at - opened_at) * 1000.0:.1f}ms"
+                )
+                if logger.debug_mode:
+                    return _TracedStreamResponse(
+                        response,
+                        logger=logger,
+                        opened_at=opened_at,
+                        response_ready_at=response_ready_at,
+                    )
+                return response
             except Exception as exc:  # noqa: BLE001
                 if attempt >= max_retries or not _is_retryable_stream_error(exc):
                     raise
-                get_logger().warning(
+                logger.warning(
                     "Retrying provider stream request after transient error: "
                     f"attempt={attempt}/{max_retries}, error={type(exc).__name__}"
                 )
@@ -370,8 +452,25 @@ def _build_tinyagent_model(
 
 
 def _build_skills_prompt_state(session: SessionStateProtocol) -> SkillsPromptState:
+    logger = get_logger()
+    available_skills_started_at = time.perf_counter()
     available_skill_summaries = list_skill_summaries()
+    available_skills_duration_ms = (time.perf_counter() - available_skills_started_at) * 1000.0
+    logger.lifecycle(
+        "Init: "
+        f"available_skills count={len(available_skill_summaries)} "
+        f"dur={available_skills_duration_ms:.1f}ms"
+    )
+
+    selected_skills_started_at = time.perf_counter()
     selected_skills = resolve_selected_skills(session.selected_skill_names)
+    selected_skills_duration_ms = (time.perf_counter() - selected_skills_started_at) * 1000.0
+    logger.lifecycle(
+        "Init: "
+        f"selected_skills count={len(selected_skills)} "
+        f"dur={selected_skills_duration_ms:.1f}ms"
+    )
+
     return SkillsPromptState(
         available_block=render_available_skills_block(available_skill_summaries),
         selected_block=render_selected_skills_block(selected_skills),
@@ -424,8 +523,26 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     session_agents = _session_agents_dict(session)
     config = _normalize_session_config(session)
 
+    init_started_at = time.perf_counter()
+    registry_cached = get_cached_models_registry() is not None
+    registry_started_at = time.perf_counter()
     load_models_registry()
+    registry_duration_ms = (time.perf_counter() - registry_started_at) * 1000.0
+    logger.lifecycle(
+        "Init: "
+        f"models_registry cached={str(registry_cached).lower()} "
+        f"dur={registry_duration_ms:.1f}ms"
+    )
+
+    skills_started_at = time.perf_counter()
     skills_state = _build_skills_prompt_state(session)
+    skills_duration_ms = (time.perf_counter() - skills_started_at) * 1000.0
+    logger.lifecycle(
+        "Init: "
+        f"skills_prompt total={skills_duration_ms:.1f}ms "
+        f"selected={len(skills_state.selected_skills)}"
+    )
+
     max_tokens = get_max_tokens()
     agent_version = _compute_agent_version(
         config.settings,
@@ -455,6 +572,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
 
     tools = _build_tools(strict_validation=config.settings.tool_strict_validation)
 
+    agent_build_started_at = time.perf_counter()
     agent = Agent(
         _build_agent_options(
             session=session,
@@ -470,5 +588,13 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     session.agent_versions[model] = agent_version
     session_agents[model] = agent
 
+    agent_build_duration_ms = (time.perf_counter() - agent_build_started_at) * 1000.0
+    total_init_duration_ms = (time.perf_counter() - init_started_at) * 1000.0
+    logger.lifecycle(
+        "Init: "
+        f"agent_build model={model} "
+        f"dur={agent_build_duration_ms:.1f}ms "
+        f"total={total_init_duration_ms:.1f}ms"
+    )
     logger.info(f"Agent created: {model}")
     return agent
