@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-from functools import partial
 from typing import TYPE_CHECKING, Never
 
 from rich.console import RenderableType
@@ -300,26 +299,30 @@ class TextualReplApp(App[None]):
         try:
             model_name = session.current_model or "openai/gpt-4o"
             should_stream_agent_text = self._should_stream_agent_text()
-            from textual.worker import WorkerCancelled, WorkerFailed
+            from textual.worker import Worker, WorkerCancelled, WorkerFailed
 
             from tunacode.core.agents.main import process_request
             from tunacode.core.ui_api.shared_types import ModelName
 
-            worker = self.run_worker(
-                partial(
-                    process_request,
-                    message=message,
-                    model=ModelName(model_name),
-                    state_manager=self.state_manager,
-                    streaming_callback=(
-                        bridge.streaming_callback if should_stream_agent_text else None
-                    ),
-                    thinking_callback=bridge.thinking_callback,
-                    tool_result_callback=build_tool_result_callback(self),
-                    tool_start_callback=None,
-                    notice_callback=bridge.notice_callback,
-                    compaction_status_callback=bridge.compaction_status_callback,
-                ),
+            def request_work() -> object:
+                return asyncio.run(
+                    process_request(
+                        message=message,
+                        model=ModelName(model_name),
+                        state_manager=self.state_manager,
+                        streaming_callback=(
+                            bridge.streaming_callback if should_stream_agent_text else None
+                        ),
+                        thinking_callback=bridge.thinking_callback,
+                        tool_result_callback=build_tool_result_callback(self),
+                        tool_start_callback=None,
+                        notice_callback=bridge.notice_callback,
+                        compaction_status_callback=bridge.compaction_status_callback,
+                    )
+                )
+
+            worker: Worker[object] = self.run_worker(
+                request_work,
                 thread=True,
                 exit_on_error=False,
                 name="process_request",
@@ -331,7 +334,10 @@ class TextualReplApp(App[None]):
         except WorkerFailed as e:
             from tunacode.ui.renderers.errors import render_exception
 
-            content, meta = render_exception(e.error)
+            error = e.error
+            if not isinstance(error, Exception):
+                error = RuntimeError(f"Worker failed with non-exception error: {error!r}")
+            content, meta = render_exception(error)
             self.chat_container.write(content, panel_meta=meta)
         except Exception as e:
             from tunacode.ui.renderers.errors import render_exception
@@ -444,6 +450,7 @@ class TextualReplApp(App[None]):
         filepath = filepath_value.strip()
         if not filepath:
             return
+        self.update_lsp_for_file(filepath)
         self._edited_files.add(filepath)
         self._refresh_context_panel()
 

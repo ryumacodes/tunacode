@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 from rich.text import Text
@@ -9,8 +10,9 @@ from tunacode.core.session import StateManager
 from tunacode.ui.app import TextualReplApp
 from tunacode.ui.esc.handler import EscHandler
 from tunacode.ui.lifecycle import AppLifecycle
+from tunacode.ui.repl_support import build_tool_result_callback
 from tunacode.ui.request_bridge import RequestUiBridge
-from tunacode.ui.widgets.messages import TuiLogDisplay
+from tunacode.ui.widgets.messages import ToolResultDisplay, TuiLogDisplay
 
 
 class _FakeChatContainer:
@@ -48,6 +50,19 @@ class _FakeBridgeApp:
     def post_message(self, message: object) -> bool:
         self.messages.append(message)
         return True
+
+
+class _FakeToolCallbackApp:
+    def __init__(self) -> None:
+        self.messages: list[object] = []
+        self.lsp_updates: list[str] = []
+
+    def post_message(self, message: object) -> bool:
+        self.messages.append(message)
+        return True
+
+    def update_lsp_for_file(self, filepath: str) -> None:
+        self.lsp_updates.append(filepath)
 
 
 class _FakeStreamingHandler:
@@ -100,7 +115,7 @@ class _FakeWorker:
         self.wait_called = True
         assert self._app._current_request_task is self
         if callable(self._work):
-            result = self._work()
+            result = await asyncio.to_thread(self._work)
             if hasattr(result, "__await__"):
                 return await result
             return result
@@ -239,3 +254,54 @@ async def test_process_request_runs_in_thread_worker_and_sets_current_request_ha
     assert timer.stopped is True
     assert viewport.removed_classes
     assert notifications == []
+
+
+def test_tool_result_callback_never_calls_update_lsp_for_file_from_request_thread() -> None:
+    app = _FakeToolCallbackApp()
+
+    callback = build_tool_result_callback(app)
+    callback(
+        "write_file",
+        "completed",
+        {"filepath": "src/example.py"},
+        result=None,
+        duration_ms=12.0,
+    )
+
+    assert app.lsp_updates == []
+    assert len(app.messages) == 1
+    message = app.messages[0]
+    assert isinstance(message, ToolResultDisplay)
+    assert message.tool_name == "write_file"
+    assert message.status == "completed"
+    assert message.args == {"filepath": "src/example.py"}
+
+
+def test_on_tool_result_display_updates_lsp_on_ui_thread_for_file_edits() -> None:
+    app = TextualReplApp(state_manager=StateManager())
+    app.chat_container = _FakeChatContainer()  # type: ignore[assignment]
+    lsp_updates: list[str] = []
+    refresh_calls: list[bool] = []
+    app.update_lsp_for_file = lsp_updates.append  # type: ignore[method-assign]
+    app._refresh_context_panel = lambda: refresh_calls.append(True)  # type: ignore[method-assign]
+    app.tool_panel_max_width = lambda: 80  # type: ignore[method-assign]
+
+    with patch(
+        "tunacode.ui.renderers.panels.tool_panel_smart",
+        return_value=("rendered", {"title": "tool"}),
+    ):
+        app.on_tool_result_display(
+            ToolResultDisplay(
+                tool_name="write_file",
+                status="completed",
+                args={"filepath": "src/example.py"},
+                result=None,
+                result_text="ok",
+                duration_ms=4.0,
+            )
+        )
+
+    assert app.chat_container.calls == ["rendered"]
+    assert lsp_updates == ["src/example.py"]
+    assert "src/example.py" in app._edited_files
+    assert refresh_calls == [True]

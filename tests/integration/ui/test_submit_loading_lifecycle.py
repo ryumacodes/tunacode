@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -40,8 +41,8 @@ async def test_submit_loading_indicator_lifecycle_remains_responsive(
     state_manager.save_session = AsyncMock(return_value=True)  # type: ignore[method-assign]
     app = TextualReplApp(state_manager=state_manager)
 
-    started_events = [asyncio.Event(), asyncio.Event()]
-    release_events = [asyncio.Event(), asyncio.Event()]
+    started_events = [threading.Event(), threading.Event()]
+    release_events = [threading.Event(), threading.Event()]
     calls: list[str] = []
 
     async def _fake_process_request(
@@ -53,7 +54,7 @@ async def test_submit_loading_indicator_lifecycle_remains_responsive(
         call_index = len(calls)
         calls.append(message)
         started_events[call_index].set()
-        await release_events[call_index].wait()
+        await asyncio.to_thread(release_events[call_index].wait)
         state_manager.session.conversation.messages.append(
             AssistantMessage(content=[TextContent(text=f"response-{call_index + 1}")])
         )
@@ -61,7 +62,7 @@ async def test_submit_loading_indicator_lifecycle_remains_responsive(
     async with app.run_test() as pilot:
         with patch(
             "tunacode.core.agents.main.process_request",
-            new=AsyncMock(side_effect=_fake_process_request),
+            new=_fake_process_request,
         ):
             app.editor.value = "first prompt"
             await pilot.press("enter")
