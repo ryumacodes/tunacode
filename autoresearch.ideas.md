@@ -1,0 +1,3 @@
+- Instrument true keypress-to-visible-paint latency inside the Textual app (event receipt, editor mutation, next refresh) so future optimization targets the exact user pain instead of only `pilot.press()` wall time.
+- Explore a dedicated lightweight live-thought widget path that reuses a stable render object / avoids full Rich re-rendering, but only after profiling shows widget update cost dominates.
+- Test whether recent-keypress deferral should key off "time since last editor value mutation" rather than raw keypresses, so navigation keys and non-edit inputs do not affect thought cadence.

@@ -1,28 +1,32 @@
-# Autoresearch: active-request editor input latency
+# Autoresearch: active-request editor input paint latency
 
 ## Objective
 Reduce the latency users feel while typing a new draft during an already-active request, without hiding live thought updates or otherwise cheating by removing the user-visible work.
 
+This session now optimizes a more user-facing benchmark than the earlier `pilot.press()` wall-time metric. The new workload measures **time until the editor is next rendered after a keypress**, which is closer to the visible local typing experience the user complained about.
+
 ## Metrics
-- **Primary**: `input_p95` (ms, lower is better) — median-of-runs p95 keypress latency while a synthetic active request is pushing live thinking updates through the real Textual app.
+- **Primary**: `paint_p95` (ms, lower is better) — median-of-runs p95 time from keypress injection to the next editor render pass showing the updated editor value during an active synthetic request.
 - **Secondary**:
-  - `input_median` — typical keypress latency under load
-  - `input_max` — spike severity during the sample
-  - `idle_p95` — unloaded editor baseline
-  - `active_idle_gap` — extra latency caused by an active request
+  - `paint_median` — typical paint latency under load
+  - `press_return_p95` — previous coarse `pilot.press()`-style wall time for comparison
+  - `paint_after_return_p95` — residual paint delay after `pilot.press()` returns
+  - `idle_paint_p95` — unloaded editor paint baseline
+  - `active_idle_paint_gap` — extra paint delay caused by an active request
 
 ## How to Run
 `./autoresearch.sh`
 
-The benchmark uses a real `TextualReplApp` test harness and patches `process_request()` with a synthetic request that continuously emits thinking deltas. It measures end-to-end per-key latency using `pilot.press()` while the loading indicator is active.
+The benchmark patches `Editor.render_line()` to timestamp the first render pass after each keypress where the editor value reflects the new text. It still runs through a real `TextualReplApp` test harness and a synthetic active request that continuously emits thinking deltas.
 
 ## Files in Scope
 - `src/tunacode/ui/app.py` — request lifecycle, loading, streaming, thinking wiring
 - `src/tunacode/ui/thinking_state.py` — live thought rendering and throttling
+- `src/tunacode/ui/widgets/editor.py` — local typing path and edit-activity tracking
+- `src/tunacode/ui/renderers/thinking.py` — thought content shaping if needed
 - `src/tunacode/ui/widgets/chat.py` — chat mounting / scroll behavior if needed
-- `src/tunacode/ui/styles/layout.tcss` — any supporting live-thinking layout changes
 - `tests/unit/ui/` and `tests/integration/ui/` — correctness coverage for request/thinking behavior
-- `scripts/benchmarks/input_latency.py` — primary benchmark workload
+- `scripts/benchmarks/input_paint_latency.py` — primary benchmark workload
 - `autoresearch.checks.sh` — focused validation commands
 
 ## Off Limits
@@ -39,8 +43,10 @@ The benchmark uses a real `TextualReplApp` test harness and patches `process_req
 - Update `AGENTS.md` if `src/` changes.
 
 ## What's Been Tried
-- Historical probe: removing thought-panel auto-scroll alone did not materially help.
-- Historical probe: deferring live thought repaint while drafting improved measurements, but it hid live thoughts and was rejected.
-- Historical probe: replacing `LoadingIndicator` was worse.
-- Historical probe: the threaded request worker improved the coarse tmux measurement, so the remaining issue is likely live UI churn on the main thread rather than request execution itself.
-- Current session hypothesis: live thought rendering still couples request churn to editor responsiveness; make live thought presentation cheaper without removing it.
+- Earlier coarse benchmark wins already on the branch:
+  - removing forced `scroll_end()` on incremental thought updates
+  - adaptive thought throttling (`100 ms` normally, `300 ms` while drafting)
+  - shrinking hidden thought retention from `20k` chars to `2.4k`
+  - deferring incremental thought refreshes for `150 ms` after the most recent editing keypress
+- Under the older `pilot.press()` metric, many nearby variants regressed: `125 ms` and `175 ms` keypress windows, `200 ms` and `350 ms` drafting throttles, smaller visible thought payloads, pending-delta buffers, queue-drain deferral, detached live thought widgets, and editor-side micro-optimizations.
+- Current hypothesis for the new benchmark: the existing keyburst-aware thought deferral should help actual keypress-to-paint latency too, but the more precise render metric may expose a different optimum than the coarser wall-time metric.
