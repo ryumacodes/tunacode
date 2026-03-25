@@ -70,7 +70,6 @@ def refresh_thinking_output(app: TextualReplApp, force: bool = False) -> None:
         return
 
     thinking_panel_widget.update(thinking_content)
-    app.chat_container.scroll_end(animate=False)
 
 
 async def thinking_callback(app: TextualReplApp, delta: str) -> None:
