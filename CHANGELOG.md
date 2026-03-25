@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.99] - 2026-03-25
+
+### Added
+- Threaded request execution to move LLM processing off the UI thread for improved input responsiveness.
+- RequestUiBridge for thread-safe callback adaptation between background workers and the Textual UI.
+- Thread-safe UI message types for cross-thread event propagation.
+- UI-thread delta flush timer and drain helper for batched stream updates.
+
+### Changed
+- Reduced the internal thinking-text buffer from 20k chars to 2.4k chars to minimize memory churn during live thought updates.
+- Made thought refresh cadence adaptive: 100 ms normally, 300 ms while the editor contains an in-progress draft.
+- Raised the detached-widget drafting-time thought throttle from 250 ms to 275 ms for improved stability.
+
+### Fixed
+- Fixed request cancellation and tmux test gating.
+- Broadened ESC cancellation contract for threaded worker handles.
+- Made TUI logger callback thread-safe via message posting.
+
 ## [0.1.98] - 2026-03-24
 
 ### Fixed
