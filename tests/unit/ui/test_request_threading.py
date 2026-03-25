@@ -7,6 +7,7 @@ from rich.text import Text
 from tunacode.core.session import StateManager
 
 from tunacode.ui.app import TextualReplApp
+from tunacode.ui.esc.handler import EscHandler
 from tunacode.ui.lifecycle import AppLifecycle
 from tunacode.ui.request_bridge import RequestUiBridge
 from tunacode.ui.widgets.messages import TuiLogDisplay
@@ -47,6 +48,14 @@ class _FakeStreamingHandler:
 
     async def callback(self, chunk: str) -> None:
         self.chunks.append(chunk)
+
+
+class _FakeWorkerHandle:
+    def __init__(self) -> None:
+        self.cancelled = False
+
+    def cancel(self) -> None:
+        self.cancelled = True
 
 
 def test_tui_log_display_is_written_via_message_handler() -> None:
@@ -116,3 +125,11 @@ async def test_flush_timer_applies_queued_deltas_to_streaming_handler() -> None:
 
     assert app.streaming.chunks == ["hello world"]
     assert thinking_chunks == ["trace data"]
+
+
+def test_escape_handler_cancels_worker_handle() -> None:
+    worker = _FakeWorkerHandle()
+
+    EscHandler().handle_escape(current_request_task=worker, shell_runner=None)
+
+    assert worker.cancelled is True

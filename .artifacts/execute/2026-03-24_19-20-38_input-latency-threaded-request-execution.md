@@ -67,7 +67,7 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 
 ### T004 – Add a UI-thread delta flush timer that applies bridge deltas to widgets
 - Status: completed
-- Commit: pending
+- Commit: 246c0040
 - Files:
   - src/tunacode/ui/app.py
   - tests/unit/ui/test_request_threading.py
@@ -77,6 +77,19 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Added timer lifecycle helpers and a UI-thread flush method that drains queued streaming and thinking deltas.
+
+### T007 – Broaden ESC cancellation contract to support Worker cancellation
+- Status: completed
+- Commit: pending
+- Files:
+  - src/tunacode/ui/esc/types.py
+  - tests/unit/ui/test_request_threading.py
+- Commands:
+  - `uv run pytest tests/unit/ui/test_request_threading.py::test_escape_handler_cancels_worker_handle -q` → pass
+  - `uv run ruff check src/tunacode/ui/esc/types.py tests/unit/ui/test_request_threading.py` → pass
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Request cancellation now accepts any cancellable handle, including Textual workers.
 
 ## Gate Results
 - Tests: not run yet
@@ -100,4 +113,4 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 - [x] Execution log saved
 
 ## Next Steps
-- Execute T007.
+- Execute T005.
