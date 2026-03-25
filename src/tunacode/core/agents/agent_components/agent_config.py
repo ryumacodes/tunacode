@@ -387,7 +387,7 @@ def _build_stream_fn(
                 if logger.debug_mode:
                     return _TracedStreamResponse(
                         response,
-                        logger=logger,
+                        logger=cast(_LifecycleTraceLogger, logger),
                         opened_at=opened_at,
                         response_ready_at=response_ready_at,
                     )
@@ -524,7 +524,7 @@ def get_or_create_agent(model: ModelName, state_manager: StateManagerProtocol) -
     config = _normalize_session_config(session)
 
     init_started_at = time.perf_counter()
-    registry_cached = get_cached_models_registry() is not None
+    registry_cached = get_cached_models_registry() is not None  # type: ignore[misc]
     registry_started_at = time.perf_counter()
     load_models_registry()
     registry_duration_ms = (time.perf_counter() - registry_started_at) * 1000.0
