@@ -65,12 +65,15 @@ from tunacode.ui.styles import STYLE_PRIMARY, STYLE_SUCCESS, STYLE_WARNING
 from tunacode.ui.widgets import (
     ChatContainer,
     CommandAutoComplete,
+    CompactionStatusChanged,
     Editor,
     EditorSubmitRequested,
     FileAutoComplete,
     ResourceBar,
     SkillsAutoComplete,
+    SystemNoticeDisplay,
     ToolResultDisplay,
+    TuiLogDisplay,
 )
 
 
@@ -357,6 +360,15 @@ class TextualReplApp(App[None]):
         user_block.append(f"│ you {timestamp}", style=f"dim {STYLE_PRIMARY}")
         self.chat_container.write(user_block).add_class("user-message")
         self._queue_request_after_refresh(normalized_message)
+
+    def on_tui_log_display(self, message: TuiLogDisplay) -> None:
+        self.chat_container.write(message.renderable)
+
+    def on_system_notice_display(self, message: SystemNoticeDisplay) -> None:
+        self._show_system_notice(message.notice)
+
+    def on_compaction_status_changed(self, message: CompactionStatusChanged) -> None:
+        self._update_compaction_status(message.active)
 
     def on_tool_result_display(self, message: ToolResultDisplay) -> None:
         from tunacode.ui.renderers.panels import tool_panel_smart

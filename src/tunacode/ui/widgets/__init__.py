@@ -14,6 +14,9 @@ _WIDGET_EXPORTS = {
     "EditorCompletionsAvailable": ".messages",
     "EditorSubmitRequested": ".messages",
     "ToolResultDisplay": ".messages",
+    "TuiLogDisplay": ".messages",
+    "SystemNoticeDisplay": ".messages",
+    "CompactionStatusChanged": ".messages",
     "ResourceBar": ".resource_bar",
     "SkillsAutoComplete": ".skills_autocomplete",
 }

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from rich.console import RenderableType
 from textual.message import Message
 
 from tunacode.core.ui_api.shared_types import ToolArgs, ToolName, ToolResult
@@ -47,3 +48,27 @@ class ToolResultDisplay(Message):
         self.result = result
         self.result_text = result_text
         self.duration_ms = duration_ms
+
+
+class TuiLogDisplay(Message):
+    """Request to display a renderable in the chat container on the UI thread."""
+
+    def __init__(self, *, renderable: RenderableType) -> None:
+        super().__init__()
+        self.renderable = renderable
+
+
+class SystemNoticeDisplay(Message):
+    """Request to display a system notice on the UI thread."""
+
+    def __init__(self, *, notice: str) -> None:
+        super().__init__()
+        self.notice = notice
+
+
+class CompactionStatusChanged(Message):
+    """Request to update compaction status on the UI thread."""
+
+    def __init__(self, *, active: bool) -> None:
+        super().__init__()
+        self.active = active
