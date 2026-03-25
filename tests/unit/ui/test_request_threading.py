@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio
+import inspect
 from unittest.mock import AsyncMock, patch
 
 from rich.text import Text
@@ -114,12 +114,14 @@ class _FakeWorker:
     async def wait(self) -> object:
         self.wait_called = True
         assert self._app._current_request_task is self
+        if inspect.isawaitable(self._work):
+            return await self._work
         if callable(self._work):
-            result = await asyncio.to_thread(self._work)
-            if hasattr(result, "__await__"):
+            result = self._work()
+            if inspect.isawaitable(result):
                 return await result
             return result
-        return None
+        return self._work
 
 
 def test_tui_log_display_is_written_via_message_handler() -> None:
@@ -199,7 +201,7 @@ def test_escape_handler_cancels_worker_handle() -> None:
     assert worker.cancelled is True
 
 
-async def test_process_request_runs_in_thread_worker_and_sets_current_request_handle() -> None:
+async def test_process_request_runs_in_worker_and_sets_current_request_handle() -> None:
     app = TextualReplApp(state_manager=StateManager())
     app.chat_container = _FakeChatContainer()  # type: ignore[assignment]
     app.streaming = _FakeStreamingHandler()  # type: ignore[assignment]
@@ -239,7 +241,6 @@ async def test_process_request_runs_in_thread_worker_and_sets_current_request_ha
 
     assert len(worker_calls) == 1
     worker_call = worker_calls[0]
-    assert worker_call["thread"] is True
     assert worker_call["exit_on_error"] is False
     assert worker_call["name"] == "process_request"
     assert len(process_request_calls) == 1

@@ -20,7 +20,12 @@ TEST_MODEL = "minimax:MiniMax-M2.1"
 TEST_PROMPT = "hey this is a test, respond hello"
 EXPECTED_RESPONSE = "hello"
 TEST_API_KEY_ENV_VAR = "TUNACODE_TEST_API_KEY"
+RUN_TMUX_TESTS_ENV_VAR = "TUNACODE_RUN_TMUX_TESTS"
 PROVIDER_API_KEY_ENV_VAR = "MINIMAX_API_KEY"
+
+
+def _tmux_tests_explicitly_enabled() -> bool:
+    return os.environ.get(RUN_TMUX_TESTS_ENV_VAR, "").lower() in {"1", "true", "yes"}
 
 
 def _run_tmux(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -94,6 +99,10 @@ def _write_test_config(config_path: Path, api_key: str) -> None:
 
 @pytest.mark.integration
 @pytest.mark.skipif(shutil.which("tmux") is None, reason="Requires tmux")
+@pytest.mark.skipif(
+    not _tmux_tests_explicitly_enabled(),
+    reason=f"Requires explicit opt-in via {RUN_TMUX_TESTS_ENV_VAR}=1",
+)
 @pytest.mark.skipif(
     not os.environ.get(TEST_API_KEY_ENV_VAR),
     reason=f"Requires {TEST_API_KEY_ENV_VAR} for real API integration tests",

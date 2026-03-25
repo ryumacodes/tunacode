@@ -309,26 +309,20 @@ class TextualReplApp(App[None]):
             from tunacode.core.agents.main import process_request
             from tunacode.core.ui_api.shared_types import ModelName
 
-            def request_work() -> object:
-                return asyncio.run(
-                    process_request(
-                        message=message,
-                        model=ModelName(model_name),
-                        state_manager=self.state_manager,
-                        streaming_callback=(
-                            bridge.streaming_callback if should_stream_agent_text else None
-                        ),
-                        thinking_callback=bridge.thinking_callback,
-                        tool_result_callback=build_tool_result_callback(self),
-                        tool_start_callback=None,
-                        notice_callback=bridge.notice_callback,
-                        compaction_status_callback=bridge.compaction_status_callback,
-                    )
-                )
-
             worker: Worker[object] = self.run_worker(
-                request_work,
-                thread=True,
+                process_request(
+                    message=message,
+                    model=ModelName(model_name),
+                    state_manager=self.state_manager,
+                    streaming_callback=(
+                        bridge.streaming_callback if should_stream_agent_text else None
+                    ),
+                    thinking_callback=bridge.thinking_callback,
+                    tool_result_callback=build_tool_result_callback(self),
+                    tool_start_callback=None,
+                    notice_callback=bridge.notice_callback,
+                    compaction_status_callback=bridge.compaction_status_callback,
+                ),
                 exit_on_error=False,
                 name="process_request",
             )
