@@ -41,7 +41,7 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 
 ### T002 – Make TUI logger callback thread-safe via message posting
 - Status: completed
-- Commit: pending
+- Commit: f0dabeaa
 - Files:
   - src/tunacode/ui/lifecycle.py
   - tests/unit/ui/test_request_threading.py
@@ -51,6 +51,19 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Logger callback now posts a `TuiLogDisplay` message instead of writing directly to chat widgets.
+
+### T003 – Introduce RequestUiBridge for thread→UI callback adaptation and delta batching
+- Status: completed
+- Commit: pending
+- Files:
+  - src/tunacode/ui/request_bridge.py
+  - tests/unit/ui/test_request_threading.py
+- Commands:
+  - `uv run pytest tests/unit/ui/test_request_threading.py::test_request_ui_bridge_drains_all_chunks_in_order -q` → pass
+  - `uv run ruff check src/tunacode/ui/request_bridge.py tests/unit/ui/test_request_threading.py` → pass
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added a per-request bridge that queues streaming and thinking deltas and routes notices/compaction updates through app messages.
 
 ## Gate Results
 - Tests: not run yet
@@ -74,4 +87,4 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 - [x] Execution log saved
 
 ## Next Steps
-- Execute T003.
+- Execute T004.

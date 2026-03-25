@@ -8,6 +8,7 @@ from tunacode.core.session import StateManager
 
 from tunacode.ui.app import TextualReplApp
 from tunacode.ui.lifecycle import AppLifecycle
+from tunacode.ui.request_bridge import RequestUiBridge
 from tunacode.ui.widgets.messages import TuiLogDisplay
 
 
@@ -29,6 +30,15 @@ class _FakeLogger:
 
     def set_tui_callback(self, callback: object) -> None:
         self.tui_callback = callback
+
+
+class _FakeBridgeApp:
+    def __init__(self) -> None:
+        self.messages: list[object] = []
+
+    def post_message(self, message: object) -> bool:
+        self.messages.append(message)
+        return True
 
 
 def test_tui_log_display_is_written_via_message_handler() -> None:
@@ -62,3 +72,18 @@ def test_logger_tui_callback_posts_message_not_widget_write() -> None:
     message = posted_messages[0]
     assert isinstance(message, TuiLogDisplay)
     assert message.renderable == renderable
+
+
+async def test_request_ui_bridge_drains_all_chunks_in_order() -> None:
+    bridge = RequestUiBridge(_FakeBridgeApp())
+
+    await bridge.streaming_callback("hello")
+    await bridge.streaming_callback(" ")
+    await bridge.streaming_callback("world")
+    await bridge.thinking_callback("thinking")
+    await bridge.thinking_callback("...")
+
+    assert bridge.drain_streaming() == "hello world"
+    assert bridge.drain_streaming() == ""
+    assert bridge.drain_thinking() == "thinking..."
+    assert bridge.drain_thinking() == ""
