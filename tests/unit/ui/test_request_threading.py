@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from rich.text import Text
 
@@ -16,6 +16,14 @@ from tunacode.ui.widgets.messages import TuiLogDisplay
 class _FakeChatContainer:
     def __init__(self) -> None:
         self.calls: list[object] = []
+        self.insertion_anchor_cleared = False
+        self.insertion_anchor: object | None = None
+
+    def clear_insertion_anchor(self) -> None:
+        self.insertion_anchor_cleared = True
+
+    def set_insertion_anchor(self, widget: object) -> None:
+        self.insertion_anchor = widget
 
     def write(self, content: object, **_kwargs: object) -> None:
         self.calls.append(content)
@@ -45,9 +53,13 @@ class _FakeBridgeApp:
 class _FakeStreamingHandler:
     def __init__(self) -> None:
         self.chunks: list[str] = []
+        self.reset_called = False
 
     async def callback(self, chunk: str) -> None:
         self.chunks.append(chunk)
+
+    def reset(self) -> None:
+        self.reset_called = True
 
 
 class _FakeWorkerHandle:
@@ -56,6 +68,43 @@ class _FakeWorkerHandle:
 
     def cancel(self) -> None:
         self.cancelled = True
+
+
+class _FakeViewport:
+    def __init__(self) -> None:
+        self.removed_classes: list[str] = []
+
+    def remove_class(self, class_name: str) -> None:
+        self.removed_classes.append(class_name)
+
+
+class _FakeTimer:
+    def __init__(self) -> None:
+        self.stopped = False
+
+    def stop(self) -> None:
+        self.stopped = True
+
+
+class _FakeWorker:
+    def __init__(self, app: TextualReplApp, work: object) -> None:
+        self._app = app
+        self._work = work
+        self.cancelled = False
+        self.wait_called = False
+
+    def cancel(self) -> None:
+        self.cancelled = True
+
+    async def wait(self) -> object:
+        self.wait_called = True
+        assert self._app._current_request_task is self
+        if callable(self._work):
+            result = self._work()
+            if hasattr(result, "__await__"):
+                return await result
+            return result
+        return None
 
 
 def test_tui_log_display_is_written_via_message_handler() -> None:
@@ -133,3 +182,60 @@ def test_escape_handler_cancels_worker_handle() -> None:
     EscHandler().handle_escape(current_request_task=worker, shell_runner=None)
 
     assert worker.cancelled is True
+
+
+async def test_process_request_runs_in_thread_worker_and_sets_current_request_handle() -> None:
+    app = TextualReplApp(state_manager=StateManager())
+    app.chat_container = _FakeChatContainer()  # type: ignore[assignment]
+    app.streaming = _FakeStreamingHandler()  # type: ignore[assignment]
+    viewport = _FakeViewport()
+    timer = _FakeTimer()
+    compaction_updates: list[bool] = []
+    notifications: list[str] = []
+    worker_calls: list[dict[str, object]] = []
+    process_request_calls: list[dict[str, object]] = []
+    tool_result_callback = object()
+
+    async def _fake_process_request(**kwargs: object) -> None:
+        process_request_calls.append(kwargs)
+
+    def _fake_run_worker(work: object, **kwargs: object) -> _FakeWorker:
+        worker_calls.append({"work": work, **kwargs})
+        return _FakeWorker(app, work)
+
+    app.run_worker = _fake_run_worker  # type: ignore[method-assign]
+    app.query_one = lambda *_args, **_kwargs: viewport  # type: ignore[method-assign]
+    app.set_interval = lambda *_args, **_kwargs: timer  # type: ignore[method-assign]
+    app._show_loading_indicator = lambda: None  # type: ignore[method-assign]
+    app._hide_loading_indicator = lambda: None  # type: ignore[method-assign]
+    app._clear_thinking_state = lambda: None  # type: ignore[method-assign]
+    app._finalize_thinking_state_after_request = lambda: None  # type: ignore[method-assign]
+    app._update_resource_bar = lambda: None  # type: ignore[method-assign]
+    app._get_latest_response_text = lambda: None  # type: ignore[method-assign]
+    app._update_compaction_status = compaction_updates.append  # type: ignore[method-assign]
+    app.notify = notifications.append  # type: ignore[method-assign]
+    app.state_manager.save_session = AsyncMock()  # type: ignore[method-assign]
+
+    with (
+        patch("tunacode.core.agents.main.process_request", new=_fake_process_request),
+        patch("tunacode.ui.app.build_tool_result_callback", return_value=tool_result_callback),
+    ):
+        await app._process_request("hello")
+
+    assert len(worker_calls) == 1
+    worker_call = worker_calls[0]
+    assert worker_call["thread"] is True
+    assert worker_call["exit_on_error"] is False
+    assert worker_call["name"] == "process_request"
+    assert len(process_request_calls) == 1
+    process_request_call = process_request_calls[0]
+    assert process_request_call["message"] == "hello"
+    assert process_request_call["tool_result_callback"] is tool_result_callback
+    assert process_request_call["thinking_callback"] is not None
+    assert process_request_call["notice_callback"] is not None
+    assert process_request_call["compaction_status_callback"] is not None
+    assert app._current_request_task is None
+    assert app._request_bridge is None
+    assert timer.stopped is True
+    assert viewport.removed_classes
+    assert notifications == []

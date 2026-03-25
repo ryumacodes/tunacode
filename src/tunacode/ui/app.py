@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from functools import partial
 from typing import TYPE_CHECKING, Never
 
 from rich.console import RenderableType
@@ -46,6 +47,7 @@ from tunacode.ui.context_panel import (
     token_remaining_pct,
 )
 from tunacode.ui.esc.handler import EscHandler
+from tunacode.ui.esc.types import RequestTask
 from tunacode.ui.renderers.thinking import (
     DEFAULT_THINKING_MAX_CHARS,
     DEFAULT_THINKING_MAX_LINES,
@@ -125,7 +127,7 @@ class TextualReplApp(App[None]):
         self._show_setup: bool = show_setup
         self._lifecycle: AppLifecycle | None = None
         self.request_queue: asyncio.Queue[str] = asyncio.Queue()
-        self._current_request_task: asyncio.Task | None = None
+        self._current_request_task: RequestTask | None = None
         self._loading_indicator_shown: bool = False
         self._request_start_time: float = 0.0
         self._esc_handler: EscHandler = EscHandler()
@@ -292,35 +294,54 @@ class TextualReplApp(App[None]):
         self._update_compaction_status(False)
         self._show_loading_indicator()
         self._clear_thinking_state()
+        bridge = RequestUiBridge(self)
+        self._request_bridge = bridge
+        self._start_delta_flush_timer()
         try:
             model_name = session.current_model or "openai/gpt-4o"
             should_stream_agent_text = self._should_stream_agent_text()
-            streaming_callback = self.streaming.callback if should_stream_agent_text else None
+            from textual.worker import WorkerCancelled, WorkerFailed
+
             from tunacode.core.agents.main import process_request
             from tunacode.core.ui_api.shared_types import ModelName
 
-            self._current_request_task = asyncio.create_task(
-                process_request(
+            worker = self.run_worker(
+                partial(
+                    process_request,
                     message=message,
                     model=ModelName(model_name),
                     state_manager=self.state_manager,
-                    streaming_callback=streaming_callback,
-                    thinking_callback=self._thinking_callback,
+                    streaming_callback=(
+                        bridge.streaming_callback if should_stream_agent_text else None
+                    ),
+                    thinking_callback=bridge.thinking_callback,
                     tool_result_callback=build_tool_result_callback(self),
                     tool_start_callback=None,
-                    notice_callback=self._show_system_notice,
-                    compaction_status_callback=self._update_compaction_status,
-                )
+                    notice_callback=bridge.notice_callback,
+                    compaction_status_callback=bridge.compaction_status_callback,
+                ),
+                thread=True,
+                exit_on_error=False,
+                name="process_request",
             )
-            await self._current_request_task
-        except asyncio.CancelledError:
+            self._current_request_task = worker
+            await worker.wait()
+        except WorkerCancelled:
             self.notify("Cancelled")
+        except WorkerFailed as e:
+            from tunacode.ui.renderers.errors import render_exception
+
+            content, meta = render_exception(e.error)
+            self.chat_container.write(content, panel_meta=meta)
         except Exception as e:
             from tunacode.ui.renderers.errors import render_exception
 
             content, meta = render_exception(e)
             self.chat_container.write(content, panel_meta=meta)
         finally:
+            await self._flush_request_deltas()
+            self._stop_delta_flush_timer()
+            self._request_bridge = None
             self._current_request_task = None
             self._hide_loading_indicator()
             self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)

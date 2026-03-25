@@ -78,9 +78,22 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 - Coverage delta: not measured
 - Notes: Added timer lifecycle helpers and a UI-thread flush method that drains queued streaming and thinking deltas.
 
-### T007 – Broaden ESC cancellation contract to support Worker cancellation
+### T005 – Execute core process_request in a threaded Textual Worker
 - Status: completed
 - Commit: pending
+- Files:
+  - src/tunacode/ui/app.py
+  - tests/unit/ui/test_request_threading.py
+- Commands:
+  - `uv run pytest tests/unit/ui/test_request_threading.py::test_process_request_runs_in_thread_worker_and_sets_current_request_handle -q` → pass
+  - `uv run ruff check src/tunacode/ui/app.py tests/unit/ui/test_request_threading.py` → pass
+- Tests: pass
+- Coverage delta: not measured
+- Notes: `_process_request()` now creates a per-request bridge, starts the flush timer, runs `process_request` in a thread worker via `functools.partial`, catches worker cancellation/failure, and performs a final delta flush before cleanup.
+
+### T007 – Broaden ESC cancellation contract to support Worker cancellation
+- Status: completed
+- Commit: 5e4c4288
 - Files:
   - src/tunacode/ui/esc/types.py
   - tests/unit/ui/test_request_threading.py
@@ -89,7 +102,7 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
   - `uv run ruff check src/tunacode/ui/esc/types.py tests/unit/ui/test_request_threading.py` → pass
 - Tests: pass
 - Coverage delta: not measured
-- Notes: Request cancellation now accepts any cancellable handle, including Textual workers.
+- Notes: Request cancellation now accepts any cancellable handle, including Textual workers. Executed before T005 because T005 depends on this cancellation contract.
 
 ## Gate Results
 - Tests: not run yet
@@ -113,4 +126,5 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 - [x] Execution log saved
 
 ## Next Steps
-- Execute T005.
+- Paused after T005 per user instruction.
+- Remaining planned work: T006, T008, T009, then full quality gates.
