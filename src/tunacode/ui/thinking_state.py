@@ -9,6 +9,12 @@ if TYPE_CHECKING:
     from tunacode.ui.app import TextualReplApp
 
 
+def _current_thinking_throttle_ms(app: TextualReplApp) -> float:
+    if app.editor.value.strip():
+        return app.THINKING_THROTTLE_WHILE_DRAFTING_MS
+    return app.THINKING_THROTTLE_MS
+
+
 def hide_thinking_output(app: TextualReplApp) -> None:
     """Remove the thinking panel widget from the DOM."""
     thinking_panel_widget = app._thinking_panel_widget
@@ -49,7 +55,8 @@ def refresh_thinking_output(app: TextualReplApp, force: bool = False) -> None:
     is_first_render = thinking_panel_widget is None
     now = time.monotonic()
     elapsed_ms = (now - app._last_thinking_update) * app.MILLISECONDS_PER_SECOND
-    if not force and not is_first_render and elapsed_ms < app.THINKING_THROTTLE_MS:
+    thinking_throttle_ms = _current_thinking_throttle_ms(app)
+    if not force and not is_first_render and elapsed_ms < thinking_throttle_ms:
         return
 
     from tunacode.ui.renderers.thinking import render_thinking_panel
