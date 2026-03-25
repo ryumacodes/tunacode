@@ -26,7 +26,7 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 
 ### T001 – Add thread-safe UI message types for cross-thread events
 - Status: completed
-- Commit: 10179ce0
+- Commit: cdd93781
 - Files:
   - src/tunacode/ui/widgets/messages.py
   - src/tunacode/ui/widgets/__init__.py
@@ -38,6 +38,19 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 - Tests: pass
 - Coverage delta: not measured
 - Notes: Added message classes and UI-thread handlers for log, notice, and compaction updates.
+
+### T002 – Make TUI logger callback thread-safe via message posting
+- Status: completed
+- Commit: pending
+- Files:
+  - src/tunacode/ui/lifecycle.py
+  - tests/unit/ui/test_request_threading.py
+- Commands:
+  - `uv run pytest tests/unit/ui/test_request_threading.py::test_logger_tui_callback_posts_message_not_widget_write -q` → pass
+  - `uv run ruff check src/tunacode/ui/lifecycle.py tests/unit/ui/test_request_threading.py` → pass
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Logger callback now posts a `TuiLogDisplay` message instead of writing directly to chat widgets.
 
 ## Gate Results
 - Tests: not run yet
@@ -61,4 +74,4 @@ env: {target: "local", notes: "Executing plan on repository working tree from ui
 - [x] Execution log saved
 
 ## Next Steps
-- Execute T002.
+- Execute T003.

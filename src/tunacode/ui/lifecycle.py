@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 
 from rich.console import RenderableType
 
+from tunacode.ui.widgets import TuiLogDisplay
+
 if TYPE_CHECKING:
     from tunacode.ui.app import TextualReplApp
 
@@ -128,7 +130,7 @@ class AppLifecycle:
         logger.set_state_manager(self._state_manager)
 
         def write_tui(renderable: RenderableType) -> None:
-            app.chat_container.write(renderable)
+            app.post_message(TuiLogDisplay(renderable=renderable))
 
         logger.set_tui_callback(write_tui)
 
