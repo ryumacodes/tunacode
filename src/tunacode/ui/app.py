@@ -109,6 +109,7 @@ class TextualReplApp(App[None]):
     THINKING_MAX_RENDER_CHARS: int = DEFAULT_THINKING_MAX_CHARS
     THINKING_THROTTLE_MS: float = STREAM_THROTTLE_MS
     THINKING_THROTTLE_WHILE_DRAFTING_MS: float = 300.0
+    THINKING_DEFER_AFTER_KEYPRESS_MS: float = 150.0
     USER_SETTINGS_KEY: str = "settings"
     STREAM_AGENT_TEXT_SETTING_KEY: str = "stream_agent_text"
     STREAM_AGENT_TEXT_DEFAULT: bool = False
@@ -153,6 +154,7 @@ class TextualReplApp(App[None]):
 
         self._current_thinking_text: str = ""
         self._last_thinking_update: float = 0.0
+        self._last_editor_keypress_at: float = 0.0
 
     def compose(self) -> ComposeResult:
         self.resource_bar = ResourceBar()

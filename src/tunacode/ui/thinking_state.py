@@ -9,8 +9,24 @@ if TYPE_CHECKING:
     from tunacode.ui.app import TextualReplApp
 
 
+def _editor_has_draft(app: TextualReplApp) -> bool:
+    editor = getattr(app, "editor", None)
+    editor_value = getattr(editor, "value", "")
+    return bool(editor_value.strip())
+
+
+def _has_recent_editor_keypress(app: TextualReplApp) -> bool:
+    if not _editor_has_draft(app):
+        return False
+    last_keypress_at = getattr(app, "_last_editor_keypress_at", 0.0)
+    if last_keypress_at <= 0.0:
+        return False
+    elapsed_ms = (time.monotonic() - last_keypress_at) * app.MILLISECONDS_PER_SECOND
+    return elapsed_ms < app.THINKING_DEFER_AFTER_KEYPRESS_MS
+
+
 def _current_thinking_throttle_ms(app: TextualReplApp) -> float:
-    if app.editor.value.strip():
+    if _editor_has_draft(app):
         return app.THINKING_THROTTLE_WHILE_DRAFTING_MS
     return app.THINKING_THROTTLE_MS
 
@@ -55,6 +71,9 @@ def refresh_thinking_output(app: TextualReplApp, force: bool = False) -> None:
     is_first_render = thinking_panel_widget is None
     now = time.monotonic()
     elapsed_ms = (now - app._last_thinking_update) * app.MILLISECONDS_PER_SECOND
+    if not force and not is_first_render and _has_recent_editor_keypress(app):
+        return
+
     thinking_throttle_ms = _current_thinking_throttle_ms(app)
     if not force and not is_first_render and elapsed_ms < thinking_throttle_ms:
         return
