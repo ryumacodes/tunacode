@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Never
 
 from rich.console import RenderableType
 from rich.text import Text
+from tinyagent.agent_types import AgentMessage
 from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -45,6 +46,7 @@ from tunacode.ui.context_panel import (
     token_remaining_pct,
 )
 from tunacode.ui.esc.handler import EscHandler
+from tunacode.ui.esc.types import RequestTask
 from tunacode.ui.renderers.thinking import (
     DEFAULT_THINKING_MAX_CHARS,
     DEFAULT_THINKING_MAX_LINES,
@@ -55,6 +57,7 @@ from tunacode.ui.repl_support import (
     format_user_message,
     normalize_agent_message_text,
 )
+from tunacode.ui.request_bridge import RequestUiBridge
 from tunacode.ui.slopgotchi import (
     SlopgotchiHandler,
     SlopgotchiPanelState,
@@ -64,12 +67,15 @@ from tunacode.ui.styles import STYLE_PRIMARY, STYLE_SUCCESS, STYLE_WARNING
 from tunacode.ui.widgets import (
     ChatContainer,
     CommandAutoComplete,
+    CompactionStatusChanged,
     Editor,
     EditorSubmitRequested,
     FileAutoComplete,
     ResourceBar,
     SkillsAutoComplete,
+    SystemNoticeDisplay,
     ToolResultDisplay,
+    TuiLogDisplay,
 )
 
 
@@ -98,10 +104,12 @@ class TextualReplApp(App[None]):
 
     STREAM_THROTTLE_MS: float = 100.0
     MILLISECONDS_PER_SECOND: float = 1000.0
-    THINKING_BUFFER_CHAR_LIMIT: int = 20000
+    THINKING_BUFFER_CHAR_LIMIT: int = 2400
     THINKING_MAX_RENDER_LINES: int = DEFAULT_THINKING_MAX_LINES
     THINKING_MAX_RENDER_CHARS: int = DEFAULT_THINKING_MAX_CHARS
     THINKING_THROTTLE_MS: float = STREAM_THROTTLE_MS
+    THINKING_THROTTLE_WHILE_DRAFTING_MS: float = 275.0
+    THINKING_DEFER_AFTER_KEYPRESS_MS: float = 150.0
     USER_SETTINGS_KEY: str = "settings"
     STREAM_AGENT_TEXT_SETTING_KEY: str = "stream_agent_text"
     STREAM_AGENT_TEXT_DEFAULT: bool = False
@@ -120,7 +128,7 @@ class TextualReplApp(App[None]):
         self._show_setup: bool = show_setup
         self._lifecycle: AppLifecycle | None = None
         self.request_queue: asyncio.Queue[str] = asyncio.Queue()
-        self._current_request_task: asyncio.Task | None = None
+        self._current_request_task: RequestTask | None = None
         self._loading_indicator_shown: bool = False
         self._request_start_time: float = 0.0
         self._esc_handler: EscHandler = EscHandler()
@@ -141,14 +149,18 @@ class TextualReplApp(App[None]):
         self._field_slopgotchi: Static | None = None
         self._slopgotchi_handler: SlopgotchiHandler | None = None
         self._slopgotchi_timer: Timer | None = None
+        self._request_bridge: RequestUiBridge | None = None
+        self._delta_flush_timer: Timer | None = None
 
         self._current_thinking_text: str = ""
         self._last_thinking_update: float = 0.0
+        self._last_editor_keypress_at: float = 0.0
 
     def compose(self) -> ComposeResult:
         self.resource_bar = ResourceBar()
         self.chat_container = ChatContainer(id="chat-container", auto_scroll=True)
         self.streaming_output = Static("", id="streaming-output")
+        self._thinking_panel_widget = Static("", id="thinking-output", classes="thinking-panel")
         self.streaming = StreamingHandler(self.streaming_output, self.STREAM_THROTTLE_MS)
         self.loading_indicator = LoadingIndicator()
         self.editor = Editor()
@@ -157,6 +169,7 @@ class TextualReplApp(App[None]):
             with Container(id="viewport"):
                 yield self.chat_container
                 yield self.loading_indicator
+                yield self._thinking_panel_widget
                 yield self.streaming_output
             with (
                 Container(id="context-rail", classes=self.CONTEXT_PANEL_COLLAPSED_CLASS) as rail,
@@ -236,47 +249,106 @@ class TextualReplApp(App[None]):
             return stream_setting
         return self.STREAM_AGENT_TEXT_DEFAULT
 
+    def _show_loading_indicator(self) -> None:
+        if self._loading_indicator_shown:
+            return
+        self._loading_indicator_shown = True
+        self.loading_indicator.add_class("active")
+
+    def _hide_loading_indicator(self) -> None:
+        if not self._loading_indicator_shown:
+            return
+        self._loading_indicator_shown = False
+        self.loading_indicator.remove_class("active")
+
+    def _queue_request_after_refresh(self, message: str) -> None:
+        self.call_after_refresh(lambda: self.request_queue.put_nowait(message))
+
+    def _start_delta_flush_timer(self) -> None:
+        self._delta_flush_timer = self.set_interval(
+            self.STREAM_THROTTLE_MS / self.MILLISECONDS_PER_SECOND,
+            self._flush_request_deltas,
+        )
+
+    def _stop_delta_flush_timer(self) -> None:
+        timer = self._delta_flush_timer
+        if timer is None:
+            return
+        timer.stop()
+        self._delta_flush_timer = None
+
+    async def _flush_request_deltas(self) -> None:
+        bridge = self._request_bridge
+        if bridge is None:
+            return
+
+        stream_chunk = bridge.drain_streaming()
+        if stream_chunk:
+            await self.streaming.callback(stream_chunk)
+
+        thinking_chunk = bridge.drain_thinking()
+        if thinking_chunk:
+            await self._thinking_callback(thinking_chunk)
+
     async def _process_request(self, message: str) -> None:
         session = self.state_manager.session
         self._request_start_time = time.monotonic()
         self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
         self.chat_container.clear_insertion_anchor()
         self._update_compaction_status(False)
-        self._loading_indicator_shown = True
-        self.loading_indicator.add_class("active")
+        self._show_loading_indicator()
         self._clear_thinking_state()
+        bridge = RequestUiBridge(self)
+        self._request_bridge = bridge
+        self._start_delta_flush_timer()
         try:
             model_name = session.current_model or "openai/gpt-4o"
             should_stream_agent_text = self._should_stream_agent_text()
-            streaming_callback = self.streaming.callback if should_stream_agent_text else None
+            from textual.worker import Worker, WorkerCancelled, WorkerFailed
+
             from tunacode.core.agents.main import process_request
             from tunacode.core.ui_api.shared_types import ModelName
 
-            self._current_request_task = asyncio.create_task(
+            worker: Worker[object] = self.run_worker(
                 process_request(
                     message=message,
                     model=ModelName(model_name),
                     state_manager=self.state_manager,
-                    streaming_callback=streaming_callback,
-                    thinking_callback=self._thinking_callback,
+                    streaming_callback=(
+                        bridge.streaming_callback if should_stream_agent_text else None
+                    ),
+                    thinking_callback=bridge.thinking_callback,
                     tool_result_callback=build_tool_result_callback(self),
                     tool_start_callback=None,
-                    notice_callback=self._show_system_notice,
-                    compaction_status_callback=self._update_compaction_status,
-                )
+                    notice_callback=bridge.notice_callback,
+                    compaction_status_callback=bridge.compaction_status_callback,
+                ),
+                exit_on_error=False,
+                name="process_request",
             )
-            await self._current_request_task
-        except asyncio.CancelledError:
+            self._current_request_task = worker
+            await worker.wait()
+        except WorkerCancelled:
             self.notify("Cancelled")
+        except WorkerFailed as e:
+            from tunacode.ui.renderers.errors import render_exception
+
+            error = e.error
+            if not isinstance(error, Exception):
+                error = RuntimeError(f"Worker failed with non-exception error: {error!r}")
+            content, meta = render_exception(error)
+            self.chat_container.write(content, panel_meta=meta)
         except Exception as e:
             from tunacode.ui.renderers.errors import render_exception
 
             content, meta = render_exception(e)
             self.chat_container.write(content, panel_meta=meta)
         finally:
+            await self._flush_request_deltas()
+            self._stop_delta_flush_timer()
+            self._request_bridge = None
             self._current_request_task = None
-            self._loading_indicator_shown = False
-            self.loading_indicator.remove_class("active")
+            self._hide_loading_indicator()
             self.query_one("#viewport").remove_class(RICHLOG_CLASS_STREAMING)
             self.streaming.reset()
             self._finalize_thinking_state_after_request()
@@ -333,7 +405,7 @@ class TextualReplApp(App[None]):
         if await handle_command(self, message.text):
             return
         normalized_message = normalize_agent_message_text(message.text)
-        await self.request_queue.put(normalized_message)
+        self._show_loading_indicator()
         from datetime import datetime
 
         timestamp = datetime.now().strftime("%I:%M %p").lstrip("0")
@@ -342,6 +414,16 @@ class TextualReplApp(App[None]):
         user_block = format_user_message(message.text, STYLE_PRIMARY, width=render_width)
         user_block.append(f"│ you {timestamp}", style=f"dim {STYLE_PRIMARY}")
         self.chat_container.write(user_block).add_class("user-message")
+        self._queue_request_after_refresh(normalized_message)
+
+    def on_tui_log_display(self, message: TuiLogDisplay) -> None:
+        self.chat_container.write(message.renderable)
+
+    def on_system_notice_display(self, message: SystemNoticeDisplay) -> None:
+        self._show_system_notice(message.notice)
+
+    def on_compaction_status_changed(self, message: CompactionStatusChanged) -> None:
+        self._update_compaction_status(message.active)
 
     def on_tool_result_display(self, message: ToolResultDisplay) -> None:
         from tunacode.ui.renderers.panels import tool_panel_smart
@@ -367,6 +449,7 @@ class TextualReplApp(App[None]):
         filepath = filepath_value.strip()
         if not filepath:
             return
+        self.update_lsp_for_file(filepath)
         self._edited_files.add(filepath)
         self._refresh_context_panel()
 
@@ -524,7 +607,7 @@ class TextualReplApp(App[None]):
         if handler is not None:
             handler._refresh()
 
-    def _estimate_conversation_tokens(self, messages: list[object]) -> int:
+    def _estimate_conversation_tokens(self, messages: list[AgentMessage]) -> int:
         if not messages:
             return 0
 

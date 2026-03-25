@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 
 from rich.cells import cell_len
@@ -78,6 +79,11 @@ class Editor(Input):
 
     def on_key(self, event: events.Key) -> None:
         """Handle key events for bash-mode auto-spacing."""
+        if event.character or event.key in {"backspace", "delete"}:
+            app = getattr(self, "app", None)
+            if app is not None:
+                app._last_editor_keypress_at = time.monotonic()
+
         has_paste_buffer = bool(getattr(self, "has_paste_buffer", False))
         if has_paste_buffer and not self.value and event.key == "backspace":
             event.prevent_default()

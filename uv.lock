@@ -2004,16 +2004,16 @@ wheels = [
 
 [[package]]
 name = "tiny-agent-os"
-version = "1.2.15"
+version = "1.2.26"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/21/53/b757ae380a4fbd5f51771bd5b49cb3ba132eda732f7ddc97023115e912db/tiny_agent_os-1.2.15.tar.gz", hash = "sha256:1f4fa771ce4fe448cad42e2a55be5fc01e9d21ec59474639181889a7c133c79d", size = 44814, upload-time = "2026-03-22T21:53:40.854Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f2/fc/0aaa9415d33b8ce0a7d2e9046f1ba8843c518638f40acd1c7f9a937c25e8/tiny_agent_os-1.2.15-cp310-abi3-macosx_11_0_universal2.whl", hash = "sha256:bd27ca4faad464a8c8cdad2f25f2c76e69eb17155fa9ab17762ae2e70d8cb27e", size = 1811909, upload-time = "2026-03-22T21:53:38.098Z" },
-    { url = "https://files.pythonhosted.org/packages/69/91/87b49a5c41490d0d8ff53e97ef7a3aa131ee13571126e1087a092565ecb5/tiny_agent_os-1.2.15-cp310-abi3-win_amd64.whl", hash = "sha256:e7d860ff8fe564341158abcf8fdc5047ac7688423aa0a7d646bf147923264697", size = 1602492, upload-time = "2026-03-22T21:53:39.512Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/73/200a03a9ac3711fb97302755b67cec0a3799744075766e944722d2727086/tiny_agent_os-1.2.26-cp310-abi3-macosx_11_0_universal2.whl", hash = "sha256:22175db2e6533b3abdb6e3469af0fc20312081e4c7d36a847be3eb43ae8cb27a", size = 2134914, upload-time = "2026-03-24T20:56:41.244Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/54/4c61dc8670f36e094f05ff9561fb1923a8ce4eaef156bd14dcea34723922/tiny_agent_os-1.2.26-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:0fec977b38d4ecc94b883533b3917bed4e31b7e2f30c21a609b16354ed6605bf", size = 2455901, upload-time = "2026-03-24T20:56:42.487Z" },
+    { url = "https://files.pythonhosted.org/packages/34/15/5f52cbc98b458978d1f9cfa5848e23865935f5f47ea3364c2624d22ab285/tiny_agent_os-1.2.26-cp310-abi3-win_amd64.whl", hash = "sha256:2be71cd359abbe73e22a0147087f2b74a30f0fa4771274886aa9f0d240be9d4b", size = 1956472, upload-time = "2026-03-24T20:56:43.593Z" },
 ]
 
 [[package]]
@@ -2069,7 +2069,7 @@ wheels = [
 
 [[package]]
 name = "tunacode-cli"
-version = "0.1.96"
+version = "0.1.98"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -2174,7 +2174,7 @@ requires-dist = [
     { name = "textual", specifier = ">=4.0.0,<5.0.0" },
     { name = "textual-autocomplete", specifier = ">=4.0.6" },
     { name = "textual-dev", marker = "extra == 'dev'" },
-    { name = "tiny-agent-os", specifier = ">=1.2.15" },
+    { name = "tiny-agent-os", specifier = ">=1.2.26" },
     { name = "twine", marker = "extra == 'dev'" },
     { name = "typer", specifier = ">=0.15.0" },
     { name = "unimport", marker = "extra == 'dev'", specifier = ">=1.0.0" },

@@ -138,8 +138,6 @@ def normalize_agent_message_text(text: str, *, cwd: Path | None = None) -> str:
 class AppForCallbacks(Protocol):
     def post_message(self, message: ToolResultDisplay) -> bool: ...
 
-    def update_lsp_for_file(self, filepath: str) -> None: ...
-
 
 def build_textual_tool_callback() -> ToolCallback:
     async def _callback(
@@ -208,13 +206,6 @@ def build_tool_result_callback(app: AppForCallbacks) -> ToolResultCallback:
         result: ToolResult | None = None,
         duration_ms: float | None = None,
     ) -> None:
-        if tool_name in FILE_EDIT_TOOLS and status == "completed":
-            filepath = args.get("filepath")
-            if isinstance(filepath, str):
-                normalized_filepath = filepath.strip()
-                if normalized_filepath:
-                    app.update_lsp_for_file(normalized_filepath)
-
         # Don't show validation errors to users - they go back to model for retry
         result_text = _extract_tool_result_text(result)
 

@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import Protocol, TypeAlias
 
-RequestTask: TypeAlias = asyncio.Task[object]
+
+class Cancellable(Protocol):
+    """Protocol for request handles that can be cancelled."""
+
+    def cancel(self) -> None: ...
+
+
+RequestTask: TypeAlias = Cancellable
 
 
 class ShellRunnerProtocol(Protocol):

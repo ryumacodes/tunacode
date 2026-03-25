@@ -42,7 +42,7 @@ class _FakeApp:
         self.updated_lsp_files.append(filepath)
 
 
-def test_tool_result_callback_updates_lsp_and_posts_message_for_completed_file_edit() -> None:
+def test_tool_result_callback_posts_message_for_completed_file_edit_without_lsp_update() -> None:
     app = _FakeApp()
     result_callback = repl_support.build_tool_result_callback(app)
 
@@ -54,5 +54,5 @@ def test_tool_result_callback_updates_lsp_and_posts_message_for_completed_file_e
         12.0,
     )
 
-    assert app.updated_lsp_files == ["src/example.py"]
+    assert app.updated_lsp_files == []
     assert len(app.posted_messages) == 1

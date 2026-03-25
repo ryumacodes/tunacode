@@ -1,0 +1,1 @@
+- Make the tmux benchmark more tail-stable before trusting sub-millisecond wins (e.g. more repeats or a statistic less sensitive to one noisy sample).
