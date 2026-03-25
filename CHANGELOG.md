@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.100] - 2026-03-25
+
+### Added
+- Added provider stream lifecycle tracing for debug sessions.
+
+### Changed
+- Documented validation of the tiny-agent-os 1.2.27 GIL hotfix release.
+
 ## [0.1.99] - 2026-03-25
 
 ### Added
