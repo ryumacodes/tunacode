@@ -167,6 +167,17 @@ LoadingIndicator.active {
 }
 
 /* ============================================
+ * LIVE THINKING OUTPUT - Detached from chat scroll during active request
+ * ============================================ */
+#thinking-output {
+    display: none;
+}
+
+#thinking-output.active {
+    display: block;
+}
+
+/* ============================================
  * STREAMING OUTPUT - Inside viewport, below chat container
  * ============================================ */
 #streaming-output {

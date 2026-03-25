@@ -160,6 +160,7 @@ class TextualReplApp(App[None]):
         self.resource_bar = ResourceBar()
         self.chat_container = ChatContainer(id="chat-container", auto_scroll=True)
         self.streaming_output = Static("", id="streaming-output")
+        self._thinking_panel_widget = Static("", id="thinking-output", classes="thinking-panel")
         self.streaming = StreamingHandler(self.streaming_output, self.STREAM_THROTTLE_MS)
         self.loading_indicator = LoadingIndicator()
         self.editor = Editor()
@@ -168,6 +169,7 @@ class TextualReplApp(App[None]):
             with Container(id="viewport"):
                 yield self.chat_container
                 yield self.loading_indicator
+                yield self._thinking_panel_widget
                 yield self.streaming_output
             with (
                 Container(id="context-rail", classes=self.CONTEXT_PANEL_COLLAPSED_CLASS) as rail,
