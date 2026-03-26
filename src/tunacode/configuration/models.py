@@ -241,10 +241,7 @@ def get_provider_env_var(provider_id: str) -> str:
     Returns:
         Environment variable name (e.g., "OPENAI_API_KEY")
     """
-    registry = get_cached_models_registry()
-    if registry is None:
-        return f"{provider_id.upper().replace('-', '_')}_API_KEY"
-
+    registry = _get_registry_for_read()
     provider = _get_provider_entry(registry, provider_id)
     env_vars = provider.get("env", []) if provider is not None else []
     if env_vars:
@@ -284,24 +281,21 @@ def get_provider_base_url(provider_id: str) -> str | None:
     Returns:
         Base URL string or None if not specified
     """
-    registry = get_cached_models_registry()
-    if registry is None:
-        return None
-
+    registry = _get_registry_for_read()
     provider = _get_provider_entry(registry, provider_id)
     return provider.get("api") if provider is not None else None
 
 
 def get_provider_alchemy_api(provider_id: str) -> str | None:
     """Return the alchemy API routing identifier for a provider."""
-    registry = get_cached_models_registry()
-    if registry is None:
-        return None
-
+    registry = _get_registry_for_read()
     provider = _get_provider_entry(registry, provider_id)
     if provider is None:
         return None
+
     alchemy_api = provider.get("alchemy_api")
+    if not isinstance(alchemy_api, str):
+        return None
 
     normalized_alchemy_api = alchemy_api.strip()
     if not normalized_alchemy_api:
@@ -311,24 +305,21 @@ def get_provider_alchemy_api(provider_id: str) -> str | None:
 
 
 def get_model_context_window(model_string: str) -> int:
-    """Get context window limit for a model from cached models_registry data.
+    """Get context window limit for a model from models_registry data.
 
     Args:
         model_string: Full model identifier (e.g., "openrouter:openai/gpt-4.1")
 
     Returns:
         Context window size in tokens. Falls back to DEFAULT_CONTEXT_WINDOW
-        if registry is not loaded, model not found, or limit not specified.
+        if model is invalid, model not found, or limit not specified.
     """
-    registry = get_cached_models_registry()
-    if registry is None:
-        return DEFAULT_CONTEXT_WINDOW
-
     try:
         provider_id, model_id = parse_model_string(model_string)
     except ValueError:
         return DEFAULT_CONTEXT_WINDOW
 
+    registry = _get_registry_for_read()
     provider = _get_provider_entry(registry, provider_id)
     model = _get_model_entry(provider, model_id)
     if model is None:
