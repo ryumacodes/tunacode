@@ -1,35 +1,37 @@
 """
 Module: tunacode.utils.system.gitignore
 
-Provides gitignore pattern matching and file listing with ignore support.
+Provides repository file listing with shared ignore-rule support.
 """
 
 import os
-from collections.abc import Iterable
+from pathlib import Path
+
+import pathspec
 
 from tunacode.configuration.ignore_patterns import (
+    DEFAULT_EXCLUDE_DIRS,
     DEFAULT_IGNORE_PATTERNS,
-    GIT_DIR_PATTERN,
-    is_ignored,
+    GITIGNORE_FILE_NAME,
+    compile_ignore_spec,
+    merge_ignore_patterns,
+    read_ignore_file_lines,
 )
 
 
-def _load_gitignore_patterns(filepath: str = ".gitignore") -> Iterable[str] | None:
-    """Loads patterns from a .gitignore file."""
-    patterns = set()
-    try:
-        with open(filepath, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    patterns.add(line)
-    except FileNotFoundError:
-        return None
-    except Exception as e:
-        print(f"Error reading {filepath}: {e}")
-        return None
-    patterns.add(GIT_DIR_PATTERN)
-    return patterns
+def _is_fast_excluded(relative_path: Path) -> bool:
+    return any(part in DEFAULT_EXCLUDE_DIRS for part in relative_path.parts)
+
+
+def _matches_ignored_path(relative_path: Path, spec: pathspec.PathSpec, is_dir: bool) -> bool:
+    if _is_fast_excluded(relative_path):
+        return True
+
+    rel_posix = relative_path.as_posix()
+    if spec.match_file(rel_posix):
+        return True
+
+    return is_dir and spec.match_file(f"{rel_posix}/")
 
 
 def list_cwd(max_depth: int = 3) -> list[str]:
@@ -46,21 +48,17 @@ def list_cwd(max_depth: int = 3) -> list[str]:
     Returns:
         list: A sorted list of relative file paths.
     """
-    ignore_patterns = _load_gitignore_patterns()
-    if ignore_patterns is None:
-        ignore_patterns = DEFAULT_IGNORE_PATTERNS
-
     file_list = []
-    start_path = "."
+    start_path = Path(".")
+    gitignore = start_path / GITIGNORE_FILE_NAME
+    patterns = merge_ignore_patterns(DEFAULT_IGNORE_PATTERNS, read_ignore_file_lines(gitignore))
+    spec = compile_ignore_spec(patterns)
     max_depth = max(0, max_depth)
 
     for root, dirs, files in os.walk(start_path, topdown=True):
-        rel_root = os.path.relpath(root, start_path)
-        if rel_root == ".":
-            rel_root = ""
-            current_depth = 0
-        else:
-            current_depth = rel_root.count(os.sep) + 1
+        root_path = Path(root)
+        rel_root = root_path.relative_to(start_path)
+        current_depth = len(rel_root.parts)
 
         if current_depth >= max_depth:
             dirs[:] = []
@@ -68,14 +66,14 @@ def list_cwd(max_depth: int = 3) -> list[str]:
         original_dirs = list(dirs)
         dirs[:] = []
         for d in original_dirs:
-            dir_rel_path = os.path.join(rel_root, d) if rel_root else d
-            if not is_ignored(dir_rel_path, d, ignore_patterns):
+            dir_rel_path = rel_root / d
+            if not _matches_ignored_path(dir_rel_path, spec, is_dir=True):
                 dirs.append(d)
 
         if current_depth <= max_depth:
             for f in files:
-                file_rel_path = os.path.join(rel_root, f) if rel_root else f
-                if not is_ignored(file_rel_path, f, ignore_patterns):
-                    file_list.append(file_rel_path.replace(os.sep, "/"))
+                file_rel_path = rel_root / f
+                if not _matches_ignored_path(file_rel_path, spec, is_dir=False):
+                    file_list.append(file_rel_path.as_posix())
 
     return sorted(file_list)

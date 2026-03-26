@@ -25,7 +25,7 @@ Everything that can be configured by the user or the project. This layer reads `
 | `paths.py` | Session storage directory, project ID derivation, home-dir resolution. |
 | `limits.py` | `get_max_tokens()` -- resolves the effective max output tokens from user config. |
 | `pricing.py` | Per-model pricing tables used to compute `CostBreakdown`. |
-| `ignore_patterns.py` | Default file patterns excluded from grep/glob (`.git`, `node_modules`, etc.). |
+| `ignore_patterns.py` | Built-in ignore defaults plus shared helpers for loading `.gitignore` rules and compiling match specs. |
 
 ## Related Docs
 

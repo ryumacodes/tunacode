@@ -9,19 +9,17 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
-import pathspec
-
 from tunacode.configuration.ignore_patterns import (
     DEFAULT_EXCLUDE_DIRS,
     DEFAULT_IGNORE_PATTERNS,
+    GITIGNORE_FILE_NAME,
+    compile_ignore_spec,
+    merge_ignore_patterns,
+    read_ignore_file_lines,
 )
 
-GITIGNORE_FILE_NAME = ".gitignore"
-GITIGNORE_STYLE = "gitwildmatch"
 PATH_SEPARATOR = "/"
 MISSING_GITIGNORE_MTIME_NS = 0
-EMPTY_PATTERNS: tuple[str, ...] = ()
-TEXT_ENCODING = "utf-8"
 ROOT_NOT_FOUND_ERROR = "Ignore root not found: {root}."
 ROOT_NOT_DIRECTORY_ERROR = "Ignore root is not a directory: {root}."
 PATH_OUTSIDE_ROOT_ERROR = "Path '{path}' is outside ignore root '{root}'."
@@ -50,20 +48,7 @@ def get_gitignore_mtime_ns(gitignore_path: Path) -> int:
 
 
 def read_gitignore_lines(gitignore_path: Path) -> tuple[str, ...]:
-    try:
-        gitignore_text = gitignore_path.read_text(encoding=TEXT_ENCODING)
-    except FileNotFoundError:
-        return EMPTY_PATTERNS
-
-    return tuple(gitignore_text.splitlines())
-
-
-def build_patterns(gitignore_lines: tuple[str, ...]) -> tuple[str, ...]:
-    return tuple(DEFAULT_IGNORE_PATTERNS) + gitignore_lines
-
-
-def compile_spec(patterns: tuple[str, ...]) -> pathspec.PathSpec:
-    return pathspec.PathSpec.from_lines(GITIGNORE_STYLE, patterns)
+    return read_ignore_file_lines(gitignore_path)
 
 
 def normalize_extra_patterns(extra_patterns: Iterable[str]) -> tuple[str, ...]:
@@ -85,7 +70,7 @@ class IgnoreManager:
         patterns_tuple = tuple(patterns)
         self._patterns = patterns_tuple
         self._exclude_dirs = exclude_dirs
-        self._spec = compile_spec(patterns_tuple)
+        self._spec = compile_ignore_spec(patterns_tuple)
 
     def should_ignore(self, path: Path) -> bool:
         relative_path = self._normalize_path(path)
@@ -140,5 +125,5 @@ def create_ignore_manager(
     root: Path,
     gitignore_lines: tuple[str, ...],
 ) -> IgnoreManager:
-    patterns = build_patterns(gitignore_lines)
+    patterns = merge_ignore_patterns(DEFAULT_IGNORE_PATTERNS, gitignore_lines)
     return IgnoreManager(root=root, patterns=patterns, exclude_dirs=DEFAULT_EXCLUDE_DIRS)

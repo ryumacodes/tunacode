@@ -7,15 +7,15 @@ from typing import TypeVar
 
 from tunacode.exceptions import FileOperationError, ToolExecutionError, ToolRetryError
 
-_ResultT = TypeVar("_ResultT")
+result_t = TypeVar("result_t")
 
 
 async def translate_file_tool_errors(
     *,
     tool_name: str,
     filepath: str,
-    operation: Awaitable[_ResultT],
-) -> _ResultT:
+    operation: Awaitable[result_t],
+) -> result_t:
     """Normalize filesystem failures into TunaCode tool exceptions."""
     try:
         return await operation
