@@ -1,6 +1,6 @@
 ---
 title: Configuration Layer
-summary: User settings, model registry, path resolution, pricing tables, and feature flags.
+summary: User settings, model registry, path resolution, pricing tables, and ignore patterns.
 read_when: Adding a new user-facing setting, supporting a new provider, or changing default behavior.
 depends_on: [types, infrastructure]
 feeds_into: [core, tools, ui]
@@ -12,7 +12,7 @@ feeds_into: [core, tools, ui]
 
 ## What
 
-Everything that can be configured by the user or the project. This layer reads `tunacode.json`, resolves paths, loads the bundled model registry, and exposes typed accessors for limits, pricing, and feature flags.
+Everything that can be configured by the user or the project. This layer reads `tunacode.json`, resolves paths, loads the bundled model registry, and exposes typed accessors for limits, pricing, and ignore patterns.
 
 ## Key Files
 
@@ -25,7 +25,6 @@ Everything that can be configured by the user or the project. This layer reads `
 | `paths.py` | Session storage directory, project ID derivation, home-dir resolution. |
 | `limits.py` | `get_max_tokens()` -- resolves the effective max output tokens from user config. |
 | `pricing.py` | Per-model pricing tables used to compute `CostBreakdown`. |
-| `feature_flags.py` | Boolean feature toggles (e.g., experimental features). |
 | `ignore_patterns.py` | Default file patterns excluded from grep/glob (`.git`, `node_modules`, etc.). |
 
 ## Related Docs

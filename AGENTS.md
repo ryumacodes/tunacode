@@ -1,5 +1,5 @@
 # AGENTS.md
-Last Updated: 2026-03-25
+Last Updated: 2026-03-26
 
 ## Repository Orientation
 - This is `tunacode-cli`, a terminal AI coding agent with a Textual UI and tiny-agent tool loop.
@@ -46,7 +46,7 @@ Last Updated: 2026-03-25
 - `src/tunacode/ui/` — terminal UI, widgets, screens, CSS, command shell.
 - `src/tunacode/core/` — agents, compaction, session, prompting, logging.
 - `src/tunacode/tools/` — native tinyagent tool implementations (`bash`, `discover`, `read_file`, `hashline_edit`, `web_fetch`, `write_file`) plus supporting helpers.
-- `src/tunacode/configuration/` — settings, model registry, API paths, limits, pricing, feature flags.
+- `src/tunacode/configuration/` — settings, model registry, API paths, limits, pricing, and ignore patterns.
 - `src/tunacode/infrastructure/` — caches and managers.
 - `src/tunacode/utils/` — adapters, messaging helpers, token counting, gitignore, system utilities.
 - `src/tunacode/types/` — canonical data models, callbacks, protocol types.

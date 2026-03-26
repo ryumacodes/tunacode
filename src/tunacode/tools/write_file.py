@@ -15,13 +15,12 @@ from tinyagent.agent_types import (
 )
 
 from tunacode.exceptions import (
-    FileOperationError,
-    ToolExecutionError,
     ToolRetryError,
     UserAbortError,
 )
 
 from tunacode.tools.lsp.diagnostics import maybe_prepend_lsp_diagnostics
+from tunacode.tools.utils.file_errors import translate_file_tool_errors
 
 _WRITE_FILE_DESCRIPTION = """Write content to a new file. Fails if the file already exists."""
 
@@ -77,39 +76,11 @@ async def _execute_write_file(
     if not isinstance(content, str):
         raise ToolRetryError("Invalid arguments for tool 'write_file': 'content' must be a string.")
 
-    try:
-        result = await _run_write_file(filepath=filepath, content=content)
-    except FileNotFoundError as err:
-        raise ToolRetryError(f"File not found: {filepath}. Check the path.") from err
-    except PermissionError as exc:
-        raise FileOperationError(
-            operation="access",
-            path=filepath,
-            message=str(exc),
-            original_error=exc,
-        ) from exc
-    except UnicodeDecodeError as exc:
-        raise FileOperationError(
-            operation="decode",
-            path=filepath,
-            message=str(exc),
-            original_error=exc,
-        ) from exc
-    except OSError as exc:
-        raise FileOperationError(
-            operation="read/write",
-            path=filepath,
-            message=str(exc),
-            original_error=exc,
-        ) from exc
-    except (ToolRetryError, ToolExecutionError, FileOperationError):
-        raise
-    except Exception as exc:  # noqa: BLE001
-        raise ToolExecutionError(
-            tool_name="write_file",
-            message=str(exc),
-            original_error=exc,
-        ) from exc
+    result = await translate_file_tool_errors(
+        tool_name="write_file",
+        filepath=filepath,
+        operation=_run_write_file(filepath=filepath, content=content),
+    )
 
     return _text_result(result)
 

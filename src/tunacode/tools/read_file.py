@@ -14,7 +14,6 @@ from tinyagent.agent_types import (
 )
 
 from tunacode.exceptions import (
-    FileOperationError,
     ToolExecutionError,
     ToolRetryError,
     UserAbortError,
@@ -22,6 +21,7 @@ from tunacode.exceptions import (
 
 from tunacode.tools.hashline import HashedLine, content_hash, format_hashline
 from tunacode.tools.line_cache import store as _cache_store
+from tunacode.tools.utils.file_errors import translate_file_tool_errors
 
 KB_BYTES = 1024
 MAX_FILE_SIZE_KB = 100
@@ -155,39 +155,11 @@ async def _execute_read_file(  # noqa: C901
     if limit is not None and (not isinstance(limit, int) or isinstance(limit, bool)):
         raise ToolRetryError("Invalid arguments for tool 'read_file': 'limit' must be an integer.")
 
-    try:
-        result = await _run_read_file(filepath=filepath, offset=offset, limit=limit)
-    except FileNotFoundError as err:
-        raise ToolRetryError(f"File not found: {filepath}. Check the path.") from err
-    except PermissionError as exc:
-        raise FileOperationError(
-            operation="access",
-            path=filepath,
-            message=str(exc),
-            original_error=exc,
-        ) from exc
-    except UnicodeDecodeError as exc:
-        raise FileOperationError(
-            operation="decode",
-            path=filepath,
-            message=str(exc),
-            original_error=exc,
-        ) from exc
-    except OSError as exc:
-        raise FileOperationError(
-            operation="read/write",
-            path=filepath,
-            message=str(exc),
-            original_error=exc,
-        ) from exc
-    except (ToolRetryError, ToolExecutionError, FileOperationError):
-        raise
-    except Exception as exc:  # noqa: BLE001
-        raise ToolExecutionError(
-            tool_name="read_file",
-            message=str(exc),
-            original_error=exc,
-        ) from exc
+    result = await translate_file_tool_errors(
+        tool_name="read_file",
+        filepath=filepath,
+        operation=_run_read_file(filepath=filepath, offset=offset, limit=limit),
+    )
 
     return _text_result(result)
 
