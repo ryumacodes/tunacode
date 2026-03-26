@@ -267,13 +267,13 @@ def _normalize_chat_completions_url(base_url: str | None) -> str | None:
 
 
 def _resolve_base_url(config: SessionConfig | SessionStateProtocol, provider_id: str) -> str | None:
+    """Resolve base URL with env override first, then lazy registry lookup."""
     session_config = _coerce_session_config(config)
     configured_base_url = _normalize_chat_completions_url(
         session_config.env.get(ENV_OPENAI_BASE_URL)
     )
     if configured_base_url is not None:
         return configured_base_url
-    load_models_registry()
     return _normalize_chat_completions_url(get_provider_base_url(provider_id))
 
 
