@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from tunacode.core.session import StateManager
 from tunacode.infrastructure.cache import clear_all
+
+from tunacode.core.session import StateManager
 
 
 def test_state_manager_loads_default_model_context_window_on_cold_cache(

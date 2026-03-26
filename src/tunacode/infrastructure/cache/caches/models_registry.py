@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import cast
 
-from tunacode.infrastructure.cache import ManualStrategy, get_cache, register_cache
 from tunacode.types import ModelsRegistryDocument
+
+from tunacode.infrastructure.cache import ManualStrategy, get_cache, register_cache
 
 MODELS_REGISTRY_CACHE_NAME = "tunacode.models.registry"
 MODELS_REGISTRY_KEY = "registry"

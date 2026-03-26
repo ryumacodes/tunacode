@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from tunacode.configuration.ignore_patterns import DEFAULT_IGNORE_PATTERNS
+
 from tunacode.infrastructure.file_filter import FileFilter
 
 
