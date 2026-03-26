@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import cast
 
 from tunacode.infrastructure.cache import ManualStrategy, get_cache, register_cache
+from tunacode.types import ModelsRegistryDocument
 
 MODELS_REGISTRY_CACHE_NAME = "tunacode.models.registry"
 MODELS_REGISTRY_KEY = "registry"
@@ -10,17 +11,17 @@ MODELS_REGISTRY_KEY = "registry"
 register_cache(MODELS_REGISTRY_CACHE_NAME, ManualStrategy())
 
 
-def get_registry() -> dict[str, Any] | None:
+def get_registry() -> ModelsRegistryDocument | None:
     cache = get_cache(MODELS_REGISTRY_CACHE_NAME)
     cached = cache.get(MODELS_REGISTRY_KEY)
     if cached is None:
         return None
     if not isinstance(cached, dict):
         raise TypeError(f"Models registry cache value must be dict, got {type(cached).__name__}")
-    return cast(dict[str, Any], cached)
+    return cast(ModelsRegistryDocument, cached)
 
 
-def set_registry(registry: dict[str, Any]) -> None:
+def set_registry(registry: ModelsRegistryDocument) -> None:
     get_cache(MODELS_REGISTRY_CACHE_NAME).set(MODELS_REGISTRY_KEY, registry)
 
 

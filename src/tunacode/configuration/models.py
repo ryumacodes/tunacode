@@ -5,9 +5,10 @@ Configuration for loading model data from models_registry.json.
 """
 
 from dataclasses import dataclass
-from typing import Any
+from typing import cast
 
 from tunacode.constants import DEFAULT_CONTEXT_WINDOW, MODEL_PICKER_UNFILTERED_LIMIT
+from tunacode.types import ModelsRegistryDocument, RegistryModelEntry, RegistryProviderEntry
 
 from tunacode.infrastructure.cache.caches import models_registry as models_registry_cache
 
@@ -66,7 +67,7 @@ def parse_model_string(model_string: str) -> tuple[str, str]:
     return (parts[0], parts[1])
 
 
-def load_models_registry() -> dict[str, Any]:
+def load_models_registry() -> ModelsRegistryDocument:
     """Load bundled models.dev registry from JSON file.
 
     Returns cached data on subsequent calls for performance.
@@ -86,14 +87,41 @@ def load_models_registry() -> dict[str, Any]:
     if not isinstance(registry, dict):
         raise TypeError(f"models registry must be a dict, got {type(registry).__name__}")
 
-    models_registry_cache.set_registry(registry)
-    return registry
+    typed_registry = cast(ModelsRegistryDocument, registry)
+    models_registry_cache.set_registry(typed_registry)
+    return typed_registry
 
 
-def get_cached_models_registry() -> dict[str, Any] | None:
-    """Return cached registry data if already loaded."""
+def get_cached_models_registry() -> ModelsRegistryDocument | None:
+    """Return cached registry data if already loaded, without loading it."""
 
     return models_registry_cache.get_registry()
+
+
+def _get_registry_for_read() -> ModelsRegistryDocument:
+    """Return registry data for normal read paths, loading it on demand."""
+    cached = get_cached_models_registry()
+    if cached is not None:
+        return cached
+    return load_models_registry()
+
+
+def _get_provider_entry(
+    registry: ModelsRegistryDocument,
+    provider_id: str,
+) -> RegistryProviderEntry | None:
+    """Return the provider entry for a provider id, if present."""
+    return registry.get(provider_id)
+
+
+def _get_model_entry(
+    provider: RegistryProviderEntry | None,
+    model_id: str,
+) -> RegistryModelEntry | None:
+    """Return the model entry for a provider/model pair, if present."""
+    if provider is None:
+        return None
+    return provider["models"].get(model_id)
 
 
 def get_providers() -> list[tuple[str, str]]:
@@ -116,8 +144,8 @@ def get_models_for_provider(provider_id: str) -> list[tuple[str, str]]:
         List of (model_name, model_id) tuples, sorted alphabetically.
     """
     registry = load_models_registry()
-    provider = registry.get(provider_id, {})
-    models = provider.get("models", {})
+    provider = _get_provider_entry(registry, provider_id)
+    models = provider["models"] if provider is not None else {}
     result = [(m["name"], mid) for mid, m in models.items()]
     return sorted(result, key=lambda x: x[0].lower())
 
@@ -217,8 +245,8 @@ def get_provider_env_var(provider_id: str) -> str:
     if registry is None:
         return f"{provider_id.upper().replace('-', '_')}_API_KEY"
 
-    provider = registry.get(provider_id, {})
-    env_vars = provider.get("env", [])
+    provider = _get_provider_entry(registry, provider_id)
+    env_vars = provider.get("env", []) if provider is not None else []
     if env_vars:
         return env_vars[0]
     return f"{provider_id.upper().replace('-', '_')}_API_KEY"
@@ -260,8 +288,8 @@ def get_provider_base_url(provider_id: str) -> str | None:
     if registry is None:
         return None
 
-    provider = registry.get(provider_id, {})
-    return provider.get("api")
+    provider = _get_provider_entry(registry, provider_id)
+    return provider.get("api") if provider is not None else None
 
 
 def get_provider_alchemy_api(provider_id: str) -> str | None:
@@ -270,10 +298,10 @@ def get_provider_alchemy_api(provider_id: str) -> str | None:
     if registry is None:
         return None
 
-    provider = registry.get(provider_id, {})
-    alchemy_api = provider.get("alchemy_api")
-    if not isinstance(alchemy_api, str):
+    provider = _get_provider_entry(registry, provider_id)
+    if provider is None:
         return None
+    alchemy_api = provider.get("alchemy_api")
 
     normalized_alchemy_api = alchemy_api.strip()
     if not normalized_alchemy_api:
@@ -301,9 +329,14 @@ def get_model_context_window(model_string: str) -> int:
     except ValueError:
         return DEFAULT_CONTEXT_WINDOW
 
-    provider = registry.get(provider_id, {})
-    model = provider.get("models", {}).get(model_id, {})
-    limit = model.get("limit", {})
+    provider = _get_provider_entry(registry, provider_id)
+    model = _get_model_entry(provider, model_id)
+    if model is None:
+        return DEFAULT_CONTEXT_WINDOW
+
+    limit = model.get("limit")
+    if limit is None:
+        return DEFAULT_CONTEXT_WINDOW
 
     context = limit.get("context")
     if context is None:

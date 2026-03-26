@@ -37,7 +37,7 @@ from tunacode.configuration.pricing import (
     get_model_pricing as _get_model_pricing,
 )
 from tunacode.configuration.settings import ApplicationSettings  # noqa: F401 (re-export)
-from tunacode.types import ModelPricing
+from tunacode.types import ModelPricing, ModelsRegistryDocument
 
 
 def get_models_for_provider(provider_id: str) -> list[tuple[str, str]]:
@@ -65,7 +65,7 @@ def validate_provider_api_key(provider_id: str, user_config: dict) -> tuple[bool
     return _validate_provider_api_key(provider_id, user_config)
 
 
-def load_models_registry() -> dict:
+def load_models_registry() -> ModelsRegistryDocument:
     """Load the model registry data (cached after first load)."""
     return _load_models_registry()
 

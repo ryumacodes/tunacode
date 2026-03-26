@@ -86,8 +86,17 @@ from tunacode.types.canonical import (  # noqa: F401
 # Dataclasses
 from tunacode.types.dataclasses import (  # noqa: F401
     CostBreakdown,
-    ModelConfig,
     ModelPricing,
-    ModelRegistry,
     TokenUsage,
+)
+from tunacode.types.models_registry import (  # noqa: F401
+    ModelsRegistryDocument,
+    RegistryCostBreakdown,
+    RegistryInterleavedConfig,
+    RegistryModalities,
+    RegistryModelCost,
+    RegistryModelEntry,
+    RegistryModelLimit,
+    RegistryProviderEntry,
+    RegistryProviderOverride,
 )
