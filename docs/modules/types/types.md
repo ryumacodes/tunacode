@@ -23,11 +23,11 @@ Single source of truth for every type alias, callback protocol, and data structu
 | `callbacks.py`    | Async callback signatures (`StreamingCallback`, `ToolCallback`, `ToolResultCallback`, `ToolStartCallback`, `NoticeCallback`) and protocols (`StreamResultProtocol`, `ToolCallPartProtocol`). |
 | `canonical.py`    | The canonical message model: `CanonicalMessage`, `CanonicalPart`, `CanonicalToolCall`, `CanonicalToolCallPart`, `CanonicalToolReturnPart`, `UsageMetrics`. Enums: `MessageRole`, `PartKind`, `ToolCallStatus`. |
 | `dataclasses.py`  | Value objects: `ModelPricing`, `TokenUsage`, `CostBreakdown`. |
-| `models_registry.py` | TypedDict schema and public aliases for the bundled registry document: `ModelConfig`, `ModelRegistry`, and supporting registry metadata types. |
+| `models_registry.py` | TypedDict schema and public aliases for the bundled registry document: `ModelsRegistryDocument`, `ModelConfig`, `ModelRegistry`, and supporting registry metadata types. |
 
 ## How
 
-Every other layer imports from `tunacode.types`. The `__init__.py` re-export list is the public API surface. `ModelConfig` and `ModelRegistry` are public aliases sourced from `models_registry.py`, while `ModelPricing`, `TokenUsage`, and `CostBreakdown` remain dataclasses. If a type is not in `__all__`, it is internal.
+Every other layer imports from `tunacode.types`. The `__init__.py` re-export list is the public API surface. `ModelsRegistryDocument`, `ModelConfig`, and `ModelRegistry` are public aliases sourced from `models_registry.py`, while `ModelPricing`, `TokenUsage`, and `CostBreakdown` remain dataclasses. If a type is not in `__all__`, it is internal.
 
 `CanonicalMessage` / `CanonicalToolCall` form the domain vocabulary for messages flowing between the agent loop, tools, compaction, and the UI.
 

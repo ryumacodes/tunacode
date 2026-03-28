@@ -28,7 +28,7 @@ Stateless helper functions used across multiple layers. Two sub-packages: messag
 
 | File | Purpose |
 |------|---------|
-| `gitignore.py` | `list_cwd(max_depth)` -- walks the working directory using the same built-in ignore defaults and `.gitignore` rules as the rest of the file-filtering stack. |
+| `gitignore.py` | `list_cwd(max_depth)` -- walks the working directory using the same built-in ignore defaults and `.gitignore` rules as the rest of the file-filtering stack, including fallback-to-default behavior when `.gitignore` is unreadable or malformed. |
 
 ## How
 
@@ -58,6 +58,12 @@ The 4-chars-per-token heuristic is deliberately simple. It is used for:
 - Retention boundary calculation in `ContextSummarizer`
 
 It is NOT used for billing -- `UsageMetrics` carries the provider-reported token counts.
+
+### File Listing
+
+`list_cwd()` composes the shared default ignore set with any readable `.gitignore` lines, compiles that into a reusable `pathspec`, and short-circuits obvious generated directories such as `.git/` and `.venv/` before the expensive matcher runs.
+
+If `.gitignore` cannot be read cleanly, the utility falls back to the built-in defaults instead of failing the listing call. That keeps the UI file picker and related helpers usable on cold or damaged checkouts.
 
 ## Why
 

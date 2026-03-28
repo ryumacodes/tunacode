@@ -25,7 +25,7 @@ Concrete cache instances (agents, models registry, context, limits/settings) are
 | `cache/metadata.py` | Metadata types attached to cache entries (version stamps, timestamps). |
 | `cache/caches/__init__.py` | Package that imports and exposes all named cache modules. |
 | `cache/caches/agents.py` | `get_agent()` / `set_agent()` / `invalidate_agent()` -- caches tinyagent `Agent` instances keyed by model name. |
-| `cache/caches/models_registry.py` | `get_registry()` / `set_registry()` -- caches the parsed `models_registry.json`. |
+| `cache/caches/models_registry.py` | `get_registry()` / `set_registry()` / `clear_registry_cache()` -- manual cache for the parsed `ModelsRegistryDocument` backing lazy metadata and pricing reads. |
 | `cache/caches/tunacode_context.py` | `get_context()` -- caches the guide file (`AGENTS.md`) content. Uses file-stat-based staleness. |
 | `cache/caches/limits_settings.py` | Caches resolved limit/setting values to avoid re-parsing user config on every call. |
 | `cache/caches/skills.py` | `get_skill_summary()` / `set_skill_summary()` / `get_loaded_skill()` / `set_loaded_skill()` -- mtime-based cache for parsed skill summaries and fully loaded skill bodies. |

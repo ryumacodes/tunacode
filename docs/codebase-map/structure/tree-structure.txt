@@ -1,7 +1,7 @@
 TunaCode Source Code Structure Tree
 ===================================
 
-Generated: 2026-03-26
+Generated: 2026-03-28
 Source: <repo_root>/src/tunacode
 Output: <repo_root>/docs/codebase-map/structure/tree-structure.txt
 
@@ -98,6 +98,7 @@ src/tunacode/
 │   │   ├── __init__.py
 │   │   ├── ignore_manager_cache.py
 │   │   └── ripgrep_cache.py
+│   ├── grep_components/
 │   ├── lsp/
 │   │   ├── __init__.py
 │   │   ├── client.py
@@ -108,6 +109,7 @@ src/tunacode/
 │   │   ├── discover_pipeline.py
 │   │   ├── discover_terms.py
 │   │   ├── discover_types.py
+│   │   ├── file_errors.py
 │   │   ├── formatting.py
 │   │   └── ripgrep.py
 │   ├── __init__.py
@@ -126,7 +128,8 @@ src/tunacode/
 │   ├── base.py
 │   ├── callbacks.py
 │   ├── canonical.py
-│   └── dataclasses.py
+│   ├── dataclasses.py
+│   └── models_registry.py
 ├── ui/
 │   ├── assets/
 │   │   └── logo.ansi
