@@ -1,34 +1,38 @@
 """Pricing utilities for cost calculation and model pricing lookup."""
 
-from tunacode.configuration.models import get_cached_models_registry, parse_model_string
+from tunacode.configuration.models import (
+    _get_model_entry,
+    _get_provider_entry,
+    _get_registry_for_read,
+    parse_model_string,
+)
 from tunacode.types import ModelPricing
 
 TOKENS_PER_MILLION = 1_000_000
 
 
 def get_model_pricing(model_string: str) -> ModelPricing | None:
-    """Get pricing for a model from cached models_registry data.
+    """Get pricing for a model from models_registry data.
 
     Args:
         model_string: Full model identifier (e.g., "openrouter:openai/gpt-4.1")
 
     Returns:
         ModelPricing with input/output/cached costs per million tokens,
-        or None if registry is not loaded, model not found, or has no pricing data.
+        or None if model not found or has no pricing data.
     """
-    registry = get_cached_models_registry()
-    if registry is None:
-        return None
-
     try:
         provider_id, model_id = parse_model_string(model_string)
     except ValueError:
         return None
 
-    provider = registry.get(provider_id, {})
-    model = provider.get("models", {}).get(model_id, {})
-    cost = model.get("cost", {})
+    registry = _get_registry_for_read()
+    provider = _get_provider_entry(registry, provider_id)
+    model = _get_model_entry(provider, model_id)
+    if model is None:
+        return None
 
+    cost = model.get("cost")
     if not cost:
         return None
 

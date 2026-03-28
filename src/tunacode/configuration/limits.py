@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from tunacode.constants import MAX_COMMAND_OUTPUT, MAX_FILES_IN_DIR
+from tunacode.constants import MAX_COMMAND_OUTPUT
 
 from tunacode.infrastructure.cache.caches import limits_settings as limits_settings_cache
 
@@ -60,12 +60,6 @@ def get_command_limit() -> int:
     """Get max command output length for bash tool."""
 
     return _get_limit("max_command_output", MAX_COMMAND_OUTPUT)
-
-
-def get_max_files_in_dir() -> int:
-    """Get max files to list in list_dir tool."""
-
-    return _get_limit("max_files_in_dir", MAX_FILES_IN_DIR)
 
 
 def get_max_tokens() -> int | None:

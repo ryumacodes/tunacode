@@ -1,6 +1,6 @@
 ---
 title: Utilities Layer
-summary: Cross-cutting utilities for message conversion, token estimation, and gitignore-aware file listing.
+summary: Cross-cutting utilities for message conversion, token estimation, and repository file listing.
 read_when: Modifying message format handling, changing token estimation heuristics, or adjusting file-listing behavior.
 depends_on: [types, configuration]
 feeds_into: [core, tools, ui]
@@ -12,7 +12,7 @@ feeds_into: [core, tools, ui]
 
 ## What
 
-Stateless helper functions used across multiple layers. Two sub-packages: messaging (canonical message conversion and token counting) and system (gitignore-aware file listing).
+Stateless helper functions used across multiple layers. Two sub-packages: messaging (canonical message conversion and token counting) and system (repository file listing with shared ignore rules).
 
 ## Key Files
 
@@ -28,7 +28,7 @@ Stateless helper functions used across multiple layers. Two sub-packages: messag
 
 | File | Purpose |
 |------|---------|
-| `gitignore.py` | `list_cwd(max_depth)` -- walks the working directory respecting `.gitignore` patterns (falls back to built-in defaults). Used during system prompt context generation. |
+| `gitignore.py` | `list_cwd(max_depth)` -- walks the working directory using the same built-in ignore defaults and `.gitignore` rules as the rest of the file-filtering stack. |
 
 ## How
 

@@ -16,16 +16,6 @@ class ModelPricing:
 
 
 @dataclass
-class ModelConfig:
-    """Configuration for a model including pricing."""
-
-    pricing: ModelPricing
-
-
-ModelRegistry = dict[str, ModelConfig]
-
-
-@dataclass
 class TokenUsage:
     """Token usage for a request."""
 

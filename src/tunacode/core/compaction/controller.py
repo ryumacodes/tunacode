@@ -21,7 +21,6 @@ from tunacode.configuration.models import (
     get_provider_alchemy_api,
     get_provider_base_url,
     get_provider_env_var,
-    load_models_registry,
     parse_model_string,
 )
 from tunacode.constants import ENV_OPENAI_BASE_URL
@@ -385,7 +384,7 @@ class CompactionController:
         return OpenAICompatModel(provider=provider_id, id=model_id)
 
     def _resolve_base_url(self, provider_id: str) -> str | None:
-        """Resolve model base URL with explicit override-first precedence."""
+        """Resolve model base URL with override-first, lazy-registry fallback."""
 
         env_config = self._state_manager.session.user_config.get("env", {})
         if not isinstance(env_config, dict):
@@ -397,7 +396,6 @@ class CompactionController:
         if configured_base_url is not None:
             return configured_base_url
 
-        load_models_registry()
         provider_base_url = get_provider_base_url(provider_id)
         return self._normalize_chat_completions_url(provider_base_url)
 
@@ -424,7 +422,6 @@ class CompactionController:
         raise UnsupportedCompactionProviderError(provider_id)
 
     def _resolve_api_key(self, provider_id: str) -> str:
-        load_models_registry()
         provider_env_var = get_provider_env_var(provider_id)
 
         env_config = self._state_manager.session.user_config.get("env", {})

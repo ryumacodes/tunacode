@@ -16,8 +16,6 @@ from tinyagent.agent_types import (
 )
 
 from tunacode.exceptions import (
-    FileOperationError,
-    ToolExecutionError,
     ToolRetryError,
     UserAbortError,
 )
@@ -27,6 +25,7 @@ from tunacode.tools.line_cache import get as _cache_get
 from tunacode.tools.line_cache import replace_range as _cache_replace_range
 from tunacode.tools.line_cache import update_lines as _cache_update_lines
 from tunacode.tools.lsp.diagnostics import maybe_prepend_lsp_diagnostics
+from tunacode.tools.utils.file_errors import translate_file_tool_errors
 
 STALE_REF_MESSAGE = (
     "File has changed since last read — line {line} hash mismatch "
@@ -293,8 +292,10 @@ async def _execute_hashline_edit(  # noqa: C901
     if not isinstance(new, str):
         raise ToolRetryError("Invalid arguments for tool 'hashline_edit': 'new' must be a string.")
 
-    try:
-        result = await _run_hashline_edit(
+    result = await translate_file_tool_errors(
+        tool_name="hashline_edit",
+        filepath=filepath,
+        operation=_run_hashline_edit(
             filepath=filepath,
             operation=operation,
             line=line,
@@ -302,38 +303,8 @@ async def _execute_hashline_edit(  # noqa: C901
             end=end,
             after=after,
             new=new,
-        )
-    except FileNotFoundError as err:
-        raise ToolRetryError(f"File not found: {filepath}. Check the path.") from err
-    except PermissionError as exc:
-        raise FileOperationError(
-            operation="access",
-            path=filepath,
-            message=str(exc),
-            original_error=exc,
-        ) from exc
-    except UnicodeDecodeError as exc:
-        raise FileOperationError(
-            operation="decode",
-            path=filepath,
-            message=str(exc),
-            original_error=exc,
-        ) from exc
-    except OSError as exc:
-        raise FileOperationError(
-            operation="read/write",
-            path=filepath,
-            message=str(exc),
-            original_error=exc,
-        ) from exc
-    except (ToolRetryError, ToolExecutionError, FileOperationError):
-        raise
-    except Exception as exc:  # noqa: BLE001
-        raise ToolExecutionError(
-            tool_name="hashline_edit",
-            message=str(exc),
-            original_error=exc,
-        ) from exc
+        ),
+    )
 
     return _text_result(result)
 

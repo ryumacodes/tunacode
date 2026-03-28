@@ -7,6 +7,13 @@ from pathlib import Path
 import pathspec
 from textual.fuzzy import FuzzySearch
 
+from tunacode.configuration.ignore_patterns import (
+    GITIGNORE_FILE_NAME,
+    compile_ignore_spec,
+    merge_ignore_patterns,
+    read_ignore_file_lines,
+)
+
 FUZZY_CASE_SENSITIVE = False
 FUZZY_MATCH_SCORE_THRESHOLD = 0.0
 
@@ -28,16 +35,17 @@ class FileFilter:
         self._spec = self._build_spec()
 
     def _build_spec(self) -> pathspec.PathSpec:
-        patterns = list(self._ignore_patterns)
-        gitignore = self.root / ".gitignore"
-        if gitignore.exists():
-            patterns.extend(gitignore.read_text().splitlines())
-        return pathspec.PathSpec.from_lines("gitwildmatch", patterns)
+        gitignore = self.root / GITIGNORE_FILE_NAME
+        patterns = merge_ignore_patterns(self._ignore_patterns, read_ignore_file_lines(gitignore))
+        return compile_ignore_spec(patterns)
 
     def is_ignored(self, path: Path) -> bool:
         try:
             rel = path.relative_to(self.root)
-            return self._spec.match_file(str(rel))
+            rel_posix = rel.as_posix()
+            if self._spec.match_file(rel_posix):
+                return True
+            return path.is_dir() and self._spec.match_file(f"{rel_posix}/")
         except ValueError:
             return False
 

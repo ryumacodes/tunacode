@@ -70,11 +70,8 @@ class ModelCommand(Command):
         self._open_model_picker(app)
 
     def _handle_direct_model_selection(self, app: TextualReplApp, model_name: str) -> None:
-        from tunacode.core.ui_api.configuration import load_models_registry
-
         session = app.state_manager.session
 
-        load_models_registry()
         if _validate_provider_api_key_with_notification(
             model_name,
             session.user_config,
