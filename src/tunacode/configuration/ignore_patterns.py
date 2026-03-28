@@ -103,7 +103,7 @@ def read_ignore_file_lines(filepath: Path) -> tuple[str, ...]:
     """Read raw ignore-file lines, returning an empty tuple when absent."""
     try:
         ignore_text = filepath.read_text(encoding=TEXT_ENCODING)
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError, UnicodeDecodeError):
         return EMPTY_IGNORE_PATTERNS
     return tuple(ignore_text.splitlines())
 
