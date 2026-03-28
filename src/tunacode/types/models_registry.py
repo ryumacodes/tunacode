@@ -91,3 +91,5 @@ class RegistryProviderEntry(TypedDict):
 
 
 ModelsRegistryDocument: TypeAlias = dict[str, RegistryProviderEntry]
+ModelConfig: TypeAlias = RegistryModelEntry
+ModelRegistry: TypeAlias = ModelsRegistryDocument

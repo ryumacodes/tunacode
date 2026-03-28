@@ -90,6 +90,8 @@ from tunacode.types.dataclasses import (  # noqa: F401
     TokenUsage,
 )
 from tunacode.types.models_registry import (  # noqa: F401
+    ModelConfig,
+    ModelRegistry,
     ModelsRegistryDocument,
     RegistryCostBreakdown,
     RegistryInterleavedConfig,
