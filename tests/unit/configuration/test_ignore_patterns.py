@@ -31,3 +31,10 @@ def test_read_ignore_file_lines_returns_empty_tuple_for_invalid_utf8(tmp_path: P
     gitignore_path.write_bytes(b"\xff\xfeignored\n")
 
     assert read_ignore_file_lines(gitignore_path) == EMPTY_IGNORE_PATTERNS
+
+
+def test_read_ignore_file_lines_returns_empty_tuple_for_directory(tmp_path: Path) -> None:
+    gitignore_path = tmp_path / ".gitignore"
+    gitignore_path.mkdir()
+
+    assert read_ignore_file_lines(gitignore_path) == EMPTY_IGNORE_PATTERNS

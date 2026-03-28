@@ -100,10 +100,10 @@ def merge_ignore_patterns(
 
 
 def read_ignore_file_lines(filepath: Path) -> tuple[str, ...]:
-    """Read raw ignore-file lines, returning an empty tuple when absent."""
+    """Read raw ignore-file lines, returning an empty tuple when unreadable."""
     try:
         ignore_text = filepath.read_text(encoding=TEXT_ENCODING)
-    except (FileNotFoundError, PermissionError, UnicodeDecodeError):
+    except (OSError, UnicodeDecodeError):
         return EMPTY_IGNORE_PATTERNS
     return tuple(ignore_text.splitlines())
 

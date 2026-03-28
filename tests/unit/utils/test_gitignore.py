@@ -49,3 +49,18 @@ def test_list_cwd_falls_back_when_gitignore_is_unreadable(
 
     assert "src/app.py" in results
     assert ".venv/ignored.py" not in results
+
+
+def test_list_cwd_falls_back_when_gitignore_is_a_directory(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".gitignore").mkdir()
+    _write_file(tmp_path / "src" / "app.py")
+    _write_file(tmp_path / ".venv" / "ignored.py")
+
+    results = list_cwd(max_depth=5)
+
+    assert "src/app.py" in results
+    assert ".venv/ignored.py" not in results
