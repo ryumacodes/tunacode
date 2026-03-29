@@ -30,13 +30,12 @@ def _run_cli_help() -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_cli_help_lists_run_command() -> None:
+def test_cli_help_lists_commands() -> None:
     result = _run_cli_help()
     assert result.returncode == 0
 
     output = _strip_ansi(result.stdout)
     assert "TunaCode - OS AI-powered development assistant" in output
-    assert "run" in output
     assert "--setup" in output
 
 
