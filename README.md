@@ -103,6 +103,8 @@ export OPENAI_API_KEY="your-key"
 
 Config file: `~/.config/tunacode.json`
 
+TunaCode deep-merges partial config files onto built-in defaults and validates the merged result at startup. If the file is malformed, the app reports a configuration error instead of silently guessing.
+
 For local models and advanced settings, see the [Configuration Guide](docs/configuration/README.md).
 
 ## Commands
@@ -111,13 +113,16 @@ For local models and advanced settings, see the [Configuration Guide](docs/confi
 Slash commands are command objects in `tunacode.ui.commands`; each one is a `Command` subclass and is registered in `COMMANDS`. `handle_command()` also routes shell commands (`!<cmd>`), legacy `exit`, and slash `/exit`.
 | Command | Description |
 |---------|-------------|
+| `/cancel` | Cancel the current request or shell command. |
 | `/help` | Show available commands |
 | `/clear` | Clear transient agent state while preserving message history. |
 | `/compact` | Force context compaction |
 | `/debug` | Toggle debug logging to screen (includes parallel tool-call lifecycle lines) |
 | `/model` | Open model picker or switch model |
-| `/theme` | Open theme picker or switch theme |
 | `/resume` | List, load, or delete persisted sessions. |
+| `/skills` | Browse, search, or load session skills. |
+| `/theme` | Open theme picker or switch theme |
+| `/thoughts` | Toggle the streaming thought panel. |
 | `/update` | Check for or install updates. |
 | `!<cmd>` | Run shell command |
 | `/exit` | Exit TunaCode |

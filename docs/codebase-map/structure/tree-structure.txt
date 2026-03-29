@@ -1,7 +1,7 @@
 TunaCode Source Code Structure Tree
 ===================================
 
-Generated: 2026-03-28
+Generated: 2026-03-29
 Source: <repo_root>/src/tunacode
 Output: <repo_root>/docs/codebase-map/structure/tree-structure.txt
 
@@ -152,9 +152,6 @@ src/tunacode/
 │   │   ├── __init__.py
 │   │   ├── handler.py
 │   │   └── types.py
-│   ├── headless/
-│   │   ├── __init__.py
-│   │   └── output.py
 │   ├── renderers/
 │   │   ├── tools/
 │   │   │   ├── __init__.py

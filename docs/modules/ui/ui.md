@@ -20,7 +20,7 @@ The Textual-based terminal user interface for TunaCode. Handles all user interac
 
 | File | Purpose |
 |------|---------|
-| `main.py` | CLI entry point using typer. Handles `--setup`, `--model`, `--baseurl` flags, headless mode (`tunacode run`), and launches the TUI. |
+| `main.py` | CLI entry point using typer. Handles `--setup`, `--model`, and `--baseurl`, lazily constructs `StateManager` after CLI parsing, and launches the TUI. |
 | `app.py` | `TextualReplApp` — the main Textual application. Manages request queue, streaming callbacks, tool result display, ESC handler, clipboard copy shortcuts, and composes all widgets. |
 | `streaming.py` | `StreamingHandler` — owns streaming state and throttled UI updates for the streaming output widget. |
 
@@ -29,6 +29,7 @@ The Textual-based terminal user interface for TunaCode. Handles all user interac
 | File | Purpose |
 |------|---------|
 | `repl_support.py` | Helper functions and callback builders for the REPL. `run_textual_repl()` creates and runs the app. Callback builders wire core events to UI components. |
+| `request_bridge.py` | Thread-safe queue bridge for streaming/thinking deltas and UI-thread notice/compaction messages. |
 | `shell_runner.py` | `ShellRunner` — async shell command execution for `!cmd` syntax. Handles timeouts, cancellation (SIGINT), and formats output via NeXTSTEP panels. |
 
 ### Screens (Modal Dialogs)
@@ -69,13 +70,16 @@ All slash commands are implemented as `Command` subclasses and registered in `CO
 | `commands/base.py` | `Command` abstract base class defining the command interface (`name`, `description`, optional `usage`, `execute(app, args)`). |
 | `commands/__init__.py` | Slash command registry and router. Maps command name to instance and dispatches `/` commands in `handle_command()`. |
 | `commands/help.py` | `/help` command rendering command/description table. |
+| `commands/cancel.py` | `/cancel` command for canceling the current request, shell command, or modal action. |
 | `commands/clear.py` | `/clear` command for clearing transient agent state while preserving message history for `/resume`. |
 | `commands/compact.py` | `/compact` command for manual context compaction and token reclamation. |
 | `commands/debug.py` | `/debug` command toggling debug log output. |
 | `commands/model.py` | `/model` command for picker-based and direct model selection. |
-| `commands/theme.py` | `/theme` command for picker-based and direct theme switching by name. |
 | `commands/update.py` | `/update` command for checking and installing TunaCode updates. |
 | `commands/resume.py` | `/resume` command for listing, loading, and deleting sessions. |
+| `commands/skills.py` | `/skills` command for searching the local skill catalog and attaching skills to the session. |
+| `commands/theme.py` | `/theme` command for picker-based and direct theme switching by name. |
+| `commands/thoughts.py` | `/thoughts` command for toggling the streaming thought panel. |
 | `commands/exit.py` | `/exit` command for quitting TunaCode via slash input. |
 
 ### Command Contract
@@ -107,9 +111,9 @@ This contract is enforced in `tests/unit/ui/test_command_contracts.py`.
 |------|---------|
 | `model_display.py` | Model name formatting for the resource bar (truncates long model IDs). |
 | `clipboard.py` | Clipboard copy helpers for selected Textual widgets. Tries OSC 52, `pyperclip`, and platform clipboard commands with verification reads when possible. |
+| `request_debug.py` | Low-noise request/input latency tracing used when `/debug` is enabled. |
 | `styles.py` | Color constants for UI components (`STYLE_PRIMARY`, `STYLE_WARNING`, etc.). |
 | `welcome.py` | Welcome message rendered on fresh REPL start. |
-| `headless/output.py` | Headless mode output resolution from agent responses. |
 | `logo_assets.py` | ASCII logo assets for the TUI. |
 
 ## How
@@ -123,10 +127,19 @@ tunacode (CLI)
 main.py typer app
     |
     v
-_apply_base_url_override()  (if --baseurl)
+_default_command()
+    |-- `--help` / `--version` exit before config load
+    |-- rejects `--setup` when combined with a subcommand
     |
     v
 _run_textual_cli()
+    |
+    v
+_run_textual_app()
+    |-- _get_state_manager() lazily constructs StateManager
+    |-- catches ConfigurationError and prints a clean startup error
+    |-- _apply_base_url_override()  (if --baseurl)
+    |-- creates background update check
     |
     v
 TextualReplApp(state_manager, show_setup)
@@ -143,6 +156,13 @@ if show_setup:
 else:
     _start_repl()
 ```
+
+### Startup/Error Behavior
+
+- `StateManager` is no longer created at module import time.
+- CLI parse-only paths such as `tunacode --help` and `tunacode --version` do not require a valid user config file.
+- Runtime startup still validates config when the app actually launches, and malformed config is surfaced as a user-visible `ConfigurationError`.
+- `_reset_state_manager()` clears the cached manager after each CLI run so repeated startup tests and subprocess runs do not reuse stale state.
 
 ### REPL Request Flow
 

@@ -42,17 +42,19 @@ Contract semantics:
 
 `src/tunacode/ui/commands/__init__.py`
 
-- `COMMANDS: dict[str, Command]` maps slash name to a concrete `Command` instance.
+- `COMMANDS` is a lazy mapping that instantiates each concrete `Command` on first access.
 - Current registrations:
   - `help -> HelpCommand`
+  - `cancel -> CancelCommand`
   - `clear -> ClearCommand`
   - `compact -> CompactCommand`
   - `debug -> DebugCommand`
   - `exit -> ExitCommand`
   - `model -> ModelCommand`
-  - `theme -> ThemeCommand`
   - `resume -> ResumeCommand`
   - `skills -> SkillsCommand`
+  - `theme -> ThemeCommand`
+  - `thoughts -> ThoughtsCommand`
   - `update -> UpdateCommand`
 `handle_command(app, text)` returns `True` when input is consumed and `False` otherwise.
 
@@ -70,18 +72,20 @@ Routing rules:
 |---|---|---|
 | `help.py` | `/help` | Renders a command table and writes it to chat (`/help`, `/exit`, `!<cmd>`, `exit`). |
 | `exit.py` | `/exit` | Exits the TUI immediately. `exit` is preserved as legacy bare command. |
+| `cancel.py` | `/cancel` | Cancels the current request, shell command, or modal workflow. Requires no args. |
 | `clear.py` | `/clear` | Clears transient runtime artifacts (`thoughts`, `tool_registry`, context state, counters, etc.) and updates UI; conversation history and saved session are preserved for `/resume`. |
 | `compact.py` | `/compact` | Compacts history via compaction controller, emits reclamation notice, skips if no old messages. Requires no args. |
 | `debug.py` | `/debug` | Toggles `session.debug_mode`; updates logger mode; emits on-screen status. |
 | `model.py` | `/model [provider:model-name]` | With arg: validates API key requirements and switches model + persists config. Without arg: opens provider/model picker screens. |
-| `theme.py` | `/theme [name]` | With arg: applies known theme and persists config. Without arg: opens picker screen. |
 | `resume.py` | `/resume [list|load <id>|delete <id>]` | `list` opens selector, `load` swaps session and replays messages, `delete` removes persisted session file. |
 | `skills.py` | `/skills [loaded|clear|search <query>|<exact-name>]` | Lists the skill catalog, searches by ranked name/description match, attaches one skill to the session, shows loaded skills, or clears them. Falls back to showing matches when no exact skill name exists. |
+| `theme.py` | `/theme [name]` | With arg: applies known theme and persists config. Without arg: opens picker screen. |
+| `thoughts.py` | `/thoughts` | Toggles the streaming thought panel on or off for the current session. |
 | `update.py` | `/update [check]` | `check` only; default branch runs install flow with confirmation panel, then package upgrade path (`uv` or `pip`). |
 
 Notes:
 
-- `/compact`, `/resume`, and `/update` validate their argument forms and report usage/warnings before mutating state.
+- `/cancel`, `/compact`, `/resume`, and `/update` validate their argument forms and report usage/warnings before mutating state.
 - Unknown command and shell invocation failures are surfaced through `TextualReplApp.notify(...)` or shell runner behavior.
 
 ## Tests
