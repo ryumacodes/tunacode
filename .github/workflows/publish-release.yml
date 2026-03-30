@@ -1,16 +1,23 @@
-name: Publish to PyPI
-run-name: Publish ${{ github.ref_name }}
-# Renamed in v0.0.76.2 to invalidate any stale workflow cache on GitHub Actions.
-# CLAUDE_ANCHOR[publish-workflow-9d7fb121-2f47-4f31-9856-67e25f2c4834]: Ensure releases execute Ruff lint/test pipeline after cache bust.
+name: Release to PyPI
+run-name: Release ${{ inputs.version }}
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish, for example 0.0.78.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    concurrency:
+      group: pypi-release
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
@@ -22,52 +29,41 @@ jobs:
       - name: Install build tooling
         run: |
           python -m pip install --upgrade pip
-          pip install build twine ruff pytest pytest-cov pytest-asyncio
+          pip install build twine
 
-      - name: Install project dependencies
-        run: pip install -e '.[dev]'
-
-      - name: Determine version from tag
+      - name: Determine version from code
         id: ver
         shell: bash
         run: |
-          # Prefer release tag when present; fall back to ref name
-          if [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.event.release.tag_name }}"
-          else
-            TAG="${{ github.ref_name }}"
-          fi
-          TAG="${TAG#v}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Check version consistency
-        shell: bash
-        run: |
-          TAG="${{ steps.ver.outputs.tag }}"
-          # Extract only the [project] version from pyproject.toml
           PYPROJ=$(awk '
             /^\[project\]/ { in_proj=1; next }
             /^\[/ { if (in_proj) exit }
             in_proj && /^version =/ { match($0, /"([^"]+)"/, m); print m[1]; exit }
           ' pyproject.toml)
-          # Extract APP_VERSION from constants
           CONST=$(awk -F '"' '/^APP_VERSION =/ { print $2; exit }' src/tunacode/constants.py)
-          echo "Tag: $TAG"
+          echo "pyproject=$PYPROJ" >> "$GITHUB_OUTPUT"
+          echo "constants=$CONST" >> "$GITHUB_OUTPUT"
+          echo "Requested: ${{ inputs.version }}"
           echo "pyproject.toml: $PYPROJ"
           echo "constants.APP_VERSION: $CONST"
-          if [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            [[ "$TAG" == "$PYPROJ" ]] || { echo 'pyproject.toml version mismatch'; exit 1; }
-            [[ "$TAG" == "$CONST" ]] || { echo 'constants.py APP_VERSION mismatch'; exit 1; }
-          else
-            echo "No semver tag detected; skipping tag consistency check."
-          fi
+
+      - name: Check version consistency
+        shell: bash
+        run: |
+          EXPECTED="${{ inputs.version }}"
+          PYPROJ="${{ steps.ver.outputs.pyproject }}"
+          CONST="${{ steps.ver.outputs.constants }}"
+          [[ "$EXPECTED" == "$PYPROJ" ]] || { echo 'pyproject.toml version mismatch'; exit 1; }
+          [[ "$EXPECTED" == "$CONST" ]] || { echo 'constants.py APP_VERSION mismatch'; exit 1; }
 
       - name: Build
         run: python -m build
 
-      # Preferred: API token secret
-      - name: Publish to PyPI (API token, skip existing)
+      - name: Check distribution metadata
+        run: python -m twine check dist/*
+
+      - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: python -m twine upload --skip-existing dist/*
+        run: python -m twine upload dist/*
