@@ -83,7 +83,7 @@ def update_readme(readme_path: Path, old_version: str, new_version: str) -> bool
     updated = re.sub(pattern, f'## v{new_version}', content)
 
     if content == updated:
-        print(f"⚠ No version header found in README.md, skipping")
+        print("⚠ No version header found in README.md, skipping")
         return False
 
     readme_path.write_text(updated)
@@ -131,7 +131,7 @@ def main() -> int:
             readme_updated = update_readme(readme_path, current_version, new_version)
 
         print(f"\n✅ Version bump complete: {new_version}")
-        print(f"   Files updated:")
+        print("   Files updated:")
         print(f"   - {pyproject_path}")
         print(f"   - {constants_path}")
         if readme_updated:

@@ -110,7 +110,18 @@ def git_commit_and_push(version: str) -> None:
 def dispatch_publish_workflow(version: str) -> None:
     """Dispatch the manual GitHub Actions publish workflow."""
     print(f"🚀 Dispatching publish workflow for {version}...")
-    run_command(["gh", "workflow", "run", "publish-release.yml", "--ref", "master", "-f", f"version={version}"])
+    run_command(
+        [
+            "gh",
+            "workflow",
+            "run",
+            "publish-release.yml",
+            "--ref",
+            "master",
+            "-f",
+            f"version={version}",
+        ]
+    )
     print("  ✓ Workflow dispatched")
 
 
@@ -137,17 +148,16 @@ def monitor_workflow(version: str, timeout: int = 120) -> bool:
         parts = stdout.strip().split('\t')
         if len(parts) >= 2:
             status = parts[0]
-            workflow_name = parts[1] if len(parts) > 1 else ""
 
             if status == "completed":
                 result = parts[1] if len(parts) > 1 else ""
                 if result == "success":
-                    print(f"  ✅ Workflow completed successfully!")
+                    print("  ✅ Workflow completed successfully!")
                     return True
                 else:
                     print(f"  ❌ Workflow failed: {result}")
-                    print(f"\n  View logs: gh run list --workflow=publish-release.yml --limit 1")
-                    print(f"  Debug with: gh run view <run-id> --log-failed")
+                    print("\n  View logs: gh run list --workflow=publish-release.yml --limit 1")
+                    print("  Debug with: gh run view <run-id> --log-failed")
                     return False
 
             elif status == "in_progress":
@@ -159,7 +169,7 @@ def monitor_workflow(version: str, timeout: int = 120) -> bool:
                 time.sleep(10)
 
     print(f"  ⏱ Timeout reached after {timeout}s")
-    print(f"  Check status manually: gh run list --workflow=publish-release.yml")
+    print("  Check status manually: gh run list --workflow=publish-release.yml")
     return False
 
 
@@ -189,7 +199,7 @@ def main() -> int:
             print("\n" + "=" * 60)
             print(f"✅ Release {new_version} published successfully!")
             print("=" * 60)
-            print(f"\nPackage available at: https://pypi.org/project/tunacode-cli/")
+            print("\nPackage available at: https://pypi.org/project/tunacode-cli/")
             return 0
         else:
             print("\n" + "=" * 60)

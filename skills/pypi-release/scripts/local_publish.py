@@ -6,9 +6,9 @@ This script handles local PyPI publishing using the .pypirc token.
 It's useful for testing and local releases when GitHub Actions isn't available.
 """
 
+import os
 import subprocess
 import sys
-import os
 from pathlib import Path
 
 
@@ -39,7 +39,7 @@ def check_pypirc_token() -> bool:
         return False
 
     # Check if file contains token
-    with open(pypirc_path, 'r') as f:
+    with open(pypirc_path) as f:
         content = f.read()
         if "pypi-AgEIcHlwaS5vcmc" in content:
             print("✅ PyPI token found in ~/.pypirc")
@@ -85,7 +85,7 @@ def publish_to_pypi() -> None:
 
     # Extract token from .pypirc
     pypirc_path = Path.home() / ".pypirc"
-    with open(pypirc_path, 'r') as f:
+    with open(pypirc_path) as f:
         content = f.read()
         for line in content.split('\n'):
             if line.startswith('password = pypi-'):
@@ -145,7 +145,7 @@ def main() -> int:
         print("\n" + "=" * 60)
         print("✅ Local PyPI publishing completed!")
         print("=" * 60)
-        print(f"\nPackage available at: https://pypi.org/project/tunacode-cli/")
+        print("\nPackage available at: https://pypi.org/project/tunacode-cli/")
         return 0
 
     except KeyboardInterrupt:
