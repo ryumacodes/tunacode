@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.101] - 2026-03-30
+
+### Added
+- Added a manual GitHub Actions PyPI publish workflow that verifies the requested version, builds artifacts, runs `twine check`, and uploads with the repository `PYPI_API_TOKEN` secret.
+- Vendored a local `pypi-release` skill to document and automate the repository's release flow.
+
+### Changed
+- Aligned the vendored release skill and helper scripts with the repository's new workflow-dispatch publication path.
+- Updated documentation to match the current configuration and UI behavior.
+- Switched user configuration loading to typed config models and continued simplifying registry-backed metadata loading.
+- Cleaned up ignore-pattern handling and removed additional unused packaging and runtime surface area.
+
+### Fixed
+- Restored ignore-file fallback behavior and added related regression coverage.
+- Applied release-gate lint cleanups required for the vendored publish skill scripts.
+
 ## [0.1.100] - 2026-03-25
 
 ### Added
