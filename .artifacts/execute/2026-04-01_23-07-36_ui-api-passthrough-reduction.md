@@ -10,7 +10,7 @@ created_at: "2026-04-01T23:07:41Z"
 owner: "fabian"
 plan_path: ".artifacts/plan/2026-03-31_17-00-48_ui-api-passthrough-reduction/PLAN.md"
 start_commit: "27b7835e"
-end_commit: "d95e12fe"
+end_commit: "2ee4337d"
 env: {target: "local", notes: "Plan refreshed locally before execution; existing ui/headless empty-dir pre-push blocker remains out of scope unless encountered again."}
 ---
 
@@ -53,7 +53,7 @@ env: {target: "local", notes: "Plan refreshed locally before execution; existing
 
 ### T004 – Add a ratchet and fix source docstrings for the reduced `ui_api` surface
 - Status: completed
-- Commit: d95e12fe
+- Commit: 2ee4337d
 - Files: tests/architecture/test_ui_api_surface.py, src/tunacode/core/ui_api/__init__.py, src/tunacode/core/ui_api/file_filter.py, src/tunacode/core/ui_api/lsp_status.py
 - Commands: `uv run pytest tests/architecture/test_ui_api_surface.py tests/test_dependency_layers.py tests/architecture/test_layer_dependencies.py tests/architecture/test_import_order.py tests/architecture/test_init_bloat.py -q` → 70 passed in 0.27s
 - Tests: acceptance pytest suite passed
