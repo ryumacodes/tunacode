@@ -35,7 +35,7 @@ env: {target: "local", notes: "Plan refreshed locally before execution; existing
 
 ### T002 – Migrate runtime and rendering flows off passthrough facades
 - Status: completed
-- Commit: pending
+- Commit: 981f7df9
 - Files: src/tunacode/ui/app.py, src/tunacode/ui/repl_support.py, src/tunacode/ui/commands/clear.py, src/tunacode/ui/commands/compact.py, src/tunacode/ui/screens/session_picker.py, src/tunacode/ui/widgets/messages.py, src/tunacode/ui/widgets/resource_bar.py, src/tunacode/ui/styles.py, src/tunacode/ui/welcome.py, src/tunacode/ui/renderers/agent_response.py, src/tunacode/ui/renderers/panel_widths.py, src/tunacode/ui/renderers/panels.py, src/tunacode/ui/renderers/search.py, src/tunacode/ui/renderers/tools/base.py, src/tunacode/ui/renderers/tools/bash.py, src/tunacode/ui/renderers/tools/diagnostics.py, src/tunacode/ui/renderers/tools/discover.py, src/tunacode/ui/renderers/tools/hashline_edit.py, src/tunacode/ui/renderers/tools/read_file.py, src/tunacode/ui/renderers/tools/web_fetch.py, src/tunacode/ui/renderers/tools/write_file.py
 - Commands: `rg -n "tunacode\.core\.ui_api\.(constants|shared_types|messaging)" ...` → identified runtime/rendering passthrough imports; `! rg -n "tunacode\.core\.ui_api\.(constants|shared_types|messaging)" ...` → pass
 - Tests: acceptance grep passed
@@ -43,16 +43,16 @@ env: {target: "local", notes: "Plan refreshed locally before execution; existing
 - Notes: Replaced UI runtime/rendering imports with direct imports from `tunacode.constants`, `tunacode.types`, and `tunacode.utils.messaging`. Kept `core.ui_api.formatting` and `core.ui_api.lsp_status` imports unchanged per plan.
 
 ### T003 – Delete dead facade modules and narrow the `core/ui_api` package surface
-- Status: in_progress
-- Commit:
-- Files:
-- Commands:
-- Tests:
+- Status: completed
+- Commit: pending
+- Files: src/tunacode/core/ui_api/configuration.py, src/tunacode/core/ui_api/constants.py, src/tunacode/core/ui_api/messaging.py, src/tunacode/core/ui_api/shared_types.py, src/tunacode/core/ui_api/system_paths.py, src/tunacode/core/ui_api/user_configuration.py
+- Commands: `rg -n "tunacode\.core\.ui_api\.(configuration|constants|messaging|shared_types|system_paths|user_configuration)" src/tunacode -g '*.py'` → no matches; `rm ... && ! rg ... && test "$(find src/tunacode/core/ui_api ...)" = "__init__.py file_filter.py formatting.py lsp_status.py "` → pass
+- Tests: repository-wide grep and reduced-surface shell test passed
 - Coverage delta: not measured
-- Notes:
+- Notes: Deleted the six passthrough-only facade modules without shims after verifying no in-repo Python source still imports them. The first commit attempt was blocked by the repo-wide unused-constants hook because `RICHLOG_CLASS_PAUSED` became dead after the import migration; removed that constant as a trivial local lint fix before retrying.
 
 ### T004 – Add a ratchet and fix source docstrings for the reduced `ui_api` surface
-- Status: pending
+- Status: in_progress
 - Commit:
 - Files:
 - Commands:
