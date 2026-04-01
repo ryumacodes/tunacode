@@ -26,7 +26,7 @@ env: {target: "local", notes: "Plan refreshed locally before execution; existing
 
 ### T001 – Migrate startup and model-selection flows off passthrough facades
 - Status: completed
-- Commit: pending
+- Commit: 23d230e7
 - Files: src/tunacode/ui/main.py, src/tunacode/ui/lifecycle.py, src/tunacode/ui/screens/setup.py, src/tunacode/ui/screens/model_picker.py, src/tunacode/ui/screens/api_key_entry.py, src/tunacode/ui/commands/model.py, src/tunacode/ui/commands/theme.py, src/tunacode/ui/commands/update.py, src/tunacode/ui/commands/resume.py
 - Commands: `rg -n "tunacode\.core\.ui_api\.(configuration|user_configuration|system_paths|constants)" ...` → identified targeted imports; `! rg -n "tunacode\.core\.ui_api\.(configuration|user_configuration|system_paths|constants)" ...` → pass
 - Tests: acceptance grep passed
@@ -34,16 +34,16 @@ env: {target: "local", notes: "Plan refreshed locally before execution; existing
 - Notes: Replaced passthrough imports with direct imports from configuration/defaults/models/settings/user_config/paths and tunacode.constants while preserving lazy imports and call ordering. `src/tunacode/ui/commands/update.py` now imports `configuration.paths._get_installed_version` under the existing local alias to avoid changing behavior.
 
 ### T002 – Migrate runtime and rendering flows off passthrough facades
-- Status: in_progress
-- Commit:
-- Files:
-- Commands:
-- Tests:
+- Status: completed
+- Commit: pending
+- Files: src/tunacode/ui/app.py, src/tunacode/ui/repl_support.py, src/tunacode/ui/commands/clear.py, src/tunacode/ui/commands/compact.py, src/tunacode/ui/screens/session_picker.py, src/tunacode/ui/widgets/messages.py, src/tunacode/ui/widgets/resource_bar.py, src/tunacode/ui/styles.py, src/tunacode/ui/welcome.py, src/tunacode/ui/renderers/agent_response.py, src/tunacode/ui/renderers/panel_widths.py, src/tunacode/ui/renderers/panels.py, src/tunacode/ui/renderers/search.py, src/tunacode/ui/renderers/tools/base.py, src/tunacode/ui/renderers/tools/bash.py, src/tunacode/ui/renderers/tools/diagnostics.py, src/tunacode/ui/renderers/tools/discover.py, src/tunacode/ui/renderers/tools/hashline_edit.py, src/tunacode/ui/renderers/tools/read_file.py, src/tunacode/ui/renderers/tools/web_fetch.py, src/tunacode/ui/renderers/tools/write_file.py
+- Commands: `rg -n "tunacode\.core\.ui_api\.(constants|shared_types|messaging)" ...` → identified runtime/rendering passthrough imports; `! rg -n "tunacode\.core\.ui_api\.(constants|shared_types|messaging)" ...` → pass
+- Tests: acceptance grep passed
 - Coverage delta: not measured
-- Notes:
+- Notes: Replaced UI runtime/rendering imports with direct imports from `tunacode.constants`, `tunacode.types`, and `tunacode.utils.messaging`. Kept `core.ui_api.formatting` and `core.ui_api.lsp_status` imports unchanged per plan.
 
 ### T003 – Delete dead facade modules and narrow the `core/ui_api` package surface
-- Status: pending
+- Status: in_progress
 - Commit:
 - Files:
 - Commands:
