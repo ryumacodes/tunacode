@@ -214,6 +214,37 @@ BUILTIN_THEME_PALETTES: dict[str, dict[str, str]] = {
     },
 }
 
+BUILTIN_THEME_COLOR_FIELDS: tuple[str, ...] = (
+    "foreground",
+    "background",
+    "surface",
+    "panel",
+)
+
+# Textual 4.0.0 leaves some built-ins with unresolved theme object fields even
+# though its ColorSystem later computes concrete defaults for rendering. Freeze
+# those concrete values here so TunaCode can safely re-register the built-ins.
+BUILTIN_THEME_COLOR_FALLBACKS: dict[str, dict[str, str]] = {
+    "textual-dark": {
+        "foreground": "#E0E0E0",
+        "background": "#121212",
+        "surface": "#1E1E1E",
+        "panel": "#242F38",
+    },
+    "textual-light": {
+        "foreground": "#1F1F1F",
+        "background": "#E0E0E0",
+        "surface": "#D8D8D8",
+        "panel": "#D0D0D0",
+    },
+    "textual-ansi": {
+        "foreground": "#000000",
+        "background": "#FFFFFF",
+        "surface": "#FFFFFF",
+        "panel": "#E5E5F2",
+    },
+}
+
 SUPPORTED_THEME_NAMES: tuple[str, ...] = (
     THEME_NAME,
     NEXTSTEP_THEME_NAME,
@@ -299,6 +330,13 @@ def _wrap_builtin_theme(theme: Theme, palette: Mapping[str, str]) -> Theme:
     from textual.theme import Theme as ThemeCls
 
     merged_vars = {**theme.variables, **_build_theme_variables(palette)}
+    fallback_colors = BUILTIN_THEME_COLOR_FALLBACKS.get(theme.name, {})
+
+    def resolve_color_field(field: str) -> str | None:
+        value = getattr(theme, field, None)
+        if value not in (None, "ansi_default"):
+            return value
+        return fallback_colors.get(field, value)
 
     return ThemeCls(
         name=theme.name,
@@ -308,10 +346,10 @@ def _wrap_builtin_theme(theme: Theme, palette: Mapping[str, str]) -> Theme:
         error=getattr(theme, "error", None),
         success=getattr(theme, "success", None),
         accent=getattr(theme, "accent", None),
-        foreground=getattr(theme, "foreground", None),
-        background=getattr(theme, "background", None),
-        surface=getattr(theme, "surface", None),
-        panel=getattr(theme, "panel", None),
+        foreground=resolve_color_field("foreground"),
+        background=resolve_color_field("background"),
+        surface=resolve_color_field("surface"),
+        panel=resolve_color_field("panel"),
         boost=getattr(theme, "boost", None),
         dark=theme.dark,
         luminosity_spread=getattr(theme, "luminosity_spread", 0.15),
