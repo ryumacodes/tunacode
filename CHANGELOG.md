@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-02
+
+### Changed
+- Cached conversation total token counts and improved request debug flow.
+- Hardened the harness audit workflow.
+- Documented the deployment flow and refreshed workflow action references.
+
 ## [0.1.101] - 2026-03-30
 
 ### Added
