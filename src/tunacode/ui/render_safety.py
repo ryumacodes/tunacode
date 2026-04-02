@@ -26,6 +26,13 @@ def _default_terminal_color(*, ansi_theme: TerminalTheme, foreground: bool) -> R
     return RichColor.from_rgb(*triplet)
 
 
+def _require_color_triplet(color: RichColor) -> tuple[int, int, int]:
+    triplet = color.triplet
+    if triplet is None:
+        raise ValueError("render_safety requires a concrete Rich color triplet")
+    return triplet.red, triplet.green, triplet.blue
+
+
 def _resolve_color(
     color: RichColor | None,
     *,
@@ -50,13 +57,13 @@ def theme_fallback_colors(theme: Theme, ansi_theme: TerminalTheme) -> tuple[Rich
     default_background = _default_terminal_color(ansi_theme=ansi_theme, foreground=False)
 
     foreground = _resolve_color(
-        Color.parse(theme.foreground).rich_color if theme.foreground is not None else None,
+        (Color.parse(theme.foreground).rich_color if theme.foreground is not None else None),
         ansi_theme=ansi_theme,
         fallback=default_foreground,
         foreground=True,
     )
     background = _resolve_color(
-        Color.parse(theme.background).rich_color if theme.background is not None else None,
+        (Color.parse(theme.background).rich_color if theme.background is not None else None),
         ansi_theme=ansi_theme,
         fallback=default_background,
         foreground=False,
@@ -92,13 +99,12 @@ def normalize_rich_style(
 
     if style.dim and foreground is not None:
         blend_background = background or fallback_background
+        background_red, background_green, background_blue = _require_color_triplet(blend_background)
+        foreground_red, foreground_green, foreground_blue = _require_color_triplet(foreground)
         foreground = RichColor.from_rgb(
-            blend_background.triplet.red
-            + (foreground.triplet.red - blend_background.triplet.red) * DIM_FACTOR,
-            blend_background.triplet.green
-            + (foreground.triplet.green - blend_background.triplet.green) * DIM_FACTOR,
-            blend_background.triplet.blue
-            + (foreground.triplet.blue - blend_background.triplet.blue) * DIM_FACTOR,
+            background_red + (foreground_red - background_red) * DIM_FACTOR,
+            background_green + (foreground_green - background_green) * DIM_FACTOR,
+            background_blue + (foreground_blue - background_blue) * DIM_FACTOR,
         )
         style = style + Style(dim=False)
 
@@ -117,24 +123,31 @@ def normalize_text(
     normalized = text.copy()
     base_style = _coerce_style(normalized.style)
     if base_style is not None:
-        normalized.style = normalize_rich_style(
+        normalized_base_style = normalize_rich_style(
             base_style,
             ansi_theme=ansi_theme,
             fallback_foreground=fallback_foreground,
             fallback_background=fallback_background,
         )
+        if normalized_base_style is not None:
+            normalized.style = normalized_base_style
 
-    normalized.spans = [
-        Span(
-            span.start,
-            span.end,
-            normalize_rich_style(
-                _coerce_style(span.style),
-                ansi_theme=ansi_theme,
-                fallback_foreground=fallback_foreground,
-                fallback_background=fallback_background,
-            ),
+    normalized_spans: list[Span] = []
+    for span in normalized.spans:
+        span_style = _coerce_style(span.style)
+        normalized_span_style = normalize_rich_style(
+            span_style,
+            ansi_theme=ansi_theme,
+            fallback_foreground=fallback_foreground,
+            fallback_background=fallback_background,
         )
-        for span in normalized.spans
-    ]
+        normalized_spans.append(
+            Span(
+                span.start,
+                span.end,
+                span.style if normalized_span_style is None else normalized_span_style,
+            )
+        )
+
+    normalized.spans = normalized_spans
     return normalized

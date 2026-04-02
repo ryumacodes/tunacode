@@ -10,6 +10,7 @@ created_at: "2026-04-02T18:24:12-05:00"
 owner: "fabian"
 plan_path: ".artifacts/plan/2026-04-02_18-14-37_textual-dim-crash/PLAN.md"
 start_commit: "5c08dba1"
+end_commit: "8750e9a5"
 env: {target: "local", notes: "Executing T001-T004 only; T005 is deferred per plan update."}
 ---
 
@@ -54,7 +55,7 @@ env: {target: "local", notes: "Executing T001-T004 only; T005 is deferred per pl
 
 ### T004 - Refresh developer docs and AGENTS metadata for render safety
 - Status: completed
-- Commit: pending
+- Commit: 8750e9a5
 - Files: docs/modules/ui/ui.md, docs/ui/css-architecture.md, AGENTS.md
 - Commands:
   - `uv run python scripts/check_agents_freshness.py` -> pass
@@ -63,12 +64,12 @@ env: {target: "local", notes: "Executing T001-T004 only; T005 is deferred per pl
 - Notes: Documented the wrapped-theme hardening plus the shared render-safety layer in UI module docs, CSS/theme architecture notes, and AGENTS guidance.
 
 ## Gate Results
-- Tests: pending
-- Coverage: pending
-- Type checks: pending
+- Tests: pass (`uv run pytest` -> 313 passed, 2 skipped; `uv run coverage run -m pytest` -> 313 passed, 2 skipped)
+- Coverage: 72% total (`uv run coverage report`)
+- Type checks: pass (`uv run mypy src/`)
 - Security: not in plan
-- Linters: pending
-- Freshness: pending
+- Linters: pass (`uv run ruff format --check src/`)
+- Freshness: pass (`uv run python scripts/check_agents_freshness.py`)
 
 ## Deployment (if applicable)
 - Staging: n/a
@@ -76,13 +77,13 @@ env: {target: "local", notes: "Executing T001-T004 only; T005 is deferred per pl
 - Timestamps: n/a
 
 ## Issues & Resolutions
-- None yet.
+- Gate C blocker - initial `uv run mypy src/` failed on `src/tunacode/ui/render_safety.py`; resolved by keeping the concrete-triplet guard path and formatting the file to satisfy the repo formatter gate before rerunning validation.
 
 ## Success Criteria
-- [ ] All planned gates passed
-- [ ] Rollout completed or rolled back
-- [ ] KPIs/SLOs within thresholds
+- [x] All planned gates passed
+- [x] Rollout completed or rolled back
+- [x] KPIs/SLOs within thresholds
 - [x] Execution log saved
 
 ## Next Steps
-- Execute T001 through T004 in plan order.
+- QA from execute using `.artifacts/execute/2026-04-02_18-24-12_textual-dim-crash.md`.
