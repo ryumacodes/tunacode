@@ -34,7 +34,7 @@ env: {target: "local", notes: "Executing T001-T004 only; T005 is deferred per pl
 
 ### T002 - Normalize Rich segment styles before Textual filter execution
 - Status: completed
-- Commit: pending
+- Commit: b16b813f
 - Files: src/tunacode/ui/render_safety.py, src/tunacode/ui/widgets/chat.py, src/tunacode/ui/welcome.py, tests/unit/ui/test_render_safety.py
 - Commands:
   - `uv run pytest tests/unit/ui/test_render_safety.py -q` -> pass (3 passed)
@@ -43,7 +43,14 @@ env: {target: "local", notes: "Executing T001-T004 only; T005 is deferred per pl
 - Notes: Added a single UI render-safety layer that resolves ANSI/default Rich colors against the active terminal theme and clears `dim` before Textual filters run.
 
 ### T003 - Add a startup and theme-switch crash regression harness
-- Status: pending
+- Status: completed
+- Commit: pending
+- Files: tests/integration/ui/test_theme_render_crash_regression.py
+- Commands:
+  - `uv run pytest tests/integration/ui/test_theme_render_crash_regression.py -q` -> pass (1 passed)
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Exercised real startup welcome rendering, injected a dim/default probe message, switched through the risky built-in themes, and hit the ThemePicker live-preview path without exceptions.
 
 ### T004 - Refresh developer docs and AGENTS metadata for render safety
 - Status: pending
