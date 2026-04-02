@@ -25,6 +25,8 @@ from textual.visual import RichVisual, Visual, visualize
 from textual.widget import Widget
 from textual.widgets import Static
 
+from tunacode.ui.render_safety import normalize_rich_style, theme_fallback_colors
+
 
 class SelectableRichVisual(RichVisual):
     """RichVisual subclass that injects offset metadata into rendered segments.
@@ -47,11 +49,16 @@ class SelectableRichVisual(RichVisual):
         selection_style: Style | None = None,
         _post_style: Style | None = None,
     ) -> list[Strip]:
-        console = active_app.get().console
+        app = active_app.get()
+        console = app.console
         options = console.options.update(
             highlight=False,
             width=width,
             height=height,
+        )
+        fallback_foreground, fallback_background = theme_fallback_colors(
+            app.current_theme,
+            app.ansi_theme,
         )
         rich_style = style.rich_style
         renderable = self._widget.post_render(self._renderable, rich_style)
@@ -81,7 +88,12 @@ class SelectableRichVisual(RichVisual):
                     continue
 
                 seg_cells = segment.cell_length
-                base_style = segment.style
+                base_style = normalize_rich_style(
+                    segment.style,
+                    ansi_theme=app.ansi_theme,
+                    fallback_foreground=fallback_foreground,
+                    fallback_background=fallback_background,
+                )
 
                 if span is None or sel_rich_style is None:
                     new_segments.append(

@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING, Protocol
 
 from rich.console import RenderableType
 from rich.text import Text
+from textual._context import active_app
 
 from tunacode.core.ui_api.constants import APP_NAME, APP_VERSION
 
+from tunacode.ui.render_safety import normalize_text, theme_fallback_colors
 from tunacode.ui.logo_assets import LOGO_WELCOME_FILENAME, read_logo_ansi
 from tunacode.ui.styles import (
     STYLE_MUTED,
@@ -43,7 +45,19 @@ def show_welcome(log: WriteableLog) -> None:
     except FileNotFoundError as exc:
         log.write(Text(str(exc), style=STYLE_WARNING))
     else:
-        log.write(logo)
+        app = active_app.get()
+        fallback_foreground, fallback_background = theme_fallback_colors(
+            app.current_theme,
+            app.ansi_theme,
+        )
+        log.write(
+            normalize_text(
+                logo,
+                ansi_theme=app.ansi_theme,
+                fallback_foreground=fallback_foreground,
+                fallback_background=fallback_background,
+            )
+        )
 
     welcome_title = WELCOME_TITLE_FORMAT.format(name=APP_NAME, version=APP_VERSION)
     welcome = Text()

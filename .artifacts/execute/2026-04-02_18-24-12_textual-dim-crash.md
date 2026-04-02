@@ -24,7 +24,7 @@ env: {target: "local", notes: "Executing T001-T004 only; T005 is deferred per pl
 
 ### T001 - Harden wrapped built-in themes against unresolved colors
 - Status: completed
-- Commit: pending
+- Commit: 4f8469c0
 - Files: src/tunacode/constants.py, tests/unit/ui/test_theme_wrapping.py
 - Commands:
   - `uv run pytest tests/unit/ui/test_theme_wrapping.py -q` -> pass (4 passed)
@@ -33,7 +33,14 @@ env: {target: "local", notes: "Executing T001-T004 only; T005 is deferred per pl
 - Notes: Added concrete fallback color fields for risky wrapped built-in themes while preserving existing contract-variable merges.
 
 ### T002 - Normalize Rich segment styles before Textual filter execution
-- Status: pending
+- Status: completed
+- Commit: pending
+- Files: src/tunacode/ui/render_safety.py, src/tunacode/ui/widgets/chat.py, src/tunacode/ui/welcome.py, tests/unit/ui/test_render_safety.py
+- Commands:
+  - `uv run pytest tests/unit/ui/test_render_safety.py -q` -> pass (3 passed)
+- Tests: pass
+- Coverage delta: not measured
+- Notes: Added a single UI render-safety layer that resolves ANSI/default Rich colors against the active terminal theme and clears `dim` before Textual filters run.
 
 ### T003 - Add a startup and theme-switch crash regression harness
 - Status: pending
