@@ -61,6 +61,8 @@ catppuccin-latte, catppuccin-mocha, dracula, flexoki, gruvbox, monokai, nord, so
 
 At startup, `wrap_builtin_themes()` takes each built-in theme, merges the contract variables on top of its existing variables, and re-registers it. This means every theme in the picker emits the same variable schema.
 
+For Textual 4.0.0, TunaCode also hardens wrapped built-ins so `foreground`, `background`, `surface`, and `panel` never stay as `None` or `ansi_default` when TunaCode can provide a concrete fallback. That keeps startup and theme-preview rendering on a fully concrete theme object.
+
 **Total: 14 supported themes.**
 
 ## Rules
@@ -90,9 +92,11 @@ STYLE_SUBHEADING = "bold #00d7d7"
 
 These reference `UI_COLORS` directly. They are used by renderers and the welcome screen -- anywhere Rich text is composed outside of Textual CSS.
 
+Rich content that passes through chat rendering or the ANSI welcome logo also flows through `src/tunacode/ui/render_safety.py` before Textual filters touch it. That helper resolves ANSI/default colors against the active terminal theme and precomputes `dim` blending so Textual 4.0.0 never receives unresolved Rich colors in the selection/filter path.
+
 ## Theme Picker
 
-`src/tunacode/ui/screens/theme_picker.py` -- modal with live preview. Navigating the list swaps the theme in real time. ESC reverts to the original.
+`src/tunacode/ui/screens/theme_picker.py` -- modal with live preview. Navigating the list swaps the theme in real time. ESC reverts to the original. The preview path depends on the same wrapped-theme hardening plus `render_safety.py`, so welcome/chat Rich content stays safe while the preview flips between built-ins.
 
 ## Zone Layout
 

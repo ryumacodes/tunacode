@@ -47,6 +47,7 @@ The Textual-based terminal user interface for TunaCode. Handles all user interac
 | File | Purpose |
 |------|---------|
 | `widgets/chat.py` | `ChatContainer` — scrollable chat history with insertion point tracking. `CopyOnSelectStatic` preserves mouse selection for Rich renderables. `SelectableRichVisual` injects offset metadata for selection. |
+| `render_safety.py` | Resolves ANSI/default Rich colors to concrete theme-aware colors and precomputes `dim` styling before Textual 4.0.0 filter handling. Shared by chat rendering and welcome-screen startup output. |
 | `widgets/editor.py` | `Editor` — enhanced single-line input with Enter-submit, bash-mode (`!` prefix), paste buffer for multiline input, and custom rendering. |
 | `widgets/resource_bar.py` | Top status bar displaying token usage percentage, model name, session cost, LSP server status, and compaction activity. |
 | `widgets/status_bar.py` | Bottom status bar with 3 zones: git branch/location (left), edited files (mid), last action (right). |
@@ -296,6 +297,7 @@ The UI layer follows **NeXTSTEP User Interface Guidelines** (see `.claude/skills
 **Why Rich-selection support?**
 - Chat messages and tool panels include Rich renderables, not just plain text widgets.
 - `SelectableRichVisual` injects offset metadata that Textual's selection requires but doesn't provide by default.
+- `render_safety.normalize_rich_style()` resolves ANSI/default colors and clears `dim` before Textual filters run, which keeps startup welcome rendering and theme preview changes from crashing on unresolved Rich colors.
 - `CopyOnSelectStatic.get_selection()` extracts text from rendered strips so selections still work.
 - `TextualReplApp` binds `ctrl+y` and `ctrl+shift+c` to `copy_selection_to_clipboard()`, which mirrors the current selection into the system clipboard via OSC 52, `pyperclip`, or platform-native commands.
 

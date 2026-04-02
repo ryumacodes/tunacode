@@ -44,7 +44,7 @@ env: {target: "local", notes: "Executing T001-T004 only; T005 is deferred per pl
 
 ### T003 - Add a startup and theme-switch crash regression harness
 - Status: completed
-- Commit: pending
+- Commit: 59d111ac
 - Files: tests/integration/ui/test_theme_render_crash_regression.py
 - Commands:
   - `uv run pytest tests/integration/ui/test_theme_render_crash_regression.py -q` -> pass (1 passed)
@@ -53,7 +53,14 @@ env: {target: "local", notes: "Executing T001-T004 only; T005 is deferred per pl
 - Notes: Exercised real startup welcome rendering, injected a dim/default probe message, switched through the risky built-in themes, and hit the ThemePicker live-preview path without exceptions.
 
 ### T004 - Refresh developer docs and AGENTS metadata for render safety
-- Status: pending
+- Status: completed
+- Commit: pending
+- Files: docs/modules/ui/ui.md, docs/ui/css-architecture.md, AGENTS.md
+- Commands:
+  - `uv run python scripts/check_agents_freshness.py` -> pass
+- Tests: pass
+- Coverage delta: not applicable
+- Notes: Documented the wrapped-theme hardening plus the shared render-safety layer in UI module docs, CSS/theme architecture notes, and AGENTS guidance.
 
 ## Gate Results
 - Tests: pending

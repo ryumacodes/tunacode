@@ -44,7 +44,7 @@ Last Updated: 2026-04-02
 - Developer entry: `Makefile` target `make run` -> `uv run tunacode`.
 
 ## Source Structure (high-level)
-- `src/tunacode/ui/` — terminal UI, widgets, screens, CSS, command shell.
+- `src/tunacode/ui/` — terminal UI, widgets, screens, CSS, command shell, and render-safety helpers for Rich/Textual theme stability.
 - `src/tunacode/core/` — agents, compaction, session, prompting, logging.
 - `src/tunacode/tools/` — native tinyagent tool implementations (`bash`, `discover`, `read_file`, `hashline_edit`, `web_fetch`, `write_file`) plus supporting helpers.
 - `src/tunacode/configuration/` — settings, model registry, API paths, limits, pricing, and ignore patterns.
@@ -121,4 +121,5 @@ Last Updated: 2026-04-02
 - Prefer small, scoped changes.
 - Keep edits minimal and targeted.
 - Prefer existing patterns; mirror command/test naming used in nearby code.
+- Treat `src/tunacode/ui/render_safety.py` plus built-in theme wrapping in `src/tunacode/constants.py` as part of the startup/theme stability path; keep Rich default/ANSI color handling local to TunaCode rather than patching Textual.
 - Run validation commands before handoff when touching architecture, dependencies, or shared packages.
