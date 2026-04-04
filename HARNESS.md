@@ -1,8 +1,19 @@
+---
+title: Harness
+summary: Repository code-quality harness for hooks, CI checks, and local enforcement.
+when_to_read:
+  - When auditing pre-commit or pre-push hooks
+  - When checking local and CI enforcement behavior
+last_updated: "2026-04-04"
+---
+
 # HARNESS.md
 
 ## Pre-commits
 
 Source of truth: `.pre-commit-config.yaml`
+
+Git hook entrypoints are repo-managed wrappers in `.githooks/`, installed into `.git/hooks/` as relative symlinks by `scripts/install-git-hooks.sh`. This keeps hook execution tied to the checkout's local `.venv` after the repository directory moves.
 
 ### Global pre-commit settings
 - Python runtime: `python3`
@@ -55,6 +66,7 @@ Source of truth: `.pre-commit-config.yaml`
 - `tests/architecture/test_init_bloat.py` enforces thin `__init__.py` modules.
 - `scripts/check_agents_freshness.py` validates `AGENTS.md` freshness against recent `src/` and `docs/` changes.
 - `doc8` (repo: `pycqa/doc8`, args: `--max-line-length=120`)
+  - Current behavior: the hook is configured, but `pre-commit run doc8 --all-files` skips in this repository because no matching doc8-supported files are selected.
 
 ### Currently disabled in config
 - `isort` (commented out; replaced by Ruff import sorting)
@@ -70,6 +82,7 @@ Pre-push hooks run from `.pre-commit-config.yaml` with stage `pre-push`.
 - `pylint-duplicates` (local, duplicate-code check)
 - `pytest` (local, `uv run pytest -x -q`)
 - `empty-dir-check` (local, `uv run python scripts/utils/check_empty_dirs.py`)
+- `markdown-frontmatter` (local, `uv run python scripts/check_markdown_frontmatter.py`, scoped to repo-root/docs markdown except `AGENTS.md`)
 
 ### Run hooks manually
 - Canonical local harness entrypoint: `make check`

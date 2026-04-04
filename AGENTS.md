@@ -84,6 +84,7 @@ Last Updated: 2026-04-04
 
 ## Routine Commands
 - Setup: `make install` (canonical full dev environment bootstrap).
+  - Installs repo-managed `pre-commit` and `pre-push` git hooks from `.githooks/`.
 - Compatibility alias: `make dev-setup`.
 - Run app: `make run`.
 - Full tests: `make test`.

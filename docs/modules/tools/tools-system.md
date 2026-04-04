@@ -4,6 +4,11 @@ summary: Architecture and implementation of the native tinyagent tool system use
 read_when: Understanding how tools are implemented, registered, and executed in the agent loop.
 depends_on: [types, infrastructure, configuration, core]
 feeds_into: [core]
+when_to_read:
+  - Understanding how tools are implemented
+  - Understanding how tools are registered
+  - Understanding how tools are executed in the agent loop
+last_updated: "2026-04-04"
 ---
 
 # Tools System

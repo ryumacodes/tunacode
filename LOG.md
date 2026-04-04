@@ -1,3 +1,12 @@
+---
+title: Headless Code Removal Log
+summary: Change log for the headless code removal work and related cleanup notes.
+when_to_read:
+  - When tracing headless-mode cleanup history
+  - When reviewing prior removal work
+last_updated: "2026-04-04"
+---
+
 # Headless Code Removal Log
 
 **Date:** 2026-03-29

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+    HOOK_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ "$SOURCE" != /* ]] && SOURCE="$HOOK_DIR/$SOURCE"
+done
+HOOK_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+exec "$HOOK_DIR/../scripts/run-pre-commit-hook.sh" pre-commit "$@"

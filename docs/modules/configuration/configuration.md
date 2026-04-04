@@ -4,6 +4,11 @@ summary: User settings, model registry, path resolution, pricing tables, and ign
 read_when: Adding a new user-facing setting, supporting a new provider, or changing default behavior.
 depends_on: [types, infrastructure]
 feeds_into: [core, tools, ui]
+when_to_read:
+  - Adding a new user-facing setting
+  - Supporting a new provider
+  - Changing default behavior
+last_updated: "2026-04-04"
 ---
 
 # Configuration Layer

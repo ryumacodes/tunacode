@@ -1,3 +1,12 @@
+---
+title: Deployment
+summary: Runbook for publishing tunacode-cli to PyPI and handling the release flow.
+when_to_read:
+  - When preparing a PyPI release
+  - When reviewing the deployment runbook
+last_updated: "2026-04-04"
+---
+
 # Deployment
 
 This document is the repository runbook for publishing `tunacode-cli` to PyPI.

@@ -1,3 +1,12 @@
+---
+title: Documentation Workflow
+summary: Workflow guidance for keeping documentation truthful, focused, and easy to maintain.
+when_to_read:
+  - When editing docs
+  - When reorganizing documentation content
+last_updated: "2026-04-04"
+---
+
 # Documentation Work
 
 Documentation is a first-class citizen in this repository.

@@ -1,3 +1,12 @@
+---
+title: TunaCode Headless RPC Rewrite Plan
+summary: Implementation plan for replacing the current one-shot headless path with a long-lived RPC agent mode.
+when_to_read:
+  - When implementing the headless RPC rewrite
+  - When reviewing the migration plan
+last_updated: "2026-04-04"
+---
+
 # TunaCode headless RPC rewrite plan
 
 ## Goal

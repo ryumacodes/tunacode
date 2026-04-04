@@ -1,3 +1,12 @@
+---
+title: Development Workflows
+summary: Index of the repository's accepted development workflows.
+when_to_read:
+  - When choosing a workflow for a task
+  - When navigating the workflow docs
+last_updated: "2026-04-04"
+---
+
 # Development Workflows
 
 This directory is the map for accepted development workflows in `tunacode-cli`.

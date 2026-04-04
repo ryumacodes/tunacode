@@ -14,9 +14,9 @@ fi
 echo "Reinstalling project dependencies into .venv..."
 uv sync --extra dev --reinstall --frozen
 
-# Set up pre-commit hooks
-echo "Installing pre-commit hooks..."
-uv run pre-commit install
+# Set up repository-managed git hooks
+echo "Installing git hooks..."
+bash scripts/install-git-hooks.sh
 
 # Validate environment
 echo "Validating environment..."

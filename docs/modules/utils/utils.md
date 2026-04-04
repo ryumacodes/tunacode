@@ -4,6 +4,11 @@ summary: Cross-cutting utilities for message conversion, token estimation, and r
 read_when: Modifying message format handling, changing token estimation heuristics, or adjusting file-listing behavior.
 depends_on: [types, configuration]
 feeds_into: [core, tools, ui]
+when_to_read:
+  - Modifying message format handling
+  - Changing token estimation heuristics
+  - Adjusting file-listing behavior
+last_updated: "2026-04-04"
 ---
 
 # Utilities Layer

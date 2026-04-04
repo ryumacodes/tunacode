@@ -1,3 +1,12 @@
+---
+title: PR 429 CodeRabbit Review Notes
+summary: Review notes and merge recommendation for PR 429 and its CodeRabbit feedback.
+when_to_read:
+  - When reviewing PR 429 feedback
+  - When checking the historical review outcome
+last_updated: "2026-04-04"
+---
+
 # PR 429 CodeRabbit Review Notes
 
 Date: 2026-03-16

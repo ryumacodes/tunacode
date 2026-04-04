@@ -4,6 +4,12 @@ summary: Textual-based TUI application, screens, widgets, renderers, command sys
 read_when: Modifying the REPL interface, adding new commands, styling components, or changing user interaction patterns.
 depends_on: [types, infrastructure, core, configuration]
 feeds_into: []
+when_to_read:
+  - Modifying the REPL interface
+  - Adding new commands
+  - Styling components
+  - Changing user interaction patterns
+last_updated: "2026-04-04"
 ---
 
 # UI Layer

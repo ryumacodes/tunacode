@@ -4,6 +4,11 @@ summary: Agent loop orchestration, context compaction, session state management,
 read_when: Debugging agent behavior, modifying the request lifecycle, or changing how session state is persisted.
 depends_on: [types, infrastructure, configuration, tools]
 feeds_into: [ui]
+when_to_read:
+  - Debugging agent behavior
+  - Modifying the request lifecycle
+  - Changing how session state is persisted
+last_updated: "2026-04-04"
 ---
 
 # Core Layer

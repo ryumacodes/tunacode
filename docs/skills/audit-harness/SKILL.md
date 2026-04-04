@@ -1,6 +1,12 @@
 ---
 name: audit-harness
 description: Use when auditing HARNESS.md, pre-commit hooks, pre-push hooks, architecture gates, or CI workflows for tunacode-cli. This skill treats any mismatch, skipped gate, or failing check as a critical failure and requires manual one-by-one execution rather than make targets, batch wrappers, or summary-only audits.
+when_to_read:
+  - Auditing HARNESS.md
+  - Verifying harness accuracy
+  - Running pre-commit or pre-push hooks manually
+summary: Strict procedure for auditing harness, hook, and CI enforcement in tunacode-cli.
+last_updated: "2026-04-04"
 ---
 
 # Audit Harness

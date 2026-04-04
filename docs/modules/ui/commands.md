@@ -4,6 +4,11 @@ summary: Slash commands and shell-command dispatch for the Textual REPL, includi
 read_when: Adding a new command, changing command parsing, or updating REPL routing behavior.
 depends_on: [ui]
 feeds_into: [ui]
+when_to_read:
+  - Adding a new command
+  - Changing command parsing
+  - Updating REPL routing behavior
+last_updated: "2026-04-04"
 ---
 
 # UI Command System

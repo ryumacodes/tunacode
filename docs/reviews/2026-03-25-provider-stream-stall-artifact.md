@@ -1,3 +1,12 @@
+---
+title: Provider Stream Stall Research Artifact
+summary: Research notes about the remaining stream stall that occurs before provider events arrive.
+when_to_read:
+  - When investigating provider stream stalls
+  - When reviewing the stream-stall research artifact
+last_updated: "2026-04-04"
+---
+
 # Provider Stream Stall Research Artifact
 
 Date: 2026-03-25

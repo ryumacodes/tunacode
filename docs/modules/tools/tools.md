@@ -4,6 +4,11 @@ summary: Native tinyagent tool implementations and the helper modules they depen
 read_when: Adding a tool, changing native tinyagent tool contracts, or tracing helper modules used by the active tools.
 depends_on: [types, infrastructure, configuration]
 feeds_into: [core]
+when_to_read:
+  - Adding a tool
+  - Changing native tinyagent tool contracts
+  - Tracing helper modules used by the active tools
+last_updated: "2026-04-04"
 ---
 
 # Tools Layer

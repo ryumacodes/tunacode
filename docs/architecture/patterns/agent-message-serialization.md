@@ -13,6 +13,12 @@ depends_on:
   - src/tunacode/types/canonical.py
 feeds_into:
   - docs/modules/core/core.md
+when_to_read:
+  - Modifying agent message handling
+  - Working on abort/resume logic
+  - Reviewing type boundary violations
+  - Understanding message type ownership
+last_updated: "2026-04-04"
 ---
 
 ## The Problem: Three Type Systems for One Concept

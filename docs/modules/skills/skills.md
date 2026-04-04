@@ -4,6 +4,11 @@ summary: Discovery, validation, selection, caching, and prompt rendering for use
 read_when: Adding or debugging `/skills`, changing skill file validation, or tracing how loaded skills reach the system prompt.
 depends_on: [infrastructure, core]
 feeds_into: [core, ui]
+when_to_read:
+  - Adding or debugging `/skills`
+  - Changing skill file validation
+  - Tracing how loaded skills reach the system prompt
+last_updated: "2026-04-04"
 ---
 
 # Skills Package

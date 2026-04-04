@@ -1,3 +1,12 @@
+---
+title: Changelog
+summary: Release history for TunaCode versions and notable changes.
+when_to_read:
+  - When preparing a release note
+  - When reviewing past changes or version history
+last_updated: "2026-04-04"
+---
+
 # Changelog
 
 All notable changes to this project will be documented in this file.

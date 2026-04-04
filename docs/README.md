@@ -1,3 +1,12 @@
+---
+title: Documentation Index
+summary: Overview of the repository documentation tree and where to find each doc family.
+when_to_read:
+  - When locating documentation
+  - When navigating docs by topic
+last_updated: "2026-04-04"
+---
+
 # Docs
 
 This directory contains project documentation, architecture artifacts, and reference materials for TunaCode.

@@ -1,3 +1,12 @@
+---
+title: Git Practices
+summary: Safe Git operating practices for humans and code agents in this repository.
+when_to_read:
+  - Before performing Git operations
+  - When deciding whether cleanup is safe
+last_updated: "2026-04-04"
+---
+
 # Git Practices
 
 ## Purpose

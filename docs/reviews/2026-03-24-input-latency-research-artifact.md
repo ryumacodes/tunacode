@@ -1,3 +1,12 @@
+---
+title: Input Latency Research Artifact
+summary: Research notes explaining the causes of input latency during active requests.
+when_to_read:
+  - When investigating editor sluggishness during requests
+  - When reviewing the original latency research
+last_updated: "2026-04-04"
+---
+
 # Input Latency Research Artifact
 
 Date: 2026-03-24

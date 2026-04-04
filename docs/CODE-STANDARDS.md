@@ -1,3 +1,12 @@
+---
+title: Code Standards
+summary: Repository coding standards and guardrails for keeping changes simple and scoped.
+when_to_read:
+  - When editing source code
+  - When reviewing local style and complexity rules
+last_updated: "2026-04-04"
+---
+
 # CODE-STANDARDS.md
 
 ## Purpose

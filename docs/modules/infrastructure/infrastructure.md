@@ -4,6 +4,11 @@ summary: Thread-safe caching infrastructure with pluggable invalidation strategi
 read_when: Adding a new cached resource, debugging stale cache state, or changing invalidation behavior.
 depends_on: [types]
 feeds_into: [configuration, core, tools]
+when_to_read:
+  - Adding a new cached resource
+  - Debugging stale cache state
+  - Changing invalidation behavior
+last_updated: "2026-04-04"
 ---
 
 # Infrastructure Layer

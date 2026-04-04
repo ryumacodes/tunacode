@@ -1,3 +1,12 @@
+---
+title: CSS Architecture
+summary: Styling architecture and design language notes for the TunaCode UI.
+when_to_read:
+  - When editing UI styles
+  - When updating the visual system or theme layout
+last_updated: "2026-04-04"
+---
+
 # CSS Architecture
 
 ## Design Language

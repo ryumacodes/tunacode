@@ -1,3 +1,12 @@
+---
+title: Dependency Layers
+summary: Generated layer dependency summary for the current TunaCode codebase.
+when_to_read:
+  - When auditing layer imports or dependency direction.
+  - When regenerating the dependency map artifact.
+last_updated: "2026-04-04"
+---
+
 # Dependency Layers
 
 Generated: 2026-02-15

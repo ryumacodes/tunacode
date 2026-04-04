@@ -4,6 +4,10 @@ summary: Reading order and layer map for tunacode's architecture.
 read_when: Starting work on the codebase or orienting after time away.
 depends_on: []
 feeds_into: []
+when_to_read:
+  - Starting work on the codebase
+  - Orienting after time away
+last_updated: "2026-04-04"
 ---
 
 # Module Documentation

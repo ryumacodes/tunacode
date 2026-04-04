@@ -1,3 +1,13 @@
+---
+title: tunacode-cli
+summary: Project overview, setup instructions, and development entry points for TunaCode.
+when_to_read:
+  - When cloning the repository
+  - When setting up development locally
+  - When looking for the main project entry points
+last_updated: "2026-04-04"
+---
+
 # tunacode-cli
 
 <img src="assets/home.png" alt="tunacode" width="600"/>
@@ -74,6 +84,8 @@ make test       # Run test suite
 make lint       # Run linters
 make clean      # Clean build artifacts
 ```
+
+`make install` also installs repo-managed `pre-commit` and `pre-push` hooks from `.githooks/` using relative symlinks, so moving the checkout does not strand the hooks on an old absolute virtualenv path.
 
 View technical debt:
 

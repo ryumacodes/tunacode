@@ -1,3 +1,12 @@
+---
+title: Feature Work
+summary: Workflow guidance for adding or extending product behavior.
+when_to_read:
+  - When implementing a feature
+  - When extending existing behavior
+last_updated: "2026-04-04"
+---
+
 # Feature Work
 
 Use this workflow when adding or extending product behavior.

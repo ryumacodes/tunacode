@@ -12,6 +12,12 @@ depends_on:
 feeds_into:
   - docs/modules/core/core.md
   - README.md
+when_to_read:
+  - You need to understand how file edits are validated
+  - You're implementing a new file editing tool
+  - Debugging hash mismatch errors in file edits
+  - Working on the read_file → hashline_edit workflow
+last_updated: "2026-04-04"
 ---
 
 # Hashline Edit Subsystem

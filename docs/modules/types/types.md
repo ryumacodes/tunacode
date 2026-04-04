@@ -4,6 +4,11 @@ summary: Centralized type aliases, callback protocols, and the canonical message
 read_when: Adding a new callback signature, creating a new tool, or modifying message structures.
 depends_on: []
 feeds_into: [configuration, infrastructure, tools, core, ui]
+when_to_read:
+  - Adding a new callback signature
+  - Creating a new tool
+  - Modifying message structures
+last_updated: "2026-04-04"
 ---
 
 # Types Layer

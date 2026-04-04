@@ -4,6 +4,11 @@ summary: How the bundled model registry is sourced, refreshed, normalized, and v
 read_when: Refreshing the bundled provider/model catalog, debugging registry metadata, or changing provider API contract rules.
 depends_on: []
 feeds_into: [configuration]
+when_to_read:
+  - Refreshing the bundled provider/model catalog
+  - Debugging registry metadata
+  - Changing provider API contract rules
+last_updated: "2026-04-04"
 ---
 
 # Models Registry Workflow
