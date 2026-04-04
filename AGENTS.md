@@ -69,6 +69,8 @@ Last Updated: 2026-04-04
 - Review notes for active PR triage: `docs/reviews/`.
 - Debugging and investigation artifacts: `docs/reviews/*-artifact.md`.
 - Git workflow and safety practices: `docs/git/practices.md`.
+- Workflow guidance: `docs/workflows/README.md` and workflow-specific files such
+  as `docs/workflows/REFACTOR.md`.
 - Module-specific docs:
   - `docs/modules/core/core.md`
   - `docs/modules/ui/ui.md`

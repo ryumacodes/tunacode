@@ -83,5 +83,4 @@ Feature work is ready for review when all of the following are true:
 - dependencies were installed in that worktree with `make install`
 - the branch name clearly identifies the feature
 - the implementation stays within the intended feature scope
-- verification demonst
-rates the feature works through real behavior
+- verification demonstrates the feature works through real behavior

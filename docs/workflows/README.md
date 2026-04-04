@@ -18,6 +18,7 @@ file so the guidance stays focused and easy to maintain.
 
 - `FEATURES.md` — adding or extending product behavior.
 - `DEBUG.md` — reproducing, isolating, and fixing defects.
+- `REFACTOR.md` — restructuring code without changing intended behavior.
 - `HOTFIX.md` — urgent production-facing corrections with minimal scope.
 - `DOCS.md` — documentation updates and workflow maintenance.
 - `QA.md` — validation, checks, and handoff readiness.
