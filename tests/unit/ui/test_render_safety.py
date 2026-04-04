@@ -4,6 +4,7 @@ from rich.color import Color as RichColor
 from rich.style import Style
 
 from tunacode.core.session import StateManager
+
 from tunacode.ui.app import TextualReplApp
 from tunacode.ui.render_safety import (
     normalize_rich_style,

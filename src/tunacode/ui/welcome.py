@@ -10,8 +10,8 @@ from textual._context import active_app
 
 from tunacode.core.ui_api.constants import APP_NAME, APP_VERSION
 
-from tunacode.ui.render_safety import normalize_text, theme_fallback_colors
 from tunacode.ui.logo_assets import LOGO_WELCOME_FILENAME, read_logo_ansi
+from tunacode.ui.render_safety import normalize_text, theme_fallback_colors
 from tunacode.ui.styles import (
     STYLE_MUTED,
     STYLE_PRIMARY,

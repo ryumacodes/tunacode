@@ -9,6 +9,7 @@ import pytest
 from rich.text import Text
 
 from tunacode.core.session import StateManager
+
 from tunacode.ui.app import TextualReplApp
 from tunacode.ui.screens.theme_picker import ThemePickerScreen
 
@@ -41,7 +42,9 @@ async def test_startup_and_theme_changes_do_not_crash_with_dim_default_renderabl
     async with app.run_test() as pilot:
         await _wait_until(lambda: len(list(app.query(".chat-message"))) >= 2, timeout=1.0)
 
-        app.chat_container.write(Text("dim-default regression probe", style="dim default on default"))
+        app.chat_container.write(
+            Text("dim-default regression probe", style="dim default on default")
+        )
         await _wait_until(lambda: len(list(app.query(".chat-message"))) >= 3, timeout=1.0)
 
         for theme_name in ("dracula", "textual-light", "textual-dark", "textual-ansi"):

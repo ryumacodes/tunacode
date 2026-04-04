@@ -214,13 +214,6 @@ BUILTIN_THEME_PALETTES: dict[str, dict[str, str]] = {
     },
 }
 
-BUILTIN_THEME_COLOR_FIELDS: tuple[str, ...] = (
-    "foreground",
-    "background",
-    "surface",
-    "panel",
-)
-
 # Textual 4.0.0 leaves some built-ins with unresolved theme object fields even
 # though its ColorSystem later computes concrete defaults for rendering. Freeze
 # those concrete values here so TunaCode can safely re-register the built-ins.
