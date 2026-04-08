@@ -107,11 +107,16 @@ def _patch_dangling_tool_calls(messages: list[AgentMessage]) -> int:
         message = messages[index]
         if not isinstance(message, AssistantMessage):
             continue
-        for content in message.content:
-            if isinstance(content, ToolCallContent) and content.id:
-                pending_tool_call_ids[content.id] = content.name or "unknown"
-        if pending_tool_call_ids:
+        tool_calls = [
+            content
+            for content in message.content
+            if isinstance(content, ToolCallContent) and content.id
+        ]
+        if tool_calls:
             last_assistant_idx = index
+            pending_tool_call_ids = {
+                cast(str, tool_call.id): tool_call.name or "unknown" for tool_call in tool_calls
+            }
             break
 
     if last_assistant_idx is None:

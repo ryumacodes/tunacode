@@ -22,8 +22,8 @@ from tunacode.utils.messaging import estimate_messages_tokens
 from tunacode.core.agents import main as agent_main
 from tunacode.core.agents.main import (
     RequestOrchestrator,
-    _TinyAgentStreamState,
     _patch_dangling_tool_calls,
+    _TinyAgentStreamState,
 )
 from tunacode.core.logging.manager import get_logger
 from tunacode.core.session import StateManager
@@ -341,9 +341,7 @@ def test_abort_preserves_completed_tool_results_and_patches_remaining() -> None:
         is_error=False,
     )
 
-    fake_agent = SimpleNamespace(
-        state=SimpleNamespace(messages=[assistant_msg, completed_result])
-    )
+    fake_agent = SimpleNamespace(state=SimpleNamespace(messages=[assistant_msg, completed_result]))
 
     state.active_tool_call_ids.add("tool-b")
     orchestrator._active_stream_state = state
@@ -411,7 +409,9 @@ def test_patch_dangling_tool_calls_noop_when_all_matched() -> None:
             stop_reason="tool_calls",
             timestamp=None,
         ),
-        ToolResultMessage(tool_call_id="t1", tool_name="read_file", content=[TextContent(text="ok")]),
+        ToolResultMessage(
+            tool_call_id="t1", tool_name="read_file", content=[TextContent(text="ok")]
+        ),
     ]
     assert _patch_dangling_tool_calls(messages) == 0
     assert len(messages) == 2
