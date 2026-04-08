@@ -99,33 +99,27 @@ def _describe_stream_event(event: AgentEvent) -> str:
 
 
 def _patch_dangling_tool_calls(messages: list[AgentMessage]) -> int:
-    """Inject error ToolResultMessages for tool_use blocks without matching results.
-
-    Scans backward for the last AssistantMessage with ToolCallContent, collects
-    which tool_call_ids already have a ToolResultMessage after it, and injects
-    a synthetic aborted ToolResultMessage for each unmatched id.
-
-    Returns the number of synthetic results injected.
-    """
+    """Append aborted ToolResultMessages for tool calls left without a result."""
     last_assistant_idx: int | None = None
     pending_tool_call_ids: dict[str, str] = {}
 
-    for i in range(len(messages) - 1, -1, -1):
-        msg = messages[i]
-        if not isinstance(msg, AssistantMessage):
+    for index in range(len(messages) - 1, -1, -1):
+        message = messages[index]
+        if not isinstance(message, AssistantMessage):
             continue
-        tool_calls = [c for c in msg.content if isinstance(c, ToolCallContent) and c.id]
-        if tool_calls:
-            last_assistant_idx = i
-            pending_tool_call_ids = {c.id: (c.name or "unknown") for c in tool_calls}  # type: ignore[misc]
+        for content in message.content:
+            if isinstance(content, ToolCallContent) and content.id:
+                pending_tool_call_ids[content.id] = content.name or "unknown"
+        if pending_tool_call_ids:
+            last_assistant_idx = index
             break
 
-    if last_assistant_idx is None or not pending_tool_call_ids:
+    if last_assistant_idx is None:
         return 0
 
-    for msg in messages[last_assistant_idx + 1 :]:
-        if isinstance(msg, ToolResultMessage) and msg.tool_call_id:
-            pending_tool_call_ids.pop(msg.tool_call_id, None)
+    for message in messages[last_assistant_idx + 1 :]:
+        if isinstance(message, ToolResultMessage) and message.tool_call_id:
+            pending_tool_call_ids.pop(message.tool_call_id, None)
 
     if not pending_tool_call_ids:
         return 0
@@ -434,7 +428,7 @@ class RequestOrchestrator:
         max_iterations: int,
         baseline_message_count: int,
     ) -> bool:
-        _ = (event_obj, agent, baseline_message_count)
+        _ = (event_obj, baseline_message_count)
         state.runtime.iteration_count += 1
         state.runtime.current_iteration = state.runtime.iteration_count
         if state.runtime.iteration_count <= max_iterations:
