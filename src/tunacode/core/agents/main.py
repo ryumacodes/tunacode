@@ -18,9 +18,11 @@ from tinyagent.agent_types import (
     MessageEndEvent,
     MessageUpdateEvent,
     TextContent,
+    ToolCallContent,
     ToolExecutionEndEvent,
     ToolExecutionStartEvent,
     ToolExecutionUpdateEvent,
+    ToolResultMessage,
     TurnEndEvent,
     is_agent_end_event,
     is_message_end_event,
@@ -94,6 +96,51 @@ def _describe_stream_event(event: AgentEvent) -> str:
     if is_agent_end_event(event):
         return "agent_end"
     return type(event).__name__
+
+
+def _patch_dangling_tool_calls(messages: list[AgentMessage]) -> int:
+    """Inject error ToolResultMessages for tool_use blocks without matching results.
+
+    Scans backward for the last AssistantMessage with ToolCallContent, collects
+    which tool_call_ids already have a ToolResultMessage after it, and injects
+    a synthetic aborted ToolResultMessage for each unmatched id.
+
+    Returns the number of synthetic results injected.
+    """
+    last_assistant_idx: int | None = None
+    pending_tool_call_ids: dict[str, str] = {}
+
+    for i in range(len(messages) - 1, -1, -1):
+        msg = messages[i]
+        if not isinstance(msg, AssistantMessage):
+            continue
+        tool_calls = [c for c in msg.content if isinstance(c, ToolCallContent) and c.id]
+        if tool_calls:
+            last_assistant_idx = i
+            pending_tool_call_ids = {c.id: (c.name or "unknown") for c in tool_calls}  # type: ignore[misc]
+            break
+
+    if last_assistant_idx is None or not pending_tool_call_ids:
+        return 0
+
+    for msg in messages[last_assistant_idx + 1 :]:
+        if isinstance(msg, ToolResultMessage) and msg.tool_call_id:
+            pending_tool_call_ids.pop(msg.tool_call_id, None)
+
+    if not pending_tool_call_ids:
+        return 0
+
+    for tool_call_id, tool_name in pending_tool_call_ids.items():
+        messages.append(
+            ToolResultMessage(
+                tool_call_id=tool_call_id,
+                tool_name=tool_name,
+                content=[TextContent(text="Tool execution aborted")],
+                is_error=True,
+            )
+        )
+
+    return len(pending_tool_call_ids)
 
 
 class RequestOrchestrator:
@@ -339,32 +386,22 @@ class RequestOrchestrator:
         if removed_count > 0:
             logger.lifecycle(f"Removed {removed_count} in-flight tool call(s) after abort")
 
-    def _rollback_to_last_stable_turn(
+    def _forward_patch_dangling_tool_calls(
         self,
         logger: LogManager,
         *,
         agent: Agent,
         baseline_message_count: int,
     ) -> None:
-        active_state = self._active_stream_state
-        if active_state is None:
-            self._persist_agent_messages(agent, baseline_message_count)
-            return
-
-        stable_count = active_state.last_stable_agent_message_count
-        all_agent_messages = list(agent.state.messages)
-        rolled_back_messages = all_agent_messages[:stable_count]
-        dropped_count = len(all_agent_messages) - stable_count
+        agent_messages = list(agent.state.messages)
+        patched = _patch_dangling_tool_calls(agent_messages)
+        if patched > 0:
+            logger.lifecycle(f"Injected {patched} aborted tool result(s) for dangling calls")
 
         conversation = self.state_manager.session.conversation
         external_messages = list(conversation.messages[baseline_message_count:])
-        conversation.messages = [*rolled_back_messages, *external_messages]
+        conversation.messages = [*agent_messages, *external_messages]
         conversation.total_tokens = estimate_messages_tokens(conversation.messages)
-
-        if dropped_count > 0:
-            logger.lifecycle(
-                f"Rolled back {dropped_count} in-flight message(s) to last stable turn"
-            )
 
     def _append_interrupted_partial_message(self) -> None:
         session = self.state_manager.session
@@ -397,8 +434,7 @@ class RequestOrchestrator:
         max_iterations: int,
         baseline_message_count: int,
     ) -> bool:
-        _ = (event_obj, baseline_message_count)
-        state.last_stable_agent_message_count = len(agent.state.messages)
+        _ = (event_obj, agent, baseline_message_count)
         state.runtime.iteration_count += 1
         state.runtime.current_iteration = state.runtime.iteration_count
         if state.runtime.iteration_count <= max_iterations:
@@ -628,7 +664,6 @@ class RequestOrchestrator:
             tool_start_times={},
             active_tool_call_ids=set(),
             batch_tool_call_ids=set(),
-            last_stable_agent_message_count=len(agent.state.messages),
         )
         self._active_stream_state = state
         started_at = time.perf_counter()
@@ -716,7 +751,7 @@ class RequestOrchestrator:
         invalidate_cache: bool = False,
     ) -> None:
         if agent is not None and baseline_message_count is not None:
-            self._rollback_to_last_stable_turn(
+            self._forward_patch_dangling_tool_calls(
                 logger,
                 agent=agent,
                 baseline_message_count=baseline_message_count,

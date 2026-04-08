@@ -38,7 +38,6 @@ class _TinyAgentStreamState:
     tool_start_times: dict[str, float]
     active_tool_call_ids: set[str]
     batch_tool_call_ids: set[str]
-    last_stable_agent_message_count: int = 0
     last_assistant_message: AssistantMessage | None = None
 
 
